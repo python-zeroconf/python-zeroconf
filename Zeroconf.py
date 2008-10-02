@@ -1331,7 +1331,7 @@ class Zeroconf(object):
 		changed if needed to make it unique on the network."""
 		self.checkService(info)
 		self.services[info.name.lower()] = info
-		if self.servicetypes.has_key(info.type):
+		if info.type in self.servicetypes:
 			self.servicetypes[info.type]+=1
 		else:
 			self.servicetypes[info.type]=1
