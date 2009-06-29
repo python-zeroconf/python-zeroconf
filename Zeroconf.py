@@ -258,8 +258,8 @@ class DNSQuestion(DNSEntry):
     """A DNS question entry"""
     
     def __init__(self, name, type, clazz):
-        if not name.endswith(".local."):
-            raise NonLocalNameException
+        #if not name.endswith(".local."):
+        #    raise NonLocalNameException
         DNSEntry.__init__(self, name, type, clazz)
 
     def answeredBy(self, rec):
