@@ -902,7 +902,16 @@ class Listener(object):
         self.zeroconf.engine.addReader(self, self.zeroconf.socket)
 
     def handle_read(self):
-        data, (addr, port) = self.zeroconf.socket.recvfrom(_MAX_MSG_ABSOLUTE)
+        try:
+            data, (addr, port) = self.zeroconf.socket.recvfrom(_MAX_MSG_ABSOLUTE)
+        except socket.error, e:
+            # If the socket was closed by another thread -- which happens
+            # regularly on shutdown -- an EBADF exception is thrown here.
+            # Ignore it.
+            if e[0] == socket.EBADF:
+                return
+            else:
+                raise e
         self.data = data
         msg = DNSIncoming(data)
         if msg.isQuery():
