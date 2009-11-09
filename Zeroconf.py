@@ -78,7 +78,6 @@ __author__ = "Paul Scott-Murphy"
 __email__ = "paul at scott dash murphy dot com"
 __version__ = "0.12"
 
-import string
 import time
 import struct
 import socket
@@ -210,7 +209,7 @@ class DNSEntry(object):
     """A DNS entry"""
     
     def __init__(self, name, type, clazz):
-        self.key = string.lower(name)
+        self.key = name.lower()
         self.name = name
         self.type = type
         self.clazz = clazz & _CLASS_MASK
