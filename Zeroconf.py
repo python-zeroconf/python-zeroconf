@@ -549,14 +549,9 @@ class DNSIncoming(object):
                 rec = DNSAddress(domain, info[0], info[1], info[2], self.readString(16))
             else:
                 # Try to ignore types we don't know about
-                # this may mean the rest of the name is
-                # unable to be parsed, and may show errors
-                # so this is left for debugging.  New types
-                # encountered need to be parsed properly.
-                #
-                #print "UNKNOWN TYPE = " + str(info[0])
-                #raise BadTypeInNameException
-                pass
+                # Skip the payload for the resource record so the next
+                # records can be parsed correctly
+                self.offset += info[3]
 
             if rec is not None:
                 self.answers.append(rec)
