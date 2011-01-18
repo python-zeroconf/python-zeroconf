@@ -90,7 +90,7 @@ __all__ = ["Zeroconf", "ServiceInfo", "ServiceBrowser"]
 
 # hook for threads
 
-globals()['_GLOBAL_DONE'] = 0
+_GLOBAL_DONE = False
 
 # Some timing constants
 
@@ -218,11 +218,10 @@ class DNSEntry(object):
 
     def __eq__(self, other):
         """Equality test on name, type, and class"""
-        if isinstance(other, DNSEntry):
-            return (self.name == other.name and
-                    self.type == other.type and
-                    self.clazz == other.clazz)
-        return 0
+        return (isinstance(other, DNSEntry) and
+                self.name == other.name and
+                self.type == other.type and
+                self.clazz == other.clazz)
 
     def __ne__(self, other):
         """Non-equality test"""
@@ -286,24 +285,20 @@ class DNSRecord(DNSEntry):
 
     def __eq__(self, other):
         """Tests equality as per DNSRecord"""
-        if isinstance(other, DNSRecord):
-            return DNSEntry.__eq__(self, other)
-        return 0
+        return isinstance(other, DNSRecord) and DNSEntry.__eq__(self, other)
 
     def suppressedBy(self, msg):
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
         for record in msg.answers:
             if self.suppressedByAnswer(record):
-                return 1
-        return 0
+                return True
+        return False
 
     def suppressedByAnswer(self, other):
         """Returns true if another record has same name, type and class,
         and if its TTL is at least half of this record's."""
-        if self == other and other.ttl > (self.ttl / 2):
-            return 1
-        return 0
+        return self == other and other.ttl > (self.ttl / 2)
 
     def getExpirationTime(self, percent):
         """Returns the time at which this record will have expired
@@ -351,9 +346,7 @@ class DNSAddress(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on address"""
-        if isinstance(other, DNSAddress):
-            return self.address == other.address
-        return 0
+        return isinstance(other, DNSAddress) and self.address == other.address
 
     def __repr__(self):
         """String representation"""
@@ -377,9 +370,8 @@ class DNSHinfo(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on cpu and os"""
-        if isinstance(other, DNSHinfo):
-            return self.cpu == other.cpu and self.os == other.os
-        return 0
+        return (isinstance(other, DNSHinfo) and
+                self.cpu == other.cpu and self.os == other.os)
 
     def __repr__(self):
         """String representation"""
@@ -398,9 +390,7 @@ class DNSPointer(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on alias"""
-        if isinstance(other, DNSPointer):
-            return self.alias == other.alias
-        return 0
+        return isinstance(other, DNSPointer) and self.alias == other.alias
 
     def __repr__(self):
         """String representation"""
@@ -419,9 +409,7 @@ class DNSText(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on text"""
-        if isinstance(other, DNSText):
-            return self.text == other.text
-        return 0
+        return isinstance(other, DNSText) and self.text == other.text
 
     def __repr__(self):
         """String representation"""
@@ -449,12 +437,11 @@ class DNSService(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on priority, weight, port and server"""
-        if isinstance(other, DNSService):
-            return (self.priority == other.priority and
-                    self.weight == other.weight and
-                    self.port == other.port and
-                    self.server == other.server)
-        return 0
+        return (isinstance(other, DNSService) and
+                self.priority == other.priority and
+                self.weight == other.weight and
+                self.port == other.port and
+                self.server == other.server)
 
     def __repr__(self):
         """String representation"""
@@ -580,7 +567,7 @@ class DNSIncoming(object):
         next = -1
         first = off
 
-        while 1:
+        while True:
             len = ord(self.data[off])
             off += 1
             if len == 0:
@@ -611,7 +598,7 @@ class DNSOutgoing(object):
     """Object representation of an outgoing packet"""
     
     def __init__(self, flags, multicast = 1):
-        self.finished = 0
+        self.finished = False
         self.id = 0
         self.multicast = multicast
         self.flags = flags
@@ -743,7 +730,7 @@ class DNSOutgoing(object):
         No further parts should be added to the packet once this
         is done."""
         if not self.finished:
-            self.finished = 1
+            self.finished = True
             for question in self.questions:
                 self.writeQuestion(question)
             for answer, time in self.answers:
@@ -839,7 +826,7 @@ class Engine(threading.Thread):
         self.start()
 
     def run(self):
-        while not globals()['_GLOBAL_DONE']:
+        while not _GLOBAL_DONE:
             rs = self.getReaders()
             if len(rs) == 0:
                 # No sockets to manage, but we wait for the timeout
@@ -933,9 +920,9 @@ class Reaper(threading.Thread):
         self.start()
 
     def run(self):
-        while 1:
+        while True:
             self.zc.wait(10 * 1000)
-            if globals()['_GLOBAL_DONE']:
+            if _GLOBAL_DONE:
                 return
             now = currentTimeMillis()
             for record in self.zc.cache.entries():
@@ -962,7 +949,7 @@ class ServiceBrowser(threading.Thread):
         self.delay = _BROWSER_TIME
         self.list = []
         
-        self.done = 0
+        self.done = False
 
         self.zc.addListener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
         self.start()
@@ -995,16 +982,16 @@ class ServiceBrowser(threading.Thread):
                 self.nextTime = expires
 
     def cancel(self):
-        self.done = 1
+        self.done = True
         self.zc.notifyAll()
 
     def run(self):
-        while 1:
+        while True:
             event = None
             now = currentTimeMillis()
             if len(self.list) == 0 and self.nextTime > now:
                 self.zc.wait(self.nextTime - now)
-            if globals()['_GLOBAL_DONE'] or self.done:
+            if _GLOBAL_DONE or self.done:
                 return
             now = currentTimeMillis()
 
@@ -1097,18 +1084,16 @@ class ServiceInfo(object):
                 index += length
             
             for s in strs:
-                eindex = s.find('=')
-                if eindex == -1:
+                try:
+                    key, value = s.split('=', 1)
+                    if value == 'true':
+                        value = True
+                    elif value == 'false' or not value:
+                        value = False
+                except:
                     # No equals sign at all
                     key = s
-                    value = 0
-                else:
-                    key = s[:eindex]
-                    value = s[eindex+1:]
-                    if value == 'true':
-                        value = 1
-                    elif value == 'false' or not value:
-                        value = 0
+                    value = False
 
                 # Only update non-existent properties
                 if key and result.get(key) == None:
@@ -1185,13 +1170,13 @@ class ServiceInfo(object):
         delay = _LISTENER_TIME
         next = now + delay
         last = now + timeout
-        result = 0
+        result = False
         try:
             zc.addListener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
             while (self.server is None or self.address is None or 
                    self.text is None):
                 if last <= now:
-                    return 0
+                    return False
                 if next <= now:
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
                     out.addQuestion(DNSQuestion(self.name, _TYPE_SRV, 
@@ -1213,7 +1198,7 @@ class ServiceInfo(object):
 
                 zc.wait(min(next, last) - now)
                 now = currentTimeMillis()
-            result = 1
+            result = True
         finally:
             zc.removeListener(self)
             
@@ -1223,7 +1208,7 @@ class ServiceInfo(object):
         """Tests equality of service name"""
         if isinstance(other, ServiceInfo):
             return other.name == self.name
-        return 0
+        return False
 
     def __ne__(self, other):
         """Non-equality test"""
@@ -1252,7 +1237,8 @@ class Zeroconf(object):
     def __init__(self, bindaddress=None):
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads."""
-        globals()['_GLOBAL_DONE'] = 0
+        global _GLOBAL_DONE
+        _GLOBAL_DONE = False
         if bindaddress is None:
             self.intf = socket.gethostbyname(socket.gethostname())
         else:
@@ -1590,8 +1576,9 @@ class Zeroconf(object):
     def close(self):
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        if globals()['_GLOBAL_DONE'] == 0:
-            globals()['_GLOBAL_DONE'] = 1
+        global _GLOBAL_DONE
+        if not _GLOBAL_DONE:
+            _GLOBAL_DONE = True
             self.notifyAll()
             self.engine.notify()
             self.unregisterAllServices()
