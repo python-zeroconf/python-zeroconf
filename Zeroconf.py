@@ -340,7 +340,7 @@ class DNSAddress(DNSRecord):
 
     def write(self, out):
         """Used in constructing an outgoing packet"""
-        out.writeString(self.address, len(self.address))
+        out.writeString(self.address)
 
     def __eq__(self, other):
         """Tests equality on address"""
@@ -365,8 +365,8 @@ class DNSHinfo(DNSRecord):
 
     def write(self, out):
         """Used in constructing an outgoing packet"""
-        out.writeString(self.cpu, len(self.cpu))
-        out.writeString(self.os, len(self.os))
+        out.writeString(self.cpu)
+        out.writeString(self.oso)
 
     def __eq__(self, other):
         """Tests equality on cpu and os"""
@@ -408,7 +408,7 @@ class DNSText(DNSRecord):
 
     def write(self, out):
         """Used in constructing an outgoing packet"""
-        out.writeString(self.text, len(self.text))
+        out.writeString(self.text)
 
     def __eq__(self, other):
         """Tests equality on text"""
@@ -468,12 +468,15 @@ class DNSIncoming(object):
         self.readQuestions()
         self.readOthers()
 
-    def readHeader(self):
-        """Reads header portion of packet"""
-        format = '!HHHHHH'
+    def unpack(self, format):
         length = struct.calcsize(format)
         info = struct.unpack(format, self.data[self.offset:self.offset+length])
         self.offset += length
+        return info
+
+    def readHeader(self):
+        """Reads header portion of packet"""
+        info = self.unpack('!HHHHHH')
 
         self.id = info[0]
         self.flags = info[1]
@@ -484,23 +487,16 @@ class DNSIncoming(object):
 
     def readQuestions(self):
         """Reads questions section of packet"""
-        format = '!HH'
-        length = struct.calcsize(format)
         for i in range(0, self.numQuestions):
             name = self.readName()
-            info = struct.unpack(format, self.data[self.offset:self.offset+length])
-            self.offset += length
+            info = self.unpack('!HH')
             
             question = DNSQuestion(name, info[0], info[1])
             self.questions.append(question)
 
     def readInt(self):
         """Reads an integer from the packet"""
-        format = '!I'
-        length = struct.calcsize(format)
-        info = struct.unpack(format, self.data[self.offset:self.offset+length])
-        self.offset += length
-        return info[0]
+        return self.unpack('!I')[0]
 
     def readCharacterString(self):
         """Reads a character string from the packet"""
@@ -508,31 +504,22 @@ class DNSIncoming(object):
         self.offset += 1
         return self.readString(length)
 
-    def readString(self, len):
+    def readString(self, length):
         """Reads a string of a given length from the packet"""
-        format = '!' + str(len) + 's'
-        length =  struct.calcsize(format)
-        info = struct.unpack(format, self.data[self.offset:self.offset+length])
+        info = self.data[self.offset:self.offset+length]
         self.offset += length
-        return info[0]
+        return info
 
     def readUnsignedShort(self):
         """Reads an unsigned short from the packet"""
-        format = '!H'
-        length = struct.calcsize(format)
-        info = struct.unpack(format, self.data[self.offset:self.offset+length])
-        self.offset += length
-        return info[0]
+        return self.unpack('!H')[0]
 
     def readOthers(self):
         """Reads the answers, authorities and additionals section of the packet"""
-        format = '!HHiH'
-        length = struct.calcsize(format)
         n = self.numAnswers + self.numAuthorities + self.numAdditionals
         for i in range(0, n):
             domain = self.readName()
-            info = struct.unpack(format, self.data[self.offset:self.offset+length])
-            self.offset += length
+            info = self.unpack('!HHiH')
 
             rec = None
             if info[0] == _TYPE_A:
@@ -642,35 +629,31 @@ class DNSOutgoing(object):
         """Adds an additional answer"""
         self.additionals.append(record)
 
+    def pack(self, format, value):
+        self.data.append(struct.pack(format, value))
+        self.size += struct.calcsize(format)
+
     def writeByte(self, value):
         """Writes a single byte to the packet"""
-        format = '!c'
-        self.data.append(struct.pack(format, chr(value)))
-        self.size += 1
+        self.pack('!c', chr(value))
 
     def insertShort(self, index, value):
         """Inserts an unsigned short in a certain position in the packet"""
-        format = '!H'
-        self.data.insert(index, struct.pack(format, value))
+        self.data.insert(index, struct.pack('!H', value))
         self.size += 2
         
     def writeShort(self, value):
         """Writes an unsigned short to the packet"""
-        format = '!H'
-        self.data.append(struct.pack(format, value))
-        self.size += 2
+        self.pack('!H', value)
 
     def writeInt(self, value):
         """Writes an unsigned integer to the packet"""
-        format = '!I'
-        self.data.append(struct.pack(format, int(value)))
-        self.size += 4
+        self.pack('!I', int(value))
 
-    def writeString(self, value, length):
+    def writeString(self, value):
         """Writes a string to the packet"""
-        format = '!' + str(length) + 's'
-        self.data.append(struct.pack(format, value))
-        self.size += length
+        self.data.append(value)
+        self.size += len(value)
 
     def writeUTF(self, s):
         """Writes a UTF-8 string of a given length to the packet"""
@@ -679,7 +662,7 @@ class DNSOutgoing(object):
         if length > 64:
             raise NamePartTooLongException
         self.writeByte(length)
-        self.writeString(utfstr, length)
+        self.writeString(utfstr)
 
     def writeName(self, name):
         """Writes a domain name to the packet"""
