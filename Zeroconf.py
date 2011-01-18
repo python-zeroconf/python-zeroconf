@@ -1444,8 +1444,8 @@ class Zeroconf(object):
         i = 0
         while i < 3:
             for record in self.cache.entriesWithName(info.type):
-                if (record.type == _TYPE_PTR and not 
-                    record.isExpired(now) and
+                if (record.type == _TYPE_PTR and
+                    not record.isExpired(now) and
                     record.alias == info.name):
                     if info.name.find('.') < 0:
                         info.name = '%s.[%s:%s].%s' % (info.name,
