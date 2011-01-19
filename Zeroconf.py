@@ -473,22 +473,16 @@ class DNSIncoming(object):
 
     def readHeader(self):
         """Reads header portion of packet"""
-        info = self.unpack('!HHHHHH')
-
-        self.id = info[0]
-        self.flags = info[1]
-        self.numQuestions = info[2]
-        self.numAnswers = info[3]
-        self.numAuthorities = info[4]
-        self.numAdditionals = info[5]
+        (self.id, self.flags, self.numQuestions, self.numAnswers,
+         self.numAuthorities, self.numAdditionals) = self.unpack('!HHHHHH')
 
     def readQuestions(self):
         """Reads questions section of packet"""
-        for i in range(0, self.numQuestions):
+        for i in xrange(self.numQuestions):
             name = self.readName()
-            info = self.unpack('!HH')
+            type, clazz = self.unpack('!HH')
             
-            question = DNSQuestion(name, info[0], info[1])
+            question = DNSQuestion(name, type, clazz)
             self.questions.append(question)
 
     def readInt(self):
@@ -515,35 +509,31 @@ class DNSIncoming(object):
         """Reads the answers, authorities and additionals section of the 
         packet"""
         n = self.numAnswers + self.numAuthorities + self.numAdditionals
-        for i in range(0, n):
+        for i in xrange(n):
             domain = self.readName()
-            info = self.unpack('!HHiH')
+            type, clazz, ttl, length = self.unpack('!HHiH')
 
             rec = None
-            if info[0] == _TYPE_A:
-                rec = DNSAddress(domain, info[0], info[1], info[2],
-                    self.readString(4))
-            elif info[0] == _TYPE_CNAME or info[0] == _TYPE_PTR:
-                rec = DNSPointer(domain, info[0], info[1], info[2],
-                    self.readName())
-            elif info[0] == _TYPE_TXT:
-                rec = DNSText(domain, info[0], info[1], info[2],
-                    self.readString(info[3]))
-            elif info[0] == _TYPE_SRV:
-                rec = DNSService(domain, info[0], info[1], info[2],
+            if type == _TYPE_A:
+                rec = DNSAddress(domain, type, clazz, ttl, self.readString(4))
+            elif type == _TYPE_CNAME or type == _TYPE_PTR:
+                rec = DNSPointer(domain, type, clazz, ttl, self.readName())
+            elif type == _TYPE_TXT:
+                rec = DNSText(domain, type, clazz, ttl, self.readString(length))
+            elif type == _TYPE_SRV:
+                rec = DNSService(domain, type, clazz, ttl,
                     self.readUnsignedShort(), self.readUnsignedShort(),
                     self.readUnsignedShort(), self.readName())
-            elif info[0] == _TYPE_HINFO:
-                rec = DNSHinfo(domain, info[0], info[1], info[2],
+            elif type == _TYPE_HINFO:
+                rec = DNSHinfo(domain, type, clazz, ttl,
                     self.readCharacterString(), self.readCharacterString())
-            elif info[0] == _TYPE_AAAA:
-                rec = DNSAddress(domain, info[0], info[1], info[2],
-                    self.readString(16))
+            elif type == _TYPE_AAAA:
+                rec = DNSAddress(domain, type, clazz, ttl, self.readString(16))
             else:
                 # Try to ignore types we don't know about
                 # Skip the payload for the resource record so the next
                 # records can be parsed correctly
-                self.offset += info[3]
+                self.offset += length
 
             if rec is not None:
                 self.answers.append(rec)
