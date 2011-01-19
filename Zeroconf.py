@@ -587,7 +587,7 @@ class DNSIncoming(object):
 class DNSOutgoing(object):
     """Object representation of an outgoing packet"""
     
-    def __init__(self, flags, multicast = 1):
+    def __init__(self, flags, multicast=True):
         self.finished = False
         self.id = 0
         self.multicast = multicast
@@ -1497,7 +1497,7 @@ class Zeroconf(object):
         # Support unicast client responses
         #
         if port != _MDNS_PORT:
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, 0)
+            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, False)
             for question in msg.questions:
                 out.addQuestion(question)
         
@@ -1523,7 +1523,7 @@ class Zeroconf(object):
                         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
                     
                     # Answer A record queries for any service addresses we know
-                    if question.type == _TYPE_A or question.type == _TYPE_ANY:
+                    if question.type in (_TYPE_A, _TYPE_ANY):
                         for service in self.services.values():
                             if service.server == question.name.lower():
                                 out.addAnswer(msg, DNSAddress(question.name,
@@ -1533,12 +1533,12 @@ class Zeroconf(object):
                     service = self.services.get(question.name.lower(), None)
                     if not service: continue
                     
-                    if question.type == _TYPE_SRV or question.type == _TYPE_ANY:
+                    if question.type in (_TYPE_SRV, _TYPE_ANY):
                         out.addAnswer(msg, DNSService(question.name,
                             _TYPE_SRV, _CLASS_IN | _CLASS_UNIQUE,
                             _DNS_TTL, service.priority, service.weight, 
                             service.port, service.server))
-                    if question.type == _TYPE_TXT or question.type == _TYPE_ANY:
+                    if question.type in (_TYPE_TXT, _TYPE_ANY):
                         out.addAnswer(msg, DNSText(question.name,
                             _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE,
                             _DNS_TTL, service.text))
