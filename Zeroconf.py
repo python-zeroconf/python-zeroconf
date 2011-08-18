@@ -1230,7 +1230,12 @@ class Zeroconf(object):
         global _GLOBAL_DONE
         _GLOBAL_DONE = False
         if bindaddress is None:
-            self.intf = socket.gethostbyname(socket.gethostname())
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(('4.2.2.1', 123))
+                self.intf = s.getsockname()[0]
+            except:
+                self.intf = socket.gethostbyname(socket.gethostname())
         else:
             self.intf = bindaddress
         self.group = ('', _MDNS_PORT)
