@@ -474,7 +474,7 @@ class DNSIncoming(object):
     def readHeader(self):
         """Reads header portion of packet"""
         (self.id, self.flags, self.numQuestions, self.numAnswers,
-         self.numAuthorities, self.numAdditionals) = self.unpack('!HHHHHH')
+         self.numAuthorities, self.numAdditionals) = self.unpack('!6H')
 
     def readQuestions(self):
         """Reads questions section of packet"""
