@@ -1562,10 +1562,13 @@ class Zeroconf(object):
 
     def send(self, out, addr = _MDNS_ADDR, port = _MDNS_PORT):
         """Sends an outgoing packet."""
-        # This is a quick test to see if we can parse the packets we generate
-        #temp = DNSIncoming(out.packet())
+        packet = out.packet()
         try:
-            bytes_sent = self.socket.sendto(out.packet(), 0, (addr, port))
+            while packet:
+                bytes_sent = self.socket.sendto(packet, 0, (addr, port))
+                if bytes_sent < 0:
+                    break
+                packet = packet[bytes_sent:]
         except:
             # Ignore this, it may be a temporary loss of network connection
             pass
