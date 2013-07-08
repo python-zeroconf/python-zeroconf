@@ -685,7 +685,7 @@ class DNSOutgoing(object):
         # An index was found, so write a pointer to it
         #
         self.writeByte((index >> 8) | 0xC0)
-        self.writeByte(index)
+        self.writeByte(index & 0xFF)
 
     def writeQuestion(self, question):
         """Writes a question to the packet"""
