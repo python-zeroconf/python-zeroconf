@@ -14,7 +14,4 @@ they're generally applicable. This version also includes patches found
 on the now-defunct (?) Launchpad repo of pyzeroconf, and elsewhere 
 around the net -- not always well-documented, sorry.
 
-I only use Zeroconf.py myself, so I can't vouch for the other bits here 
-yet. I'll check them out.
-
 Long-term goals: Python 3.x
