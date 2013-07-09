@@ -13,13 +13,14 @@ class MyListener(object):
 		print "Service", name, "added"
 		print "Type is", type
 		info = self.r.getServiceInfo(type, name)
-		print "Address is", str(socket.inet_ntoa(info.getAddress()))
-		print "Port is", info.getPort()
-		print "Weight is", info.getWeight()
-		print "Priority is", info.getPriority()
-		print "Server is", info.getServer()
-		print "Text is", info.getText()
-		print "Properties are", info.getProperties()
+		if info:
+			print "Address is", str(socket.inet_ntoa(info.getAddress()))
+			print "Port is", info.getPort()
+			print "Weight is", info.getWeight()
+			print "Priority is", info.getPriority()
+			print "Server is", info.getServer()
+			print "Text is", info.getText()
+			print "Properties are", info.getProperties()
 
 if __name__ == '__main__':	
 	print "Multicast DNS Service Discovery for Python Browser test"
