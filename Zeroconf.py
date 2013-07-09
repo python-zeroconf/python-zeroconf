@@ -2,9 +2,7 @@
     Copyright (C) 2003, Paul Scott-Murphy
 
     This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.  It has been tested against the JRendezvous
-    implementation from <a href="http://strangeberry.com">StrangeBerry</a>,
-    and against the mDNSResponder from Mac OS X 10.3.8.
+    using IP multicast.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
