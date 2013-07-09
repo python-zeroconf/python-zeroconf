@@ -123,9 +123,6 @@ class PacketForm(unittest.TestCase):
 
 class Names(unittest.TestCase):
 	
-	def testNonLocalName(self):
-		self.assertRaises(r.NonLocalNameException, r.DNSQuestion, "this.wont.work.com.", r._TYPE_SRV, r._CLASS_IN)
-		
 	def testLongName(self):
 		generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
 		question = r.DNSQuestion("this.is.a.very.long.name.with.lots.of.parts.in.it.local.", r._TYPE_SRV, r._CLASS_IN)
