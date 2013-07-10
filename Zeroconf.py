@@ -460,7 +460,7 @@ class DNSIncoming(object):
         self.numAnswers = 0
         self.numAuthorities = 0
         self.numAdditionals = 0
-        
+
         self.readHeader()
         self.readQuestions()
         self.readOthers()
@@ -481,7 +481,7 @@ class DNSIncoming(object):
         for i in xrange(self.numQuestions):
             name = self.readName()
             type, clazz = self.unpack('!HH')
-            
+
             question = DNSQuestion(name, type, clazz)
             self.questions.append(question)
 
@@ -537,7 +537,7 @@ class DNSIncoming(object):
 
             if rec is not None:
                 self.answers.append(rec)
-                
+
     def isQuery(self):
         """Returns true if this is a query"""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
@@ -546,10 +546,10 @@ class DNSIncoming(object):
         """Returns true if this is a response"""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
-    def readUTF(self, offset, len):
+    def readUTF(self, offset, length):
         """Reads a UTF-8 string of a given length from the packet"""
-        return unicode(self.data[offset:offset+len], 'utf-8', 'replace')
-        
+        return unicode(self.data[offset:offset+length], 'utf-8', 'replace')
+
     def readName(self):
         """Reads a domain name from the packet"""
         result = ''
@@ -558,18 +558,18 @@ class DNSIncoming(object):
         first = off
 
         while True:
-            len = ord(self.data[off])
+            length = ord(self.data[off])
             off += 1
-            if len == 0:
+            if length == 0:
                 break
-            t = len & 0xC0
+            t = length & 0xC0
             if t == 0x00:
-                result = ''.join((result, self.readUTF(off, len) + '.'))
-                off += len
+                result = ''.join((result, self.readUTF(off, length) + '.'))
+                off += length
             elif t == 0xC0:
                 if next < 0:
                     next = off + 1
-                off = ((len & 0x3F) << 8) | ord(self.data[off])
+                off = ((length & 0x3F) << 8) | ord(self.data[off])
                 if off >= first:
                     raise "Bad domain name (circular) at " + str(off)
                 first = off
@@ -586,7 +586,7 @@ class DNSIncoming(object):
         
 class DNSOutgoing(object):
     """Object representation of an outgoing packet"""
-    
+
     def __init__(self, flags, multicast=True):
         self.finished = False
         self.id = 0
@@ -595,7 +595,7 @@ class DNSOutgoing(object):
         self.names = {}
         self.data = []
         self.size = 12
-        
+
         self.questions = []
         self.answers = []
         self.authorities = []
@@ -636,7 +636,7 @@ class DNSOutgoing(object):
         """Inserts an unsigned short in a certain position in the packet"""
         self.data.insert(index, struct.pack('!H', value))
         self.size += 2
-        
+
     def writeShort(self, value):
         """Writes an unsigned short to the packet"""
         self.pack('!H', value)
@@ -729,7 +729,7 @@ class DNSOutgoing(object):
                 self.writeRecord(authority, 0)
             for additional in self.additionals:
                 self.writeRecord(additional, 0)
-        
+
             self.insertShort(0, len(self.additionals))
             self.insertShort(0, len(self.authorities))
             self.insertShort(0, len(self.answers))
@@ -744,7 +744,7 @@ class DNSOutgoing(object):
 
 class DNSCache(object):
     """A cache of DNS entries"""
-    
+
     def __init__(self):
         self.cache = {}
 
@@ -867,7 +867,7 @@ class Listener(object):
 
     It requires registration with an Engine object in order to have
     the read() method called when a socket is availble for reading."""
-    
+
     def __init__(self, zc):
         self.zc = zc
         self.zc.engine.addReader(self, self.zc.socket)
@@ -1000,11 +1000,11 @@ class ServiceBrowser(threading.Thread):
 
             if event is not None:
                 event(self.zc)
-                
+
 
 class ServiceInfo(object):
     """Service information"""
-    
+
     def __init__(self, type, name, address=None, port=None, weight=0, 
                  priority=0, properties=None, server=None):
         """Create a service description.
@@ -1072,7 +1072,7 @@ class ServiceInfo(object):
                 index += 1
                 strs.append(text[index:index+length])
                 index += length
-            
+
             for s in strs:
                 try:
                     key, value = s.split('=', 1)
@@ -1093,7 +1093,7 @@ class ServiceInfo(object):
         except:
             traceback.print_exc()
             self.properties = None
-            
+
     def getType(self):
         """Type accessor"""
         return self.type
@@ -1191,7 +1191,7 @@ class ServiceInfo(object):
             result = True
         finally:
             zc.removeListener(self)
-            
+
         return result
 
     def __eq__(self, other):
@@ -1217,7 +1217,7 @@ class ServiceInfo(object):
                 result += self.text[:17] + "..."
         result += "]"
         return result
-                
+
 
 class Zeroconf(object):
     """Implementation of Zeroconf Multicast DNS Service Discovery
@@ -1276,7 +1276,7 @@ class Zeroconf(object):
         self.cache = DNSCache()
 
         self.condition = threading.Condition()
-        
+
         self.engine = Engine(self)
         self.listener = Listener(self)
         self.reaper = Reaper(self)
