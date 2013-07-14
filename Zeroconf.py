@@ -662,11 +662,16 @@ class DNSOutgoing(object):
     def writeName(self, name):
         """Writes a domain name to the packet"""
 
-        try:
+        if name in self.names:
             # Find existing instance of this name in packet
             #
             index = self.names[name]
-        except KeyError:
+
+            # An index was found, so write a pointer to it
+            #
+            self.writeByte((index >> 8) | 0xC0)
+            self.writeByte(index & 0xFF)
+        else:
             # No record of this name already, so write it
             # out as normal, recording the location of the name
             # for future pointers to it.
@@ -678,12 +683,6 @@ class DNSOutgoing(object):
             for part in parts:
                 self.writeUTF(part)
             self.writeByte(0)
-            return
-
-        # An index was found, so write a pointer to it
-        #
-        self.writeByte((index >> 8) | 0xC0)
-        self.writeByte(index & 0xFF)
 
     def writeQuestion(self, question):
         """Writes a question to the packet"""
