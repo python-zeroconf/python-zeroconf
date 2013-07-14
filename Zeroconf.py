@@ -229,17 +229,11 @@ class DNSEntry(object):
 
     def getClazz(self, clazz):
         """Class accessor"""
-        try:
-            return _CLASSES[clazz]
-        except:
-            return "?(%s)" % (clazz)
+        return _CLASSES.get(clazz, "?(%s)" % clazz)
 
-    def getType(self, type):
+    def getType(self, t):
         """Type accessor"""
-        try:
-            return _TYPES[type]
-        except:
-            return "?(%s)" % (type)
+        return _TYPES.get(t, "?(%s)" % t)
 
     def toString(self, hdr, other):
         """String representation with additional information"""
