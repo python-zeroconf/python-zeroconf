@@ -4,7 +4,6 @@ import socket
 class MyListener(object):
     def __init__(self):
         self.r = Zeroconf()
-        pass
 
     def removeService(self, zeroconf, type, name):
         print "Service", name, "removed"
