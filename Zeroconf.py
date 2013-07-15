@@ -1,5 +1,5 @@
-""" Multicast DNS Service Discovery for Python, v0.12-wmcbrine
-    Copyright (C) 2003, Paul Scott-Murphy
+""" Multicast DNS Service Discovery for Python, v0.13-wmcbrine
+    Copyright 2003 Paul Scott-Murphy, 2013 William McBrine
 
     This module provides a framework for the use of DNS Service Discovery
     using IP multicast.
@@ -20,64 +20,10 @@
     
 """
 
-"""0.12-wmcbrine update - see git for changes"""
-
-"""0.12 update - allow selection of binding interface
-         typo fix - Thanks A. M. Kuchlingi
-         removed all use of word 'Rendezvous' - this is an API change"""
-
-"""0.11 update - correction to comments for addListener method
-                 support for new record types seen from OS X
-                  - IPv6 address
-                  - hostinfo
-                 ignore unknown DNS record types
-                 fixes to name decoding
-                 works alongside other processes using port 5353
-                 (e.g. on Mac OS X)
-                 tested against Mac OS X 10.3.2's mDNSResponder
-                 corrections to removal of list entries for service browser"""
-
-"""0.10 update - Jonathon Paisley contributed these corrections:
-                 always multicast replies, even when query is unicast
-                 correct a pointer encoding problem
-                 can now write records in any order
-                 traceback shown on failure
-                 better TXT record parsing
-                 server is now separate from name
-                 can cancel a service browser
-
-                 modified some unit tests to accommodate these changes"""
-
-"""0.09 update - remove all records on service unregistration
-                 fix DOS security problem with readName"""
-
-"""0.08 update - changed licensing to LGPL"""
-
-"""0.07 update - faster shutdown on engine
-                 pointer encoding of outgoing names
-                 ServiceBrowser now works
-                 new unit tests"""
-
-"""0.06 update - small improvements with unit tests
-                 added defined exception types
-                 new style objects
-                 fixed hostname/interface problem
-                 fixed socket timeout problem
-                 fixed addServiceListener() typo bug
-                 using select() for socket reads
-                 tested on Debian unstable with Python 2.2.2"""
-
-"""0.05 update - ensure case insensitivty on domain names
-                 support for unicast DNS queries"""
-
-"""0.04 update - added some unit tests
-                 added __ne__ adjuncts where required
-                 ensure names end in '.local.'
-                 timeout on receiving socket for clean shutdown"""
-
-__author__ = "Paul Scott-Murphy"
-__email__ = "paul at scott dash murphy dot com"
-__version__ = "0.12-wmcbrine"
+__author__ = 'Paul Scott-Murphy'
+__maintainer__ = 'William McBrine <wmcbrine@gmail.com>'
+__version__ = '0.13-wmcbrine'
+__license__ = 'LGPL'
 
 import time
 import struct
