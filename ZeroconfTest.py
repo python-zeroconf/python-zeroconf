@@ -38,14 +38,15 @@ class PacketGeneration(unittest.TestCase):
     def testParseOwnPacketSimpleUnicast(self):
         generated = r.DNSOutgoing(0, 0)
         parsed = r.DNSIncoming(generated.packet())
-        
+
     def testParseOwnPacketFlags(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         parsed = r.DNSIncoming(generated.packet())
 
     def testParseOwnPacketQuestion(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
-        generated.addQuestion(r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN))
+        generated.addQuestion(r.DNSQuestion("testname.local.", r._TYPE_SRV,
+                                            r._CLASS_IN))
         parsed = r.DNSIncoming(generated.packet())
 
     def testMatchQuestion(self):
@@ -66,7 +67,7 @@ class PacketForm(unittest.TestCase):
         bytes = generated.packet()
         id = ord(bytes[0]) << 8 | ord(bytes[1])
         self.assertEqual(id, 0)
-        
+
     def testQueryHeaderBits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
@@ -105,7 +106,7 @@ class PacketForm(unittest.TestCase):
         self.assertEqual(numAnswers, 0)
         self.assertEqual(numAuthorities, 0)
         self.assertEqual(numAddtionals, 0)
-        
+
     def testNumbersAnswers(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
@@ -123,10 +124,11 @@ class PacketForm(unittest.TestCase):
 
 
 class Names(unittest.TestCase):
-    
+
     def testLongName(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion("this.is.a.very.long.name.with.lots.of.parts.in.it.local.", r._TYPE_SRV, r._CLASS_IN)
+        question = r.DNSQuestion("this.is.a.very.long.name.with.lots.of.parts.in.it.local.",
+                                 r._TYPE_SRV, r._CLASS_IN)
         generated.addQuestion(question)
         parsed = r.DNSIncoming(generated.packet())
 
@@ -152,12 +154,12 @@ class Names(unittest.TestCase):
         generated.addQuestion(question)
         parsed = r.DNSIncoming(generated.packet())
 
-        
+
 class Framework(unittest.TestCase):
 
     def testLaunchAndClose(self):
         rv = r.Zeroconf()
         rv.close()
-        
+
 if __name__ == '__main__':
     unittest.main()

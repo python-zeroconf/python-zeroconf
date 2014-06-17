@@ -21,7 +21,7 @@ class MyListener(object):
             print "Text is", info.getText()
             print "Properties are", info.getProperties()
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     print "Multicast DNS Service Discovery for Python Browser test"
     r = Zeroconf()
     print "1. Testing browsing for a service..."
