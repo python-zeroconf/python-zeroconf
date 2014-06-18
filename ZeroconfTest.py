@@ -107,21 +107,6 @@ class PacketForm(unittest.TestCase):
         self.assertEqual(numAuthorities, 0)
         self.assertEqual(numAddtionals, 0)
 
-    def testNumbersAnswers(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
-        for i in range(0, 10):
-            generated.addQuestion(question)
-        bytes = generated.packet()
-        numQuestions = ord(bytes[4]) << 8 | ord(bytes[5])
-        numAnswers = ord(bytes[6]) << 8 | ord(bytes[7])
-        numAuthorities = ord(bytes[8]) << 8 | ord(bytes[9])
-        numAddtionals = ord(bytes[10]) << 8 | ord(bytes[11])
-        self.assertEqual(numQuestions, 10)
-        self.assertEqual(numAnswers, 0)
-        self.assertEqual(numAuthorities, 0)
-        self.assertEqual(numAddtionals, 0)
-
 
 class Names(unittest.TestCase):
 
