@@ -25,7 +25,7 @@ __maintainer__ = 'William McBrine <wmcbrine@gmail.com>'
 __version__ = '0.13-wmcbrine'
 __license__ = 'LGPL'
 
-from Zeroconf import *
+from zeroconf import *
 import socket
 
 desc = {'path':'/~paulsm/'}

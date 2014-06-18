@@ -1,4 +1,4 @@
-from Zeroconf import *
+from zeroconf import *
 import socket
 
 class MyListener(object):
