@@ -21,9 +21,6 @@ class MyListener(object):
             print "  Weight is %d, Priority is %d" % (info.getWeight(),
                                                       info.getPriority())
             print "  Server is", info.getServer()
-            #text = info.getText()
-            #if text:
-            #    print "  Text is", repr(text)
             prop = info.getProperties()
             if prop:
                 print "  Properties are"

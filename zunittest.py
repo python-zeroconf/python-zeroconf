@@ -1,34 +1,5 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
-
-    This module provides a unit test suite for the Multicast DNS
-    Service Discovery for Python module.
-
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 
-    USA
-    
-"""
-
-__author__ = 'Paul Scott-Murphy'
-__maintainer__ = 'William McBrine <wmcbrine@gmail.com>'
-__version__ = '0.14-wmcbrine'
-__license__ = 'LGPL'
-
 import zeroconf as r
 import unittest
-
 
 class PacketGeneration(unittest.TestCase):
 
@@ -58,7 +29,6 @@ class PacketGeneration(unittest.TestCase):
         self.assertEqual(len(generated.questions), 1)
         self.assertEqual(len(generated.questions), len(parsed.questions))
         self.assertEqual(question, parsed.questions[0])
-
 
 class PacketForm(unittest.TestCase):
 
@@ -108,7 +78,6 @@ class PacketForm(unittest.TestCase):
         self.assertEqual(numAuthorities, 0)
         self.assertEqual(numAddtionals, 0)
 
-
 class Names(unittest.TestCase):
 
     def testLongName(self):
@@ -139,7 +108,6 @@ class Names(unittest.TestCase):
         generated.addQuestion(question)
         generated.addQuestion(question)
         parsed = r.DNSIncoming(generated.packet())
-
 
 class Framework(unittest.TestCase):
 
