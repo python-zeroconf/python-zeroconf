@@ -1,9 +1,9 @@
 This is Multicast DNS Service Discovery for Python v0.14-wmcbrine
 Originally by Paul Scott-Murphy, modified by William McBrine.
 
-zeroconf.py is the implementation file, look at the end for examples of 
+zeroconf.py is the implementation file; look at the end for examples of 
 basic use. You can also view zwebbrowse.py to see how to browse for 
-services.
+services, and zwebtest.py for an example of announcing them.
 
 This fork is used in all of my TiVo-related projects: HME for Python 
 (and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo. 
@@ -20,6 +20,10 @@ Long-term goals: Python 3.x
 
 History
 -------
+0.14 - Fix for SOL_IP undefined on some systems - thanks Mike Erdely.
+       Cleaned up examples.
+       Lowercased module name.
+
 0.13 - Various minor changes; see git for details.
        No longer compatible with Python 2.2. Only tested with 2.5-2.7.
        Fork by William McBrine.
