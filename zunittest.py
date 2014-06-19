@@ -60,7 +60,7 @@ class PacketForm(unittest.TestCase):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         (numQuestions, numAnswers, numAuthorities,
-           numAdditionals) = struct.unpack('>4H', bytes[4:12])
+           numAdditionals) = struct.unpack('!4H', bytes[4:12])
         self.assertEqual(numQuestions, 0)
         self.assertEqual(numAnswers, 0)
         self.assertEqual(numAuthorities, 0)
@@ -73,7 +73,7 @@ class PacketForm(unittest.TestCase):
             generated.addQuestion(question)
         bytes = generated.packet()
         (numQuestions, numAnswers, numAuthorities,
-           numAdditionals) = struct.unpack('>4H', bytes[4:12])
+           numAdditionals) = struct.unpack('!4H', bytes[4:12])
         self.assertEqual(numQuestions, 10)
         self.assertEqual(numAnswers, 0)
         self.assertEqual(numAuthorities, 0)
