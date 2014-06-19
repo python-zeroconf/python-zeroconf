@@ -1188,10 +1188,7 @@ class Zeroconf(object):
             # multicast UDP sockets (p 731, "TCP/IP Illustrated,
             # Volume 2"), but some BSD-derived systems require
             # SO_REUSEPORT to be specified explicity.  Also, not all
-            # versions of Python have SO_REUSEPORT available.  So
-            # if you're on a BSD-based system, and haven't upgraded
-            # to Python 2.3 yet, you may find this library doesn't
-            # work as expected.
+            # versions of Python have SO_REUSEPORT available.
             #
             pass
         self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_TTL, 255)
