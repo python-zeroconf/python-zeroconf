@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from zeroconf import *
 import socket
 import time

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import zeroconf as r
 import unittest
 
