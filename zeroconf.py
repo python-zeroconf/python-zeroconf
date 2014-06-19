@@ -1191,8 +1191,8 @@ class Zeroconf(object):
             # versions of Python have SO_REUSEPORT available.
             #
             pass
-        self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_TTL, 255)
-        self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_LOOP, 1)
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
         try:
             self.socket.bind(self.group)
         except:
@@ -1200,9 +1200,9 @@ class Zeroconf(object):
             # the SO_REUSE* options have been set, so ignore it
             #
             pass
-        #self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF,
+        #self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF,
         #    socket.inet_aton(self.intf) + socket.inet_aton('0.0.0.0'))
-        self.socket.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP,
+        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
             socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
 
         self.listeners = []
@@ -1517,7 +1517,7 @@ class Zeroconf(object):
             self.notifyAll()
             self.engine.notify()
             self.unregisterAllServices()
-            self.socket.setsockopt(socket.SOL_IP,
+            self.socket.setsockopt(socket.IPPROTO_IP,
                                    socket.IP_DROP_MEMBERSHIP,
                                    socket.inet_aton(_MDNS_ADDR) +
                                    socket.inet_aton('0.0.0.0'))
