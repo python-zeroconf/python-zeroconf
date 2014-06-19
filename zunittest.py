@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+""" Unit tests for zeroconf.py """
+
 import zeroconf as r
+import struct
 import unittest
 
 class PacketGeneration(unittest.TestCase):
@@ -56,14 +59,12 @@ class PacketForm(unittest.TestCase):
     def testNumbers(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
-        numQuestions = ord(bytes[4]) << 8 | ord(bytes[5])
-        numAnswers = ord(bytes[6]) << 8 | ord(bytes[7])
-        numAuthorities = ord(bytes[8]) << 8 | ord(bytes[9])
-        numAddtionals = ord(bytes[10]) << 8 | ord(bytes[11])
+        (numQuestions, numAnswers, numAuthorities,
+           numAdditionals) = struct.unpack('>4H', bytes[4:12])
         self.assertEqual(numQuestions, 0)
         self.assertEqual(numAnswers, 0)
         self.assertEqual(numAuthorities, 0)
-        self.assertEqual(numAddtionals, 0)
+        self.assertEqual(numAdditionals, 0)
 
     def testNumbersQuestions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
@@ -71,14 +72,12 @@ class PacketForm(unittest.TestCase):
         for i in xrange(10):
             generated.addQuestion(question)
         bytes = generated.packet()
-        numQuestions = ord(bytes[4]) << 8 | ord(bytes[5])
-        numAnswers = ord(bytes[6]) << 8 | ord(bytes[7])
-        numAuthorities = ord(bytes[8]) << 8 | ord(bytes[9])
-        numAddtionals = ord(bytes[10]) << 8 | ord(bytes[11])
+        (numQuestions, numAnswers, numAuthorities,
+           numAdditionals) = struct.unpack('>4H', bytes[4:12])
         self.assertEqual(numQuestions, 10)
         self.assertEqual(numAnswers, 0)
         self.assertEqual(numAuthorities, 0)
-        self.assertEqual(numAddtionals, 0)
+        self.assertEqual(numAdditionals, 0)
 
 class Names(unittest.TestCase):
 

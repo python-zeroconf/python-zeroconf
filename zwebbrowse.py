@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+""" Example of browsing for a service (in this case, HTTP) """
+
 from zeroconf import *
 import socket
 import time
@@ -36,5 +38,5 @@ if __name__ == '__main__':
     type = "_http._tcp.local."
     listener = MyListener()
     browser = ServiceBrowser(r, type, listener)
-    time.sleep(10)
+    time.sleep(5)
     r.close()
