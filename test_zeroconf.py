@@ -119,6 +119,3 @@ class Framework(unittest.TestCase):
     def testLaunchAndClose(self):
         rv = r.Zeroconf()
         rv.close()
-
-if __name__ == '__main__':
-    unittest.main()
