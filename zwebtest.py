@@ -2,8 +2,9 @@
 
 """ Example of announcing a service (in this case, a fake HTTP server) """
 
-from zeroconf import *
 import socket
+
+from zeroconf import ServiceInfo, Zeroconf
 
 desc = {'path': '/~paulsm/'}
 

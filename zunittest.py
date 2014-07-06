@@ -6,25 +6,26 @@ import zeroconf as r
 import struct
 import unittest
 
+
 class PacketGeneration(unittest.TestCase):
 
     def testParseOwnPacketSimple(self):
         generated = r.DNSOutgoing(0)
-        parsed = r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packet())
 
     def testParseOwnPacketSimpleUnicast(self):
         generated = r.DNSOutgoing(0, 0)
-        parsed = r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packet())
 
     def testParseOwnPacketFlags(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
-        parsed = r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packet())
 
     def testParseOwnPacketQuestion(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         generated.addQuestion(r.DNSQuestion("testname.local.", r._TYPE_SRV,
                                             r._CLASS_IN))
-        parsed = r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packet())
 
     def testMatchQuestion(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
@@ -34,6 +35,7 @@ class PacketGeneration(unittest.TestCase):
         self.assertEqual(len(generated.questions), 1)
         self.assertEqual(len(generated.questions), len(parsed.questions))
         self.assertEqual(question, parsed.questions[0])
+
 
 class PacketForm(unittest.TestCase):
 
@@ -60,7 +62,7 @@ class PacketForm(unittest.TestCase):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         (numQuestions, numAnswers, numAuthorities,
-           numAdditionals) = struct.unpack('!4H', bytes[4:12])
+         numAdditionals) = struct.unpack('!4H', bytes[4:12])
         self.assertEqual(numQuestions, 0)
         self.assertEqual(numAnswers, 0)
         self.assertEqual(numAuthorities, 0)
@@ -73,11 +75,12 @@ class PacketForm(unittest.TestCase):
             generated.addQuestion(question)
         bytes = generated.packet()
         (numQuestions, numAnswers, numAuthorities,
-           numAdditionals) = struct.unpack('!4H', bytes[4:12])
+         numAdditionals) = struct.unpack('!4H', bytes[4:12])
         self.assertEqual(numQuestions, 10)
         self.assertEqual(numAnswers, 0)
         self.assertEqual(numAuthorities, 0)
         self.assertEqual(numAdditionals, 0)
+
 
 class Names(unittest.TestCase):
 
@@ -86,14 +89,14 @@ class Names(unittest.TestCase):
         question = r.DNSQuestion("this.is.a.very.long.name.with.lots.of.parts.in.it.local.",
                                  r._TYPE_SRV, r._CLASS_IN)
         generated.addQuestion(question)
-        parsed = r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packet())
 
     def testExceedinglyLongName(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         name = "%slocal." % ("part." * 1000)
         question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
         generated.addQuestion(question)
-        parsed = r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packet())
 
     def testExceedinglyLongNamePart(self):
         name = "%s.local." % ("a" * 1000)
@@ -108,7 +111,8 @@ class Names(unittest.TestCase):
         question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
         generated.addQuestion(question)
         generated.addQuestion(question)
-        parsed = r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packet())
+
 
 class Framework(unittest.TestCase):
 

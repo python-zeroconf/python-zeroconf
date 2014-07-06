@@ -2,11 +2,14 @@
 
 """ Example of browsing for a service (in this case, HTTP) """
 
-from zeroconf import *
 import socket
 import time
 
+from zeroconf import ServiceBrowser, Zeroconf
+
+
 class MyListener(object):
+
     def __init__(self):
         self.r = Zeroconf()
 
