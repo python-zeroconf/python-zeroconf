@@ -20,6 +20,10 @@ around the net -- not always well-documented, sorry.
 
 Long-term goals: Python 3.x
 
+Compatible with:
+* CPython 2.6, 2.7
+* PyPy 2.2+ (possibly 1.9-2.1 as well)
+
 
 History
 =======
