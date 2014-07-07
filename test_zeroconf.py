@@ -6,6 +6,8 @@ import zeroconf as r
 import struct
 import unittest
 
+from zeroconf import byte_ord, xrange
+
 
 class PacketGeneration(unittest.TestCase):
 
@@ -43,19 +45,19 @@ class PacketForm(unittest.TestCase):
         """ID must be zero in a DNS-SD packet"""
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
-        id = ord(bytes[0]) << 8 | ord(bytes[1])
+        id = byte_ord(bytes[0]) << 8 | byte_ord(bytes[1])
         self.assertEqual(id, 0)
 
     def testQueryHeaderBits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
-        flags = ord(bytes[2]) << 8 | ord(bytes[3])
+        flags = byte_ord(bytes[2]) << 8 | byte_ord(bytes[3])
         self.assertEqual(flags, 0x0)
 
     def testResponseHeaderBits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
-        flags = ord(bytes[2]) << 8 | ord(bytes[3])
+        flags = byte_ord(bytes[2]) << 8 | byte_ord(bytes[3])
         self.assertEqual(flags, 0x8000)
 
     def testNumbers(self):

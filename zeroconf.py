@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 """ Multicast DNS Service Discovery for Python, v0.14-wmcbrine
     Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
@@ -31,8 +33,29 @@ import socket
 import threading
 import select
 import traceback
+from functools import reduce
 
 __all__ = ["Zeroconf", "ServiceInfo", "ServiceBrowser"]
+
+try:
+    xrange = xrange
+except NameError:
+    xrange = range
+
+try:
+    unicode
+except NameError:
+    unicode = str
+
+if isinstance(chr(8), unicode):
+    byte_chr = lambda num: bytes([num])
+else:
+    byte_chr = chr
+
+if isinstance(bytes([8])[0], int):
+    byte_ord = lambda x: x
+else:
+    byte_ord = ord
 
 # hook for threads
 
@@ -359,6 +382,7 @@ class DNSText(DNSRecord):
     """A DNS text record"""
 
     def __init__(self, name, type, clazz, ttl, text):
+        assert isinstance(text, bytes)
         DNSRecord.__init__(self, name, type, clazz, ttl)
         self.text = text
 
@@ -437,24 +461,24 @@ class DNSIncoming(object):
     def readHeader(self):
         """Reads header portion of packet"""
         (self.id, self.flags, self.numQuestions, self.numAnswers,
-         self.numAuthorities, self.numAdditionals) = self.unpack('!6H')
+         self.numAuthorities, self.numAdditionals) = self.unpack(b'!6H')
 
     def readQuestions(self):
         """Reads questions section of packet"""
         for i in xrange(self.numQuestions):
             name = self.readName()
-            type, clazz = self.unpack('!HH')
+            type, clazz = self.unpack(b'!HH')
 
             question = DNSQuestion(name, type, clazz)
             self.questions.append(question)
 
     def readInt(self):
         """Reads an integer from the packet"""
-        return self.unpack('!I')[0]
+        return self.unpack(b'!I')[0]
 
     def readCharacterString(self):
         """Reads a character string from the packet"""
-        length = ord(self.data[self.offset])
+        length = byte_ord(self.data[self.offset])
         self.offset += 1
         return self.readString(length)
 
@@ -466,7 +490,7 @@ class DNSIncoming(object):
 
     def readUnsignedShort(self):
         """Reads an unsigned short from the packet"""
-        return self.unpack('!H')[0]
+        return self.unpack(b'!H')[0]
 
     def readOthers(self):
         """Reads the answers, authorities and additionals section of the
@@ -474,7 +498,7 @@ class DNSIncoming(object):
         n = self.numAnswers + self.numAuthorities + self.numAdditionals
         for i in xrange(n):
             domain = self.readName()
-            type, clazz, ttl, length = self.unpack('!HHiH')
+            type, clazz, ttl, length = self.unpack(b'!HHiH')
 
             rec = None
             if type == _TYPE_A:
@@ -521,7 +545,7 @@ class DNSIncoming(object):
         first = off
 
         while True:
-            length = ord(self.data[off])
+            length = byte_ord(self.data[off])
             off += 1
             if length == 0:
                 break
@@ -532,12 +556,14 @@ class DNSIncoming(object):
             elif t == 0xC0:
                 if next < 0:
                     next = off + 1
-                off = ((length & 0x3F) << 8) | ord(self.data[off])
+                off = ((length & 0x3F) << 8) | byte_ord(self.data[off])
                 if off >= first:
-                    raise "Bad domain name (circular) at " + str(off)
+                    # TODO raise more specific exception
+                    raise Exception("Bad domain name (circular) at %s" % (off,))
                 first = off
             else:
-                raise "Bad domain name at " + str(off)
+                # TODO raise more specific exception
+                raise Exception("Bad domain name at %s" % (off,))
 
         if next >= 0:
             self.offset = next
@@ -594,23 +620,24 @@ class DNSOutgoing(object):
 
     def writeByte(self, value):
         """Writes a single byte to the packet"""
-        self.pack('!c', chr(value))
+        self.pack(b'!c', byte_chr(value))
 
     def insertShort(self, index, value):
         """Inserts an unsigned short in a certain position in the packet"""
-        self.data.insert(index, struct.pack('!H', value))
+        self.data.insert(index, struct.pack(b'!H', value))
         self.size += 2
 
     def writeShort(self, value):
         """Writes an unsigned short to the packet"""
-        self.pack('!H', value)
+        self.pack(b'!H', value)
 
     def writeInt(self, value):
         """Writes an unsigned integer to the packet"""
-        self.pack('!I', int(value))
+        self.pack(b'!I', int(value))
 
     def writeString(self, value):
         """Writes a string to the packet"""
+        assert isinstance(value, bytes)
         self.data.append(value)
         self.size += len(value)
 
@@ -674,7 +701,7 @@ class DNSOutgoing(object):
         record.write(self)
         self.size -= 2
 
-        length = len(''.join(self.data[index:]))
+        length = len(b''.join(self.data[index:]))
         self.insertShort(index, length)  # Here is the short we adjusted for
 
     def packet(self):
@@ -702,7 +729,7 @@ class DNSOutgoing(object):
                 self.insertShort(0, 0)
             else:
                 self.insertShort(0, self.id)
-        return ''.join(self.data)
+        return b''.join(self.data)
 
 
 class DNSCache(object):
@@ -843,7 +870,7 @@ class Listener(object):
     def handle_read(self):
         try:
             data, (addr, port) = self.zc.socket.recvfrom(_MAX_MSG_ABSOLUTE)
-        except socket.error, e:
+        except socket.error as e:
             # If the socket was closed by another thread -- which happens
             # regularly on shutdown -- an EBADF exception is thrown here.
             # Ignore it.
@@ -1009,23 +1036,26 @@ class ServiceInfo(object):
         if isinstance(properties, dict):
             self.properties = properties
             list = []
-            result = ''
+            result = b''
             for key in properties:
                 value = properties[key]
+                if isinstance(key, unicode):
+                    key = key.encode('utf-8')
+
                 if value is None:
-                    suffix = ''.encode('utf-8')
-                elif isinstance(value, str):
+                    suffix = b''
+                elif isinstance(value, unicode):
                     suffix = value.encode('utf-8')
                 elif isinstance(value, int):
                     if value:
-                        suffix = 'true'
+                        suffix = b'true'
                     else:
-                        suffix = 'false'
+                        suffix = b'false'
                 else:
-                    suffix = ''.encode('utf-8')
-                list.append('='.join((key, suffix)))
+                    suffix = b''
+                list.append(b'='.join((key, suffix)))
             for item in list:
-                result = ''.join((result, chr(len(item)), item))
+                result = b''.join((result, byte_chr(len(item)), item))
             self.text = result
         else:
             self.text = properties
@@ -1039,7 +1069,7 @@ class ServiceInfo(object):
             index = 0
             strs = []
             while index < end:
-                length = ord(text[index])
+                length = byte_ord(text[index])
                 index += 1
                 strs.append(text[index:index + length])
                 index += length
@@ -1561,26 +1591,25 @@ class Zeroconf(object):
 # query (for Zoe), and service unregistration.
 
 if __name__ == '__main__':
-    print "Multicast DNS Service Discovery for Python, version", __version__
+    print("Multicast DNS Service Discovery for Python, version %s" % __version__)
     r = Zeroconf()
-    print "1. Testing registration of a service..."
+    print("1. Testing registration of a service...")
     desc = {'version': '0.10', 'a': 'test value', 'b': 'another value'}
     info = ServiceInfo("_http._tcp.local.",
                        "My Service Name._http._tcp.local.",
                        socket.inet_aton("127.0.0.1"), 1234, 0, 0, desc)
-    print "   Registering service..."
+    print("   Registering service...")
     r.registerService(info)
-    print "   Registration done."
-    print "2. Testing query of service information..."
-    print "   Getting ZOE service:",
-    print str(r.getServiceInfo("_http._tcp.local.", "ZOE._http._tcp.local."))
-    print "   Query done."
-    print "3. Testing query of own service..."
-    print "   Getting self:",
-    print str(r.getServiceInfo("_http._tcp.local.",
-                               "My Service Name._http._tcp.local."))
-    print "   Query done."
-    print "4. Testing unregister of service information..."
+    print("   Registration done.")
+    print("2. Testing query of service information...")
+    print("   Getting ZOE service: %s" % (
+        r.getServiceInfo("_http._tcp.local.", "ZOE._http._tcp.local.")))
+    print("   Query done.")
+    print("3. Testing query of own service...")
+    print("   Getting self: %s" % (
+        r.getServiceInfo("_http._tcp.local.", "My Service Name._http._tcp.local.")),)
+    print("   Query done.")
+    print("4. Testing unregister of service information...")
     r.unregisterService(info)
-    print "   Unregister done."
+    print("   Unregister done.")
     r.close()
