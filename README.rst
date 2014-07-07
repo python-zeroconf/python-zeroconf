@@ -1,25 +1,28 @@
+pyzeroconf
+==========
+
 This is Multicast DNS Service Discovery for Python v0.14-wmcbrine
 Originally by Paul Scott-Murphy, modified by William McBrine.
 
-zeroconf.py is the implementation file; look at the end for examples of 
-basic use. You can also view zwebbrowse.py to see how to browse for 
+zeroconf.py is the implementation file; look at the end for examples of
+basic use. You can also view zwebbrowse.py to see how to browse for
 services, and zwebtest.py for an example of announcing them.
 
-This fork is used in all of my TiVo-related projects: HME for Python 
-(and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo. 
-Before this, I was tracking the changes for zeroconf.py in three 
+This fork is used in all of my TiVo-related projects: HME for Python
+(and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo.
+Before this, I was tracking the changes for zeroconf.py in three
 separate repos. I figured I should have an authoritative source.
 
-Although I make changes based on my experience with TiVos, I expect that 
-they're generally applicable. This version also includes patches found 
-on the now-defunct (?) Launchpad repo of pyzeroconf, and elsewhere 
+Although I make changes based on my experience with TiVos, I expect that
+they're generally applicable. This version also includes patches found
+on the now-defunct (?) Launchpad repo of pyzeroconf, and elsewhere
 around the net -- not always well-documented, sorry.
 
 Long-term goals: Python 3.x
 
 
 History
--------
+=======
 0.14 - Fix for SOL_IP undefined on some systems - thanks Mike Erdely.
        Cleaned up examples.
        Lowercased module name.
@@ -36,6 +39,7 @@ History
        support for new record types seen from OS X
          - IPv6 address
          - hostinfo
+
        ignore unknown DNS record types
        fixes to name decoding
        works alongside other processes using port 5353
