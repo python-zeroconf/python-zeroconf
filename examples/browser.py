@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 """ Example of browsing for a service (in this case, HTTP) """
 
@@ -10,11 +11,10 @@ from zeroconf import raw_input, ServiceBrowser, Zeroconf
 class MyListener(object):
 
     def removeService(self, zeroconf, type, name):
-        print()
         print("Service %s removed" % (name,))
+        print('\n')
 
     def addService(self, zeroconf, type, name):
-        print()
         print("Service %s added" % (name,))
         print("  Type is %s" % (type,))
         info = zeroconf.getServiceInfo(type, name)
@@ -29,14 +29,16 @@ class MyListener(object):
                 print("  Properties are")
                 for key, value in prop.items():
                     print("    %s: %s" % (key, value))
+        else:
+            print("  No info")
+        print('\n')
 
 if __name__ == '__main__':
-    print("Multicast DNS Service Discovery for Python Browser test")
     zeroconf = Zeroconf()
-    print("Testing browsing for a service...")
+    print("Browsing services...")
     listener = MyListener()
     browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
     try:
-        raw_input("Waiting (press Enter to exit)...")
+        raw_input("Waiting (press Enter to exit)...\n\n")
     finally:
         zeroconf.close()
