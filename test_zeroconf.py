@@ -2,11 +2,13 @@
 
 """ Unit tests for zeroconf.py """
 
-import zeroconf as r
+import socket
 import struct
 import unittest
+from time import sleep
 
-from zeroconf import byte_ord, xrange
+import zeroconf as r
+from zeroconf import byte_ord, ServiceBrowser, ServiceInfo, xrange, Zeroconf
 
 
 class PacketGeneration(unittest.TestCase):
@@ -121,3 +123,45 @@ class Framework(unittest.TestCase):
     def testLaunchAndClose(self):
         rv = r.Zeroconf()
         rv.close()
+
+
+def test_integration():
+
+    services = set()
+
+    class Listener(object):
+
+        def removeService(self, zeroconf, type_, name):
+            print('remove')
+            services.remove((type_, name))
+
+        def addService(self, zeroconf, type_, name):
+            print('add')
+            services.add((type_, name))
+
+    type_ = "_http._tcp.local."
+
+    zeroconf_browser = Zeroconf()
+    listener = Listener()
+    browser = ServiceBrowser(zeroconf_browser, type_, listener)
+
+    zeroconf_registrar = Zeroconf()
+    desc = {'path': '/~paulsm/'}
+    name = "xxxyyy.%s" % type_
+    info = ServiceInfo(
+        type_, name,
+        socket.inet_aton("10.0.1.2"), 80, 0, 0,
+        desc, "ash-2.local.")
+    zeroconf_registrar.registerService(info)
+
+    # TODO replace those blind sleeps with events
+    sleep(2)
+    try:
+        assert (type_, name) in services, services
+        zeroconf_registrar.unregisterService(info)
+        sleep(2)
+        assert (type_, name) not in services, services
+    finally:
+        zeroconf_registrar.close()
+        browser.cancel()
+        zeroconf_browser.close()

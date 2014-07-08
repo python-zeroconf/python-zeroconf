@@ -381,9 +381,9 @@ class DNSText(DNSRecord):
 
     """A DNS text record"""
 
-    def __init__(self, name, type, clazz, ttl, text):
-        assert isinstance(text, bytes)
-        DNSRecord.__init__(self, name, type, clazz, ttl)
+    def __init__(self, name, type_, clazz, ttl, text):
+        assert isinstance(text, (bytes, type(None)))
+        DNSRecord.__init__(self, name, type_, clazz, ttl)
         self.text = text
 
     def write(self, out):
