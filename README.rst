@@ -1,6 +1,9 @@
 python-zeroconf
 ===============
 
+.. image:: https://travis-ci.org/jstasiak/python-zeroconf.svg?branch=master
+    :target: https://travis-ci.org/jstasiak/python-zeroconf
+
 This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
 originally by Paul Scott-Murphy, modified by William McBrine.
 
