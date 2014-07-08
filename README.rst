@@ -44,8 +44,8 @@ See examples directory for examples of use.
 Changelog
 =========
 
-0.15 (not yet released)
------------------------
+0.15
+----
 
 * Forked by Jakub Stasiak
 * Made Python 3 compatible
