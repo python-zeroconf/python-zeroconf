@@ -5,7 +5,8 @@ python-zeroconf
     :target: https://travis-ci.org/jstasiak/python-zeroconf
 
 This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
-originally by Paul Scott-Murphy, modified by William McBrine.
+originally by Paul Scott-Murphy (https://github.com/paulsm/pyzeroconf),
+modified by William McBrine (https://github.com/wmcbrine/pyzeroconf).
 
 This fork is used in all of my TiVo-related projects: HME for Python
 (and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo.
@@ -22,11 +23,22 @@ Compatible with:
 * Bonjour
 * Avahi
 
+Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
+
+* has zero external dependencies
+* isn't tied to Bonjour or Avahi
+* doesn't use D-Bus
+* doesn't force you to use particular event loop or Twisted
+* is pip-installable
+* has PyPI distribution
+
 Python compatibility
 --------------------
 
 * CPython 2.6, 2.7, 3.3+
 * PyPy 2.2+ (possibly 1.9-2.1 as well)
+
+
 
 How to get python-zeroconf?
 ===========================
