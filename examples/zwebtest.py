@@ -4,12 +4,7 @@
 
 import socket
 
-from zeroconf import ServiceInfo, Zeroconf
-
-try:
-    raw_input
-except NameError:
-    raw_input = input
+from zeroconf import raw_input, ServiceInfo, Zeroconf
 
 desc = {'path': '/~paulsm/'}
 
@@ -18,10 +13,12 @@ info = ServiceInfo("_http._tcp.local.",
                    socket.inet_aton("10.0.1.2"), 80, 0, 0,
                    desc, "ash-2.local.")
 
-r = Zeroconf()
+zeroconf = Zeroconf()
 print("Registration of a service...")
-r.registerService(info)
-raw_input("Waiting (press Enter to exit)...")
-print("Unregistering...")
-r.unregisterService(info)
-r.close()
+zeroconf.registerService(info)
+try:
+    raw_input("Waiting (press Enter to exit)...")
+finally:
+    print("Unregistering...")
+    zeroconf.unregisterService(info)
+    zeroconf.close()

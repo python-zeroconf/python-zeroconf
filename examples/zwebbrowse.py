@@ -3,9 +3,8 @@
 """ Example of browsing for a service (in this case, HTTP) """
 
 import socket
-import time
 
-from zeroconf import ServiceBrowser, Zeroconf
+from zeroconf import raw_input, ServiceBrowser, Zeroconf
 
 
 class MyListener(object):
@@ -36,10 +35,11 @@ class MyListener(object):
 
 if __name__ == '__main__':
     print("Multicast DNS Service Discovery for Python Browser test")
-    r = Zeroconf()
+    zeroconf = Zeroconf()
     print("Testing browsing for a service...")
-    type = "_http._tcp.local."
     listener = MyListener()
-    browser = ServiceBrowser(r, type, listener)
-    time.sleep(5)
-    r.close()
+    browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
+    try:
+        raw_input("Waiting (press Enter to exit)...")
+    finally:
+        zeroconf.close()

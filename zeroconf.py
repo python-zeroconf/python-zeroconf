@@ -57,6 +57,11 @@ if isinstance(bytes([8])[0], int):
 else:
     byte_ord = ord
 
+try:
+    raw_input = raw_input
+except NameError:
+    raw_input = input
+
 # hook for threads
 
 _GLOBAL_DONE = False
