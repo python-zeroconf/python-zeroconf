@@ -34,6 +34,8 @@ The easiest way to install python-zeroconf is using pip:
 
 ``pip install zeroconf``
 
+See examples directory for examples of use.
+
 
 Changelog
 =========
