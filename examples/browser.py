@@ -9,9 +9,6 @@ from zeroconf import raw_input, ServiceBrowser, Zeroconf
 
 class MyListener(object):
 
-    def __init__(self):
-        self.r = Zeroconf()
-
     def removeService(self, zeroconf, type, name):
         print()
         print("Service %s removed" % (name,))
@@ -20,7 +17,7 @@ class MyListener(object):
         print()
         print("Service %s added" % (name,))
         print("  Type is %s" % (type,))
-        info = self.r.getServiceInfo(type, name)
+        info = zeroconf.getServiceInfo(type, name)
         if info:
             print("  Address is %s:%d" % (socket.inet_ntoa(info.getAddress()),
                                           info.getPort()))
