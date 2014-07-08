@@ -47,7 +47,13 @@ Changelog
 0.15 (not yet released)
 -----------------------
 
+* Forked by Jakub Stasiak
 * Made Python 3 compatible
+* Added setup script, made installable by pip and uploaded to PyPI
+* Set up Travis build
+* Reformatted the code and moved files around
+* Stopped catching BaseException in several places, that could hide errors
+* Marked threads as daemonic, they won't keep application alive now
 
 0.14
 ----
