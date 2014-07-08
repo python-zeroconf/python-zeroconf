@@ -11,10 +11,10 @@ env:
 	cp requirements-dev.txt ./env/requirements.built
 
 flake8:
-	flake8 --max-line-length=$(MAX_LINE_LENGTH) *.py
+	flake8 --max-line-length=$(MAX_LINE_LENGTH) examples *.py
 
 test:
 	nosetests -v
 
 autopep8:
-	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i *.py
+	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i examples *.py
