@@ -802,6 +802,7 @@ class Engine(threading.Thread):
 
     def __init__(self, zc):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.zc = zc
         self.readers = {}  # maps socket to reader
         self.timeout = 5
@@ -902,6 +903,7 @@ class Reaper(threading.Thread):
 
     def __init__(self, zc):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.zc = zc
         self.start()
 
@@ -928,6 +930,7 @@ class ServiceBrowser(threading.Thread):
     def __init__(self, zc, type, listener):
         """Creates a browser for a specific type"""
         threading.Thread.__init__(self)
+        self.daemon = True
         self.zc = zc
         self.type = type
         self.listener = listener
