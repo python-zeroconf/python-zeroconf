@@ -21,6 +21,16 @@ Compatible with:
 * CPython 2.6, 2.7
 * PyPy 2.2+ (possibly 1.9-2.1 as well)
 
+How to get python-zeroconf?
+===========================
+
+* PyPI page https://github.com/jstasiak/python-zeroconf
+* GitHub project https://github.com/jstasiak/python-zeroconf
+
+The easiest way to install python-zeroconf is using pip:
+
+``pip install zeroconf``
+
 
 Changelog
 =========
