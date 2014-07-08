@@ -17,7 +17,7 @@ setup(
     description='Pure Python Multicast DNS Service Discovery Library '
     '(Bonjour/Avahi compatible)',
     long_description=readme,
-    author='Paul Scott-Murphy, William McBrine',
+    author='Paul Scott-Murphy, William McBrine, Jakub Stasiak',
     url='https://github.com/jstasiak/python-zeroconf',
     py_modules=['zeroconf'],
     platforms=['unix', 'linux', 'osx'],

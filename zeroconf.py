@@ -22,8 +22,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
     USA
 """
 
-__author__ = 'Paul Scott-Murphy'
-__maintainer__ = 'William McBrine <wmcbrine@gmail.com>'
+__author__ = 'Paul Scott-Murphy, William McBrine'
+__maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
 __version__ = '0.14'
 __license__ = 'LGPL'
 
