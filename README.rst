@@ -19,6 +19,12 @@ around the net -- not always well-documented, sorry.
 
 Compatible with:
 
+* Bonjour
+* Avahi
+
+Python compatibility
+--------------------
+
 * CPython 2.6, 2.7, 3.3+
 * PyPy 2.2+ (possibly 1.9-2.1 as well)
 
