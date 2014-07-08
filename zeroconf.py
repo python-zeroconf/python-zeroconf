@@ -22,7 +22,7 @@
 
 __author__ = 'Paul Scott-Murphy'
 __maintainer__ = 'William McBrine <wmcbrine@gmail.com>'
-__version__ = '0.14-wmcbrine'
+__version__ = '0.14'
 __license__ = 'LGPL'
 
 import time
