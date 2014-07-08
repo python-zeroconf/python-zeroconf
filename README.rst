@@ -38,6 +38,11 @@ See examples directory for examples of use.
 Changelog
 =========
 
+0.15 (not yet released)
+-----------------------
+
+* Made Python 3 compatible
+
 0.14
 ----
 
