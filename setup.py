@@ -14,7 +14,8 @@ with open(join(PROJECT_ROOT, 'README.rst')) as f:
 setup(
     name='zeroconf',
     version=__version__,
-    description='Pure Python Multicast DNS Service Discovery Library',
+    description='Pure Python Multicast DNS Service Discovery Library '
+    '(Bonjour/Avahi compatible)',
     long_description=readme,
     author='Paul Scott-Murphy, William McBrine',
     url='https://github.com/jstasiak/python-zeroconf',
