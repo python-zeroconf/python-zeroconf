@@ -5,7 +5,7 @@
 import socket
 import struct
 import unittest
-from time import sleep
+from threading import Event
 
 import zeroconf as r
 from zeroconf import byte_ord, ServiceBrowser, ServiceInfo, xrange, Zeroconf
@@ -126,20 +126,21 @@ class Framework(unittest.TestCase):
 
 
 def test_integration():
+    service_added = Event()
+    service_removed = Event()
 
-    services = set()
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
 
     class Listener(object):
 
         def removeService(self, zeroconf, type_, name):
-            print('remove')
-            services.remove((type_, name))
+            if name == registration_name:
+                service_removed.set()
 
         def addService(self, zeroconf, type_, name):
-            print('add')
-            services.add((type_, name))
-
-    type_ = "_http._tcp.local."
+            if name == registration_name:
+                service_added.set()
 
     zeroconf_browser = Zeroconf()
     listener = Listener()
@@ -147,20 +148,18 @@ def test_integration():
 
     zeroconf_registrar = Zeroconf()
     desc = {'path': '/~paulsm/'}
-    name = "xxxyyy.%s" % type_
     info = ServiceInfo(
-        type_, name,
+        type_, registration_name,
         socket.inet_aton("10.0.1.2"), 80, 0, 0,
         desc, "ash-2.local.")
     zeroconf_registrar.registerService(info)
 
-    # TODO replace those blind sleeps with events
-    sleep(2)
     try:
-        assert (type_, name) in services, services
+        service_added.wait(1)
+        assert service_added.is_set()
         zeroconf_registrar.unregisterService(info)
-        sleep(2)
-        assert (type_, name) not in services, services
+        service_removed.wait(1)
+        assert service_removed.is_set()
     finally:
         zeroconf_registrar.close()
         browser.cancel()
