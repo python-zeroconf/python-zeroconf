@@ -53,9 +53,10 @@ How to get python-zeroconf?
 * PyPI page https://pypi.python.org/pypi/zeroconf
 * GitHub project https://github.com/jstasiak/python-zeroconf
 
-The easiest way to install python-zeroconf is using pip:
+The easiest way to install python-zeroconf is using pip::
 
-``pip install zeroconf``
+    pip install zeroconf
+
 
 
 How do I use it?
