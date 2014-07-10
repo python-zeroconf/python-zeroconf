@@ -2,4 +2,5 @@ autopep8
 coverage
 flake8
 flake8-blind-except
+mock
 nose

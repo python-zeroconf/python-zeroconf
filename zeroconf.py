@@ -880,7 +880,7 @@ class Listener(object):
             # If the socket was closed by another thread -- which happens
             # regularly on shutdown -- an EBADF exception is thrown here.
             # Ignore it.
-            if e[0] == socket.EBADF:
+            if e.errno == socket.EBADF:
                 return
             else:
                 raise e

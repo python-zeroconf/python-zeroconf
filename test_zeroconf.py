@@ -7,8 +7,17 @@ import struct
 import unittest
 from threading import Event
 
+from mock import Mock
+
 import zeroconf as r
-from zeroconf import byte_ord, ServiceBrowser, ServiceInfo, xrange, Zeroconf
+from zeroconf import (
+    byte_ord,
+    Listener,
+    ServiceBrowser,
+    ServiceInfo,
+    xrange,
+    Zeroconf,
+)
 
 
 class PacketGeneration(unittest.TestCase):
@@ -132,7 +141,7 @@ def test_integration():
     type_ = "_http._tcp.local."
     registration_name = "xxxyyy.%s" % type_
 
-    class Listener(object):
+    class MyListener(object):
 
         def removeService(self, zeroconf, type_, name):
             if name == registration_name:
@@ -143,7 +152,7 @@ def test_integration():
                 service_added.set()
 
     zeroconf_browser = Zeroconf()
-    listener = Listener()
+    listener = MyListener()
     browser = ServiceBrowser(zeroconf_browser, type_, listener)
 
     zeroconf_registrar = Zeroconf()
@@ -164,3 +173,14 @@ def test_integration():
         zeroconf_registrar.close()
         browser.cancel()
         zeroconf_browser.close()
+
+
+def test_listener_handles_closed_socket_situation_gracefully():
+    error = socket.error(socket.EBADF)
+    error.errno = socket.EBADF
+
+    zeroconf = Mock()
+    zeroconf.socket.recvfrom.side_effect = error
+
+    listener = Listener(zeroconf)
+    listener.handle_read()
