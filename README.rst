@@ -92,6 +92,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.15.1
+------
+
+* Fixed handling closed socket (GitHub #4)
+
 0.15
 ----
 
