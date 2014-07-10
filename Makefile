@@ -16,5 +16,8 @@ flake8:
 test:
 	nosetests -v
 
+test_coverage:
+	nosetests -v --with-coverage --cover-package=zeroconf
+
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i examples *.py
