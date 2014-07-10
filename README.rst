@@ -4,10 +4,10 @@ python-zeroconf
 .. image:: https://travis-ci.org/jstasiak/python-zeroconf.svg?branch=master
     :target: https://travis-ci.org/jstasiak/python-zeroconf
     
-.. image:: http://img.shields.io/pypi/v/zeroconf.svg
+.. image:: https://img.shields.io/pypi/v/zeroconf.svg
     :target: https://pypi.python.org/pypi/zeroconf
 
-.. image:: http://img.shields.io/coveralls/jstasiak/python-zeroconf.svg
+.. image:: https://img.shields.io/coveralls/jstasiak/python-zeroconf.svg
     :target: https://coveralls.io/r/jstasiak/python-zeroconf
 
     
