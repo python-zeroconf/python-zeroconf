@@ -642,7 +642,8 @@ class DNSOutgoing(object):
 
     def writeString(self, value):
         """Writes a string to the packet"""
-        assert isinstance(value, bytes)
+        if not isinstance(value, bytes):
+            raise ValueError("Expected str/bytes, got '%s'" % type(value))
         self.data.append(value)
         self.size += len(value)
 
@@ -1011,7 +1012,7 @@ class ServiceInfo(object):
 
     """Service information"""
 
-    def __init__(self, type, name, address=None, port=None, weight=0,
+    def __init__(self, type, name=None, address=None, port=80, weight=0,
                  priority=0, properties=None, server=None):
         """Create a service description.
 
@@ -1024,20 +1025,39 @@ class ServiceInfo(object):
         properties: dictionary of properties (or a string holding the
                     bytes for the text field)
         server: fully qualified name for service host (defaults to name)"""
-
-        if not name.endswith(type):
-            raise BadTypeInNameException
+        
         self.type = type
-        self.name = name
-        self.address = address
-        self.port = port
-        self.weight = weight
-        self.priority = priority
+        
+        if name:
+            if not name.endswith(type):
+                raise BadTypeInNameException
+            self.name = name
+        else:
+            hostname = socket.gethostname()
+            split_index = hostname.find(".local")
+            if split_index > 0:
+                hostname = hostname[:split_index]
+            self.name = str("%s.%s") % (hostname, type)
+            
+        if address:
+            self.address = address
+        else:
+            ip = socket.gethostbyname(socket.gethostname())
+            self.address = socket.inet_aton(ip)
+        
         if server:
             self.server = server
         else:
-            self.server = name
-        self.setProperties(properties)
+            self.server = self.name
+        
+        self.port = port
+        self.weight = weight
+        self.priority = priority
+
+        if properties:
+            self.setProperties(properties)
+        else:
+            self.setProperties(str())
 
     def setProperties(self, properties):
         """Sets properties and text of this info from a dictionary"""
