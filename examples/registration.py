@@ -15,10 +15,10 @@ info = ServiceInfo("_http._tcp.local.",
 
 zeroconf = Zeroconf()
 print("Registration of a service...")
-zeroconf.registerService(info)
+zeroconf.register_service(info)
 try:
     raw_input("Waiting (press Enter to exit)...")
 finally:
     print("Unregistering...")
-    zeroconf.unregisterService(info)
+    zeroconf.unregister_service(info)
     zeroconf.close()

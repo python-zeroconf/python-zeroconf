@@ -22,28 +22,28 @@ from zeroconf import (
 
 class PacketGeneration(unittest.TestCase):
 
-    def testParseOwnPacketSimple(self):
+    def test_parse_own_packet_simple(self):
         generated = r.DNSOutgoing(0)
         r.DNSIncoming(generated.packet())
 
-    def testParseOwnPacketSimpleUnicast(self):
+    def test_parse_own_packet_simple_unicast(self):
         generated = r.DNSOutgoing(0, 0)
         r.DNSIncoming(generated.packet())
 
-    def testParseOwnPacketFlags(self):
+    def test_parse_own_packet_flags(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         r.DNSIncoming(generated.packet())
 
-    def testParseOwnPacketQuestion(self):
+    def test_parse_own_packet_question(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
-        generated.addQuestion(r.DNSQuestion("testname.local.", r._TYPE_SRV,
-                                            r._CLASS_IN))
+        generated.add_question(r.DNSQuestion("testname.local.", r._TYPE_SRV,
+                                             r._CLASS_IN))
         r.DNSIncoming(generated.packet())
 
-    def testMatchQuestion(self):
+    def test_match_question(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
-        generated.addQuestion(question)
+        generated.add_question(question)
         parsed = r.DNSIncoming(generated.packet())
         self.assertEqual(len(generated.questions), 1)
         self.assertEqual(len(generated.questions), len(parsed.questions))
@@ -52,26 +52,26 @@ class PacketGeneration(unittest.TestCase):
 
 class PacketForm(unittest.TestCase):
 
-    def testTransactionID(self):
+    def test_transaction_id(self):
         """ID must be zero in a DNS-SD packet"""
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
         id = byte_ord(bytes[0]) << 8 | byte_ord(bytes[1])
         self.assertEqual(id, 0)
 
-    def testQueryHeaderBits(self):
+    def test_query_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
         flags = byte_ord(bytes[2]) << 8 | byte_ord(bytes[3])
         self.assertEqual(flags, 0x0)
 
-    def testResponseHeaderBits(self):
+    def test_response_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         flags = byte_ord(bytes[2]) << 8 | byte_ord(bytes[3])
         self.assertEqual(flags, 0x8000)
 
-    def testNumbers(self):
+    def test_numbers(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         (numQuestions, numAnswers, numAuthorities,
@@ -81,11 +81,11 @@ class PacketForm(unittest.TestCase):
         self.assertEqual(numAuthorities, 0)
         self.assertEqual(numAdditionals, 0)
 
-    def testNumbersQuestions(self):
+    def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
         for i in xrange(10):
-            generated.addQuestion(question)
+            generated.add_question(question)
         bytes = generated.packet()
         (numQuestions, numAnswers, numAuthorities,
          numAdditionals) = struct.unpack('!4H', bytes[4:12])
@@ -97,39 +97,39 @@ class PacketForm(unittest.TestCase):
 
 class Names(unittest.TestCase):
 
-    def testLongName(self):
+    def test_long_name(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("this.is.a.very.long.name.with.lots.of.parts.in.it.local.",
                                  r._TYPE_SRV, r._CLASS_IN)
-        generated.addQuestion(question)
+        generated.add_question(question)
         r.DNSIncoming(generated.packet())
 
-    def testExceedinglyLongName(self):
+    def test_exceedingly_long_name(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         name = "%slocal." % ("part." * 1000)
         question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
-        generated.addQuestion(question)
+        generated.add_question(question)
         r.DNSIncoming(generated.packet())
 
-    def testExceedinglyLongNamePart(self):
+    def test_exceedingly_long_name_part(self):
         name = "%s.local." % ("a" * 1000)
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
-        generated.addQuestion(question)
+        generated.add_question(question)
         self.assertRaises(r.NamePartTooLongException, generated.packet)
 
-    def testSameName(self):
+    def test_same_name(self):
         name = "paired.local."
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
-        generated.addQuestion(question)
-        generated.addQuestion(question)
+        generated.add_question(question)
+        generated.add_question(question)
         r.DNSIncoming(generated.packet())
 
 
 class Framework(unittest.TestCase):
 
-    def testLaunchAndClose(self):
+    def test_launch_and_close(self):
         rv = r.Zeroconf()
         rv.close()
 
@@ -143,11 +143,11 @@ def test_integration():
 
     class MyListener(object):
 
-        def removeService(self, zeroconf, type_, name):
+        def remove_service(self, zeroconf, type_, name):
             if name == registration_name:
                 service_removed.set()
 
-        def addService(self, zeroconf, type_, name):
+        def add_service(self, zeroconf, type_, name):
             if name == registration_name:
                 service_added.set()
 
@@ -161,12 +161,12 @@ def test_integration():
         type_, registration_name,
         socket.inet_aton("10.0.1.2"), 80, 0, 0,
         desc, "ash-2.local.")
-    zeroconf_registrar.registerService(info)
+    zeroconf_registrar.register_service(info)
 
     try:
         service_added.wait(1)
         assert service_added.is_set()
-        zeroconf_registrar.unregisterService(info)
+        zeroconf_registrar.unregister_service(info)
         service_removed.wait(1)
         assert service_removed.is_set()
     finally:

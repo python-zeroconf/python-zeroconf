@@ -10,24 +10,23 @@ from zeroconf import raw_input, ServiceBrowser, Zeroconf
 
 class MyListener(object):
 
-    def removeService(self, zeroconf, type, name):
+    def remove_service(self, zeroconf, type, name):
         print("Service %s removed" % (name,))
         print('\n')
 
-    def addService(self, zeroconf, type, name):
+    def add_service(self, zeroconf, type, name):
         print("Service %s added" % (name,))
         print("  Type is %s" % (type,))
-        info = zeroconf.getServiceInfo(type, name)
+        info = zeroconf.get_service_info(type, name)
         if info:
-            print("  Address is %s:%d" % (socket.inet_ntoa(info.getAddress()),
-                                          info.getPort()))
-            print("  Weight is %d, Priority is %d" % (info.getWeight(),
-                                                      info.getPriority()))
-            print("  Server is", info.getServer())
-            prop = info.getProperties()
-            if prop:
+            print("  Address is %s:%d" % (socket.inet_ntoa(info.address),
+                                          info.port))
+            print("  Weight is %d, Priority is %d" % (info.weight,
+                                                      info.priority))
+            print("  Server is", info.server)
+            if info.properties:
                 print("  Properties are")
-                for key, value in prop.items():
+                for key, value in info.properties.items():
                     print("    %s: %s" % (key, value))
         else:
             print("  No info")

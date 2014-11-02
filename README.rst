@@ -71,11 +71,11 @@ Here's an example:
     
     class MyListener(object):
     
-        def removeService(self, zeroconf, type, name):
+        def remove_service(self, zeroconf, type, name):
             print("Service %s removed" % (name,))
     
-        def addService(self, zeroconf, type, name):
-            info = zeroconf.getServiceInfo(type, name)
+        def add_service(self, zeroconf, type, name):
+            info = zeroconf.get_service_info(type, name)
             print("Service %s added, service info: %s" % (name, info))
     
     
@@ -182,7 +182,7 @@ Changelog
 * new style objects
 * fixed hostname/interface problem
 * fixed socket timeout problem
-* fixed addServiceListener() typo bug
+* fixed add_service_listener() typo bug
 * using select() for socket reads
 * tested on Debian unstable with Python 2.2.2
 
