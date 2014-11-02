@@ -208,27 +208,27 @@ class DNSEntry(object):
 
     """A DNS entry"""
 
-    def __init__(self, name, type, clazz):
+    def __init__(self, name, type, class_):
         self.key = name.lower()
         self.name = name
         self.type = type
-        self.clazz = clazz & _CLASS_MASK
-        self.unique = (clazz & _CLASS_UNIQUE) != 0
+        self.class_ = class_ & _CLASS_MASK
+        self.unique = (class_ & _CLASS_UNIQUE) != 0
 
     def __eq__(self, other):
         """Equality test on name, type, and class"""
         return (isinstance(other, DNSEntry) and
                 self.name == other.name and
                 self.type == other.type and
-                self.clazz == other.clazz)
+                self.class_ == other.class_)
 
     def __ne__(self, other):
         """Non-equality test"""
         return not self.__eq__(other)
 
-    def get_clazz(self, clazz):
+    def get_class_(self, class_):
         """Class accessor"""
-        return _CLASSES.get(clazz, "?(%s)" % clazz)
+        return _CLASSES.get(class_, "?(%s)" % class_)
 
     def get_type(self, t):
         """Type accessor"""
@@ -237,7 +237,7 @@ class DNSEntry(object):
     def to_string(self, hdr, other):
         """String representation with additional information"""
         result = "%s[%s,%s" % (hdr, self.get_type(self.type),
-                               self.get_clazz(self.clazz))
+                               self.get_class_(self.class_))
         if self.unique:
             result += "-unique,"
         else:
@@ -254,14 +254,14 @@ class DNSQuestion(DNSEntry):
 
     """A DNS question entry"""
 
-    def __init__(self, name, type, clazz):
+    def __init__(self, name, type, class_):
         # if not name.endswith(".local."):
         #    raise NonLocalNameException
-        DNSEntry.__init__(self, name, type, clazz)
+        DNSEntry.__init__(self, name, type, class_)
 
     def answered_by(self, rec):
         """Returns true if the question is answered by the record"""
-        return (self.clazz == rec.clazz and
+        return (self.class_ == rec.class_ and
                 (self.type == rec.type or self.type == _TYPE_ANY) and
                 self.name == rec.name)
 
@@ -274,8 +274,8 @@ class DNSRecord(DNSEntry):
 
     """A DNS record - like a DNS entry, but has a TTL"""
 
-    def __init__(self, name, type, clazz, ttl):
-        DNSEntry.__init__(self, name, type, clazz)
+    def __init__(self, name, type, class_, ttl):
+        DNSEntry.__init__(self, name, type, class_)
         self.ttl = ttl
         self.created = current_time_millis()
 
@@ -334,8 +334,8 @@ class DNSAddress(DNSRecord):
 
     """A DNS address record"""
 
-    def __init__(self, name, type, clazz, ttl, address):
-        DNSRecord.__init__(self, name, type, clazz, ttl)
+    def __init__(self, name, type, class_, ttl, address):
+        DNSRecord.__init__(self, name, type, class_, ttl)
         self.address = address
 
     def write(self, out):
@@ -359,8 +359,8 @@ class DNSHinfo(DNSRecord):
 
     """A DNS host information record"""
 
-    def __init__(self, name, type, clazz, ttl, cpu, os):
-        DNSRecord.__init__(self, name, type, clazz, ttl)
+    def __init__(self, name, type, class_, ttl, cpu, os):
+        DNSRecord.__init__(self, name, type, class_, ttl)
         self.cpu = cpu
         self.os = os
 
@@ -383,8 +383,8 @@ class DNSPointer(DNSRecord):
 
     """A DNS pointer record"""
 
-    def __init__(self, name, type, clazz, ttl, alias):
-        DNSRecord.__init__(self, name, type, clazz, ttl)
+    def __init__(self, name, type, class_, ttl, alias):
+        DNSRecord.__init__(self, name, type, class_, ttl)
         self.alias = alias
 
     def write(self, out):
@@ -404,9 +404,9 @@ class DNSText(DNSRecord):
 
     """A DNS text record"""
 
-    def __init__(self, name, type_, clazz, ttl, text):
+    def __init__(self, name, type_, class_, ttl, text):
         assert isinstance(text, (bytes, type(None)))
-        DNSRecord.__init__(self, name, type_, clazz, ttl)
+        DNSRecord.__init__(self, name, type_, class_, ttl)
         self.text = text
 
     def write(self, out):
@@ -429,8 +429,8 @@ class DNSService(DNSRecord):
 
     """A DNS service record"""
 
-    def __init__(self, name, type, clazz, ttl, priority, weight, port, server):
-        DNSRecord.__init__(self, name, type, clazz, ttl)
+    def __init__(self, name, type, class_, ttl, priority, weight, port, server):
+        DNSRecord.__init__(self, name, type, class_, ttl)
         self.priority = priority
         self.weight = weight
         self.port = port
@@ -490,9 +490,9 @@ class DNSIncoming(object):
         """Reads questions section of packet"""
         for i in xrange(self.num_questions):
             name = self.read_name()
-            type, clazz = self.unpack(b'!HH')
+            type, class_ = self.unpack(b'!HH')
 
-            question = DNSQuestion(name, type, clazz)
+            question = DNSQuestion(name, type, class_)
             self.questions.append(question)
 
     def read_int(self):
@@ -521,24 +521,24 @@ class DNSIncoming(object):
         n = self.num_answers + self.num_authorities + self.num_additionals
         for i in xrange(n):
             domain = self.read_name()
-            type, clazz, ttl, length = self.unpack(b'!HHiH')
+            type, class_, ttl, length = self.unpack(b'!HHiH')
 
             rec = None
             if type == _TYPE_A:
-                rec = DNSAddress(domain, type, clazz, ttl, self.read_string(4))
+                rec = DNSAddress(domain, type, class_, ttl, self.read_string(4))
             elif type == _TYPE_CNAME or type == _TYPE_PTR:
-                rec = DNSPointer(domain, type, clazz, ttl, self.read_name())
+                rec = DNSPointer(domain, type, class_, ttl, self.read_name())
             elif type == _TYPE_TXT:
-                rec = DNSText(domain, type, clazz, ttl, self.read_string(length))
+                rec = DNSText(domain, type, class_, ttl, self.read_string(length))
             elif type == _TYPE_SRV:
-                rec = DNSService(domain, type, clazz, ttl,
+                rec = DNSService(domain, type, class_, ttl,
                                  self.read_unsigned_short(), self.read_unsigned_short(),
                                  self.read_unsigned_short(), self.read_name())
             elif type == _TYPE_HINFO:
-                rec = DNSHinfo(domain, type, clazz, ttl,
+                rec = DNSHinfo(domain, type, class_, ttl,
                                self.read_character_string(), self.read_character_string())
             elif type == _TYPE_AAAA:
-                rec = DNSAddress(domain, type, clazz, ttl, self.read_string(16))
+                rec = DNSAddress(domain, type, class_, ttl, self.read_string(16))
             else:
                 # Try to ignore types we don't know about
                 # Skip the payload for the resource record so the next
@@ -702,7 +702,7 @@ class DNSOutgoing(object):
         """Writes a question to the packet"""
         self.write_name(question.name)
         self.write_short(question.type)
-        self.write_short(question.clazz)
+        self.write_short(question.class_)
 
     def write_record(self, record, now):
         """Writes a record (answer, authoritative answer, additional) to
@@ -710,9 +710,9 @@ class DNSOutgoing(object):
         self.write_name(record.name)
         self.write_short(record.type)
         if record.unique and self.multicast:
-            self.write_short(record.clazz | _CLASS_UNIQUE)
+            self.write_short(record.class_ | _CLASS_UNIQUE)
         else:
-            self.write_short(record.clazz)
+            self.write_short(record.class_)
         if now == 0:
             self.write_int(record.ttl)
         else:
@@ -783,10 +783,10 @@ class DNSCache(object):
         except (KeyError, ValueError):
             return None
 
-    def get_by_details(self, name, type, clazz):
+    def get_by_details(self, name, type, class_):
         """Gets an entry by details.  Will return None if there is
         no matching entry."""
-        entry = DNSEntry(name, type, clazz)
+        entry = DNSEntry(name, type, class_)
         return self.get(entry)
 
     def entries_with_name(self, name):
