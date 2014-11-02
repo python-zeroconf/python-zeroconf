@@ -1589,6 +1589,7 @@ class Zeroconf(object):
 # query (for Zoe), and service unregistration.
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     log.setLevel(logging.DEBUG)
     print("Multicast DNS Service Discovery for Python, version %s" % __version__)
     r = Zeroconf()
