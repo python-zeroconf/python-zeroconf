@@ -466,10 +466,10 @@ class DNSIncoming(object):
         self.data = data
         self.questions = []
         self.answers = []
-        self.numQuestions = 0
-        self.numAnswers = 0
-        self.numAuthorities = 0
-        self.numAdditionals = 0
+        self.num_questions = 0
+        self.num_answers = 0
+        self.num_authorities = 0
+        self.num_additionals = 0
 
         self.read_header()
         self.read_questions()
@@ -483,12 +483,12 @@ class DNSIncoming(object):
 
     def read_header(self):
         """Reads header portion of packet"""
-        (self.id, self.flags, self.numQuestions, self.numAnswers,
-         self.numAuthorities, self.numAdditionals) = self.unpack(b'!6H')
+        (self.id, self.flags, self.num_questions, self.num_answers,
+         self.num_quthorities, self.num_additionals) = self.unpack(b'!6H')
 
     def read_questions(self):
         """Reads questions section of packet"""
-        for i in xrange(self.numQuestions):
+        for i in xrange(self.num_questions):
             name = self.read_name()
             type, clazz = self.unpack(b'!HH')
 
@@ -518,7 +518,7 @@ class DNSIncoming(object):
     def read_others(self):
         """Reads the answers, authorities and additionals section of the
         packet"""
-        n = self.numAnswers + self.numAuthorities + self.numAdditionals
+        n = self.num_answers + self.num_authorities + self.num_additionals
         for i in xrange(n):
             domain = self.read_name()
             type, clazz, ttl, length = self.unpack(b'!HHiH')
@@ -532,11 +532,11 @@ class DNSIncoming(object):
                 rec = DNSText(domain, type, clazz, ttl, self.read_string(length))
             elif type == _TYPE_SRV:
                 rec = DNSService(domain, type, clazz, ttl,
-                                 self.read_unsigned_short(), self.readUnsignedShort(),
+                                 self.read_unsigned_short(), self.read_unsigned_short(),
                                  self.read_unsigned_short(), self.read_name())
             elif type == _TYPE_HINFO:
                 rec = DNSHinfo(domain, type, clazz, ttl,
-                               self.read_character_string(), self.readCharacterString())
+                               self.read_character_string(), self.read_character_string())
             elif type == _TYPE_AAAA:
                 rec = DNSAddress(domain, type, clazz, ttl, self.read_string(16))
             else:
