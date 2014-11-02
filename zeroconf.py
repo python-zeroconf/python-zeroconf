@@ -27,15 +27,31 @@ __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
 __version__ = '0.15.1'
 __license__ = 'LGPL'
 
+import logging
 import time
 import struct
 import socket
 import threading
 import select
-import traceback
 from functools import reduce
 
+
+try:
+    NullHandler = logging.NullHandler
+except AttributeError:
+    # Python 2.6 fallback
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
 __all__ = ["Zeroconf", "ServiceInfo", "ServiceBrowser"]
+
+
+log = logging.getLogger(__name__)
+log.addHandler(NullHandler())
+
+if log.level == logging.NOTSET:
+    log.setLevel(logging.WARN)
 
 try:
     xrange = xrange
@@ -333,7 +349,8 @@ class DNSAddress(DNSRecord):
         """String representation"""
         try:
             return socket.inet_ntoa(self.address)
-        except Exception:  # TODO stop catching all Exceptions
+        except Exception as e:  # TODO stop catching all Exceptions
+            log.exception('Unknown error, possibly benign: %r', e)
             return self.address
 
 
@@ -746,27 +763,23 @@ class DNSCache(object):
 
     def add(self, entry):
         """Adds an entry"""
-        try:
-            list = self.cache[entry.key]
-        except Exception:  # TODO stop catching all Exceptions
-            list = self.cache[entry.key] = []
-        list.append(entry)
+        self.cache.setdefault(entry.key, []).append(entry)
 
     def remove(self, entry):
         """Removes an entry"""
         try:
-            list = self.cache[entry.key]
-            list.remove(entry)
-        except Exception:  # TODO stop catching all Exceptions
+            list_ = self.cache[entry.key]
+            list_.remove(entry)
+        except (KeyError, ValueError):
             pass
 
     def get(self, entry):
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
         try:
-            list = self.cache[entry.key]
-            return list[list.index(entry)]
-        except Exception:  # TODO stop catching all Exceptions
+            list_ = self.cache[entry.key]
+            return list_[list_.index(entry)]
+        except (KeyError, ValueError):
             return None
 
     def getByDetails(self, name, type, clazz):
@@ -779,17 +792,15 @@ class DNSCache(object):
         """Returns a list of entries whose key matches the name."""
         try:
             return self.cache[name]
-        except Exception:  # TODO stop catching all Exceptions
+        except KeyError:
             return []
 
     def entries(self):
         """Returns a list of all entries"""
-        def add(x, y):
-            return x + y
-        try:
-            return reduce(add, self.cache.values())
-        except Exception:  # TODO stop catching all Exceptions
+        if not self.cache:
             return []
+        else:
+            return reduce(lambda a, b: a + b, self.cache.values())
 
 
 class Engine(threading.Thread):
@@ -830,10 +841,10 @@ class Engine(threading.Thread):
                     for socket_ in rr:
                         try:
                             self.readers[socket_].handle_read()
-                        except Exception:  # TODO stop catching all Exceptions
-                            traceback.print_exc()
-                except Exception:  # TODO stop catching all Exceptions
-                    pass
+                        except Exception as e:  # TODO stop catching all Exceptions
+                            log.exception('Unknown error, possibly benign: %r', e)
+                except Exception as e:  # TODO stop catching all Exceptions
+                    log.exception('Unknown error, possibly benign: %r', e)
 
     def getReaders(self):
         result = []
@@ -965,7 +976,8 @@ class ServiceBrowser(threading.Thread):
                                                                      self.type, record.alias)
                     self.list.append(callback)
                     return
-            except Exception:  # TODO stop catching all Exceptions
+            except Exception as e:  # TODO stop catching all Exceptions
+                log.exception('Unknown error, possibly benign: %r', e)
                 if not expired:
                     self.services[record.alias.lower()] = record
                     callback = lambda x: self.listener.addService(x,
@@ -1089,7 +1101,8 @@ class ServiceInfo(object):
                         value = True
                     elif value == 'false' or not value:
                         value = False
-                except Exception:  # TODO stop catching all Exceptions
+                except Exception as e:  # TODO stop catching all Exceptions
+                    log.exception('Unknown error, possibly benign: %r', e)
                     # No equals sign at all
                     key = s
                     value = False
@@ -1099,8 +1112,8 @@ class ServiceInfo(object):
                     result[key] = value
 
             self.properties = result
-        except Exception:  # TODO stop catching all Exceptions
-            traceback.print_exc()
+        except Exception as e:  # TODO stop catching all Exceptions
+            log.exception('Unknown error, possibly benign: %r', e)
             self.properties = None
 
     def getType(self):
@@ -1245,32 +1258,36 @@ class Zeroconf(object):
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(('4.2.2.1', 123))
                 self.intf = s.getsockname()[0]
-            except Exception:  # TODO stop catching all Exceptions
+            except Exception as e:  # TODO stop catching all Exceptions
+                log.exception('Unknown error, possibly benign: %r', e)
                 self.intf = socket.gethostbyname(socket.gethostname())
         else:
             self.intf = bindaddress
+        log.debug('Bind address is %r' % (self.intf,))
         self.group = ('', _MDNS_PORT)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        except Exception:  # TODO stop catching all Exceptions
+        except Exception as e:  # TODO stop catching all Exceptions
             # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
             # multicast UDP sockets (p 731, "TCP/IP Illustrated,
             # Volume 2"), but some BSD-derived systems require
             # SO_REUSEPORT to be specified explicity.  Also, not all
             # versions of Python have SO_REUSEPORT available.
             #
-            pass
+            log.exception('Unknown error, possibly benign: %r', e)
+
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
         try:
+            log.debug('Binding to %r', self.group)
             self.socket.bind(self.group)
-        except Exception:  # TODO stop catching all Exceptions
+        except Exception as e:  # TODO stop catching all Exceptions
             # Some versions of linux raise an exception even though
             # the SO_REUSE* options have been set, so ignore it
             #
-            pass
+            log.exception('Unknown error, possibly benign: %r', e)
         # self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF,
         #    socket.inet_aton(self.intf) + socket.inet_aton('0.0.0.0'))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
@@ -1373,8 +1390,8 @@ class Zeroconf(object):
                 self.servicetypes[info.type] -= 1
             else:
                 del self.servicetypes[info.type]
-        except Exception:  # TODO stop catching all Exceptions
-            pass
+        except Exception as e:  # TODO stop catching all Exceptions
+            log.exception('Unknown error, possibly benign: %r', e)
         now = currentTimeMillis()
         nextTime = now
         i = 0
@@ -1473,8 +1490,8 @@ class Zeroconf(object):
         try:
             self.listeners.remove(listener)
             self.notifyAll()
-        except Exception:  # TODO stop catching all Exceptions
-            pass
+        except Exception as e:  # TODO stop catching all Exceptions
+            log.exception('Unknown error, possibly benign: %r', e)
 
     def updateRecord(self, now, rec):
         """Used to notify listeners of new information that has updated
@@ -1560,8 +1577,8 @@ class Zeroconf(object):
                         out.addAdditionalAnswer(DNSAddress(service.server,
                                                            _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
                                                            _DNS_TTL, service.address))
-                except Exception:  # TODO stop catching all Exceptions
-                    traceback.print_exc()
+                except Exception as e:  # TODO stop catching all Exceptions
+                    log.exception('Unknown error, possibly benign: %r', e)
 
         if out is not None and out.answers:
             out.id = msg.id
@@ -1576,9 +1593,9 @@ class Zeroconf(object):
                 if bytes_sent < 0:
                     break
                 packet = packet[bytes_sent:]
-        except Exception:  # TODO stop catching all Exceptions
+        except Exception as e:  # TODO stop catching all Exceptions
             # Ignore this, it may be a temporary loss of network connection
-            pass
+            log.exception('Unknown error, possibly benign: %r', e)
 
     def close(self):
         """Ends the background threads, and prevent this instance from
@@ -1599,6 +1616,7 @@ class Zeroconf(object):
 # query (for Zoe), and service unregistration.
 
 if __name__ == '__main__':
+    log.setLevel(logging.DEBUG)
     print("Multicast DNS Service Discovery for Python, version %s" % __version__)
     r = Zeroconf()
     print("1. Testing registration of a service...")
