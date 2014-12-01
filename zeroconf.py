@@ -1069,7 +1069,7 @@ class ServiceInfo(object):
 
                 if value is None:
                     suffix = b''
-                elif isinstance(value, unicode):
+                elif isinstance(value, unicode) or isinstance(value, str):
                     suffix = value.encode('utf-8')
                 elif isinstance(value, int):
                     if value:
