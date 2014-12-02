@@ -92,6 +92,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.16.0
+------
+
+* Set up Python logging and started using it
+* Clean up code style (includes migrating from camel case to snak case)
+
 0.15.1
 ------
 
