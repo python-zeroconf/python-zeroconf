@@ -96,7 +96,7 @@ Changelog
 ------
 
 * Set up Python logging and started using it
-* Clean up code style (includes migrating from camel case to snak case)
+* Cleaned up code style (includes migrating from camel case to snak case)
 
 0.15.1
 ------
