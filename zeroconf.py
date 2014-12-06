@@ -1239,17 +1239,19 @@ class Zeroconf(object):
         log.debug('Bind address is %r' % (self.intf,))
         self.group = ('', _MDNS_PORT)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
+        # multicast UDP sockets (p 731, "TCP/IP Illustrated,
+        # Volume 2"), but some BSD-derived systems require
+        # SO_REUSEPORT to be specified explicity.  Also, not all
+        # versions of Python have SO_REUSEPORT available.
         try:
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        except Exception as e:  # TODO stop catching all Exceptions
-            # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
-            # multicast UDP sockets (p 731, "TCP/IP Illustrated,
-            # Volume 2"), but some BSD-derived systems require
-            # SO_REUSEPORT to be specified explicity.  Also, not all
-            # versions of Python have SO_REUSEPORT available.
-            #
-            log.exception('Unknown error, possibly benign: %r', e)
+            reuseport = socket.SO_REUSEPORT
+        except AttributeError:
+            pass
+        else:
+            self.socket.setsockopt(socket.SOL_SOCKET, reuseport, 1)
 
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
