@@ -1281,12 +1281,6 @@ class Zeroconf(object):
         self.listener = Listener(self)
         self.reaper = Reaper(self)
 
-    def is_loopback(self):
-        return self.intf.startswith("127.0.0.1")
-
-    def is_linklocal(self):
-        return self.intf.startswith("169.254.")
-
     def wait(self, timeout):
         """Calling thread waits for a given number of milliseconds or
         until notified."""
