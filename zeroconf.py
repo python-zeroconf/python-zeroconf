@@ -1237,7 +1237,6 @@ class Zeroconf(object):
         else:
             self.intf = bindaddress
         log.debug('Bind address is %r' % (self.intf,))
-        self.group = ('', _MDNS_PORT)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -1256,8 +1255,7 @@ class Zeroconf(object):
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
         try:
-            log.debug('Binding to %r', self.group)
-            self.socket.bind(self.group)
+            self.socket.bind(('', _MDNS_PORT))
         except Exception as e:  # TODO stop catching all Exceptions
             # Some versions of linux raise an exception even though
             # the SO_REUSE* options have been set, so ignore it
