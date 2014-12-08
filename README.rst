@@ -32,7 +32,6 @@ Compatible with:
 
 Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 
-* has zero external dependencies
 * isn't tied to Bonjour or Avahi
 * doesn't use D-Bus
 * doesn't force you to use particular event loop or Twisted
