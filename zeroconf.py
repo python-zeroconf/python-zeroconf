@@ -1560,10 +1560,6 @@ class Zeroconf(object):
             self.notify_all()
             self.engine.notify()
             self.unregister_all_services()
-            self.socket.setsockopt(socket.IPPROTO_IP,
-                                   socket.IP_DROP_MEMBERSHIP,
-                                   socket.inet_aton(_MDNS_ADDR) +
-                                   socket.inet_aton('0.0.0.0'))
             self.socket.close()
 
 # Test a few module features, including service registration, service
