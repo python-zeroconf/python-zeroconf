@@ -1221,22 +1221,11 @@ class Zeroconf(object):
     Supports registration, unregistration, queries and browsing.
     """
 
-    def __init__(self, bindaddress=None):
+    def __init__(self):
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads."""
         global _GLOBAL_DONE
         _GLOBAL_DONE = False
-        if bindaddress is None:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(('4.2.2.1', 123))
-                self.intf = s.getsockname()[0]
-            except Exception as e:  # TODO stop catching all Exceptions
-                log.exception('Unknown error, possibly benign: %r', e)
-                self.intf = socket.gethostbyname(socket.gethostname())
-        else:
-            self.intf = bindaddress
-        log.debug('Bind address is %r' % (self.intf,))
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -1261,8 +1250,6 @@ class Zeroconf(object):
             # the SO_REUSE* options have been set, so ignore it
             #
             log.exception('Unknown error, possibly benign: %r', e)
-        # self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF,
-        #    socket.inet_aton(self.intf) + socket.inet_aton('0.0.0.0'))
         self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
                                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
 
