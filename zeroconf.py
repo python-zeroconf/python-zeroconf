@@ -1199,6 +1199,12 @@ class ServiceInfo(object):
         """Non-equality test"""
         return not self.__eq__(other)
 
+    # For Python >= 2.7.2 we can use @functools.total_ordering
+    __lt__ = lambda self, other: self.name < other.name
+    __gt__ = lambda self, other: not (self < other or self == other)
+    __le__ = lambda self, other: self < other or self == other
+    __ge__ = lambda self, other: not (self < other)
+
     def __repr__(self):
         """String representation"""
         # Python 2: self.name is unicode, self.text is str
