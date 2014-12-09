@@ -1205,6 +1205,8 @@ class ServiceInfo(object):
     __le__ = lambda self, other: self < other or self == other
     __ge__ = lambda self, other: not (self < other)
 
+    __hash__ = lambda self: hash(self.name)
+
     def __repr__(self):
         """String representation"""
         # Python 2: self.name is unicode, self.text is str
