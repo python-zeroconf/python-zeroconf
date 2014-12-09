@@ -1197,7 +1197,7 @@ class ServiceInfo(object):
 
     def __ne__(self, other):
         """Non-equality test"""
-        return not self.__eq__(other)
+        return not self == other
 
     # For Python >= 2.7.2 we can use @functools.total_ordering
     __lt__ = lambda self, other: self.name < other.name
