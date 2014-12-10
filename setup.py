@@ -5,15 +5,19 @@ from os.path import abspath, dirname, join
 
 from setuptools import setup
 
-from zeroconf import __version__
-
 PROJECT_ROOT = abspath(dirname(__file__))
 with open(join(PROJECT_ROOT, 'README.rst')) as f:
     readme = f.read()
 
+version = (
+    [l for l in open(join(PROJECT_ROOT, 'zeroconf.py')) if '__version__' in l][0]
+    .split('=')[-1]
+    .strip().strip('\'"')
+)
+
 setup(
     name='zeroconf',
-    version=__version__,
+    version=version,
     description='Pure Python Multicast DNS Service Discovery Library '
     '(Bonjour/Avahi compatible)',
     long_description=readme,
