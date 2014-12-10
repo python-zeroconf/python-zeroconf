@@ -8,14 +8,14 @@ import unittest
 from threading import Event
 
 from mock import Mock
+from six import indexbytes
+from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
-    byte_ord,
     Listener,
     ServiceBrowser,
     ServiceInfo,
-    xrange,
     Zeroconf,
 )
 
@@ -56,19 +56,19 @@ class PacketForm(unittest.TestCase):
         """ID must be zero in a DNS-SD packet"""
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
-        id = byte_ord(bytes[0]) << 8 | byte_ord(bytes[1])
+        id = indexbytes(bytes, 0) << 8 | indexbytes(bytes, 1)
         self.assertEqual(id, 0)
 
     def test_query_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
-        flags = byte_ord(bytes[2]) << 8 | byte_ord(bytes[3])
+        flags = indexbytes(bytes, 2) << 8 | indexbytes(bytes, 3)
         self.assertEqual(flags, 0x0)
 
     def test_response_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
-        flags = byte_ord(bytes[2]) << 8 | byte_ord(bytes[3])
+        flags = indexbytes(bytes, 2) << 8 | indexbytes(bytes, 3)
         self.assertEqual(flags, 0x8000)
 
     def test_numbers(self):

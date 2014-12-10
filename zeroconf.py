@@ -35,7 +35,7 @@ import threading
 import time
 from functools import reduce
 
-from six import byte2int, int2byte, text_type
+from six import indexbytes, int2byte, text_type
 from six.moves import xrange
 
 
@@ -479,7 +479,7 @@ class DNSIncoming(object):
 
     def read_character_string(self):
         """Reads a character string from the packet"""
-        length = byte2int(self.data[self.offset])
+        length = indexbytes(self.data, self.offset)
         self.offset += 1
         return self.read_string(length)
 
@@ -546,7 +546,7 @@ class DNSIncoming(object):
         first = off
 
         while True:
-            length = byte2int(self.data[off])
+            length = indexbytes(self.data, off)
             off += 1
             if length == 0:
                 break
@@ -557,7 +557,7 @@ class DNSIncoming(object):
             elif t == 0xC0:
                 if next < 0:
                     next = off + 1
-                off = ((length & 0x3F) << 8) | byte2int(self.data[off])
+                off = ((length & 0x3F) << 8) | indexbytes(self.data, off)
                 if off >= first:
                     # TODO raise more specific exception
                     raise Exception("Bad domain name (circular) at %s" % (off,))
@@ -1072,7 +1072,7 @@ class ServiceInfo(object):
             index = 0
             strs = []
             while index < end:
-                length = byte2int(text[index])
+                length = indexbytes(text, index)
                 index += 1
                 strs.append(text[index:index + length])
                 index += length
