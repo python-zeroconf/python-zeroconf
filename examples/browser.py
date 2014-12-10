@@ -5,7 +5,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import socket
 
-from zeroconf import raw_input, ServiceBrowser, Zeroconf
+from six.moves import input
+
+from zeroconf import ServiceBrowser, Zeroconf
 
 
 class MyListener(object):
@@ -38,6 +40,6 @@ if __name__ == '__main__':
     listener = MyListener()
     browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
     try:
-        raw_input("Waiting (press Enter to exit)...\n\n")
+        input("Waiting (press Enter to exit)...\n\n")
     finally:
         zeroconf.close()

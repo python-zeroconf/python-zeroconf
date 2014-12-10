@@ -4,7 +4,9 @@
 
 import socket
 
-from zeroconf import raw_input, ServiceInfo, Zeroconf
+from six.moves import input
+
+from zeroconf import ServiceInfo, Zeroconf
 
 desc = {'path': '/~paulsm/'}
 
@@ -17,7 +19,7 @@ zeroconf = Zeroconf()
 print("Registration of a service...")
 zeroconf.register_service(info)
 try:
-    raw_input("Waiting (press Enter to exit)...")
+    input("Waiting (press Enter to exit)...")
 finally:
     print("Unregistering...")
     zeroconf.unregister_service(info)

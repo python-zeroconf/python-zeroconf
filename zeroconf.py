@@ -35,6 +35,9 @@ import threading
 import time
 from functools import reduce
 
+from six import byte2int, int2byte, text_type
+from six.moves import xrange
+
 
 try:
     NullHandler = logging.NullHandler
@@ -53,31 +56,6 @@ log.addHandler(NullHandler())
 
 if log.level == logging.NOTSET:
     log.setLevel(logging.WARN)
-
-try:
-    xrange = xrange
-except NameError:
-    xrange = range
-
-try:
-    unicode
-except NameError:
-    unicode = str
-
-if isinstance(chr(8), unicode):
-    byte_chr = lambda num: bytes([num])
-else:
-    byte_chr = chr
-
-if isinstance(bytes([8])[0], int):
-    byte_ord = lambda x: x
-else:
-    byte_ord = ord
-
-try:
-    raw_input = raw_input
-except NameError:
-    raw_input = input
 
 # hook for threads
 
@@ -501,7 +479,7 @@ class DNSIncoming(object):
 
     def read_character_string(self):
         """Reads a character string from the packet"""
-        length = byte_ord(self.data[self.offset])
+        length = byte2int(self.data[self.offset])
         self.offset += 1
         return self.read_string(length)
 
@@ -558,7 +536,7 @@ class DNSIncoming(object):
 
     def read_utf(self, offset, length):
         """Reads a UTF-8 string of a given length from the packet"""
-        return unicode(self.data[offset:offset + length], 'utf-8', 'replace')
+        return text_type(self.data[offset:offset + length], 'utf-8', 'replace')
 
     def read_name(self):
         """Reads a domain name from the packet"""
@@ -568,7 +546,7 @@ class DNSIncoming(object):
         first = off
 
         while True:
-            length = byte_ord(self.data[off])
+            length = byte2int(self.data[off])
             off += 1
             if length == 0:
                 break
@@ -579,7 +557,7 @@ class DNSIncoming(object):
             elif t == 0xC0:
                 if next < 0:
                     next = off + 1
-                off = ((length & 0x3F) << 8) | byte_ord(self.data[off])
+                off = ((length & 0x3F) << 8) | byte2int(self.data[off])
                 if off >= first:
                     # TODO raise more specific exception
                     raise Exception("Bad domain name (circular) at %s" % (off,))
@@ -643,7 +621,7 @@ class DNSOutgoing(object):
 
     def write_byte(self, value):
         """Writes a single byte to the packet"""
-        self.pack(b'!c', byte_chr(value))
+        self.pack(b'!c', int2byte(value))
 
     def insert_short(self, index, value):
         """Inserts an unsigned short in a certain position in the packet"""
@@ -1064,12 +1042,12 @@ class ServiceInfo(object):
             result = b''
             for key in properties:
                 value = properties[key]
-                if isinstance(key, unicode):
+                if isinstance(key, text_type):
                     key = key.encode('utf-8')
 
                 if value is None:
                     suffix = b''
-                elif isinstance(value, unicode):
+                elif isinstance(value, text_type):
                     suffix = value.encode('utf-8')
                 elif isinstance(value, int):
                     if value:
@@ -1080,7 +1058,7 @@ class ServiceInfo(object):
                     suffix = b''
                 list.append(b'='.join((key, suffix)))
             for item in list:
-                result = b''.join((result, byte_chr(len(item)), item))
+                result = b''.join((result, int2byte(len(item)), item))
             self.text = result
         else:
             self.text = properties
@@ -1094,7 +1072,7 @@ class ServiceInfo(object):
             index = 0
             strs = []
             while index < end:
-                length = byte_ord(text[index])
+                length = byte2int(text[index])
                 index += 1
                 strs.append(text[index:index + length])
                 index += length

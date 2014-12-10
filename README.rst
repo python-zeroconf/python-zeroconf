@@ -65,7 +65,8 @@ Here's an example:
 
 .. code-block:: python
 
-    from zeroconf import raw_input, ServiceBrowser, Zeroconf
+    from six.moves import input
+    from zeroconf import ServiceBrowser, Zeroconf
     
     
     class MyListener(object):
@@ -82,7 +83,7 @@ Here's an example:
     listener = MyListener()
     browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
     try:
-        raw_input("Press enter to exit...\n\n")
+        input("Press enter to exit...\n\n")
     finally:
         zeroconf.close()
 

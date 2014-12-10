@@ -50,4 +50,7 @@ setup(
         'Bonjour', 'Avahi', 'Zeroconf', 'Multicast DNS', 'Service Discovery',
         'mDNS',
     ],
+    install_requires=[
+        'six',
+    ],
 )
