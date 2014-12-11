@@ -1175,21 +1175,25 @@ class ServiceInfo(object):
 
     def __ne__(self, other):
         """Non-equality test"""
-        return not self.__eq__(other)
+        return not self == other
+
+    # For Python >= 2.7.2 we can use @functools.total_ordering
+    __lt__ = lambda self, other: self.name < other.name
+    __gt__ = lambda self, other: not (self < other or self == other)
+    __le__ = lambda self, other: self < other or self == other
+    __ge__ = lambda self, other: not (self < other)
+
+    __hash__ = lambda self: hash(self.name)
 
     def __repr__(self):
         """String representation"""
-        result = "service[%s,%s:%s," % (self.name,
-                                        socket.inet_ntoa(self.address), self.port)
-        if self.text is None:
-            result += "None"
-        else:
-            if len(self.text) < 20:
-                result += self.text
-            else:
-                result += self.text[:17] + "..."
-        result += "]"
-        return result
+        # Python 2: self.name is unicode, self.text is str
+        # Python 3: self.name is str, self.text is bytes
+        name = self.name.encode('raw_unicode_escape').decode()
+        text = repr(self.text[:20])
+        return 'service[name={},addr={},port={},text={}]'.format(
+            name, socket.inet_ntoa(self.address), self.port, text
+        )
 
 
 class Zeroconf(object):
