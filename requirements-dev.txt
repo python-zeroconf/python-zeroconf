@@ -1,10 +1,12 @@
 autopep8
 coveralls
 coverage
+enum34
 flake8
 flake8-blind-except
 flake8-import-order>=0.4.0
 mock
+netifaces
 nose
 pep8-naming
 six

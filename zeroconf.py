@@ -27,6 +27,7 @@ __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
 __version__ = '0.16.0'
 __license__ = 'LGPL'
 
+import enum
 import logging
 import select
 import socket
@@ -35,6 +36,7 @@ import threading
 import time
 from functools import reduce
 
+import netifaces
 from six import indexbytes, int2byte, text_type
 from six.moves import xrange
 
@@ -1190,6 +1192,51 @@ class ServiceInfo(object):
         return result
 
 
+@enum.unique
+class InterfaceChoice(enum.Enum):
+    Default = 1
+    All = 2
+
+
+def get_all_addresses(address_family):
+    return [
+        addr['addr']
+        for iface in netifaces.interfaces()
+        for addr in netifaces.ifaddresses(iface).get(address_family, [])
+    ]
+
+
+def normalize_interface_choice(choice, address_family):
+    if choice is InterfaceChoice.Default:
+        choice = ['0.0.0.0']
+    elif choice is InterfaceChoice.All:
+        choice = get_all_addresses(address_family)
+    return choice
+
+
+def new_socket():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
+    # multicast UDP sockets (p 731, "TCP/IP Illustrated,
+    # Volume 2"), but some BSD-derived systems require
+    # SO_REUSEPORT to be specified explicity.  Also, not all
+    # versions of Python have SO_REUSEPORT available.
+    try:
+        reuseport = socket.SO_REUSEPORT
+    except AttributeError:
+        pass
+    else:
+        s.setsockopt(socket.SOL_SOCKET, reuseport, 1)
+
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+
+    s.bind(('', _MDNS_PORT))
+    return s
+
+
 class Zeroconf(object):
 
     """Implementation of Zeroconf Multicast DNS Service Discovery
@@ -1197,37 +1244,33 @@ class Zeroconf(object):
     Supports registration, unregistration, queries and browsing.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        interfaces=InterfaceChoice.Default,
+    ):
         """Creates an instance of the Zeroconf class, establishing
-        multicast communications, listening and reaping threads."""
+        multicast communications, listening and reaping threads.
+
+        :type interfaces: :class:`InterfaceChoice` or sequence of ip addresses
+        """
         global _GLOBAL_DONE
         _GLOBAL_DONE = False
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
-        # multicast UDP sockets (p 731, "TCP/IP Illustrated,
-        # Volume 2"), but some BSD-derived systems require
-        # SO_REUSEPORT to be specified explicity.  Also, not all
-        # versions of Python have SO_REUSEPORT available.
-        try:
-            reuseport = socket.SO_REUSEPORT
-        except AttributeError:
-            pass
-        else:
-            self._socket.setsockopt(socket.SOL_SOCKET, reuseport, 1)
+        self._listen_socket = new_socket()
+        interfaces = normalize_interface_choice(interfaces, socket.AF_INET)
 
-        self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-        self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
-        try:
-            self._socket.bind(('', _MDNS_PORT))
-        except Exception as e:  # TODO stop catching all Exceptions
-            # Some versions of linux raise an exception even though
-            # the SO_REUSE* options have been set, so ignore it
-            #
-            log.exception('Unknown error, possibly benign: %r', e)
-        self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
+        self._respond_sockets = []
+
+        for i in interfaces:
+            self._listen_socket.setsockopt(
+                socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+
+            respond_socket = new_socket()
+            respond_socket.setsockopt(
+                socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(i))
+
+            self._respond_sockets.append(respond_socket)
 
         self.listeners = []
         self.browsers = []
@@ -1240,7 +1283,7 @@ class Zeroconf(object):
 
         self.engine = Engine(self)
         self.listener = Listener(self)
-        self.engine.add_reader(self.listener, self._socket)
+        self.engine.add_reader(self.listener, self._listen_socket)
         self.reaper = Reaper(self)
 
     def wait(self, timeout):
@@ -1516,10 +1559,12 @@ class Zeroconf(object):
     def send(self, out, addr=_MDNS_ADDR, port=_MDNS_PORT):
         """Sends an outgoing packet."""
         packet = out.packet()
-        bytes_sent = self._socket.sendto(packet, 0, (addr, port))
-        if bytes_sent != len(packet):
-            raise Error(
-                'Should not happen, sent %d out of %d bytes' % (bytes_sent, len(packet)))
+        for s in self._respond_sockets:
+            bytes_sent = s.sendto(packet, 0, (addr, port))
+            if bytes_sent != len(packet):
+                raise Error(
+                    'Should not happen, sent %d out of %d bytes' % (
+                        bytes_sent, len(packet)))
 
     def close(self):
         """Ends the background threads, and prevent this instance from
@@ -1530,7 +1575,8 @@ class Zeroconf(object):
             self.notify_all()
             self.engine.notify()
             self.unregister_all_services()
-            self._socket.close()
+            for s in [self._listen_socket] + self._respond_sockets:
+                s.close()
 
 # Test a few module features, including service registration, service
 # query (for Zoe), and service unregistration.
@@ -1553,8 +1599,9 @@ if __name__ == '__main__':
         r.get_service_info("_http._tcp.local.", "ZOE._http._tcp.local.")))
     print("   Query done.")
     print("3. Testing query of own service...")
-    print("   Getting self: %s" % (
-        r.get_service_info("_http._tcp.local.", "My Service Name._http._tcp.local.")),)
+    info = r.get_service_info("_http._tcp.local.", "My Service Name._http._tcp.local.")
+    assert info
+    print("   Getting self: %s" % (info,))
     print("   Query done.")
     print("4. Testing unregister of service information...")
     r.unregister_service(info)
