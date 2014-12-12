@@ -1079,10 +1079,10 @@ class ServiceInfo(object):
 
             for s in strs:
                 try:
-                    key, value = s.split('=', 1)
-                    if value == 'true':
+                    key, value = s.split(b'=', 1)
+                    if value == b'true':
                         value = True
-                    elif value == 'false' or not value:
+                    elif value == b'false' or not value:
                         value = False
                 except Exception as e:  # TODO stop catching all Exceptions
                     log.exception('Unknown error, possibly benign: %r', e)
@@ -1179,17 +1179,16 @@ class ServiceInfo(object):
 
     def __repr__(self):
         """String representation"""
-        result = "service[%s,%s:%s," % (self.name,
-                                        socket.inet_ntoa(self.address), self.port)
-        if self.text is None:
-            result += "None"
-        else:
-            if len(self.text) < 20:
-                result += self.text
-            else:
-                result += self.text[:17] + "..."
-        result += "]"
-        return result
+        return '%s(%s)' % (
+            type(self).__name__,
+            ', '.join(
+                '%s=%r' % (name, getattr(self, name))
+                for name in (
+                    'type', 'name', 'address', 'port', 'weight', 'priority',
+                    'server', 'properties',
+                )
+            )
+        )
 
 
 @enum.unique
