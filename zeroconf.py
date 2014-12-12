@@ -160,6 +160,10 @@ def current_time_millis():
 # Exceptions
 
 
+class Error(Exception):
+    pass
+
+
 class NonLocalNameException(Exception):
     pass
 
@@ -1512,15 +1516,10 @@ class Zeroconf(object):
     def send(self, out, addr=_MDNS_ADDR, port=_MDNS_PORT):
         """Sends an outgoing packet."""
         packet = out.packet()
-        try:
-            while packet:
-                bytes_sent = self._socket.sendto(packet, 0, (addr, port))
-                if bytes_sent < 0:
-                    break
-                packet = packet[bytes_sent:]
-        except Exception as e:  # TODO stop catching all Exceptions
-            # Ignore this, it may be a temporary loss of network connection
-            log.exception('Unknown error, possibly benign: %r', e)
+        bytes_sent = self._socket.sendto(packet, 0, (addr, port))
+        if bytes_sent != len(packet):
+            raise Error(
+                'Should not happen, sent %d out of %d bytes' % (bytes_sent, len(packet)))
 
     def close(self):
         """Ends the background threads, and prevent this instance from
