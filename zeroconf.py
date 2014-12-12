@@ -811,9 +811,8 @@ class Engine(threading.Thread):
                 # No sockets to manage, but we wait for the timeout
                 # or addition of a socket
                 #
-                self.condition.acquire()
-                self.condition.wait(self.timeout)
-                self.condition.release()
+                with self.condition:
+                    self.condition.wait(self.timeout)
             else:
                 try:
                     rr, wr, er = select.select(rs, [], [], self.timeout)
@@ -827,27 +826,23 @@ class Engine(threading.Thread):
 
     def get_readers(self):
         result = []
-        self.condition.acquire()
-        result = self.readers.keys()
-        self.condition.release()
+        with self.condition:
+            result = self.readers.keys()
         return result
 
     def add_reader(self, reader, socket):
-        self.condition.acquire()
-        self.readers[socket] = reader
-        self.condition.notify()
-        self.condition.release()
+        with self.condition:
+            self.readers[socket] = reader
+            self.condition.notify()
 
     def del_reader(self, socket):
-        self.condition.acquire()
-        del(self.readers[socket])
-        self.condition.notify()
-        self.condition.release()
+        with self.condition:
+            del(self.readers[socket])
+            self.condition.notify()
 
     def notify(self):
-        self.condition.acquire()
-        self.condition.notify()
-        self.condition.release()
+        with self.condition:
+            self.condition.notify()
 
 
 class Listener(object):
@@ -1247,15 +1242,13 @@ class Zeroconf(object):
     def wait(self, timeout):
         """Calling thread waits for a given number of milliseconds or
         until notified."""
-        self.condition.acquire()
-        self.condition.wait(timeout / 1000)
-        self.condition.release()
+        with self.condition:
+            self.condition.wait(timeout / 1000)
 
     def notify_all(self):
         """Notifies all waiting threads"""
-        self.condition.acquire()
-        self.condition.notify_all()
-        self.condition.release()
+        with self.condition:
+            self.condition.notify_all()
 
     def get_service_info(self, type, name, timeout=3000):
         """Returns network's service information for a particular
