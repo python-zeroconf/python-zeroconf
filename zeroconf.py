@@ -818,7 +818,7 @@ class Engine(threading.Thread):
                     rr, wr, er = select.select(rs, [], [], self.timeout)
                     for socket_ in rr:
                         try:
-                            self.readers[socket_].handle_read()
+                            self.readers[socket_].handle_read(socket_)
                         except Exception as e:  # TODO stop catching all Exceptions
                             log.exception('Unknown error, possibly benign: %r', e)
                 except Exception as e:  # TODO stop catching all Exceptions
@@ -856,11 +856,10 @@ class Listener(object):
 
     def __init__(self, zc):
         self.zc = zc
-        self.zc.engine.add_reader(self, self.zc.socket)
 
-    def handle_read(self):
+    def handle_read(self, socket_):
         try:
-            data, (addr, port) = self.zc.socket.recvfrom(_MAX_MSG_ABSOLUTE)
+            data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
         except socket.error as e:
             # If the socket was closed by another thread -- which happens
             # regularly on shutdown -- an EBADF exception is thrown here.
@@ -1199,8 +1198,8 @@ class Zeroconf(object):
         multicast communications, listening and reaping threads."""
         global _GLOBAL_DONE
         _GLOBAL_DONE = False
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
         # multicast UDP sockets (p 731, "TCP/IP Illustrated,
@@ -1212,19 +1211,19 @@ class Zeroconf(object):
         except AttributeError:
             pass
         else:
-            self.socket.setsockopt(socket.SOL_SOCKET, reuseport, 1)
+            self._socket.setsockopt(socket.SOL_SOCKET, reuseport, 1)
 
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+        self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
+        self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
         try:
-            self.socket.bind(('', _MDNS_PORT))
+            self._socket.bind(('', _MDNS_PORT))
         except Exception as e:  # TODO stop catching all Exceptions
             # Some versions of linux raise an exception even though
             # the SO_REUSE* options have been set, so ignore it
             #
             log.exception('Unknown error, possibly benign: %r', e)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                               socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
+        self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
 
         self.listeners = []
         self.browsers = []
@@ -1237,6 +1236,7 @@ class Zeroconf(object):
 
         self.engine = Engine(self)
         self.listener = Listener(self)
+        self.engine.add_reader(self.listener, self._socket)
         self.reaper = Reaper(self)
 
     def wait(self, timeout):
@@ -1514,7 +1514,7 @@ class Zeroconf(object):
         packet = out.packet()
         try:
             while packet:
-                bytes_sent = self.socket.sendto(packet, 0, (addr, port))
+                bytes_sent = self._socket.sendto(packet, 0, (addr, port))
                 if bytes_sent < 0:
                     break
                 packet = packet[bytes_sent:]
@@ -1531,7 +1531,7 @@ class Zeroconf(object):
             self.notify_all()
             self.engine.notify()
             self.unregister_all_services()
-            self.socket.close()
+            self._socket.close()
 
 # Test a few module features, including service registration, service
 # query (for Zoe), and service unregistration.

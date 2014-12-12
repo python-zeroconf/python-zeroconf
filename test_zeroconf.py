@@ -183,4 +183,4 @@ def test_listener_handles_closed_socket_situation_gracefully():
     zeroconf.socket.recvfrom.side_effect = error
 
     listener = Listener(zeroconf)
-    listener.handle_read()
+    listener.handle_read(zeroconf.socket)
