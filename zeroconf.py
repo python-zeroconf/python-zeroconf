@@ -50,7 +50,10 @@ except AttributeError:
         def emit(self, record):
             pass
 
-__all__ = ["Zeroconf", "ServiceInfo", "ServiceBrowser"]
+__all__ = [
+    "Zeroconf", "ServiceInfo", "ServiceBrowser",
+    "Error", "InterfaceChoice",
+]
 
 
 log = logging.getLogger(__name__)
