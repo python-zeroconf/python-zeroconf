@@ -1590,7 +1590,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     log.setLevel(logging.DEBUG)
     print("Multicast DNS Service Discovery for Python, version %s" % __version__)
-    r = Zeroconf()
+    r = Zeroconf(InterfaceChoice.All)
     print("1. Testing registration of a service...")
     desc = {'version': '0.10', 'a': 'test value', 'b': 'another value'}
     info = ServiceInfo("_http._tcp.local.",
