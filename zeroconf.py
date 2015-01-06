@@ -1264,9 +1264,12 @@ class Zeroconf(object):
         self._respond_sockets = []
 
         for i in interfaces:
-            self._listen_socket.setsockopt(
-                socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+            try:
+                self._listen_socket.setsockopt(
+                    socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                    socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+            except Exception:
+                pass
 
             respond_socket = new_socket()
             respond_socket.setsockopt(
