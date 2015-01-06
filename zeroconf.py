@@ -1264,9 +1264,12 @@ class Zeroconf(object):
         self._respond_sockets = []
 
         for i in interfaces:
-            self._listen_socket.setsockopt(
-                socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+            try:
+                self._listen_socket.setsockopt(
+                    socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                    socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+            except Exception:
+                pass
 
             respond_socket = new_socket()
             respond_socket.setsockopt(
@@ -1587,7 +1590,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     log.setLevel(logging.DEBUG)
     print("Multicast DNS Service Discovery for Python, version %s" % __version__)
-    r = Zeroconf()
+    r = Zeroconf(InterfaceChoice.All)
     print("1. Testing registration of a service...")
     desc = {'version': '0.10', 'a': 'test value', 'b': 'another value'}
     info = ServiceInfo("_http._tcp.local.",
