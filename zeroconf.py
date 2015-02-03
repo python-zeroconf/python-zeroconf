@@ -1254,7 +1254,7 @@ class Zeroconf(object):
 
     def __init__(
         self,
-        interfaces=InterfaceChoice.Default,
+        interfaces=InterfaceChoice.All,
     ):
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.

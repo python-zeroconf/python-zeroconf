@@ -87,6 +87,12 @@ Here's an example:
     finally:
         zeroconf.close()
 
+.. note::
+
+    Discovery and service registration use *all* available network interfaces by default.
+    If you want to customize that you need to specify ``interfaces`` argument when
+    constructing ``Zeroconf`` object (see the code for details).
+
 See examples directory for more.
 
 Changelog
