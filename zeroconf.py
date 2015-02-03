@@ -28,6 +28,7 @@ __version__ = '0.16.0'
 __license__ = 'LGPL'
 
 import enum
+import errno
 import logging
 import select
 import socket
@@ -1239,6 +1240,11 @@ def new_socket():
     return s
 
 
+def get_errno(e):
+    assert isinstance(e, socket.error)
+    return e.args[0]
+
+
 class Zeroconf(object):
 
     """Implementation of Zeroconf Multicast DNS Service Discovery
@@ -1264,9 +1270,19 @@ class Zeroconf(object):
         self._respond_sockets = []
 
         for i in interfaces:
-            self._listen_socket.setsockopt(
-                socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+            log.debug('Adding %r to multicast group', i)
+            try:
+                self._listen_socket.setsockopt(
+                    socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                    socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+            except socket.error as e:
+                if get_errno(e) == errno.EADDRINUSE:
+                    log.info(
+                        'Address in use when adding %s to multicast group, '
+                        'it is expected to happen on some systems', i,
+                    )
+                else:
+                    raise
 
             respond_socket = new_socket()
             respond_socket.setsockopt(
