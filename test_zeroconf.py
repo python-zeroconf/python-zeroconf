@@ -2,6 +2,7 @@
 
 """ Unit tests for zeroconf.py """
 
+import logging
 import socket
 import struct
 import unittest
@@ -18,6 +19,18 @@ from zeroconf import (
     ServiceInfo,
     Zeroconf,
 )
+
+log = logging.getLogger('zeroconf')
+original_logging_level = [None]
+
+
+def setup_module():
+    original_logging_level[0] = log.level
+    log.setLevel(logging.DEBUG)
+
+
+def teardown_module():
+    log.setLevel(original_logging_level[0])
 
 
 class PacketGeneration(unittest.TestCase):
