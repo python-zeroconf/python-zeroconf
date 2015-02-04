@@ -1209,7 +1209,7 @@ def get_all_addresses(address_family):
         addr['addr']
         for iface in netifaces.interfaces()
         for addr in netifaces.ifaddresses(iface).get(address_family, [])
-        if addr['netmask'] != HOST_ONLY_NETWORK_MASK
+        if addr.get('netmask') != HOST_ONLY_NETWORK_MASK
     ]
 
 
