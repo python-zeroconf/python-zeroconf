@@ -1201,11 +1201,15 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
+HOST_ONLY_NETWORK_MASK = '255.255.255.255'
+
+
 def get_all_addresses(address_family):
     return [
         addr['addr']
         for iface in netifaces.interfaces()
         for addr in netifaces.ifaddresses(iface).get(address_family, [])
+        if addr['netmask'] != HOST_ONLY_NETWORK_MASK
     ]
 
 
