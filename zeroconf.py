@@ -1205,12 +1205,12 @@ HOST_ONLY_NETWORK_MASK = '255.255.255.255'
 
 
 def get_all_addresses(address_family):
-    return [
+    return list(set(
         addr['addr']
         for iface in netifaces.interfaces()
         for addr in netifaces.ifaddresses(iface).get(address_family, [])
         if addr.get('netmask') != HOST_ONLY_NETWORK_MASK
-    ]
+    ))
 
 
 def normalize_interface_choice(choice, address_family):
