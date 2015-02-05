@@ -1069,38 +1069,35 @@ class ServiceInfo(object):
     def _set_text(self, text):
         """Sets properties and text given a text field"""
         self.text = text
-        try:
-            result = {}
-            end = len(text)
-            index = 0
-            strs = []
-            while index < end:
-                length = indexbytes(text, index)
-                index += 1
-                strs.append(text[index:index + length])
-                index += length
+        result = {}
+        end = len(text)
+        index = 0
+        strs = []
+        while index < end:
+            length = indexbytes(text, index)
+            index += 1
+            strs.append(text[index:index + length])
+            index += length
 
-            for s in strs:
-                try:
-                    key, value = s.split(b'=', 1)
-                    if value == b'true':
-                        value = True
-                    elif value == b'false' or not value:
-                        value = False
-                except Exception as e:  # TODO stop catching all Exceptions
-                    log.exception('Unknown error, possibly benign: %r', e)
-                    # No equals sign at all
-                    key = s
+        for s in strs:
+            parts = s.split(b'=', 1)
+            try:
+                key, value = parts
+            except ValueError:
+                # No equals sign at all
+                key = s
+                value = False
+            else:
+                if value == b'true':
+                    value = True
+                elif value == b'false' or not value:
                     value = False
 
-                # Only update non-existent properties
-                if key and result.get(key) is None:
-                    result[key] = value
+            # Only update non-existent properties
+            if key and result.get(key) is None:
+                result[key] = value
 
-            self._properties = result
-        except Exception as e:  # TODO stop catching all Exceptions
-            log.exception('Unknown error, possibly benign: %r', e)
-            self._properties = None
+        self._properties = result
 
     def get_name(self):
         """Name accessor"""
