@@ -878,6 +878,9 @@ class Listener(object):
                 return
             else:
                 raise e
+        else:
+            log.debug('Received %r from %r:%r', data, addr, port)
+
         self.data = data
         msg = DNSIncoming(data)
         if msg.is_query():
@@ -1577,6 +1580,7 @@ class Zeroconf(object):
     def send(self, out, addr=_MDNS_ADDR, port=_MDNS_PORT):
         """Sends an outgoing packet."""
         packet = out.packet()
+        log.debug('Sending %r as %r...', out, packet)
         for s in self._respond_sockets:
             bytes_sent = s.sendto(packet, 0, (addr, port))
             if bytes_sent != len(packet):
