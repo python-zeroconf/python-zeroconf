@@ -38,7 +38,7 @@ import time
 from functools import reduce
 
 import netifaces
-from six import indexbytes, int2byte, text_type
+from six import binary_type, indexbytes, int2byte, iteritems, text_type
 from six.moves import xrange
 
 
@@ -1085,8 +1085,7 @@ class ServiceInfo(object):
             self._properties = properties
             list = []
             result = b''
-            for key in properties:
-                value = properties[key]
+            for key, value in iteritems(properties):
                 if isinstance(key, text_type):
                     key = key.encode('utf-8')
 
@@ -1094,6 +1093,8 @@ class ServiceInfo(object):
                     suffix = b''
                 elif isinstance(value, text_type):
                     suffix = value.encode('utf-8')
+                elif isinstance(value, binary_type):
+                    suffix = value
                 elif isinstance(value, int):
                     if value:
                         suffix = b'true'
