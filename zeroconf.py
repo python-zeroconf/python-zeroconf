@@ -936,7 +936,7 @@ class ServiceBrowser(threading.Thread):
         self.services = {}
         self.next_time = current_time_millis()
         self.delay = _BROWSER_TIME
-        self.list = []
+        self._handlers_to_call = []
 
         self.done = False
 
@@ -949,23 +949,22 @@ class ServiceBrowser(threading.Thread):
         Updates information required by browser in the Zeroconf cache."""
         if record.type == _TYPE_PTR and record.name == self.type:
             expired = record.is_expired(now)
+            service_key = record.alias.lower()
             try:
-                oldrecord = self.services[record.alias.lower()]
+                old_record = self.services[service_key]
+            except KeyError:
                 if not expired:
-                    oldrecord.reset_ttl(record)
+                    self.services[service_key] = record
+                    self._handlers_to_call.append(
+                        lambda x: self.listener.add_service(x, self.type, record.alias))
+            else:
+                if not expired:
+                    old_record.reset_ttl(record)
                 else:
-                    del self.services[record.alias.lower()]
-                    callback = lambda x: self.listener.remove_service(x,
-                                                                      self.type, record.alias)
-                    self.list.append(callback)
+                    del self.services[service_key]
+                    self._handlers_to_call.append(
+                        lambda x: self.listener.remove_service(x, self.type, record.alias))
                     return
-            except Exception as e:  # TODO stop catching all Exceptions
-                log.exception('Unknown error, possibly benign: %r', e)
-                if not expired:
-                    self.services[record.alias.lower()] = record
-                    callback = lambda x: self.listener.add_service(x,
-                                                                   self.type, record.alias)
-                    self.list.append(callback)
 
             expires = record.get_expiration_time(75)
             if expires < self.next_time:
@@ -977,9 +976,8 @@ class ServiceBrowser(threading.Thread):
 
     def run(self):
         while True:
-            event = None
             now = current_time_millis()
-            if len(self.list) == 0 and self.next_time > now:
+            if len(self._handlers_to_call) == 0 and self.next_time > now:
                 self.zc.wait(self.next_time - now)
             if _GLOBAL_DONE or self.done:
                 return
@@ -995,11 +993,9 @@ class ServiceBrowser(threading.Thread):
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
 
-            if len(self.list) > 0:
-                event = self.list.pop(0)
-
-            if event is not None:
-                event(self.zc)
+            if len(self._handlers_to_call) > 0:
+                handler = self._handlers_to_call.pop(0)
+                handler(self.zc)
 
 
 class ServiceInfo(object):
