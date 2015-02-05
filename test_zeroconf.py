@@ -17,6 +17,7 @@ from zeroconf import (
     Listener,
     ServiceBrowser,
     ServiceInfo,
+    ServiceStateChange,
     Zeroconf,
 )
 
@@ -154,19 +155,15 @@ def test_integration():
     type_ = "_http._tcp.local."
     registration_name = "xxxyyy.%s" % type_
 
-    class MyListener(object):
-
-        def remove_service(self, zeroconf, type_, name):
-            if name == registration_name:
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+            elif state_change is ServiceStateChange.Removed:
                 service_removed.set()
 
-        def add_service(self, zeroconf, type_, name):
-            if name == registration_name:
-                service_added.set()
-
     zeroconf_browser = Zeroconf()
-    listener = MyListener()
-    browser = ServiceBrowser(zeroconf_browser, type_, listener)
+    browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
     zeroconf_registrar = Zeroconf()
     desc = {'path': '/~paulsm/'}
