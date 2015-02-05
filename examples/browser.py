@@ -3,9 +3,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 """ Example of browsing for a service (in this case, HTTP) """
 
+import logging
 import socket
-
-from six.moves import input
+from time import sleep
 
 from zeroconf import ServiceBrowser, Zeroconf
 
@@ -35,11 +35,17 @@ class MyListener(object):
         print('\n')
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+
     zeroconf = Zeroconf()
-    print("Browsing services...")
+    print("\nBrowsing services, press Ctrl-C to exit...\n")
     listener = MyListener()
     browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
     try:
-        input("Waiting (press Enter to exit)...\n\n")
+        while True:
+            sleep(0.1)
+    except KeyboardInterrupt:
+        pass
     finally:
         zeroconf.close()

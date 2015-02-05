@@ -2,25 +2,32 @@
 
 """ Example of announcing a service (in this case, a fake HTTP server) """
 
+import logging
 import socket
-
-from six.moves import input
+from time import sleep
 
 from zeroconf import ServiceInfo, Zeroconf
 
-desc = {'path': '/~paulsm/'}
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('zeroconf').setLevel(logging.DEBUG)
 
-info = ServiceInfo("_http._tcp.local.",
-                   "Paul's Test Web Site._http._tcp.local.",
-                   socket.inet_aton("10.0.1.2"), 80, 0, 0,
-                   desc, "ash-2.local.")
+    desc = {'path': '/~paulsm/'}
 
-zeroconf = Zeroconf()
-print("Registration of a service...")
-zeroconf.register_service(info)
-try:
-    input("Waiting (press Enter to exit)...")
-finally:
-    print("Unregistering...")
-    zeroconf.unregister_service(info)
-    zeroconf.close()
+    info = ServiceInfo("_http._tcp.local.",
+                       "Paul's Test Web Site._http._tcp.local.",
+                       socket.inet_aton("127.0.0.1"), 80, 0, 0,
+                       desc, "ash-2.local.")
+
+    zeroconf = Zeroconf()
+    print("Registration of a service, press Ctrl-C to exit...")
+    zeroconf.register_service(info)
+    try:
+        while True:
+            sleep(0.1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print("Unregistering...")
+        zeroconf.unregister_service(info)
+        zeroconf.close()
