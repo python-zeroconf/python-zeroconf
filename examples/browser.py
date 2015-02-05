@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import logging
 import socket
+import sys
 from time import sleep
 
 from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
@@ -31,7 +32,9 @@ def on_service_state_change(zeroconf, service_type, name, state_change):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+    if len(sys.argv) > 1:
+        assert sys.argv[1:] == ['--debug']
+        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
 
     zeroconf = Zeroconf()
     print("\nBrowsing services, press Ctrl-C to exit...\n")

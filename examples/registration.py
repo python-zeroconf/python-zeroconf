@@ -4,13 +4,16 @@
 
 import logging
 import socket
+import sys
 from time import sleep
 
 from zeroconf import ServiceInfo, Zeroconf
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+    if len(sys.argv) > 1:
+        assert sys.argv[1:] == ['--debug']
+        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
 
     desc = {'path': '/~paulsm/'}
 
