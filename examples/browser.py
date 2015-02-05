@@ -7,19 +7,14 @@ import logging
 import socket
 from time import sleep
 
-from zeroconf import ServiceBrowser, Zeroconf
+from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 
 
-class MyListener(object):
+def on_service_state_change(zeroconf, service_type, name, state_change):
+    print("Service %s of type %s state changed: %s" % (name, service_type, state_change))
 
-    def remove_service(self, zeroconf, type, name):
-        print("Service %s removed" % (name,))
-        print('\n')
-
-    def add_service(self, zeroconf, type, name):
-        print("Service %s added" % (name,))
-        print("  Type is %s" % (type,))
-        info = zeroconf.get_service_info(type, name)
+    if state_change is ServiceStateChange.Added:
+        info = zeroconf.get_service_info(service_type, name)
         if info:
             print("  Address is %s:%d" % (socket.inet_ntoa(info.address),
                                           info.port))
@@ -40,8 +35,8 @@ if __name__ == '__main__':
 
     zeroconf = Zeroconf()
     print("\nBrowsing services, press Ctrl-C to exit...\n")
-    listener = MyListener()
-    browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
+    browser = ServiceBrowser(zeroconf, "_http._tcp.local.", handlers=[on_service_state_change])
+
     try:
         while True:
             sleep(0.1)

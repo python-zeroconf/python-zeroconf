@@ -53,7 +53,7 @@ except AttributeError:
 
 __all__ = [
     "Zeroconf", "ServiceInfo", "ServiceBrowser",
-    "Error", "InterfaceChoice",
+    "Error", "InterfaceChoice", "ServiceStateChange",
 ]
 
 
@@ -921,6 +921,33 @@ class Reaper(threading.Thread):
                     self.zc.cache.remove(record)
 
 
+class Signal(object):
+    def __init__(self):
+        self._handlers = []
+
+    def fire(self, **kwargs):
+        for h in list(self._handlers):
+            h(**kwargs)
+
+    @property
+    def registration_interface(self):
+        return SignalRegistrationInterface(self._handlers)
+
+
+class SignalRegistrationInterface(object):
+
+    def __init__(self, handlers):
+        self._handlers = handlers
+
+    def register_handler(self, handler):
+        self._handlers.append(handler)
+        return self
+
+    def unregister_handler(self, handler):
+        self._handlers.remove(handler)
+        return self
+
+
 class ServiceBrowser(threading.Thread):
 
     """Used to browse for a service of a specific type.
@@ -929,13 +956,12 @@ class ServiceBrowser(threading.Thread):
     remove_service() methods called when this browser
     discovers changes in the services availability."""
 
-    def __init__(self, zc, type, listener):
+    def __init__(self, zc, type_, handlers):
         """Creates a browser for a specific type"""
         threading.Thread.__init__(self)
         self.daemon = True
         self.zc = zc
-        self.type = type
-        self.listener = listener
+        self.type = type_
         self.services = {}
         self.next_time = current_time_millis()
         self.delay = _BROWSER_TIME
@@ -946,10 +972,28 @@ class ServiceBrowser(threading.Thread):
         self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
         self.start()
 
+        self._service_state_changed = Signal()
+        for h in handlers:
+            self.service_state_changed.register_handler(h)
+
+    @property
+    def service_state_changed(self):
+        return self._service_state_changed.registration_interface
+
     def update_record(self, zc, now, record):
         """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache."""
+
+        def enqueue_callback(state_change, name):
+            self._handlers_to_call.append(
+                lambda zeroconf: self._service_state_changed.fire(
+                    zeroconf=zeroconf,
+                    service_type=self.type,
+                    name=name,
+                    state_change=state_change,
+                ))
+
         if record.type == _TYPE_PTR and record.name == self.type:
             expired = record.is_expired(now)
             service_key = record.alias.lower()
@@ -958,15 +1002,13 @@ class ServiceBrowser(threading.Thread):
             except KeyError:
                 if not expired:
                     self.services[service_key] = record
-                    self._handlers_to_call.append(
-                        lambda x: self.listener.add_service(x, self.type, record.alias))
+                    enqueue_callback(ServiceStateChange.Added, record.alias)
             else:
                 if not expired:
                     old_record.reset_ttl(record)
                 else:
                     del self.services[service_key]
-                    self._handlers_to_call.append(
-                        lambda x: self.listener.remove_service(x, self.type, record.alias))
+                    enqueue_callback(ServiceStateChange.Removed, record.alias)
                     return
 
             expires = record.get_expiration_time(75)
@@ -1195,6 +1237,12 @@ class ServiceInfo(object):
 class InterfaceChoice(enum.Enum):
     Default = 1
     All = 2
+
+
+@enum.unique
+class ServiceStateChange(enum.Enum):
+    Added = 1
+    Removed = 2
 
 
 HOST_ONLY_NETWORK_MASK = '255.255.255.255'
