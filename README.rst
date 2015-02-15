@@ -109,6 +109,7 @@ Changelog
 * Fixed a bug with binary strings as property values being converted to False
   (https://github.com/jstasiak/python-zeroconf/pull/10)
 * Added new ``ServiceBrowser`` event handler interface (see the examples)
+* Pypy3 now officially supported
 
 0.16.0
 ------

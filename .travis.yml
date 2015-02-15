@@ -8,8 +8,6 @@ python:
     - "pypy3"
 matrix:
     fast_finish: true
-    allow_failures:
-        - python: pypy3
 install:
     - pip install -r requirements-dev.txt
 script:
