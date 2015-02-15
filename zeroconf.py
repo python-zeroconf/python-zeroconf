@@ -957,8 +957,9 @@ class ServiceBrowser(threading.Thread):
     remove_service() methods called when this browser
     discovers changes in the services availability."""
 
-    def __init__(self, zc, type_, handlers):
+    def __init__(self, zc, type_, handlers=None, listener=None):
         """Creates a browser for a specific type"""
+        assert handlers or listener, 'You need to specify at least one handler'
         threading.Thread.__init__(self)
         self.daemon = True
         self.zc = zc
@@ -974,6 +975,24 @@ class ServiceBrowser(threading.Thread):
         self.start()
 
         self._service_state_changed = Signal()
+
+        if hasattr(handlers, 'add_service'):
+            listener = handlers
+            handlers = None
+
+        handlers = handlers or []
+
+        if listener:
+            def on_change(zeroconf, service_type, name, state_change):
+                args = (zeroconf, service_type, name)
+                if state_change is ServiceStateChange.Added:
+                    listener.add_service(*args)
+                elif state_change is ServiceStateChange.Removed:
+                    listener.remove_service(*args)
+                else:
+                    raise NotImplementedError(state_change)
+            handlers.append(on_change)
+
         for h in handlers:
             self.service_state_changed.register_handler(h)
 
