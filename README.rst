@@ -98,6 +98,18 @@ See examples directory for more.
 Changelog
 =========
 
+0.17.0 (unreleased yet)
+-----------------------
+
+* Added some Python dependencies so it's not zero-dependencies anymore
+* Improved exception handlin (it'll be quieter now)
+* Messages are listened to and sent using all available network interfaces
+  by default (configurable)
+* Started using logging more freely
+* Fixed a bug with binary strings as property values being converted to False
+  (https://github.com/jstasiak/python-zeroconf/pull/10)
+* Added new ``ServiceBrowser`` event handler interface (see the examples)
+
 0.16.0
 ------
 
