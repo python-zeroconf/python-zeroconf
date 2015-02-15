@@ -22,11 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
     USA
 """
 
-__author__ = 'Paul Scott-Murphy, William McBrine'
-__maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.17.0a1'
-__license__ = 'LGPL'
-
 import enum
 import errno
 import logging
@@ -40,6 +35,11 @@ from functools import reduce
 import netifaces
 from six import binary_type, indexbytes, int2byte, iteritems, text_type
 from six.moves import xrange
+
+__author__ = 'Paul Scott-Murphy, William McBrine'
+__maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
+__version__ = '0.17.0a1'
+__license__ = 'LGPL'
 
 
 try:
