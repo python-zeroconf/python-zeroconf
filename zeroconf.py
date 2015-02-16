@@ -1350,6 +1350,12 @@ class Zeroconf(object):
                         'Address in use when adding %s to multicast group, '
                         'it is expected to happen on some systems', i,
                     )
+                elif get_errno(e) == errno.EADDRNOTAVAIL:
+                    log.info(
+                        'Address not available when adding %s to multicast group, '
+                        'it is expected to happen on some systems', i,
+                    )
+                    continue
                 else:
                     raise
 
