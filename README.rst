@@ -43,7 +43,15 @@ Python compatibility
 
 * CPython 2.6, 2.7, 3.3+
 * PyPy 2.2+ (possibly 1.9-2.1 as well)
+* PyPy3 2.4+
 
+Versioning
+----------
+
+This project's versions follow the following pattern: MAJOR.MINOR.PATCH.
+* MAJOR version has been 0 so far
+* MINOR version is incremented on backward incompatible changes
+* PATCH version is incremented on backward compatible changes
 
 
 How to get python-zeroconf?
@@ -98,24 +106,31 @@ See examples directory for more.
 Changelog
 =========
 
-0.17.0 (unreleased yet)
------------------------
+0.17.1
+------
+
+* Fixed EADDRNOTAVAIL when attempting to use dummy network interfaces on Windows,
+  thanks to daid
+
+0.17.0
+------
 
 * Added some Python dependencies so it's not zero-dependencies anymore
 * Improved exception handlin (it'll be quieter now)
 * Messages are listened to and sent using all available network interfaces
-  by default (configurable)
+  by default (configurable); thanks to Marcus Müller
 * Started using logging more freely
 * Fixed a bug with binary strings as property values being converted to False
-  (https://github.com/jstasiak/python-zeroconf/pull/10)
+  (https://github.com/jstasiak/python-zeroconf/pull/10); thanks to Dr. Seuss
 * Added new ``ServiceBrowser`` event handler interface (see the examples)
 * Pypy3 now officially supported
+* Fixed ServiceInfo repr on Python 3, thanks to Yordan Miladinov
 
 0.16.0
 ------
 
 * Set up Python logging and started using it
-* Cleaned up code style (includes migrating from camel case to snak case)
+* Cleaned up code style (includes migrating from camel case to snake case)
 
 0.15.1
 ------
