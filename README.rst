@@ -49,6 +49,7 @@ Versioning
 ----------
 
 This project's versions follow the following pattern: MAJOR.MINOR.PATCH.
+
 * MAJOR version has been 0 so far
 * MINOR version is incremented on backward incompatible changes
 * PATCH version is incremented on backward compatible changes
