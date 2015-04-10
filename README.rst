@@ -117,14 +117,14 @@ Changelog
 ------
 
 * Added some Python dependencies so it's not zero-dependencies anymore
-* Improved exception handlin (it'll be quieter now)
+* Improved exception handling (it'll be quieter now)
 * Messages are listened to and sent using all available network interfaces
   by default (configurable); thanks to Marcus Müller
 * Started using logging more freely
 * Fixed a bug with binary strings as property values being converted to False
   (https://github.com/jstasiak/python-zeroconf/pull/10); thanks to Dr. Seuss
 * Added new ``ServiceBrowser`` event handler interface (see the examples)
-* Pypy3 now officially supported
+* PyPy3 now officially supported
 * Fixed ServiceInfo repr on Python 3, thanks to Yordan Miladinov
 
 0.16.0
