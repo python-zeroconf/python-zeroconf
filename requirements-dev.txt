@@ -8,5 +8,6 @@ flake8-import-order>=0.4.0
 mock
 netifaces
 nose
+pep8==1.5.7
 pep8-naming
 six
