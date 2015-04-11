@@ -1040,27 +1040,30 @@ class ServiceBrowser(threading.Thread):
         self.zc.notify_all()
 
     def run(self):
-        while True:
-            now = current_time_millis()
-            if len(self._handlers_to_call) == 0 and self.next_time > now:
-                self.zc.wait(self.next_time - now)
-            if _GLOBAL_DONE or self.done:
-                return
-            now = current_time_millis()
+        try:
+            while True:
+                now = current_time_millis()
+                if len(self._handlers_to_call) == 0 and self.next_time > now:
+                    self.zc.wait(self.next_time - now)
+                if _GLOBAL_DONE or self.done:
+                    return
+                now = current_time_millis()
 
-            if self.next_time <= now:
-                out = DNSOutgoing(_FLAGS_QR_QUERY)
-                out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
-                for record in self.services.values():
-                    if not record.is_expired(now):
-                        out.add_answer_at_time(record, now)
-                self.zc.send(out)
-                self.next_time = now + self.delay
-                self.delay = min(20 * 1000, self.delay * 2)
+                if self.next_time <= now:
+                    out = DNSOutgoing(_FLAGS_QR_QUERY)
+                    out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
+                    for record in self.services.values():
+                        if not record.is_expired(now):
+                            out.add_answer_at_time(record, now)
+                    self.zc.send(out)
+                    self.next_time = now + self.delay
+                    self.delay = min(20 * 1000, self.delay * 2)
 
-            if len(self._handlers_to_call) > 0:
-                handler = self._handlers_to_call.pop(0)
-                handler(self.zc)
+                if len(self._handlers_to_call) > 0:
+                    handler = self._handlers_to_call.pop(0)
+                    handler(self.zc)
+        finally:
+            self.zc.remove_listener(self)
 
 
 class ServiceInfo(object):
