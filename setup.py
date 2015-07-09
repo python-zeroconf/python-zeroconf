@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 
 from os.path import abspath, dirname, join
+import sys
 
 from setuptools import setup
 
@@ -14,6 +15,11 @@ version = (
     .split('=')[-1]
     .strip().strip('\'"')
 )
+
+install_requires = ['netifaces', 'six']
+
+if sys.version_info < (3,4):
+    install_requires.append('enum34')
 
 setup(
     name='zeroconf',
@@ -50,9 +56,5 @@ setup(
         'Bonjour', 'Avahi', 'Zeroconf', 'Multicast DNS', 'Service Discovery',
         'mDNS',
     ],
-    install_requires=[
-        'enum34',
-        'netifaces',
-        'six',
-    ],
+    install_requires=install_requires,
 )
