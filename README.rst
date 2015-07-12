@@ -107,6 +107,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.17.2
+------
+
+* Fixed installation on Python 3.4.3+ (was failing because of enum34 dependency
+  which fails to install on 3.4.3+, changed to depend on enum-compat instead;
+  thanks to Michael Brennan for the original patch, GitHub pull request #22)
+
 0.17.1
 ------
 
