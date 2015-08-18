@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 
 """ Unit tests for zeroconf.py """
 
@@ -14,6 +16,7 @@ from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
+    DNSText,
     Listener,
     ServiceBrowser,
     ServiceInfo,
@@ -194,3 +197,10 @@ def test_listener_handles_closed_socket_situation_gracefully():
 
     listener = Listener(zeroconf)
     listener.handle_read(zeroconf.socket)
+
+
+def test_dnstext_repr_works():
+    # There was an issue on Python 3 that prevented DNSText's repr
+    # from working when the text was longer than 10 bytes
+    text = DNSText('irrelevant', None, 0, 0, b'12345678901')
+    repr(text)
