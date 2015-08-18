@@ -54,6 +54,12 @@ This project's versions follow the following pattern: MAJOR.MINOR.PATCH.
 * MINOR version is incremented on backward incompatible changes
 * PATCH version is incremented on backward compatible changes
 
+Status
+------
+
+There are some people using this package. I don't actively use it and as such
+any help I can offer with regard to any issues is very limited.
+
 
 How to get python-zeroconf?
 ===========================
