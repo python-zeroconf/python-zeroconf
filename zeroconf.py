@@ -409,7 +409,7 @@ class DNSText(DNSRecord):
     def __repr__(self):
         """String representation"""
         if len(self.text) > 10:
-            return self.to_string(self.text[:7] + "...")
+            return self.to_string(self.text[:7]) + "..."
         else:
             return self.to_string(self.text)
 
