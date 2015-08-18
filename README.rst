@@ -107,6 +107,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.17.3
+------
+
+* Fixed DNSText repr on Python 3 (it'd crash when the text was longer than
+  10 bytes), thanks to Paulus Schoutsen for the patch, GitHub pull request #24
+
 0.17.2
 ------
 
