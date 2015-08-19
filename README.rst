@@ -15,15 +15,17 @@ This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
 originally by Paul Scott-Murphy (https://github.com/paulsm/pyzeroconf),
 modified by William McBrine (https://github.com/wmcbrine/pyzeroconf).
 
-This fork is used in all of my TiVo-related projects: HME for Python
-(and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo.
-Before this, I was tracking the changes for zeroconf.py in three
-separate repos. I figured I should have an authoritative source.
+The original William McBrine's fork note::
 
-Although I make changes based on my experience with TiVos, I expect that
-they're generally applicable. This version also includes patches found
-on the now-defunct (?) Launchpad repo of pyzeroconf, and elsewhere
-around the net -- not always well-documented, sorry.
+    This fork is used in all of my TiVo-related projects: HME for Python
+    (and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo.
+    Before this, I was tracking the changes for zeroconf.py in three
+    separate repos. I figured I should have an authoritative source.
+    
+    Although I make changes based on my experience with TiVos, I expect that
+    they're generally applicable. This version also includes patches found
+    on the now-defunct (?) Launchpad repo of pyzeroconf, and elsewhere
+    around the net -- not always well-documented, sorry.
 
 Compatible with:
 
