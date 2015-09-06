@@ -188,6 +188,38 @@ def test_integration():
         zeroconf_browser.close()
 
 
+def test_multiple_addresses():
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    address = socket.inet_aton("10.0.1.2")
+
+    # Old way
+    info = ServiceInfo(
+        type_, registration_name,
+        address, 80, 0, 0,
+        desc, "ash-2.local.")
+
+    assert not hasattr(info, "address")
+    assert info.addresses == [address]
+
+    # Compatibility way
+    info = ServiceInfo(
+        type_, registration_name,
+        [address, address], 80, 0, 0,
+        desc, "ash-2.local.")
+
+    assert info.addresses == [address, address]
+
+    # New kwarg way
+    info = ServiceInfo(
+        type_, registration_name,
+        None, 80, 0, 0,
+        desc, "ash-2.local.", addresses=[address, address])
+
+    assert info.addresses == [address, address]
+
+
 def test_listener_handles_closed_socket_situation_gracefully():
     error = socket.error(socket.EBADF)
     error.errno = socket.EBADF
