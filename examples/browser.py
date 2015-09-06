@@ -23,7 +23,7 @@ def on_service_state_change(zeroconf, service_type, name, state_change):
             if info.properties:
                 print("  Properties are:")
                 for key, value in info.properties.items():
-                    print("    %s: %s" % (key, value))
+                    print("    %s: %s" % (key.decode("utf-8"), value.decode("utf-8")))
             else:
                 print("  No properties")
         else:
