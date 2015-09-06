@@ -1433,7 +1433,7 @@ class ServiceInfo(RecordUpdateListener):
         self,
         type_: str,
         name: str,
-        address: Optional[bytes] = None,
+        address: Optional[Union[bytes, List[bytes]]] = None,
         port: Optional[int] = None,
         weight: int = 0,
         priority: int = 0,
@@ -1441,12 +1441,13 @@ class ServiceInfo(RecordUpdateListener):
         server: Optional[str] = None,
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
+        addresses: Optional[List[bytes]] = None,
     ) -> None:
         """Create a service description.
 
         type_: fully qualified service type name
         name: fully qualified service name
-        address: IP address as unsigned short, network byte order
+        address: IP address as unsigned short, network byte order (legacy)
         port: port that the service runs on
         weight: weight of the service
         priority: priority of the service
@@ -1454,13 +1455,31 @@ class ServiceInfo(RecordUpdateListener):
                     bytes for the text field)
         server: fully qualified name for service host (defaults to name)
         host_ttl: ttl used for A/SRV records
-        other_ttl: ttl used for PTR/TXT records"""
+        other_ttl: ttl used for PTR/TXT records
+        addresses: List of IP addresses as unsigned short, network byte
+                   order
+        """
+
+        # Accept both none, or one, but not both.
+        assert (
+            (address is None and addresses is None)
+            or (address is None and addresses)
+            or (address and addresses is None)
+        )
 
         if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
-        self.address = address
+        if addresses is not None:
+            self.addresses = addresses
+        elif address is not None:
+            if isinstance(address, list):
+                self.addresses = address
+            else:
+                self.addresses = [address]
+        else:
+            self.addresses = []
         self.port = port
         self.weight = weight
         self.priority = priority
@@ -1553,7 +1572,8 @@ class ServiceInfo(RecordUpdateListener):
                 assert isinstance(record, DNSAddress)
                 # if record.name == self.name:
                 if record.name == self.server:
-                    self.address = record.address
+                    if record.address not in self.addresses:
+                        self.addresses.append(record.address)
             elif record.type == _TYPE_SRV:
                 assert isinstance(record, DNSService)
                 if record.name == self.name:
@@ -1585,12 +1605,12 @@ class ServiceInfo(RecordUpdateListener):
             if cached:
                 self.update_record(zc, now, cached)
 
-        if None not in (self.server, self.address, self.text):
+        if self.server is not None and self.text is not None and self.addresses:
             return True
 
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
-            while None in (self.server, self.address, self.text):
+            while self.server is None or self.text is None or not self.addresses:
                 if last <= now:
                     return False
                 if next_ <= now:
@@ -1629,7 +1649,16 @@ class ServiceInfo(RecordUpdateListener):
             type(self).__name__,
             ', '.join(
                 '%s=%r' % (name, getattr(self, name))
-                for name in ('type', 'name', 'address', 'port', 'weight', 'priority', 'server', 'properties')
+                for name in (
+                    'type',
+                    'name',
+                    'addresses',
+                    'port',
+                    'weight',
+                    'priority',
+                    'server',
+                    'properties',
+                )
             ),
         )
 
@@ -1916,10 +1945,8 @@ class Zeroconf(QuietLogger):
             )
 
             out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, info.other_ttl, info.text), 0)
-            if info.address:
-                out.add_answer_at_time(
-                    DNSAddress(info.server, _TYPE_A, _CLASS_IN, info.host_ttl, info.address), 0
-                )
+            for address in info.addresses:
+                out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, info.host_ttl, address), 0)
             self.send(out)
             i += 1
             next_time += _REGISTER_TIME
@@ -1952,8 +1979,8 @@ class Zeroconf(QuietLogger):
             )
             out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
 
-            if info.address:
-                out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, 0, info.address), 0)
+            for address in info.addresses:
+                out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, 0, address), 0)
             self.send(out)
             i += 1
             next_time += _UNREGISTER_TIME
@@ -1986,10 +2013,8 @@ class Zeroconf(QuietLogger):
                         0,
                     )
                     out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
-                    if info.address:
-                        out.add_answer_at_time(
-                            DNSAddress(info.server, _TYPE_A, _CLASS_IN, 0, info.address), 0
-                        )
+                    for address in info.addresses:
+                        out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, 0, address), 0)
                 self.send(out)
                 i += 1
                 next_time += _UNREGISTER_TIME
@@ -2126,16 +2151,17 @@ class Zeroconf(QuietLogger):
                     if question.type in (_TYPE_A, _TYPE_ANY):
                         for service in self.services.values():
                             if service.server == question.name.lower():
-                                out.add_answer(
-                                    msg,
-                                    DNSAddress(
-                                        question.name,
-                                        _TYPE_A,
-                                        _CLASS_IN | _CLASS_UNIQUE,
-                                        service.host_ttl,
-                                        service.address,
-                                    ),
-                                )
+                                for address in service.addresses:
+                                    out.add_answer(
+                                        msg,
+                                        DNSAddress(
+                                            question.name,
+                                            _TYPE_A,
+                                            _CLASS_IN | _CLASS_UNIQUE,
+                                            service.host_ttl,
+                                            address,
+                                        ),
+                                    )
 
                     name_to_find = question.name.lower()
                     if name_to_find not in self.services:
@@ -2168,15 +2194,16 @@ class Zeroconf(QuietLogger):
                             ),
                         )
                     if question.type == _TYPE_SRV:
-                        out.add_additional_answer(
-                            DNSAddress(
-                                service.server,
-                                _TYPE_A,
-                                _CLASS_IN | _CLASS_UNIQUE,
-                                service.host_ttl,
-                                service.address,
+                        for address in service.addresses:
+                            out.add_additional_answer(
+                                DNSAddress(
+                                    service.server,
+                                    _TYPE_A,
+                                    _CLASS_IN | _CLASS_UNIQUE,
+                                    service.host_ttl,
+                                    address,
+                                )
                             )
-                        )
                 except Exception:  # TODO stop catching all Exceptions
                     self.log_exception_warning()
 
