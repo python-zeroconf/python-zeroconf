@@ -1295,7 +1295,7 @@ def new_socket():
     # Volume 2"), but some BSD-derived systems require
     # SO_REUSEPORT to be specified explicity.  Also, not all
     # versions of Python have SO_REUSEPORT available.
-    # Catch OSError for kernel versions <3.9 because lacking
+    # Catch OSError and socket.error for kernel versions <3.9 because lacking
     # SO_REUSEPORT support.
     try:
         reuseport = socket.SO_REUSEPORT
@@ -1304,8 +1304,9 @@ def new_socket():
     else:
         try:
             s.setsockopt(socket.SOL_SOCKET, reuseport, 1)
-        except OSError:
-            pass
+        except (OSError, socket.error) as err:  # OSError on python 3, socket.error on python 2
+            if not err.errno == errno.ENOPROTOOPT:
+                raise
 
     s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
     s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
