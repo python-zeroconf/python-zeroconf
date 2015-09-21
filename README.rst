@@ -115,6 +115,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.17.4
+------
+
+* Fixed support for Linux kernel versions < 3.9 (thanks to Giovanni Harting
+  and Luckydonald, GitHub pull request #26)
+
 0.17.3
 ------
 
