@@ -1038,6 +1038,7 @@ class ServiceBrowser(threading.Thread):
     def cancel(self):
         self.done = True
         self.zc.notify_all()
+        self.join()
 
     def run(self):
         while True:
@@ -1675,5 +1676,7 @@ class Zeroconf(object):
             self.notify_all()
             self.engine.notify()
             self.unregister_all_services()
+            self.reaper.join()
+            self.engine.join()
             for s in [self._listen_socket] + self._respond_sockets:
                 s.close()
