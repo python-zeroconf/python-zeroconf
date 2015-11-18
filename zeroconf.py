@@ -972,7 +972,6 @@ class ServiceBrowser(threading.Thread):
         self.done = False
 
         self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
-        self.start()
 
         self._service_state_changed = Signal()
 
@@ -995,6 +994,8 @@ class ServiceBrowser(threading.Thread):
 
         for h in handlers:
             self.service_state_changed.register_handler(h)
+
+        self.start()
 
     @property
     def service_state_changed(self):
