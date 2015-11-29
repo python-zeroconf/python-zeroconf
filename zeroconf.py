@@ -1308,8 +1308,12 @@ def new_socket():
             if not err.errno == errno.ENOPROTOOPT:
                 raise
 
-    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+    # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
+    # IP_MULTICAST_LOOP socket options as an unsigned char.
+    ttl = struct.pack(b'B', 255)
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+    loop = struct.pack(b'B', 1)
+    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
 
     s.bind(('', _MDNS_PORT))
     return s
