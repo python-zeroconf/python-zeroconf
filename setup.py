@@ -52,7 +52,7 @@ setup(
     ],
     install_requires=[
         'enum-compat',
-        'netifaces',
+        'psutil',
         'six',
     ],
 )

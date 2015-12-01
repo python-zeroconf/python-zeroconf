@@ -32,7 +32,7 @@ import threading
 import time
 from functools import reduce
 
-import netifaces
+import psutil
 from six import binary_type, indexbytes, int2byte, iteritems, text_type
 from six.moves import xrange
 
@@ -1271,10 +1271,11 @@ HOST_ONLY_NETWORK_MASK = '255.255.255.255'
 
 def get_all_addresses(address_family):
     return list(set(
-        addr['addr']
-        for iface in netifaces.interfaces()
-        for addr in netifaces.ifaddresses(iface).get(address_family, [])
-        if addr.get('netmask') != HOST_ONLY_NETWORK_MASK
+        nic.address
+        for iface, nics in psutil.net_if_addrs().items()
+        for nic in nics
+        if nic.family == address_family and
+        nic.netmask != HOST_ONLY_NETWORK_MASK
     ))
 
 
