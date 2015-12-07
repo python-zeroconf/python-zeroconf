@@ -1494,6 +1494,19 @@ class Zeroconf(object):
     def unregister_all_services(self):
         """Unregister all registered services."""
         if len(self.services) > 0:
+
+            temp_services = self.services.copy()
+            for info in temp_services.values():
+                # delete the service so it doesn't do a spurious add / remove cycle
+                try:
+                    del self.services[info.name.lower()]
+                    if self.servicetypes[info.type] > 1:
+                        self.servicetypes[info.type] -= 1
+                    else:
+                        del self.servicetypes[info.type]
+                except Exception as e:  # TODO stop catching all Exceptions
+                    log.exception('Unknown error, possibly benign: %r', e)
+
             now = current_time_millis()
             next_time = now
             i = 0
@@ -1503,7 +1516,7 @@ class Zeroconf(object):
                     now = current_time_millis()
                     continue
                 out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-                for info in self.services.values():
+                for info in temp_services.values():
                     out.add_answer_at_time(DNSPointer(info.type, _TYPE_PTR,
                                                       _CLASS_IN, 0, info.name), 0)
                     out.add_answer_at_time(DNSService(info.name, _TYPE_SRV,
