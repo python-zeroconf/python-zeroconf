@@ -916,7 +916,8 @@ class Reaper(threading.Thread):
             if _GLOBAL_DONE:
                 return
             now = current_time_millis()
-            for record in self.zc.cache.entries():
+            entries = list(self.zc.cache.entries())
+            for record in entries:
                 if record.is_expired(now):
                     self.zc.update_record(now, record)
                     self.zc.cache.remove(record)
