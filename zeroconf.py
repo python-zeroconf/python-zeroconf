@@ -38,7 +38,7 @@ from six.moves import xrange
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.17.4-gbiddison.1'
+__version__ = '0.17.4-gbiddison.2'
 __license__ = 'LGPL'
 
 
@@ -790,7 +790,8 @@ class DNSCache(object):
         if not self.cache:
             return []
         else:
-            return reduce(lambda a, b: a + b, self.cache.values())
+            values = list(self.cache.values())
+            return reduce(lambda a, b: a + b, values)
 
 
 class Engine(threading.Thread):
