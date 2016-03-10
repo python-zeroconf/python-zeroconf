@@ -151,73 +151,72 @@ class Framework(unittest.TestCase):
         rv.close()
 
 
-class Misc(unittest.TestCase):
-  def test_integration(self):
-      service_added = Event()
-      service_removed = Event()
+def test_integration():
+    service_added = Event()
+    service_removed = Event()
 
-      type_ = "_http._tcp.local."
-      registration_name = "xxxyyy.%s" % type_
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
 
-      def on_service_state_change(zeroconf, service_type, state_change, name):
-          if name == registration_name:
-              if state_change is ServiceStateChange.Added:
-                  service_added.set()
-              elif state_change is ServiceStateChange.Removed:
-                  service_removed.set()
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+            elif state_change is ServiceStateChange.Removed:
+                service_removed.set()
 
-      zeroconf_browser = Zeroconf()
-      browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+    zeroconf_browser = Zeroconf()
+    browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
-      zeroconf_registrar = Zeroconf()
-      desc = {'path': '/~paulsm/'}
-      info = ServiceInfo(
-          type_, registration_name,
-          socket.inet_aton("10.0.1.2"), 80, 0, 0,
-          desc, "ash-2.local.")
-      zeroconf_registrar.register_service(info)
+    zeroconf_registrar = Zeroconf()
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name,
+        socket.inet_aton("10.0.1.2"), 80, 0, 0,
+        desc, "ash-2.local.")
+    zeroconf_registrar.register_service(info)
 
-      try:
-          service_added.wait(1)
-          assert service_added.is_set()
-          zeroconf_registrar.unregister_service(info)
-          service_removed.wait(1)
-          assert service_removed.is_set()
-      finally:
-          zeroconf_registrar.close()
-          browser.cancel()
-          zeroconf_browser.close()
-
-
-  def test_listener_handles_closed_socket_situation_gracefully(self):
-      error = socket.error(socket.EBADF)
-      error.errno = socket.EBADF
-
-      zeroconf = Mock()
-      zeroconf.socket.recvfrom.side_effect = error
-
-      listener = Listener(zeroconf)
-      listener.handle_read(zeroconf.socket)
+    try:
+        service_added.wait(1)
+        assert service_added.is_set()
+        zeroconf_registrar.unregister_service(info)
+        service_removed.wait(1)
+        assert service_removed.is_set()
+    finally:
+        zeroconf_registrar.close()
+        browser.cancel()
+        zeroconf_browser.close()
 
 
-  def test_dnstext_repr_works(self):
-      # There was an issue on Python 3 that prevented DNSText's repr
-      # from working when the text was longer than 10 bytes
-      text = DNSText('irrelevant', None, 0, 0, b'12345678901')
-      repr(text)
+def test_listener_handles_closed_socket_situation_gracefully():
+    error = socket.error(socket.EBADF)
+    error.errno = socket.EBADF
+
+    zeroconf = Mock()
+    zeroconf.socket.recvfrom.side_effect = error
+
+    listener = Listener(zeroconf)
+    listener.handle_read(zeroconf.socket)
 
 
-  def test_close_waits_for_threads(self):
-      class Dummy(object):
-        def add_service(self, zeroconf_obj, service_type, name):
-          pass
-        def remove_service(self, zeroconf_obj, service_type, name):
-          pass
+def test_dnstext_repr_works():
+    # There was an issue on Python 3 that prevented DNSText's repr
+    # from working when the text was longer than 10 bytes
+    text = DNSText('irrelevant', None, 0, 0, b'12345678901')
+    repr(text)
 
-      z = Zeroconf()
-      z.add_service_listener('_privet._tcp.local.', listener=Dummy())
-      z.close()
-      assert not z.browsers[0].is_alive()
+
+def test_close_waits_for_threads():
+    class Dummy(object):
+      def add_service(self, zeroconf_obj, service_type, name):
+        pass
+      def remove_service(self, zeroconf_obj, service_type, name):
+        pass
+
+    z = Zeroconf()
+    z.add_service_listener('_privet._tcp.local.', listener=Dummy())
+    z.close()
+    assert not z.browsers[0].is_alive()
 
 
 if __name__ == '__main__':
