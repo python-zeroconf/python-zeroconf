@@ -115,6 +115,14 @@ See examples directory for more.
 Changelog
 =========
 
+0.17.5
+------
+
+* Fixed OpenBSD compatibility, thanks to Alessio Sergi
+* Fixed race condition on ServiceBrowser startup, thanks to gbiddison
+* Fixed installation on some Python 3 systems, thanks to Per Sandström
+* Fixed "size change during iteration" bug on Python 3, thanks to gbiddison
+
 0.17.4
 ------
 
