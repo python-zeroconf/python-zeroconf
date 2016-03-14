@@ -790,7 +790,9 @@ class DNSCache(object):
         if not self.cache:
             return []
         else:
-            return reduce(lambda a, b: a + b, self.cache.values())
+            # copy the cache before running the reduce, to avoid size change during iteration
+            values = list(self.cache.values())
+            return reduce(lambda a, b: a + b, values)
 
 
 class Engine(threading.Thread):
