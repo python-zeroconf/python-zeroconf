@@ -204,3 +204,20 @@ def test_dnstext_repr_works():
     # from working when the text was longer than 10 bytes
     text = DNSText('irrelevant', None, 0, 0, b'12345678901')
     repr(text)
+
+
+def test_close_waits_for_threads():
+    class Dummy(object):
+      def add_service(self, zeroconf_obj, service_type, name):
+        pass
+      def remove_service(self, zeroconf_obj, service_type, name):
+        pass
+
+    z = Zeroconf()
+    z.add_service_listener('_privet._tcp.local.', listener=Dummy())
+    z.close()
+    assert not z.browsers[0].is_alive()
+
+
+if __name__ == '__main__':
+  unittest.main()

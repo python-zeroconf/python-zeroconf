@@ -1673,14 +1673,38 @@ class Zeroconf(object):
                     'Should not happen, sent %d out of %d bytes' % (
                         bytes_sent, len(packet)))
 
+    def _check_threads(self):
+      """Check if any threads are still active.
+
+      Returns:
+        True if the Reaper or Engine started by this object is still alive or
+        if any ServiceBrowser known to this object is still alive. Otherwise
+        False.
+      """
+      threads = [self.reaper, self.engine] + self.browsers
+      for t in threads:
+          if isinstance(t, threading.Thread) and t.is_alive():
+              return True
+      return False
+
     def close(self):
         """Ends the background threads, and prevent this instance from
-        servicing further queries."""
+        servicing further queries.
+
+        This operation blocks until all threads exit.
+        """
         global _GLOBAL_DONE
         if not _GLOBAL_DONE:
             _GLOBAL_DONE = True
             self.notify_all()
             self.engine.notify()
             self.unregister_all_services()
+
+            # Wait for threads to actually die before destroying the sockets
+            threads_alive = self._check_threads()
+            while threads_alive:
+                time.sleep(0.01)
+                threads_alive = self._check_threads()
+
             for s in [self._listen_socket] + self._respond_sockets:
                 s.close()
