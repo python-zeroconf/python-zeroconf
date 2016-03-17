@@ -768,7 +768,9 @@ class DNSCache(object):
         matching entry."""
         try:
             list_ = self.cache[entry.key]
-            return list_[list_.index(entry)]
+            for cached_entry in list_:
+                if entry.__eq__(cached_entry):
+                    return cached_entry
         except (KeyError, ValueError):
             return None
 
@@ -829,6 +831,8 @@ class Engine(threading.Thread):
             else:
                 try:
                     rr, wr, er = select.select(rs, [], [], self.timeout)
+                    if _GLOBAL_DONE:
+                        break
                     for socket_ in rr:
                         try:
                             self.readers[socket_].handle_read(socket_)
@@ -865,7 +869,7 @@ class Listener(object):
     to cache information as it arrives.
 
     It requires registration with an Engine object in order to have
-    the read() method called when a socket is availble for reading."""
+    the read() method called when a socket is available for reading."""
 
     def __init__(self, zc):
         self.zc = zc
@@ -1061,7 +1065,7 @@ class ServiceBrowser(threading.Thread):
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
 
-            if len(self._handlers_to_call) > 0:
+            if len(self._handlers_to_call) > 0 and not _GLOBAL_DONE:
                 handler = self._handlers_to_call.pop(0)
                 handler(self.zc)
 
@@ -1595,6 +1599,7 @@ class Zeroconf(object):
             else:
                 self.cache.add(record)
 
+        for record in msg.answers:
             self.update_record(now, record)
 
     def handle_query(self, msg, addr, port):
@@ -1667,6 +1672,8 @@ class Zeroconf(object):
         packet = out.packet()
         log.debug('Sending %r as %r...', out, packet)
         for s in self._respond_sockets:
+            if _GLOBAL_DONE:
+                return
             bytes_sent = s.sendto(packet, 0, (addr, port))
             if bytes_sent != len(packet):
                 raise Error(
