@@ -1045,6 +1045,7 @@ class ServiceBrowser(threading.Thread):
     def cancel(self):
         self.done = True
         self.zc.notify_all()
+        self.join()
 
     def run(self):
         while True:
@@ -1204,10 +1205,24 @@ class ServiceInfo(object):
         next = now + delay
         last = now + timeout
         result = False
+
+        record_types_for_check_cache = [
+            (_TYPE_SRV, _CLASS_IN),
+            (_TYPE_TXT, _CLASS_IN),
+        ]
+        if self.server is not None:
+            record_types_for_check_cache.append((_TYPE_A, _CLASS_IN))
+        for record_type in record_types_for_check_cache:
+            cached = zc.cache.get_by_details(self.name, *record_type)
+            if cached:
+                self.update_record(zc, now, cached)
+
+        if None not in (self.server, self.address, self.text):
+            return True
+
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
-            while (self.server is None or self.address is None or
-                   self.text is None):
+            while None in (self.server, self.address, self.text):
                 if last <= now:
                     return False
                 if next <= now:
@@ -1689,5 +1704,20 @@ class Zeroconf(object):
             self.notify_all()
             self.engine.notify()
             self.unregister_all_services()
-            for s in [self._listen_socket] + self._respond_sockets:
-                s.close()
+
+            class CloseThread(threading.Thread):
+                """Engine can take a while to shutdown, so shunt him off to
+                another thread.
+                """
+                def __init__(self, zc):
+                    super(CloseThread, self).__init__()
+                    self.zc = zc
+
+                def run(self):
+                    self.zc.reaper.join()
+                    self.zc.engine.join()
+                    sockets = [self.zc._listen_socket] + self.zc._respond_sockets
+                    for s in sockets:
+                        s.close()
+
+            CloseThread(self).start()
