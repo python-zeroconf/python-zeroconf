@@ -10,14 +10,12 @@ import struct
 import unittest
 from threading import Event
 
-from mock import Mock
 from six import indexbytes
 from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
     DNSText,
-    Listener,
     ServiceBrowser,
     ServiceInfo,
     ServiceStateChange,
@@ -186,17 +184,6 @@ def test_integration():
         zeroconf_registrar.close()
         browser.cancel()
         zeroconf_browser.close()
-
-
-def test_listener_handles_closed_socket_situation_gracefully():
-    error = socket.error(socket.EBADF)
-    error.errno = socket.EBADF
-
-    zeroconf = Mock()
-    zeroconf.socket.recvfrom.side_effect = error
-
-    listener = Listener(zeroconf)
-    listener.handle_read(zeroconf.socket)
 
 
 def test_dnstext_repr_works():
