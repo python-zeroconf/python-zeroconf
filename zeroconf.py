@@ -821,44 +821,36 @@ class Engine(threading.Thread):
 
     def run(self):
         while not _GLOBAL_DONE:
-            rs = self.get_readers()
-            if len(rs) == 0:
-                # No sockets to manage, but we wait for the timeout
-                # or addition of a socket
-                #
-                with self.condition:
+            with self.condition:
+                rs = self.readers.keys()
+                if len(rs) == 0:
+                    # No sockets to manage, but we wait for the timeout
+                    # or addition of a socket
                     self.condition.wait(self.timeout)
-            else:
+
+            if len(rs) != 0:
                 try:
                     rr, wr, er = select.select(rs, [], [], self.timeout)
-                    if _GLOBAL_DONE:
-                        break
-                    for socket_ in rr:
-                        try:
-                            self.readers[socket_].handle_read(socket_)
-                        except Exception as e:  # TODO stop catching all Exceptions
-                            log.exception('Unknown error, possibly benign: %r', e)
-                except Exception as e:  # TODO stop catching all Exceptions
-                    log.exception('Unknown error, possibly benign: %r', e)
+                    if not _GLOBAL_DONE:
+                        for socket_ in rr:
+                            reader = self.readers.get(socket_)
+                            if reader:
+                                reader.handle_read(socket_)
 
-    def get_readers(self):
-        result = []
-        with self.condition:
-            result = self.readers.keys()
-        return result
+                except socket.error as e:
+                    # If the socket was closed by another thread, during
+                    # shutdown, ignore it and exit
+                    if e.errno != socket.EBADF or not _GLOBAL_DONE:
+                        raise
 
-    def add_reader(self, reader, socket):
+    def add_reader(self, reader, socket_):
         with self.condition:
-            self.readers[socket] = reader
+            self.readers[socket_] = reader
             self.condition.notify()
 
-    def del_reader(self, socket):
+    def del_reader(self, socket_):
         with self.condition:
-            del self.readers[socket]
-            self.condition.notify()
-
-    def notify(self):
-        with self.condition:
+            del self.readers[socket_]
             self.condition.notify()
 
 
@@ -875,18 +867,8 @@ class Listener(object):
         self.zc = zc
 
     def handle_read(self, socket_):
-        try:
-            data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
-        except socket.error as e:
-            # If the socket was closed by another thread -- which happens
-            # regularly on shutdown -- an EBADF exception is thrown here.
-            # Ignore it.
-            if e.errno == socket.EBADF:
-                return
-            else:
-                raise e
-        else:
-            log.debug('Received %r from %r:%r', data, addr, port)
+        data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
+        log.debug('Received %r from %r:%r', data, addr, port)
 
         self.data = data
         msg = DNSIncoming(data)
@@ -1044,7 +1026,7 @@ class ServiceBrowser(threading.Thread):
 
     def cancel(self):
         self.done = True
-        self.zc.notify_all()
+        self.zc.remove_listener(self)
         self.join()
 
     def run(self):
@@ -1701,23 +1683,13 @@ class Zeroconf(object):
         global _GLOBAL_DONE
         if not _GLOBAL_DONE:
             _GLOBAL_DONE = True
+            # shutdown recv socket and thread
+            self.engine.del_reader(self._listen_socket)
+            self._listen_socket.close()
+            self.engine.join()
+
+            # shutdown the rest
             self.notify_all()
-            self.engine.notify()
             self.unregister_all_services()
-
-            class CloseThread(threading.Thread):
-                """Engine can take a while to shutdown, so shunt him off to
-                another thread.
-                """
-                def __init__(self, zc):
-                    super(CloseThread, self).__init__()
-                    self.zc = zc
-
-                def run(self):
-                    self.zc.reaper.join()
-                    self.zc.engine.join()
-                    sockets = [self.zc._listen_socket] + self.zc._respond_sockets
-                    for s in sockets:
-                        s.close()
-
-            CloseThread(self).start()
+            for s in self._respond_sockets:
+                s.close()
