@@ -811,7 +811,7 @@ class Engine(threading.Thread):
     """
 
     def __init__(self, zc):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name='zeroconf-Engine')
         self.daemon = True
         self.zc = zc
         self.readers = {}  # maps socket to reader
@@ -893,7 +893,7 @@ class Reaper(threading.Thread):
     have expired."""
 
     def __init__(self, zc):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name='zeroconf-Reaper')
         self.daemon = True
         self.zc = zc
         self.start()
@@ -948,7 +948,8 @@ class ServiceBrowser(threading.Thread):
     def __init__(self, zc, type_, handlers=None, listener=None):
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,
+                                  name='zeroconf-ServiceBrowser' + type_)
         self.daemon = True
         self.zc = zc
         self.type = type_
@@ -1380,7 +1381,7 @@ class Zeroconf(object):
             self._respond_sockets.append(respond_socket)
 
         self.listeners = []
-        self.browsers = []
+        self.browsers = {}
         self.services = {}
         self.servicetypes = {}
 
@@ -1418,14 +1419,18 @@ class Zeroconf(object):
         will then have its update_record method called when information
         arrives for that type."""
         self.remove_service_listener(listener)
-        self.browsers.append(ServiceBrowser(self, type, listener))
+        self.browsers[listener] = ServiceBrowser(self, type, listener)
 
     def remove_service_listener(self, listener):
         """Removes a listener from the set that is currently listening."""
-        for browser in self.browsers:
-            if browser.listener == listener:
-                browser.cancel()
-                del browser
+        if listener in self.browsers:
+            self.browsers[listener].cancel()
+            del self.browsers[listener]
+
+    def remove_all_service_listeners(self):
+        """Removes a listener from the set that is currently listening."""
+        for listener in self.browsers.keys():
+            self.remove_service_listener(listener)
 
     def register_service(self, info, ttl=_DNS_TTL):
         """Registers service information to the network with a default TTL
@@ -1691,5 +1696,6 @@ class Zeroconf(object):
             # shutdown the rest
             self.notify_all()
             self.unregister_all_services()
+            self.remove_all_service_listeners()
             for s in self._respond_sockets:
                 s.close()
