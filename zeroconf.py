@@ -64,10 +64,6 @@ log.addHandler(NullHandler())
 if log.level == logging.NOTSET:
     log.setLevel(logging.WARN)
 
-# hook for threads
-
-_GLOBAL_DONE = False
-
 # Some timing constants
 
 _UNREGISTER_TIME = 125
@@ -292,7 +288,7 @@ class DNSRecord(DNSEntry):
 
     def get_remaining_ttl(self, now):
         """Returns the remaining TTL in seconds."""
-        return max(0, (self.get_expiration_time(100) - now) / 1000)
+        return max(0, (self.get_expiration_time(100) - now) / 1000.0)
 
     def is_expired(self, now):
         """Returns true if this record has expired."""
@@ -820,7 +816,7 @@ class Engine(threading.Thread):
         self.start()
 
     def run(self):
-        while not _GLOBAL_DONE:
+        while not self.zc._GLOBAL_DONE:
             with self.condition:
                 rs = self.readers.keys()
                 if len(rs) == 0:
@@ -831,7 +827,7 @@ class Engine(threading.Thread):
             if len(rs) != 0:
                 try:
                     rr, wr, er = select.select(rs, [], [], self.timeout)
-                    if not _GLOBAL_DONE:
+                    if not self.zc._GLOBAL_DONE:
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
                             if reader:
@@ -840,7 +836,7 @@ class Engine(threading.Thread):
                 except socket.error as e:
                     # If the socket was closed by another thread, during
                     # shutdown, ignore it and exit
-                    if e.errno != socket.EBADF or not _GLOBAL_DONE:
+                    if e.errno != socket.EBADF or not self.zc._GLOBAL_DONE:
                         raise
 
     def add_reader(self, reader, socket_):
@@ -901,7 +897,7 @@ class Reaper(threading.Thread):
     def run(self):
         while True:
             self.zc.wait(10 * 1000)
-            if _GLOBAL_DONE:
+            if self.zc._GLOBAL_DONE:
                 return
             now = current_time_millis()
             for record in self.zc.cache.entries():
@@ -1035,7 +1031,7 @@ class ServiceBrowser(threading.Thread):
             now = current_time_millis()
             if len(self._handlers_to_call) == 0 and self.next_time > now:
                 self.zc.wait(self.next_time - now)
-            if _GLOBAL_DONE or self.done:
+            if self.zc._GLOBAL_DONE or self.done:
                 return
             now = current_time_millis()
 
@@ -1049,7 +1045,7 @@ class ServiceBrowser(threading.Thread):
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
 
-            if len(self._handlers_to_call) > 0 and not _GLOBAL_DONE:
+            if len(self._handlers_to_call) > 0 and not self.zc._GLOBAL_DONE:
                 handler = self._handlers_to_call.pop(0)
                 handler(self.zc)
 
@@ -1345,8 +1341,8 @@ class Zeroconf(object):
 
         :type interfaces: :class:`InterfaceChoice` or sequence of ip addresses
         """
-        global _GLOBAL_DONE
-        _GLOBAL_DONE = False
+        # hook for threads
+        self._GLOBAL_DONE = False
 
         self._listen_socket = new_socket()
         interfaces = normalize_interface_choice(interfaces, socket.AF_INET)
@@ -1398,7 +1394,7 @@ class Zeroconf(object):
         """Calling thread waits for a given number of milliseconds or
         until notified."""
         with self.condition:
-            self.condition.wait(timeout / 1000)
+            self.condition.wait(timeout / 1000.0)
 
     def notify_all(self):
         """Notifies all waiting threads"""
@@ -1429,7 +1425,7 @@ class Zeroconf(object):
 
     def remove_all_service_listeners(self):
         """Removes a listener from the set that is currently listening."""
-        for listener in self.browsers.keys():
+        for listener in [k for k in self.browsers]:
             self.remove_service_listener(listener)
 
     def register_service(self, info, ttl=_DNS_TTL):
@@ -1674,7 +1670,7 @@ class Zeroconf(object):
         packet = out.packet()
         log.debug('Sending %r as %r...', out, packet)
         for s in self._respond_sockets:
-            if _GLOBAL_DONE:
+            if self._GLOBAL_DONE:
                 return
             bytes_sent = s.sendto(packet, 0, (addr, port))
             if bytes_sent != len(packet):
@@ -1685,9 +1681,12 @@ class Zeroconf(object):
     def close(self):
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        global _GLOBAL_DONE
-        if not _GLOBAL_DONE:
-            _GLOBAL_DONE = True
+        if not self._GLOBAL_DONE:
+            self._GLOBAL_DONE = True
+            # remove service listeners
+            self.remove_all_service_listeners()
+            self.unregister_all_services()
+
             # shutdown recv socket and thread
             self.engine.del_reader(self._listen_socket)
             self._listen_socket.close()
@@ -1695,7 +1694,6 @@ class Zeroconf(object):
 
             # shutdown the rest
             self.notify_all()
-            self.unregister_all_services()
-            self.remove_all_service_listeners()
+            self.reaper.join()
             for s in self._respond_sockets:
                 s.close()

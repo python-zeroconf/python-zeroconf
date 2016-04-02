@@ -1,2 +1,12 @@
 build/
+*.pyc
+*.pyo
+Thumbs.db
+.DS_Store
+.project
+.pydevproject
+.settings
+.idea
+.vslick
+.cache
 
