@@ -1080,6 +1080,7 @@ class ServiceInfo(object):
             self.server = server
         else:
             self.server = name
+        self._properties = {}
         self._set_properties(properties)
 
     @property
