@@ -349,13 +349,19 @@ class DNSHinfo(DNSRecord):
 
     def __init__(self, name, type_, class_, ttl, cpu, os):
         DNSRecord.__init__(self, name, type_, class_, ttl)
-        self.cpu = cpu
-        self.os = os
+        try:
+            self.cpu = cpu.decode('utf-8')
+        except AttributeError:
+            self.cpu = cpu
+        try:
+            self.os = os.decode('utf-8')
+        except AttributeError:
+            self.os = os
 
     def write(self, out):
         """Used in constructing an outgoing packet"""
-        out.write_string(self.cpu)
-        out.write_string(self.oso)
+        out.write_character_string(self.cpu.encode('utf-8'))
+        out.write_character_string(self.os.encode('utf-8'))
 
     def __eq__(self, other):
         """Tests equality on cpu and os"""
@@ -670,6 +676,14 @@ class DNSOutgoing(object):
             raise NamePartTooLongException
         self.write_byte(length)
         self.write_string(utfstr)
+
+    def write_character_string(self, value):
+        assert isinstance(value, bytes)
+        length = len(value)
+        if length > 256:
+            raise NamePartTooLongException
+        self.write_byte(length)
+        self.write_string(value)
 
     def write_name(self, name):
         """Writes a domain name to the packet"""

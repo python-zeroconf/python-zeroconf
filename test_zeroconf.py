@@ -16,6 +16,7 @@ from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
+    DNSHinfo,
     DNSText,
     ServiceBrowser,
     ServiceInfo,
@@ -65,6 +66,19 @@ class PacketGeneration(unittest.TestCase):
         self.assertEqual(len(generated.questions), 1)
         self.assertEqual(len(generated.questions), len(parsed.questions))
         self.assertEqual(question, parsed.questions[0])
+
+    def test_dns_hinfo(self):
+        generated = r.DNSOutgoing(0)
+        generated.add_additional_answer(
+            DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'os'))
+        parsed = r.DNSIncoming(generated.packet())
+        self.assertEqual(parsed.answers[0].cpu, u'cpu')
+        self.assertEqual(parsed.answers[0].os, u'os')
+
+        generated = r.DNSOutgoing(0)
+        generated.add_additional_answer(
+            DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
+        self.assertRaises(r.NamePartTooLongException, generated.packet)
 
 
 class PacketForm(unittest.TestCase):
@@ -187,7 +201,7 @@ class ServiceTypesQuery(unittest.TestCase):
             zeroconf_registrar.close()
 
 
-class Listener(unittest.TestCase):
+class ListenerTest(unittest.TestCase):
 
     def test_integration_with_listener_class(self):
 
