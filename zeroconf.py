@@ -903,7 +903,7 @@ class Listener(object):
             elif port == _DNS_PORT:
                 self.zc.handle_query(msg, addr, port)
                 self.zc.handle_query(msg, _MDNS_ADDR, _MDNS_PORT)
-            # handle unicast queries as per RFC6762 §6.7
+            # handle unicast queries as per RFC6762 section 6.7
             else:
                 self.zc.handle_query(msg, addr, port)
         else:
