@@ -337,8 +337,9 @@ class DNSAddress(DNSRecord):
 
     def __repr__(self):
         """String representation"""
-        try:
-            return socket.inet_ntoa(self.address)
+        try:  # handle ipv6 addresses
+            return socket.inet_ntop(socket.AF_INET6 if self.type == _TYPE_AAAA else socket.AF_INET,
+                                    self.address)
         except Exception as e:  # TODO stop catching all Exceptions
             log.exception('Unknown error, possibly benign: %r', e)
             return self.address
@@ -510,7 +511,10 @@ class DNSIncoming(object):
         n = self.num_answers + self.num_authorities + self.num_additionals
         for i in xrange(n):
             domain = self.read_name()
-            type, class_, ttl, length = self.unpack(b'!HHiH')
+            try:  # ignore malformed packet
+                type, class_, ttl, length = self.unpack(b'!HHiH')
+            except struct.error:
+                return
 
             rec = None
             if type == _TYPE_A:
@@ -557,8 +561,11 @@ class DNSIncoming(object):
         first = off
 
         while True:
-            length = indexbytes(self.data, off)
-            off += 1
+            try:  # ignore malformed packet
+                length = indexbytes(self.data, off)
+                off += 1
+            except IndexError:
+                length = 0
             if length == 0:
                 break
             t = length & 0xC0
@@ -897,6 +904,9 @@ class Listener(object):
             elif port == _DNS_PORT:
                 self.zc.handle_query(msg, addr, port)
                 self.zc.handle_query(msg, _MDNS_ADDR, _MDNS_PORT)
+            # handle unicast queries as per RFC6762 section 6.7
+            else:
+                self.zc.handle_query(msg, addr, port)
         else:
             self.zc.handle_response(msg)
 
@@ -1093,7 +1103,7 @@ class ServiceInfo(object):
         self.weight = weight
         self.priority = priority
         if server:
-            self.server = server
+            self.server = server.lower()
         else:
             self.server = name
         self._set_properties(properties)
