@@ -16,6 +16,7 @@ from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
+    DNSAddress,
     DNSText,
     Listener,
     ServiceBrowser,
@@ -204,3 +205,46 @@ def test_dnstext_repr_works():
     # from working when the text was longer than 10 bytes
     text = DNSText('irrelevant', None, 0, 0, b'12345678901')
     repr(text)
+
+
+def test_dnsaddress_repr_works():
+    # ipv6 addresses not treated properly
+    dnsaddr = DNSAddress('aaaa', r._TYPE_A, r._CLASS_IN, 60, '127.0.0.1')
+    repr(dnsaddr)
+
+
+def test_unicast_query():
+    # test for queries fron a random source port
+    generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+    generated.add_question(r.DNSQuestion("testname.local.", r._TYPE_A,
+                                         r._CLASS_IN))
+    zc = r.Zeroconf()
+    zc.handle_query(generated, '127.0.0.1', 1782)
+    zc.handle_query(generated, '127.0.0.1', 53)
+
+
+def test_handle_read_nonspecialport():
+    error = socket.error(socket.EBADF)
+    error.errno = socket.EBADF
+
+    zeroconf = Mock()
+    # packet data captured by running python examples/registration.py --debug
+    zeroconf.socket.recvfrom = lambda x: (
+        b'0\x1a\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x08testname\x05local\x00\x00\x01\x00\x01',
+        ('127.0.0.1', 1234))
+
+    listener = Listener(zeroconf)
+    listener.handle_read(zeroconf.socket)
+
+
+def test_handle_read_dnsport():
+    error = socket.error(socket.EBADF)
+    error.errno = socket.EBADF
+
+    zeroconf = Mock()
+    zeroconf.socket.recvfrom = lambda x: (
+        b'0\x1a\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x08testname\x05local\x00\x00\x01\x00\x01',
+        ('127.0.0.1', 1234))
+
+    listener = Listener(zeroconf)
+    listener.handle_read(zeroconf.socket)
