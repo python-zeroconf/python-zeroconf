@@ -37,14 +37,16 @@ class MyListener(object):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    if len(sys.argv) > 1:
-        assert sys.argv[1:] == ['--debug']
+    if '--debug' in sys.argv:
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        del sys.argv[sys.argv.index('--debug')]
 
     zeroconf = Zeroconf()
     print("\nBrowsing services, press Ctrl-C to exit...\n")
     listener = MyListener()
-    browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
+    browser = ServiceBrowser(zeroconf,
+       (sys.argv[1] if len(sys.argv)>1 and sys.argv[1].endswith(('_tcp','_udp')) else "_http._tcp")+".local.",
+       listener)
     try:
         while True:
             sleep(0.1)
