@@ -42,10 +42,11 @@ if __name__ == '__main__':
         del sys.argv[sys.argv.index('--debug')]
 
     zeroconf = Zeroconf()
-    print("\nBrowsing services, press Ctrl-C to exit...\n")
+    service=(sys.argv[1] if len(sys.argv)>1 and sys.argv[1].endswith(('_tcp','_udp')) else "_http._tcp")+".local."
+    print("\nBrowsing for %s, press Ctrl-C to exit...\n" % service)
     listener = MyListener()
     browser = ServiceBrowser(zeroconf,
-       (sys.argv[1] if len(sys.argv)>1 and sys.argv[1].endswith(('_tcp','_udp')) else "_http._tcp")+".local.",
+       service,
        listener)
     try:
         while True:
