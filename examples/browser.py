@@ -6,13 +6,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import socket
 import sys
-from time import sleep
+from time import sleep,strftime as now
 
 from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 
 
 def on_service_state_change(zeroconf, service_type, name, state_change):
-    print("Service %s of type %s state changed: %s" % (name, service_type, state_change))
+    print("%s Service %s of type %s: %s" % (now('%Y-%m-%d %H:%M:%S'),name, service_type, state_change))
 
     if state_change is ServiceStateChange.Added:
         info = zeroconf.get_service_info(service_type, name)

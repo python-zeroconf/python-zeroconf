@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import socket
 import sys
-from time import sleep
+from time import sleep,strftime as now
 
 from zeroconf import ServiceBrowser, Zeroconf
 
@@ -14,11 +14,11 @@ from zeroconf import ServiceBrowser, Zeroconf
 class MyListener(object):
 
     def remove_service(self, zeroconf, type, name):
-        print("Service %s removed" % (name,))
+        print("%s Service %s removed" % (now('%Y-%m-%d %H:%M:%S'),name,))
         print('\n')
 
     def add_service(self, zeroconf, type, name):
-        print("Service %s added" % (name,))
+        print("%s Service %s added" % (now('%Y-%m-%d %H:%M:%S'),name,))
         print("  Type is %s" % (type,))
         info = zeroconf.get_service_info(type, name)
         if info:
