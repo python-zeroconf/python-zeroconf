@@ -1652,9 +1652,9 @@ class Zeroconf(object):
                                                     _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE,
                                                     _DNS_TTL, service.text))
                     if question.type == _TYPE_SRV:
-                        out.add_additional_answer(DNSAddress(service.server,
-                                                             _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
-                                                             _DNS_TTL, service.address))
+                        out.add_answer(msg, DNSAddress(service.server,
+                                                       _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
+                                                       _DNS_TTL, service.address))
                 except Exception as e:  # TODO stop catching all Exceptions
                     log.exception('Unknown error, possibly benign: %r', e)
 
