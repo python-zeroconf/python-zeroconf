@@ -971,11 +971,11 @@ class ServiceBrowser(threading.Thread):
         self.delay = _BROWSER_TIME
         self._handlers_to_call = []
 
+        self._service_state_changed = Signal()
+
         self.done = False
 
         self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
-
-        self._service_state_changed = Signal()
 
         if hasattr(handlers, 'add_service'):
             listener = handlers
