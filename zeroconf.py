@@ -64,10 +64,6 @@ log.addHandler(NullHandler())
 if log.level == logging.NOTSET:
     log.setLevel(logging.WARN)
 
-# hook for threads
-
-_GLOBAL_DONE = False
-
 # Some timing constants
 
 _UNREGISTER_TIME = 125
@@ -292,7 +288,7 @@ class DNSRecord(DNSEntry):
 
     def get_remaining_ttl(self, now):
         """Returns the remaining TTL in seconds."""
-        return max(0, (self.get_expiration_time(100) - now) / 1000)
+        return max(0, (self.get_expiration_time(100) - now) / 1000.0)
 
     def is_expired(self, now):
         """Returns true if this record has expired."""
@@ -768,7 +764,9 @@ class DNSCache(object):
         matching entry."""
         try:
             list_ = self.cache[entry.key]
-            return list_[list_.index(entry)]
+            for cached_entry in list_:
+                if entry.__eq__(cached_entry):
+                    return cached_entry
         except (KeyError, ValueError):
             return None
 
@@ -809,7 +807,7 @@ class Engine(threading.Thread):
     """
 
     def __init__(self, zc):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name='zeroconf-Engine')
         self.daemon = True
         self.zc = zc
         self.readers = {}  # maps socket to reader
@@ -818,43 +816,37 @@ class Engine(threading.Thread):
         self.start()
 
     def run(self):
-        while not _GLOBAL_DONE:
-            rs = self.get_readers()
-            if len(rs) == 0:
-                # No sockets to manage, but we wait for the timeout
-                # or addition of a socket
-                #
-                with self.condition:
+        while not self.zc._GLOBAL_DONE:
+            with self.condition:
+                rs = self.readers.keys()
+                if len(rs) == 0:
+                    # No sockets to manage, but we wait for the timeout
+                    # or addition of a socket
                     self.condition.wait(self.timeout)
-            else:
+
+            if len(rs) != 0:
                 try:
                     rr, wr, er = select.select(rs, [], [], self.timeout)
-                    for socket_ in rr:
-                        try:
-                            self.readers[socket_].handle_read(socket_)
-                        except Exception as e:  # TODO stop catching all Exceptions
-                            log.exception('Unknown error, possibly benign: %r', e)
-                except Exception as e:  # TODO stop catching all Exceptions
-                    log.exception('Unknown error, possibly benign: %r', e)
+                    if not self.zc._GLOBAL_DONE:
+                        for socket_ in rr:
+                            reader = self.readers.get(socket_)
+                            if reader:
+                                reader.handle_read(socket_)
 
-    def get_readers(self):
-        result = []
-        with self.condition:
-            result = self.readers.keys()
-        return result
+                except socket.error as e:
+                    # If the socket was closed by another thread, during
+                    # shutdown, ignore it and exit
+                    if e.errno != socket.EBADF or not self.zc._GLOBAL_DONE:
+                        raise
 
-    def add_reader(self, reader, socket):
+    def add_reader(self, reader, socket_):
         with self.condition:
-            self.readers[socket] = reader
+            self.readers[socket_] = reader
             self.condition.notify()
 
-    def del_reader(self, socket):
+    def del_reader(self, socket_):
         with self.condition:
-            del self.readers[socket]
-            self.condition.notify()
-
-    def notify(self):
-        with self.condition:
+            del self.readers[socket_]
             self.condition.notify()
 
 
@@ -865,24 +857,14 @@ class Listener(object):
     to cache information as it arrives.
 
     It requires registration with an Engine object in order to have
-    the read() method called when a socket is availble for reading."""
+    the read() method called when a socket is available for reading."""
 
     def __init__(self, zc):
         self.zc = zc
 
     def handle_read(self, socket_):
-        try:
-            data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
-        except socket.error as e:
-            # If the socket was closed by another thread -- which happens
-            # regularly on shutdown -- an EBADF exception is thrown here.
-            # Ignore it.
-            if e.errno == socket.EBADF:
-                return
-            else:
-                raise e
-        else:
-            log.debug('Received %r from %r:%r', data, addr, port)
+        data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
+        log.debug('Received %r from %r:%r', data, addr, port)
 
         self.data = data
         msg = DNSIncoming(data)
@@ -907,7 +889,7 @@ class Reaper(threading.Thread):
     have expired."""
 
     def __init__(self, zc):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name='zeroconf-Reaper')
         self.daemon = True
         self.zc = zc
         self.start()
@@ -915,7 +897,7 @@ class Reaper(threading.Thread):
     def run(self):
         while True:
             self.zc.wait(10 * 1000)
-            if _GLOBAL_DONE:
+            if self.zc._GLOBAL_DONE:
                 return
             now = current_time_millis()
             for record in self.zc.cache.entries():
@@ -962,7 +944,8 @@ class ServiceBrowser(threading.Thread):
     def __init__(self, zc, type_, handlers=None, listener=None):
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self,
+                                  name='zeroconf-ServiceBrowser' + type_)
         self.daemon = True
         self.zc = zc
         self.type = type_
@@ -1040,14 +1023,15 @@ class ServiceBrowser(threading.Thread):
 
     def cancel(self):
         self.done = True
-        self.zc.notify_all()
+        self.zc.remove_listener(self)
+        self.join()
 
     def run(self):
         while True:
             now = current_time_millis()
             if len(self._handlers_to_call) == 0 and self.next_time > now:
                 self.zc.wait(self.next_time - now)
-            if _GLOBAL_DONE or self.done:
+            if self.zc._GLOBAL_DONE or self.done:
                 return
             now = current_time_millis()
 
@@ -1061,7 +1045,7 @@ class ServiceBrowser(threading.Thread):
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
 
-            if len(self._handlers_to_call) > 0:
+            if len(self._handlers_to_call) > 0 and not self.zc._GLOBAL_DONE:
                 handler = self._handlers_to_call.pop(0)
                 handler(self.zc)
 
@@ -1096,6 +1080,7 @@ class ServiceInfo(object):
             self.server = server
         else:
             self.server = name
+        self._properties = {}
         self._set_properties(properties)
 
     @property
@@ -1200,10 +1185,24 @@ class ServiceInfo(object):
         next = now + delay
         last = now + timeout
         result = False
+
+        record_types_for_check_cache = [
+            (_TYPE_SRV, _CLASS_IN),
+            (_TYPE_TXT, _CLASS_IN),
+        ]
+        if self.server is not None:
+            record_types_for_check_cache.append((_TYPE_A, _CLASS_IN))
+        for record_type in record_types_for_check_cache:
+            cached = zc.cache.get_by_details(self.name, *record_type)
+            if cached:
+                self.update_record(zc, now, cached)
+
+        if None not in (self.server, self.address, self.text):
+            return True
+
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
-            while (self.server is None or self.address is None or
-                   self.text is None):
+            while None in (self.server, self.address, self.text):
                 if last <= now:
                     return False
                 if next <= now:
@@ -1343,8 +1342,8 @@ class Zeroconf(object):
 
         :type interfaces: :class:`InterfaceChoice` or sequence of ip addresses
         """
-        global _GLOBAL_DONE
-        _GLOBAL_DONE = False
+        # hook for threads
+        self._GLOBAL_DONE = False
 
         self._listen_socket = new_socket()
         interfaces = normalize_interface_choice(interfaces, socket.AF_INET)
@@ -1379,7 +1378,7 @@ class Zeroconf(object):
             self._respond_sockets.append(respond_socket)
 
         self.listeners = []
-        self.browsers = []
+        self.browsers = {}
         self.services = {}
         self.servicetypes = {}
 
@@ -1396,7 +1395,7 @@ class Zeroconf(object):
         """Calling thread waits for a given number of milliseconds or
         until notified."""
         with self.condition:
-            self.condition.wait(timeout / 1000)
+            self.condition.wait(timeout / 1000.0)
 
     def notify_all(self):
         """Notifies all waiting threads"""
@@ -1417,14 +1416,18 @@ class Zeroconf(object):
         will then have its update_record method called when information
         arrives for that type."""
         self.remove_service_listener(listener)
-        self.browsers.append(ServiceBrowser(self, type, listener))
+        self.browsers[listener] = ServiceBrowser(self, type, listener)
 
     def remove_service_listener(self, listener):
         """Removes a listener from the set that is currently listening."""
-        for browser in self.browsers:
-            if browser.listener == listener:
-                browser.cancel()
-                del browser
+        if listener in self.browsers:
+            self.browsers[listener].cancel()
+            del self.browsers[listener]
+
+    def remove_all_service_listeners(self):
+        """Removes a listener from the set that is currently listening."""
+        for listener in [k for k in self.browsers]:
+            self.remove_service_listener(listener)
 
     def register_service(self, info, ttl=_DNS_TTL):
         """Registers service information to the network with a default TTL
@@ -1595,6 +1598,7 @@ class Zeroconf(object):
             else:
                 self.cache.add(record)
 
+        for record in msg.answers:
             self.update_record(now, record)
 
     def handle_query(self, msg, addr, port):
@@ -1667,6 +1671,8 @@ class Zeroconf(object):
         packet = out.packet()
         log.debug('Sending %r as %r...', out, packet)
         for s in self._respond_sockets:
+            if self._GLOBAL_DONE:
+                return
             bytes_sent = s.sendto(packet, 0, (addr, port))
             if bytes_sent != len(packet):
                 raise Error(
@@ -1676,11 +1682,19 @@ class Zeroconf(object):
     def close(self):
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        global _GLOBAL_DONE
-        if not _GLOBAL_DONE:
-            _GLOBAL_DONE = True
-            self.notify_all()
-            self.engine.notify()
+        if not self._GLOBAL_DONE:
+            self._GLOBAL_DONE = True
+            # remove service listeners
+            self.remove_all_service_listeners()
             self.unregister_all_services()
-            for s in [self._listen_socket] + self._respond_sockets:
+
+            # shutdown recv socket and thread
+            self.engine.del_reader(self._listen_socket)
+            self._listen_socket.close()
+            self.engine.join()
+
+            # shutdown the rest
+            self.notify_all()
+            self.reaper.join()
+            for s in self._respond_sockets:
                 s.close()
