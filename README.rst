@@ -110,6 +110,13 @@ Here's an example:
     If you want to customize that you need to specify ``interfaces`` argument when
     constructing ``Zeroconf`` object (see the code for details).
 
+If you don't know the name of the service you need to browse for, try:
+
+.. code-block:: python
+
+    from zeroconf import ZeroconfServiceTypes
+    print('\n'.join(ZeroconfServiceTypes.find()))
+
 See examples directory for more.
 
 Changelog

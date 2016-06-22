@@ -1256,6 +1256,46 @@ class ServiceInfo(object):
         )
 
 
+class ZeroconfServiceTypes(object):
+    """
+    Return all of the advertised services on any local networks
+    """
+    def __init__(self):
+        self.found_services = set()
+
+    def add_service(self, zc, type_, name):
+        self.found_services.add(name)
+
+    def remove_service(self, zc, type_, name):
+        pass
+
+    @classmethod
+    def find(cls, zc=None, timeout=5):
+        """
+        Return all of the advertised services on any local networks.
+
+        :param zc: Zeroconf() instance.  Pass in if already have an
+                instance running or if non-default interfaces are needed
+        :param timeout: seconds to wait for any responses
+        :return: tuple of service type strings
+        """
+        local_zc = zc or Zeroconf()
+        listener = cls()
+        browser = ServiceBrowser(
+            local_zc, '_services._dns-sd._udp.local.', listener=listener)
+
+        # wait for responses
+        time.sleep(timeout)
+
+        # close down anything we opened
+        if zc is None:
+            local_zc.close()
+        else:
+            browser.cancel()
+
+        return tuple(sorted(listener.found_services))
+
+
 @enum.unique
 class InterfaceChoice(enum.Enum):
     Default = 1

@@ -21,6 +21,7 @@ from zeroconf import (
     ServiceInfo,
     ServiceStateChange,
     Zeroconf,
+    ZeroconfServiceTypes,
 )
 
 log = logging.getLogger('zeroconf')
@@ -157,6 +158,33 @@ class Exceptions(unittest.TestCase):
         self.assertRaises(r.BadTypeInNameException,
                           browser.get_service_info, "type", "type_not")
         browser.close()
+
+
+class ServiceTypesQuery(unittest.TestCase):
+
+    def test_integration_with_listener(self):
+
+        type_ = "_test_service_type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name,
+            socket.inet_aton("10.0.1.2"), 80, 0, 0,
+            desc, "ash-2.local.")
+        zeroconf_registrar.register_service(info)
+
+        try:
+            service_types = ZeroconfServiceTypes.find(timeout=0.5)
+            assert type_ in service_types
+            service_types = ZeroconfServiceTypes.find(
+                zc=zeroconf_registrar, timeout=0.5)
+            assert type_ in service_types
+
+        finally:
+            zeroconf_registrar.close()
 
 
 class Listener(unittest.TestCase):
