@@ -26,6 +26,7 @@ from __future__ import (
 import enum
 import errno
 import logging
+import re
 import select
 import socket
 import struct
@@ -154,12 +155,103 @@ _TYPES = {_TYPE_A: "a",
           _TYPE_SRV: "srv",
           _TYPE_ANY: "any"}
 
+_HAS_A_TO_Z = re.compile(r'[A-Za-z]')
+_HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
+
 # utility functions
 
 
 def current_time_millis():
     """Current system time in milliseconds"""
     return time.time() * 1000
+
+
+def service_type_name(type_):
+    """
+    Validate a fully qualified service name, instance or subtype. [rfc6763]
+
+    Returns fully qualified service name.
+
+    Domain names used by mDNS-SD take the following forms:
+
+                   <sn> . <_tcp|_udp> . local.
+      <Instance> . <sn> . <_tcp|_udp> . local.
+      <sub>._sub . <sn> . <_tcp|_udp> . local.
+
+    1) must end with 'local.'
+
+      This is true because we are implementing mDNS and since the 'm' means
+      multi-cast, the 'local.' domain is mandatory.
+
+    2) local is preceded with either '_udp.' or '_tcp.'
+
+    3) service name <sn> precedes <_tcp|_udp>
+
+      The rules for Service Names [RFC6335] state that they may be no more
+      than fifteen characters long (not counting the mandatory underscore),
+      consisting of only letters, digits, and hyphens, must begin and end
+      with a letter or digit, must not contain consecutive hyphens, and
+      must contain at least one letter.
+
+    The instance name <Instance> and sub type <sub> may be up to 63 bytes.
+
+    :param type_: Type, SubType or service name to validate
+    :return: fully qualified service name (eg: _http._tcp.local.)
+    """
+    if not (type_.endswith('._tcp.local.') or type_.endswith('._udp.local.')):
+        raise BadTypeInNameException(
+            "Type must end with '._tcp.local.' or '._udp.local.'")
+
+    if type_.startswith('.'):
+        raise BadTypeInNameException("Type must not start with '.'")
+
+    remaining = type_[:-len('._tcp.local.')].split('.')
+    name = remaining.pop()
+    if not name:
+        raise BadTypeInNameException("No Service name found")
+
+    if name[0] != '_':
+        raise BadTypeInNameException("Service name must start with '_'")
+
+    # remove leading underscore
+    name = name[1:]
+
+    if len(name) > 15:
+        raise BadTypeInNameException("Service name must be <= 15 bytes")
+
+    if '--' in name:
+        raise BadTypeInNameException("Service name must not contain '--'")
+
+    if '-' in (name[0], name[-1]):
+        raise BadTypeInNameException(
+            "Service name may not start or end with '-'")
+
+    if not _HAS_A_TO_Z.search(name):
+        raise BadTypeInNameException(
+            "Service name must contain at least one letter (eg: 'A-Z')")
+
+    if not _HAS_ONLY_A_TO_Z_NUM_HYPHEN.search(name):
+        raise BadTypeInNameException(
+            "Service name must contain only these characters: "
+            "A-Z, a-z, 0-9, hyphen ('-')")
+
+    if remaining and remaining[-1] == '_sub':
+        remaining.pop()
+        if len(remaining) == 0:
+            raise BadTypeInNameException(
+                "_sub requires a subtype name")
+
+    if len(remaining) > 1:
+        raise BadTypeInNameException(
+            "Unexpected characters '%s.'" % '.'.join(remaining[1:]))
+
+    if remaining:
+        length = len(remaining[0].encode('utf-8'))
+        if length > 63:
+            raise BadTypeInNameException("Too long: '%s'" % remaining[0])
+
+    return '_' + name + type_[-len('._tcp.local.'):]
+
 
 # Exceptions
 
@@ -243,8 +335,6 @@ class DNSQuestion(DNSEntry):
     """A DNS question entry"""
 
     def __init__(self, name, type_, class_):
-        # if not name.endswith(".local."):
-        #    raise NonLocalNameException
         DNSEntry.__init__(self, name, type_, class_)
 
     def answered_by(self, rec):
@@ -972,8 +1062,10 @@ class ServiceBrowser(threading.Thread):
     def __init__(self, zc, type_, handlers=None, listener=None):
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        threading.Thread.__init__(self,
-                                  name='zeroconf-ServiceBrowser' + type_)
+        if not type_.endswith(service_type_name(type_)):
+            raise BadTypeInNameException
+        threading.Thread.__init__(
+            self, name='zeroconf-ServiceBrowser_' + type_)
         self.daemon = True
         self.zc = zc
         self.type = type_
@@ -1086,7 +1178,7 @@ class ServiceInfo(object):
                  priority=0, properties=None, server=None):
         """Create a service description.
 
-        type: fully qualified service type name
+        type_: fully qualified service type name
         name: fully qualified service name
         address: IP address as unsigned short, network byte order
         port: port that the service runs on
@@ -1096,7 +1188,7 @@ class ServiceInfo(object):
                     bytes for the text field)
         server: fully qualified name for service host (defaults to name)"""
 
-        if not name.endswith(type_):
+        if not type_.endswith(service_type_name(name)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name

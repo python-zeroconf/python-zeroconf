@@ -167,18 +167,73 @@ class Framework(unittest.TestCase):
 
 class Exceptions(unittest.TestCase):
 
+    browser = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.browser = Zeroconf()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.close()
+        cls.browser = None
+
     def test_bad_service_info_name(self):
-        browser = Zeroconf()
-        self.assertRaises(r.BadTypeInNameException,
-                          browser.get_service_info, "type", "type_not")
-        browser.close()
+        self.assertRaises(
+            r.BadTypeInNameException,
+            self.browser.get_service_info, "type", "type_not")
+
+    def test_bad_service_names(self):
+        bad_names_to_try = (
+            '',
+            'local',
+            '_tcp.local.',
+            '_udp.local.',
+            '._udp.local.',
+            '_@._tcp.local.',
+            '_A@._tcp.local.',
+            '_x--x._tcp.local.',
+            '_-x._udp.local.',
+            '_x-._tcp.local.',
+            '_22._udp.local.',
+            '_2-2._tcp.local.',
+            '_1234567890-abcde._udp.local.',
+            '._x._udp.local.',
+        )
+        for name in bad_names_to_try:
+            self.assertRaises(
+                r.BadTypeInNameException,
+                self.browser.get_service_info, name, 'x.' + name)
+
+    def test_bad_sub_types(self):
+        bad_names_to_try = (
+            '_sub._http._tcp.local.',
+            'x.sub._http._tcp.local.',
+            'a' * 64 + '._sub._http._tcp.local.',
+            'a' * 62 + u'â._sub._http._tcp.local.',
+        )
+        for name in bad_names_to_try:
+            self.assertRaises(
+                r.BadTypeInNameException, r.service_type_name, name)
+
+    def test_good_service_names(self):
+        good_names_to_try = (
+            '_x._tcp.local.',
+            '_x._udp.local.',
+            '_12345-67890-abc._udp.local.',
+            'x._sub._http._tcp.local.',
+            'a' * 63 + '._sub._http._tcp.local.',
+            'a' * 61 + u'â._sub._http._tcp.local.',
+        )
+        for name in good_names_to_try:
+            r.service_type_name(name)
 
 
 class ServiceTypesQuery(unittest.TestCase):
 
     def test_integration_with_listener(self):
 
-        type_ = "_test_service_type._tcp.local."
+        type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
 
@@ -208,7 +263,9 @@ class ListenerTest(unittest.TestCase):
         service_added = Event()
         service_removed = Event()
 
+        subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
+        subtype = subtype_name + "._sub." + type_
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
 
@@ -221,7 +278,7 @@ class ListenerTest(unittest.TestCase):
                 service_removed.set()
 
         zeroconf_browser = Zeroconf()
-        zeroconf_browser.add_service_listener(type_, MyListener())
+        zeroconf_browser.add_service_listener(subtype, MyListener())
 
         properties = dict(
             prop_none=None,
@@ -235,11 +292,11 @@ class ListenerTest(unittest.TestCase):
         zeroconf_registrar = Zeroconf()
         desc = {'path': '/~paulsm/'}
         desc.update(properties)
-        info = ServiceInfo(
-            type_, registration_name,
+        info_service = ServiceInfo(
+            subtype, registration_name,
             socket.inet_aton("10.0.1.2"), 80, 0, 0,
             desc, "ash-2.local.")
-        zeroconf_registrar.register_service(info)
+        zeroconf_registrar.register_service(info_service)
 
         try:
             service_added.wait(1)
@@ -262,7 +319,10 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_true'] is True
             assert info.properties[b'prop_false'] is False
 
-            zeroconf_registrar.unregister_service(info)
+            info = zeroconf_browser.get_service_info(subtype, registration_name)
+            assert info.properties[b'prop_none'] is False
+
+            zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
             assert service_removed.is_set()
         finally:
