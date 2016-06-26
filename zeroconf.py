@@ -1068,7 +1068,11 @@ class ServiceInfo(object):
                     bytes for the text field)
         server: fully qualified name for service host (defaults to name)"""
 
-        if not name.endswith(type):
+        compare_type = type
+        if '_sub' in type:
+            index = type.index('._sub')  # for subtype queries only match type in result
+            compare_type = type[index + 6:]
+        if not name.endswith(compare_type):
             raise BadTypeInNameException
         self.type = type
         self.name = name
