@@ -1078,8 +1078,6 @@ class ServiceBrowser(threading.Thread):
 
         self.done = False
 
-        self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
-
         if hasattr(handlers, 'add_service'):
             listener = handlers
             handlers = None
@@ -1147,6 +1145,8 @@ class ServiceBrowser(threading.Thread):
         self.join()
 
     def run(self):
+        self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
+
         while True:
             now = current_time_millis()
             if len(self._handlers_to_call) == 0 and self.next_time > now:
