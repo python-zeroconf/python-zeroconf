@@ -186,6 +186,33 @@ class ServiceTypesQuery(unittest.TestCase):
         finally:
             zeroconf_registrar.close()
 
+    def test_integration_with_subtype_and_listener(self):
+        subtype_ = "_subtype._sub"
+        type_ = "_type._tcp.local."
+        name = "xxxyyy"
+        # Note: discovery returns only DNS-SD type not subtype
+        discovery_type = "%s.%s" % (subtype_, type_)
+        registration_name = "%s.%s" % (name, type_)
+
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            discovery_type, registration_name,
+            socket.inet_aton("10.0.1.2"), 80, 0, 0,
+            desc, "ash-2.local.")
+        zeroconf_registrar.register_service(info)
+
+        try:
+            service_types = ZeroconfServiceTypes.find(timeout=0.5)
+            print(service_types)
+            assert discovery_type in service_types
+            service_types = ZeroconfServiceTypes.find(
+                zc=zeroconf_registrar, timeout=0.5)
+            assert discovery_type in service_types
+
+        finally:
+            zeroconf_registrar.close()
+
 
 class Listener(unittest.TestCase):
 
