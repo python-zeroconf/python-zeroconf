@@ -122,6 +122,19 @@ See examples directory for more.
 Changelog
 =========
 
+0.17.6
+------
+
+* Many improvements to address race conditions and exceptions during ZC() startup
+and shutdown, thanks to: morpav, veawor, justingiorgi, herczy, stephenrauch
+* Added more test coverage: strahlex, stephenrauch
+* Stephen Rauch contributed:
+  - Speed up browser startup
+  - Add ZeroconfServiceTypes() query class to discover all advertised service types
+  - Add full validation for service names, types and subtypes
+  - Fix for subtype browsing
+  - Fix DNSHInfo support
+
 0.17.5
 ------
 
