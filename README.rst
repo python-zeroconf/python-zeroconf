@@ -125,10 +125,12 @@ Changelog
 0.17.6
 ------
 
-* Many improvements to address race conditions and exceptions during ZC() startup
-and shutdown, thanks to: morpav, veawor, justingiorgi, herczy, stephenrauch
+* Many improvements to address race conditions and exceptions during ZC()
+  startup and shutdown, thanks to: morpav, veawor, justingiorgi, herczy,
+  stephenrauch
 * Added more test coverage: strahlex, stephenrauch
 * Stephen Rauch contributed:
+
   - Speed up browser startup
   - Add ZeroconfServiceTypes() query class to discover all advertised service types
   - Add full validation for service names, types and subtypes
@@ -243,6 +245,7 @@ and shutdown, thanks to: morpav, veawor, justingiorgi, herczy, stephenrauch
 ----
 
 * Jonathon Paisley contributed these corrections:
+
   - always multicast replies, even when query is unicast
   - correct a pointer encoding problem
   - can now write records in any order
@@ -250,6 +253,7 @@ and shutdown, thanks to: morpav, veawor, justingiorgi, herczy, stephenrauch
   - better TXT record parsing
   - server is now separate from name
   - can cancel a service browser
+  
 * modified some unit tests to accommodate these changes
 
 0.09
