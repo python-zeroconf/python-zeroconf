@@ -37,6 +37,7 @@ from functools import reduce
 import netifaces
 from six import binary_type, indexbytes, int2byte, iteritems, text_type
 from six.moves import xrange
+from random import shuffle
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
@@ -83,6 +84,11 @@ _DNS_TTL = 60 * 60  # one hour default TTL
 
 _MAX_MSG_TYPICAL = 1460  # unused
 _MAX_MSG_ABSOLUTE = 8972
+
+# maximum number of outgoing responses to aggregate from browser, roughly determined on OSX
+# RFC6762 says: 'a Multicast DNS packet, including IP and UDP headers, MUST NOT exceed 9000 bytes', but it is difficult
+# to limit based on packet size since this isn't known until we're finished aggregating service responses
+_MAX_DNS_OUTGOING = 100
 
 _FLAGS_QR_MASK = 0x8000  # query response mask
 _FLAGS_QR_QUERY = 0x0000  # query
@@ -558,9 +564,12 @@ class DNSIncoming(object):
         self.num_authorities = 0
         self.num_additionals = 0
 
-        self.read_header()
-        self.read_questions()
-        self.read_others()
+        try:
+            self.read_header()
+            self.read_questions()
+            self.read_others()
+        except struct.error:
+            pass
 
     def unpack(self, format_):
         length = struct.calcsize(format_)
@@ -609,6 +618,7 @@ class DNSIncoming(object):
         n = self.num_answers + self.num_authorities + self.num_additionals
         for i in xrange(n):
             domain = self.read_name()
+
             type_, class_, ttl, length = self.unpack(b'!HHiH')
 
             rec = None
@@ -660,15 +670,17 @@ class DNSIncoming(object):
         off = self.offset
         next_ = -1
         first = off
-
-        while True:
+        size = len(self.data)
+        while off < size:
             length = indexbytes(self.data, off)
+            # print('O: {} L: {}'.format(off, length))
             off += 1
-            if length == 0:
+            if length == 0 or off >= size:
                 break
             t = length & 0xC0
             if t == 0x00:
                 result = ''.join((result, self.read_utf(off, length) + '.'))
+                # print(result)
                 off += length
             elif t == 0xC0:
                 if next_ < 0:
@@ -679,8 +691,8 @@ class DNSIncoming(object):
                     raise Exception("Bad domain name (circular) at %s" % (off,))
                 first = off
             else:
-                # TODO raise more specific exception
-                raise Exception("Bad domain name at %s" % (off,))
+                 # TODO raise more specific exception
+                 raise Exception("Bad domain name at %s" % (off,))
 
         if next_ >= 0:
             self.offset = next_
@@ -978,13 +990,13 @@ class Listener(object):
 
     def __init__(self, zc):
         self.zc = zc
-        self.data = None
+        #self.data = None
 
     def handle_read(self, socket_):
         data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
         log.debug('Received %r from %r:%r', data, addr, port)
 
-        self.data = data
+        #self.data = data
         msg = DNSIncoming(data)
         if msg.is_query():
             # Always multicast responses
@@ -1158,9 +1170,18 @@ class ServiceBrowser(threading.Thread):
             if self.next_time <= now:
                 out = DNSOutgoing(_FLAGS_QR_QUERY)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
-                for record in self.services.values():
+
+                # outgoing record limit heuristic flush
+                total_outgoing_records = 0
+                shuffled_list = list(self.services.values())
+                shuffle(shuffled_list)
+                for record in shuffled_list:
                     if not record.is_expired(now):
                         out.add_answer_at_time(record, now)
+                        total_outgoing_records += 1
+                        # flush the response if the aggregate size is over threshold
+                        if total_outgoing_records >= _MAX_DNS_OUTGOING:
+                            break
                 self.zc.send(out)
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
