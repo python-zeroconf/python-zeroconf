@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, division, print_function
 
+from io import open
+
 from os.path import abspath, dirname, join
 
 from setuptools import setup
 
 PROJECT_ROOT = abspath(dirname(__file__))
-with open(join(PROJECT_ROOT, 'README.rst')) as f:
+with open(join(PROJECT_ROOT, 'README.rst'), encoding='utf-8') as f:
     readme = f.read()
 
 version = (

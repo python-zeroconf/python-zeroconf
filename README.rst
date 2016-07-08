@@ -110,10 +110,40 @@ Here's an example:
     If you want to customize that you need to specify ``interfaces`` argument when
     constructing ``Zeroconf`` object (see the code for details).
 
+If you don't know the name of the service you need to browse for, try:
+
+.. code-block:: python
+
+    from zeroconf import ZeroconfServiceTypes
+    print('\n'.join(ZeroconfServiceTypes.find()))
+
 See examples directory for more.
 
 Changelog
 =========
+
+0.17.6
+------
+
+* Many improvements to address race conditions and exceptions during ZC()
+  startup and shutdown, thanks to: morpav, veawor, justingiorgi, herczy,
+  stephenrauch
+* Added more test coverage: strahlex, stephenrauch
+* Stephen Rauch contributed:
+
+  - Speed up browser startup
+  - Add ZeroconfServiceTypes() query class to discover all advertised service types
+  - Add full validation for service names, types and subtypes
+  - Fix for subtype browsing
+  - Fix DNSHInfo support
+
+0.17.5
+------
+
+* Fixed OpenBSD compatibility, thanks to Alessio Sergi
+* Fixed race condition on ServiceBrowser startup, thanks to gbiddison
+* Fixed installation on some Python 3 systems, thanks to Per Sandström
+* Fixed "size change during iteration" bug on Python 3, thanks to gbiddison
 
 0.17.4
 ------
@@ -215,6 +245,7 @@ Changelog
 ----
 
 * Jonathon Paisley contributed these corrections:
+
   - always multicast replies, even when query is unicast
   - correct a pointer encoding problem
   - can now write records in any order
@@ -222,6 +253,7 @@ Changelog
   - better TXT record parsing
   - server is now separate from name
   - can cancel a service browser
+  
 * modified some unit tests to accommodate these changes
 
 0.09

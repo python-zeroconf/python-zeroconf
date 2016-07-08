@@ -7,21 +7,22 @@
 import logging
 import socket
 import struct
+import time
 import unittest
 from threading import Event
 
-from mock import Mock
 from six import indexbytes
 from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
+    DNSHinfo,
     DNSText,
-    Listener,
     ServiceBrowser,
     ServiceInfo,
     ServiceStateChange,
     Zeroconf,
+    ZeroconfServiceTypes,
 )
 
 log = logging.getLogger('zeroconf')
@@ -65,6 +66,19 @@ class PacketGeneration(unittest.TestCase):
         self.assertEqual(len(generated.questions), 1)
         self.assertEqual(len(generated.questions), len(parsed.questions))
         self.assertEqual(question, parsed.questions[0])
+
+    def test_dns_hinfo(self):
+        generated = r.DNSOutgoing(0)
+        generated.add_additional_answer(
+            DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'os'))
+        parsed = r.DNSIncoming(generated.packet())
+        self.assertEqual(parsed.answers[0].cpu, u'cpu')
+        self.assertEqual(parsed.answers[0].os, u'os')
+
+        generated = r.DNSOutgoing(0)
+        generated.add_additional_answer(
+            DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
+        self.assertRaises(r.NamePartTooLongException, generated.packet)
 
 
 class PacketForm(unittest.TestCase):
@@ -151,6 +165,198 @@ class Framework(unittest.TestCase):
         rv.close()
 
 
+class Exceptions(unittest.TestCase):
+
+    browser = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.browser = Zeroconf()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.close()
+        cls.browser = None
+
+    def test_bad_service_info_name(self):
+        self.assertRaises(
+            r.BadTypeInNameException,
+            self.browser.get_service_info, "type", "type_not")
+
+    def test_bad_service_names(self):
+        bad_names_to_try = (
+            '',
+            'local',
+            '_tcp.local.',
+            '_udp.local.',
+            '._udp.local.',
+            '_@._tcp.local.',
+            '_A@._tcp.local.',
+            '_x--x._tcp.local.',
+            '_-x._udp.local.',
+            '_x-._tcp.local.',
+            '_22._udp.local.',
+            '_2-2._tcp.local.',
+            '_1234567890-abcde._udp.local.',
+            '._x._udp.local.',
+        )
+        for name in bad_names_to_try:
+            self.assertRaises(
+                r.BadTypeInNameException,
+                self.browser.get_service_info, name, 'x.' + name)
+
+    def test_bad_sub_types(self):
+        bad_names_to_try = (
+            '_sub._http._tcp.local.',
+            'x.sub._http._tcp.local.',
+            'a' * 64 + '._sub._http._tcp.local.',
+            'a' * 62 + u'â._sub._http._tcp.local.',
+        )
+        for name in bad_names_to_try:
+            self.assertRaises(
+                r.BadTypeInNameException, r.service_type_name, name)
+
+    def test_good_service_names(self):
+        good_names_to_try = (
+            '_x._tcp.local.',
+            '_x._udp.local.',
+            '_12345-67890-abc._udp.local.',
+            'x._sub._http._tcp.local.',
+            'a' * 63 + '._sub._http._tcp.local.',
+            'a' * 61 + u'â._sub._http._tcp.local.',
+        )
+        for name in good_names_to_try:
+            r.service_type_name(name)
+
+
+class ServiceTypesQuery(unittest.TestCase):
+
+    def test_integration_with_listener(self):
+
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name,
+            socket.inet_aton("10.0.1.2"), 80, 0, 0,
+            desc, "ash-2.local.")
+        zeroconf_registrar.register_service(info)
+
+        try:
+            service_types = ZeroconfServiceTypes.find(timeout=0.5)
+            assert type_ in service_types
+            service_types = ZeroconfServiceTypes.find(
+                zc=zeroconf_registrar, timeout=0.5)
+            assert type_ in service_types
+
+        finally:
+            zeroconf_registrar.close()
+
+    def test_integration_with_subtype_and_listener(self):
+        subtype_ = "_subtype._sub"
+        type_ = "_type._tcp.local."
+        name = "xxxyyy"
+        # Note: discovery returns only DNS-SD type not subtype
+        discovery_type = "%s.%s" % (subtype_, type_)
+        registration_name = "%s.%s" % (name, type_)
+
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            discovery_type, registration_name,
+            socket.inet_aton("10.0.1.2"), 80, 0, 0,
+            desc, "ash-2.local.")
+        zeroconf_registrar.register_service(info)
+
+        try:
+            service_types = ZeroconfServiceTypes.find(timeout=0.5)
+            print(service_types)
+            assert discovery_type in service_types
+            service_types = ZeroconfServiceTypes.find(
+                zc=zeroconf_registrar, timeout=0.5)
+            assert discovery_type in service_types
+
+        finally:
+            zeroconf_registrar.close()
+
+
+class ListenerTest(unittest.TestCase):
+
+    def test_integration_with_listener_class(self):
+
+        service_added = Event()
+        service_removed = Event()
+
+        subtype_name = "My special Subtype"
+        type_ = "_http._tcp.local."
+        subtype = subtype_name + "._sub." + type_
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+
+        class MyListener(object):
+            def add_service(self, zeroconf, type, name):
+                zeroconf.get_service_info(type, name)
+                service_added.set()
+
+            def remove_service(self, zeroconf, type, name):
+                service_removed.set()
+
+        zeroconf_browser = Zeroconf()
+        zeroconf_browser.add_service_listener(subtype, MyListener())
+
+        properties = dict(
+            prop_none=None,
+            prop_string=b'a_prop',
+            prop_float=1.0,
+            prop_blank=b'a blanked string',
+            prop_true=1,
+            prop_false=0,
+        )
+
+        zeroconf_registrar = Zeroconf()
+        desc = {'path': '/~paulsm/'}
+        desc.update(properties)
+        info_service = ServiceInfo(
+            subtype, registration_name,
+            socket.inet_aton("10.0.1.2"), 80, 0, 0,
+            desc, "ash-2.local.")
+        zeroconf_registrar.register_service(info_service)
+
+        try:
+            service_added.wait(1)
+            assert service_added.is_set()
+
+            # short pause to allow multicast timers to expire
+            time.sleep(2)
+
+            # clear the answer cache to force query
+            for record in zeroconf_browser.cache.entries():
+                zeroconf_browser.cache.remove(record)
+
+            # get service info without answer cache
+            info = zeroconf_browser.get_service_info(type_, registration_name)
+
+            assert info.properties[b'prop_none'] is False
+            assert info.properties[b'prop_string'] == properties['prop_string']
+            assert info.properties[b'prop_float'] is False
+            assert info.properties[b'prop_blank'] == properties['prop_blank']
+            assert info.properties[b'prop_true'] is True
+            assert info.properties[b'prop_false'] is False
+
+            info = zeroconf_browser.get_service_info(subtype, registration_name)
+            assert info.properties[b'prop_none'] is False
+
+            zeroconf_registrar.unregister_service(info_service)
+            service_removed.wait(1)
+            assert service_removed.is_set()
+        finally:
+            zeroconf_registrar.close()
+            zeroconf_browser.close()
+
+
 def test_integration():
     service_added = Event()
     service_removed = Event()
@@ -179,24 +385,12 @@ def test_integration():
     try:
         service_added.wait(1)
         assert service_added.is_set()
-        zeroconf_registrar.unregister_service(info)
-        service_removed.wait(1)
-        assert service_removed.is_set()
+        # Don't remove service, allow close() to cleanup
+
     finally:
         zeroconf_registrar.close()
         browser.cancel()
         zeroconf_browser.close()
-
-
-def test_listener_handles_closed_socket_situation_gracefully():
-    error = socket.error(socket.EBADF)
-    error.errno = socket.EBADF
-
-    zeroconf = Mock()
-    zeroconf.socket.recvfrom.side_effect = error
-
-    listener = Listener(zeroconf)
-    listener.handle_read(zeroconf.socket)
 
 
 def test_dnstext_repr_works():
