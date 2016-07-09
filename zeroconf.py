@@ -30,6 +30,7 @@ import re
 import select
 import socket
 import struct
+import sys
 import threading
 import time
 from functools import reduce
@@ -158,6 +159,22 @@ _TYPES = {_TYPE_A: "a",
 _HAS_A_TO_Z = re.compile(r'[A-Za-z]')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
 
+
+@enum.unique
+class InterfaceChoice(enum.Enum):
+    Default = 1
+    All = 2
+
+
+@enum.unique
+class ServiceStateChange(enum.Enum):
+    Added = 1
+    Removed = 2
+
+
+HOST_ONLY_NETWORK_MASK = '255.255.255.255'
+
+
 # utility functions
 
 
@@ -260,23 +277,23 @@ class Error(Exception):
     pass
 
 
-class NonLocalNameException(Exception):
+class IncomingDecodeError(Error):
     pass
 
 
-class NonUniqueNameException(Exception):
+class NonUniqueNameException(Error):
     pass
 
 
-class NamePartTooLongException(Exception):
+class NamePartTooLongException(Error):
     pass
 
 
-class AbstractMethodException(Exception):
+class AbstractMethodException(Error):
     pass
 
 
-class BadTypeInNameException(Exception):
+class BadTypeInNameException(Error):
     pass
 
 # implementation classes
@@ -545,6 +562,8 @@ class DNSIncoming(object):
 
     """Object representation of an incoming DNS packet"""
 
+    _seen_exceptions = {}
+
     def __init__(self, data):
         """Constructor from string holding bytes of packet"""
         self.offset = 0
@@ -557,10 +576,25 @@ class DNSIncoming(object):
         self.num_answers = 0
         self.num_authorities = 0
         self.num_additionals = 0
+        self.valid = False
 
-        self.read_header()
-        self.read_questions()
-        self.read_others()
+        try:
+            self.read_header()
+            self.read_questions()
+            self.read_others()
+            self.valid = True
+
+        except (IndexError, struct.error, IncomingDecodeError):
+            # log the packet and the exception
+            exc_info = sys.exc_info()
+            exc_str = str(exc_info[1])
+            if exc_str not in self._seen_exceptions:
+                self._seen_exceptions[exc_str] = exc_info
+                logger = log.warn
+            else:
+                logger = log.debug
+            logger('Choked at offset %d while unpacking %r', self.offset, data)
+            logger('Exception occurred:', exc_info=exc_info)
 
     def unpack(self, format_):
         length = struct.calcsize(format_)
@@ -583,9 +617,9 @@ class DNSIncoming(object):
             question = DNSQuestion(name, type_, class_)
             self.questions.append(question)
 
-    def read_int(self):
-        """Reads an integer from the packet"""
-        return self.unpack(b'!I')[0]
+    # def read_int(self):
+    #     """Reads an integer from the packet"""
+    #     return self.unpack(b'!I')[0]
 
     def read_character_string(self):
         """Reads a character string from the packet"""
@@ -675,12 +709,11 @@ class DNSIncoming(object):
                     next_ = off + 1
                 off = ((length & 0x3F) << 8) | indexbytes(self.data, off)
                 if off >= first:
-                    # TODO raise more specific exception
-                    raise Exception("Bad domain name (circular) at %s" % (off,))
+                    raise IncomingDecodeError(
+                        "Bad domain name (circular) at %s" % (off,))
                 first = off
             else:
-                # TODO raise more specific exception
-                raise Exception("Bad domain name at %s" % (off,))
+                raise IncomingDecodeError("Bad domain name at %s" % (off,))
 
         if next_ >= 0:
             self.offset = next_
@@ -793,7 +826,7 @@ class DNSOutgoing(object):
             # for future pointers to it.
             #
             self.names[name] = self.size
-            parts = name.split('.')
+            parts = str(name).split('.')
             if parts[-1] == '':
                 parts = parts[:-1]
             for part in parts:
@@ -986,17 +1019,20 @@ class Listener(object):
 
         self.data = data
         msg = DNSIncoming(data)
-        if msg.is_query():
+        if not msg.valid:
+            pass
+
+        elif msg.is_query():
             # Always multicast responses
-            #
             if port == _MDNS_PORT:
                 self.zc.handle_query(msg, _MDNS_ADDR, _MDNS_PORT)
+
             # If it's not a multicast query, reply via unicast
             # and multicast
-            #
             elif port == _DNS_PORT:
                 self.zc.handle_query(msg, addr, port)
                 self.zc.handle_query(msg, _MDNS_ADDR, _MDNS_PORT)
+
         else:
             self.zc.handle_response(msg)
 
@@ -1394,7 +1430,7 @@ class ZeroconfServiceTypes(object):
         pass
 
     @classmethod
-    def find(cls, zc=None, timeout=5):
+    def find(cls, zc=None, timeout=5, interfaces=InterfaceChoice.All):
         """
         Return all of the advertised services on any local networks.
 
@@ -1403,7 +1439,7 @@ class ZeroconfServiceTypes(object):
         :param timeout: seconds to wait for any responses
         :return: tuple of service type strings
         """
-        local_zc = zc or Zeroconf()
+        local_zc = zc or Zeroconf(interfaces=interfaces)
         listener = cls()
         browser = ServiceBrowser(
             local_zc, '_services._dns-sd._udp.local.', listener=listener)
@@ -1418,21 +1454,6 @@ class ZeroconfServiceTypes(object):
             browser.cancel()
 
         return tuple(sorted(listener.found_services))
-
-
-@enum.unique
-class InterfaceChoice(enum.Enum):
-    Default = 1
-    All = 2
-
-
-@enum.unique
-class ServiceStateChange(enum.Enum):
-    Added = 1
-    Removed = 2
-
-
-HOST_ONLY_NETWORK_MASK = '255.255.255.255'
 
 
 def get_all_addresses(address_family):
