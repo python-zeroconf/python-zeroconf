@@ -321,6 +321,7 @@ class QuietLogger(object):
             logger(*logger_data)
         logger('Exception occurred:', exc_info=exc_info)
 
+    @classmethod
     def log_warning_once(cls, *args):
         msg_str = args[0]
         if msg_str not in cls._seen_logs:
@@ -832,28 +833,49 @@ class DNSOutgoing(object):
         self.write_string(value)
 
     def write_name(self, name):
-        """Writes a domain name to the packet"""
+        """
+        Write names to packet
 
-        if name in self.names:
-            # Find existing instance of this name in packet
-            #
-            index = self.names[name]
+        18.14. Name Compression
 
-            # An index was found, so write a pointer to it
-            #
+        When generating Multicast DNS messages, implementations SHOULD use
+        name compression wherever possible to compress the names of resource
+        records, by replacing some or all of the resource record name with a
+        compact two-byte reference to an appearance of that data somewhere
+        earlier in the message [RFC1035].
+        """
+
+        # split name into each label
+        parts = name.split('.')
+        if not parts[-1]:
+            parts.pop()
+
+        # construct each suffix
+        name_suffices = ['.'.join(parts[i:]) for i in range(len(parts))]
+
+        # look for an existing name or suffix
+        for count, sub_name in enumerate(name_suffices):
+            if sub_name in self.names:
+                break
+        else:
+            count += 1
+
+        # note the new names we are saving into the packet
+        for suffix in name_suffices[:count]:
+            self.names[suffix] = self.size + len(name) - len(suffix) - 1
+
+        # write the new names out.
+        for part in parts[:count]:
+            self.write_utf(part)
+
+        # if we wrote part of the name, create a pointer to the rest
+        if count != len(name_suffices):
+            # Found substring in packet, create pointer
+            index = self.names[name_suffices[count]]
             self.write_byte((index >> 8) | 0xC0)
             self.write_byte(index & 0xFF)
         else:
-            # No record of this name already, so write it
-            # out as normal, recording the location of the name
-            # for future pointers to it.
-            #
-            self.names[name] = self.size
-            parts = str(name).split('.')
-            if parts[-1] == '':
-                parts = parts[:-1]
-            for part in parts:
-                self.write_utf(part)
+            # this is the end of a name
             self.write_byte(0)
 
     def write_question(self, question):
@@ -1039,7 +1061,7 @@ class Listener(QuietLogger):
     def handle_read(self, socket_):
         try:
             data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
-        except:
+        except Exception:
             self.log_exception_warning()
             return
 
