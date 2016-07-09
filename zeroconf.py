@@ -321,6 +321,16 @@ class QuietLogger(object):
             logger(*logger_data)
         logger('Exception occurred:', exc_info=exc_info)
 
+    def log_warning_once(cls, *args):
+        msg_str = args[0]
+        if msg_str not in cls._seen_logs:
+            cls._seen_logs[msg_str] = 0
+            logger = log.warning
+        else:
+            logger = log.debug
+        cls._seen_logs[msg_str] += 1
+        logger(*args)
+
 
 class DNSEntry(object):
 
@@ -1530,7 +1540,7 @@ def get_errno(e):
     return e.args[0]
 
 
-class Zeroconf(object):
+class Zeroconf(QuietLogger):
 
     """Implementation of Zeroconf Multicast DNS Service Discovery
 
@@ -1885,7 +1895,11 @@ class Zeroconf(object):
     def send(self, out, addr=_MDNS_ADDR, port=_MDNS_PORT):
         """Sends an outgoing packet."""
         packet = out.packet()
-        log.debug('Sending %r as %r...', out, packet)
+        if len(packet) > _MAX_MSG_ABSOLUTE:
+            self.log_warning_once("Dropping %r over-sided packet (%d bytes) %r",
+                                  out, len(packet), packet)
+            return
+        log.debug('Sending %r (%d bytes) as %r...', out, len(packet), packet)
         for s in self._respond_sockets:
             if self._GLOBAL_DONE:
                 return
