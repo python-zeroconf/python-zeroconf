@@ -16,7 +16,6 @@ from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
-    DNSAddress,
     DNSHinfo,
     DNSText,
     ServiceBrowser,
@@ -162,7 +161,7 @@ class Names(unittest.TestCase):
 class Framework(unittest.TestCase):
 
     def test_launch_and_close(self):
-        rv = r.Zeroconf()
+        rv = r.Zeroconf(interfaces=['127.0.0.1'])
         rv.close()
 
 
@@ -172,7 +171,7 @@ class Exceptions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.browser = Zeroconf()
+        cls.browser = Zeroconf(interfaces=['127.0.0.1'])
 
     @classmethod
     def tearDownClass(cls):
@@ -229,20 +228,20 @@ class Exceptions(unittest.TestCase):
         for name in good_names_to_try:
             r.service_type_name(name)
 
+
 class TestDnsIncoming(unittest.TestCase):
 
     def test_incoming_exception_handling(self):
         generated = r.DNSOutgoing(0)
-        packet = list(generated.packet())
-        packet.insert(8, 'deadbeef')
-        packet = ''.join(packet)
+        packet = generated.packet()
+        packet = packet[:8] + b'deadbeef' + packet[8:]
         parsed = r.DNSIncoming(packet)
         parsed = r.DNSIncoming(packet)
         assert parsed.valid is False
 
     def test_incoming_unknown_type(self):
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress('', r._TYPE_SOA, r._CLASS_IN, 1, '')
+        answer = r.DNSAddress(b'a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
         generated.add_additional_answer(answer)
         packet = generated.packet()
         parsed = r.DNSIncoming(packet)
@@ -272,7 +271,8 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar.register_service(info)
 
         try:
-            service_types = ZeroconfServiceTypes.find(timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(
+                interfaces=['127.0.0.1'], timeout=0.5)
             assert type_ in service_types
             service_types = ZeroconfServiceTypes.find(
                 zc=zeroconf_registrar, timeout=0.5)
@@ -298,7 +298,8 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar.register_service(info)
 
         try:
-            service_types = ZeroconfServiceTypes.find(timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(
+                interfaces=['127.0.0.1'], timeout=0.5)
             # print(service_types)
             assert discovery_type in service_types
             service_types = ZeroconfServiceTypes.find(
@@ -330,7 +331,7 @@ class ListenerTest(unittest.TestCase):
             def remove_service(self, zeroconf, type, name):
                 service_removed.set()
 
-        zeroconf_browser = Zeroconf()
+        zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
         zeroconf_browser.add_service_listener(subtype, MyListener())
 
         properties = dict(
@@ -342,7 +343,7 @@ class ListenerTest(unittest.TestCase):
             prop_false=0,
         )
 
-        zeroconf_registrar = Zeroconf()
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
         desc = {'path': '/~paulsm/'}
         desc.update(properties)
         info_service = ServiceInfo(
@@ -397,10 +398,10 @@ def test_integration():
             elif state_change is ServiceStateChange.Removed:
                 service_removed.set()
 
-    zeroconf_browser = Zeroconf()
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
     browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
-    zeroconf_registrar = Zeroconf()
+    zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
         type_, registration_name,

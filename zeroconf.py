@@ -159,6 +159,22 @@ _TYPES = {_TYPE_A: "a",
 _HAS_A_TO_Z = re.compile(r'[A-Za-z]')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
 
+
+@enum.unique
+class InterfaceChoice(enum.Enum):
+    Default = 1
+    All = 2
+
+
+@enum.unique
+class ServiceStateChange(enum.Enum):
+    Added = 1
+    Removed = 2
+
+
+HOST_ONLY_NETWORK_MASK = '255.255.255.255'
+
+
 # utility functions
 
 
@@ -568,7 +584,7 @@ class DNSIncoming(object):
             self.read_others()
             self.valid = True
 
-        except (IndexError, struct.error, IncomingDecodeError) as exc:
+        except (IndexError, struct.error, IncomingDecodeError):
             # log the packet and the exception
             exc_info = sys.exc_info()
             exc_str = str(exc_info[1])
@@ -810,7 +826,7 @@ class DNSOutgoing(object):
             # for future pointers to it.
             #
             self.names[name] = self.size
-            parts = name.split('.')
+            parts = str(name).split('.')
             if parts[-1] == '':
                 parts = parts[:-1]
             for part in parts:
@@ -1414,7 +1430,7 @@ class ZeroconfServiceTypes(object):
         pass
 
     @classmethod
-    def find(cls, zc=None, timeout=5):
+    def find(cls, zc=None, timeout=5, interfaces=InterfaceChoice.All):
         """
         Return all of the advertised services on any local networks.
 
@@ -1423,7 +1439,7 @@ class ZeroconfServiceTypes(object):
         :param timeout: seconds to wait for any responses
         :return: tuple of service type strings
         """
-        local_zc = zc or Zeroconf()
+        local_zc = zc or Zeroconf(interfaces=interfaces)
         listener = cls()
         browser = ServiceBrowser(
             local_zc, '_services._dns-sd._udp.local.', listener=listener)
@@ -1438,21 +1454,6 @@ class ZeroconfServiceTypes(object):
             browser.cancel()
 
         return tuple(sorted(listener.found_services))
-
-
-@enum.unique
-class InterfaceChoice(enum.Enum):
-    Default = 1
-    All = 2
-
-
-@enum.unique
-class ServiceStateChange(enum.Enum):
-    Added = 1
-    Removed = 2
-
-
-HOST_ONLY_NETWORK_MASK = '255.255.255.255'
 
 
 def get_all_addresses(address_family):
