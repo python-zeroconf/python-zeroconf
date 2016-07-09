@@ -16,6 +16,7 @@ from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
+    DNSAddress,
     DNSHinfo,
     DNSText,
     ServiceBrowser,
@@ -228,6 +229,31 @@ class Exceptions(unittest.TestCase):
         for name in good_names_to_try:
             r.service_type_name(name)
 
+class TestDnsIncoming(unittest.TestCase):
+
+    def test_incoming_exception_handling(self):
+        generated = r.DNSOutgoing(0)
+        packet = list(generated.packet())
+        packet.insert(8, 'deadbeef')
+        packet = ''.join(packet)
+        parsed = r.DNSIncoming(packet)
+        parsed = r.DNSIncoming(packet)
+        assert parsed.valid is False
+
+    def test_incoming_unknown_type(self):
+        generated = r.DNSOutgoing(0)
+        answer = r.DNSAddress('', r._TYPE_SOA, r._CLASS_IN, 1, '')
+        generated.add_additional_answer(answer)
+        packet = generated.packet()
+        parsed = r.DNSIncoming(packet)
+        assert len(parsed.answers) == 0
+        assert parsed.is_query() != parsed.is_response()
+
+    def test_incoming_ipv6(self):
+        # ::TODO:: could use a test here if we add IPV6 record handling
+        # ie: _TYPE_AAAA
+        pass
+
 
 class ServiceTypesQuery(unittest.TestCase):
 
@@ -273,7 +299,7 @@ class ServiceTypesQuery(unittest.TestCase):
 
         try:
             service_types = ZeroconfServiceTypes.find(timeout=0.5)
-            print(service_types)
+            # print(service_types)
             assert discovery_type in service_types
             service_types = ZeroconfServiceTypes.find(
                 zc=zeroconf_registrar, timeout=0.5)
