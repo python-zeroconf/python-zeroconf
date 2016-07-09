@@ -228,29 +228,33 @@ def service_type_name(type_):
         raise BadTypeInNameException("No Service name found")
 
     if name[0] != '_':
-        raise BadTypeInNameException("Service name must start with '_'")
+        raise BadTypeInNameException(
+            "Service name (%s) must start with '_'" % name)
 
     # remove leading underscore
     name = name[1:]
 
     if len(name) > 15:
-        raise BadTypeInNameException("Service name must be <= 15 bytes")
+        raise BadTypeInNameException(
+            "Service name (%s) must be <= 15 bytes" % name)
 
     if '--' in name:
-        raise BadTypeInNameException("Service name must not contain '--'")
+        raise BadTypeInNameException(
+            "Service name (%s) must not contain '--'" % name)
 
     if '-' in (name[0], name[-1]):
         raise BadTypeInNameException(
-            "Service name may not start or end with '-'")
+            "Service name (%s) may not start or end with '-'" % name)
 
     if not _HAS_A_TO_Z.search(name):
         raise BadTypeInNameException(
-            "Service name must contain at least one letter (eg: 'A-Z')")
+            "Service name (%s) must contain at least one letter (eg: 'A-Z')" %
+            name)
 
     if not _HAS_ONLY_A_TO_Z_NUM_HYPHEN.search(name):
         raise BadTypeInNameException(
-            "Service name must contain only these characters: "
-            "A-Z, a-z, 0-9, hyphen ('-')")
+            "Service name (%s) must contain only these characters: "
+            "A-Z, a-z, 0-9, hyphen ('-')" % name)
 
     if remaining and remaining[-1] == '_sub':
         remaining.pop()
@@ -260,7 +264,8 @@ def service_type_name(type_):
 
     if len(remaining) > 1:
         raise BadTypeInNameException(
-            "Unexpected characters '%s.'" % '.'.join(remaining[1:]))
+            "Unexpected characters '%s.' in %s" % (
+                '.'.join(remaining[1:]), type_))
 
     if remaining:
         length = len(remaining[0].encode('utf-8'))
