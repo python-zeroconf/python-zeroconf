@@ -304,6 +304,24 @@ class BadTypeInNameException(Error):
 # implementation classes
 
 
+class QuietLogger(object):
+    _seen_logs = {}
+
+    @classmethod
+    def log_exception_warning(cls, logger_data=None):
+        exc_info = sys.exc_info()
+        exc_str = str(exc_info[1])
+        if exc_str not in cls._seen_logs:
+            # log at warning level the first time this is seen
+            cls._seen_logs[exc_str] = exc_info
+            logger = log.warning
+        else:
+            logger = log.debug
+        if logger_data is not None:
+            logger(*logger_data)
+        logger('Exception occurred:', exc_info=exc_info)
+
+
 class DNSEntry(object):
 
     """A DNS entry"""
@@ -563,11 +581,9 @@ class DNSService(DNSRecord):
         return self.to_string("%s:%s" % (self.server, self.port))
 
 
-class DNSIncoming(object):
+class DNSIncoming(QuietLogger):
 
     """Object representation of an incoming DNS packet"""
-
-    _seen_exceptions = {}
 
     def __init__(self, data):
         """Constructor from string holding bytes of packet"""
@@ -590,16 +606,8 @@ class DNSIncoming(object):
             self.valid = True
 
         except (IndexError, struct.error, IncomingDecodeError):
-            # log the packet and the exception
-            exc_info = sys.exc_info()
-            exc_str = str(exc_info[1])
-            if exc_str not in self._seen_exceptions:
-                self._seen_exceptions[exc_str] = exc_info
-                logger = log.warn
-            else:
-                logger = log.debug
-            logger('Choked at offset %d while unpacking %r', self.offset, data)
-            logger('Exception occurred:', exc_info=exc_info)
+            self.log_exception_warning((
+                'Choked at offset %d while unpacking %r', self.offset, data))
 
     def unpack(self, format_):
         length = struct.calcsize(format_)
