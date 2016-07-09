@@ -1013,7 +1013,7 @@ class Engine(threading.Thread):
             self.condition.notify()
 
 
-class Listener(object):
+class Listener(QuietLogger):
 
     """A Listener is used by this module to listen on the multicast
     group to which DNS messages are sent, allowing the implementation
@@ -1027,8 +1027,13 @@ class Listener(object):
         self.data = None
 
     def handle_read(self, socket_):
-        data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
-        log.debug('Received %r from %r:%r', data, addr, port)
+        try:
+            data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
+        except:
+            self.log_exception_warning()
+            return
+
+        log.debug('Received from %r:%r: %r ', addr, port, data)
 
         self.data = data
         msg = DNSIncoming(data)
