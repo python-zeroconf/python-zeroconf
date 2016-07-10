@@ -409,8 +409,8 @@ class DNSRecord(DNSEntry):
         self.created = current_time_millis()
 
     def __eq__(self, other):
-        """Tests equality as per DNSRecord"""
-        return isinstance(other, DNSRecord) and DNSEntry.__eq__(self, other)
+        """Abstract method"""
+        raise AbstractMethodException
 
     def suppressed_by(self, msg):
         """Returns true if any answer in a message can suffice for the
@@ -478,10 +478,9 @@ class DNSAddress(DNSRecord):
     def __repr__(self):
         """String representation"""
         try:
-            return socket.inet_ntoa(self.address)
-        except Exception as e:  # TODO stop catching all Exceptions
-            log.exception('Unknown error, possibly benign: %r', e)
-            return self.address
+            return str(socket.inet_ntoa(self.address))
+        except Exception:  # TODO stop catching all Exceptions
+            return str(self.address)
 
 
 class DNSHinfo(DNSRecord):
@@ -773,7 +772,7 @@ class DNSOutgoing(object):
         adding_answers = 2
         adding_authoratives = 3
         adding_additionals = 4
-        finished = 4
+        finished = 5
 
     def set_state(self, state):
         if self.state != state:
@@ -1489,9 +1488,7 @@ class ServiceInfo(object):
 
     def __eq__(self, other):
         """Tests equality of service name"""
-        if isinstance(other, ServiceInfo):
-            return other.name == self.name
-        return False
+        return isinstance(other, ServiceInfo) and other.name == self.name
 
     def __ne__(self, other):
         """Non-equality test"""
@@ -1696,7 +1693,6 @@ class Zeroconf(QuietLogger):
         info = ServiceInfo(type_, name)
         if info.request(self, timeout):
             return info
-        return None
 
     def add_service_listener(self, type_, listener):
         """Adds a listener for a particular service type.  This object
@@ -1963,7 +1959,7 @@ class Zeroconf(QuietLogger):
         """Sends an outgoing packet."""
         packet = out.packet()
         if len(packet) > _MAX_MSG_ABSOLUTE:
-            self.log_warning_once("Dropping %r over-sided packet (%d bytes) %r",
+            self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r",
                                   out, len(packet), packet)
             return
         log.debug('Sending %r (%d bytes) as %r...', out, len(packet), packet)
@@ -1972,9 +1968,9 @@ class Zeroconf(QuietLogger):
                 return
             bytes_sent = s.sendto(packet, 0, (addr, port))
             if bytes_sent != len(packet):
-                raise Error(
-                    'Should not happen, sent %d out of %d bytes' % (
-                        bytes_sent, len(packet)))
+                self.log_warning_once(
+                    '!!! sent %d out of %d bytes to %r' % (
+                        bytes_sent, len(packet)), s)
 
     def close(self):
         """Ends the background threads, and prevent this instance from

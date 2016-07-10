@@ -38,6 +38,60 @@ def teardown_module():
     log.setLevel(original_logging_level[0])
 
 
+class TestDunder(unittest.TestCase):
+
+    def test_dns_text_repr(self):
+        # There was an issue on Python 3 that prevented DNSText's repr
+        # from working when the text was longer than 10 bytes
+        text = DNSText('irrelevant', None, 0, 0, b'12345678901')
+        repr(text)
+
+        text = DNSText('irrelevant', None, 0, 0, b'123')
+        repr(text)
+
+    def test_dns_hinfo_repr_eq(self):
+        hinfo = DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'os')
+        assert hinfo == hinfo
+        repr(hinfo)
+
+    def test_dns_pointer_repr(self):
+        pointer = r.DNSPointer(
+            'irrelevant', r._TYPE_PTR, r._CLASS_IN, r._DNS_TTL, '123')
+        repr(pointer)
+
+    def test_dns_address_repr(self):
+        address = r.DNSAddress('irrelevant', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
+        repr(address)
+
+    def test_dns_question_repr(self):
+        question = r.DNSQuestion(
+            'irrelevant', r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE)
+        repr(question)
+        assert not question != question
+
+    def test_dns_service_repr(self):
+        service = r.DNSService(
+            'irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, b'a')
+        repr(service)
+
+    def test_dns_record_abc(self):
+        record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL)
+        self.assertRaises(r.AbstractMethodException, record.__eq__, record)
+        self.assertRaises(r.AbstractMethodException, record.write, None)
+
+    def test_service_info_dunder(self):
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+        info = ServiceInfo(
+            type_, registration_name,
+            socket.inet_aton("10.0.1.2"), 80, 0, 0,
+            None, "ash-2.local.")
+
+        assert not info != info
+        repr(info)
+
+
 class PacketGeneration(unittest.TestCase):
 
     def test_parse_own_packet_simple(self):
@@ -364,7 +418,6 @@ class ServiceTypesQuery(unittest.TestCase):
         try:
             service_types = ZeroconfServiceTypes.find(
                 interfaces=['127.0.0.1'], timeout=0.5)
-            # print(service_types)
             assert discovery_type in service_types
             service_types = ZeroconfServiceTypes.find(
                 zc=zeroconf_registrar, timeout=0.5)
@@ -395,8 +448,9 @@ class ListenerTest(unittest.TestCase):
             def remove_service(self, zeroconf, type, name):
                 service_removed.set()
 
+        listener = MyListener()
         zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
-        zeroconf_browser.add_service_listener(subtype, MyListener())
+        zeroconf_browser.add_service_listener(subtype, listener)
 
         properties = dict(
             prop_none=None,
@@ -445,6 +499,7 @@ class ListenerTest(unittest.TestCase):
             assert service_removed.is_set()
         finally:
             zeroconf_registrar.close()
+            zeroconf_browser.remove_service_listener(listener)
             zeroconf_browser.close()
 
 
@@ -482,10 +537,3 @@ def test_integration():
         zeroconf_registrar.close()
         browser.cancel()
         zeroconf_browser.close()
-
-
-def test_dnstext_repr_works():
-    # There was an issue on Python 3 that prevented DNSText's repr
-    # from working when the text was longer than 10 bytes
-    text = DNSText('irrelevant', None, 0, 0, b'12345678901')
-    repr(text)
