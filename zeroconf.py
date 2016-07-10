@@ -751,7 +751,7 @@ class DNSOutgoing(object):
 
     """Object representation of an outgoing packet"""
 
-    def __init__(self, flags, multicast=True):
+    def __init__(self, flags, multicast=True, build_on_fly=False):
         self.finished = False
         self.id = 0
         self.multicast = multicast
@@ -759,15 +759,36 @@ class DNSOutgoing(object):
         self.names = {}
         self.data = []
         self.size = 12
+        self.build_on_fly = build_on_fly
+        self.state = self.State.init
 
         self.questions = []
         self.answers = []
         self.authorities = []
         self.additionals = []
 
+    class State(enum.Enum):
+        init = 0
+        adding_questions = 1
+        adding_answers = 2
+        adding_authoratives = 3
+        adding_additionals = 4
+        finished = 4
+
+    def set_state(self, state):
+        if self.state != state:
+            if self.state.value > state.value:
+                raise Error('Out of order DNSOutgoing build %s -> %s' % (
+                    self.state.name, state.name))
+            self.state = state
+        return self.state != self.State.finished
+
     def add_question(self, record):
         """Adds a question"""
         self.questions.append(record)
+        if self.build_on_fly:
+            if self.set_state(self.State.adding_questions):
+                self.write_question(record)
 
     def add_answer(self, inp, record):
         """Adds an answer"""
@@ -775,18 +796,27 @@ class DNSOutgoing(object):
             self.add_answer_at_time(record, 0)
 
     def add_answer_at_time(self, record, now):
-        """Adds an answer if if does not expire by a certain time"""
+        """Adds an answer if it does not expire by a certain time"""
         if record is not None:
             if now == 0 or not record.is_expired(now):
                 self.answers.append((record, now))
+                if self.build_on_fly:
+                    if self.set_state(self.State.adding_answers):
+                        self.write_record(record, now)
 
     def add_authorative_answer(self, record):
         """Adds an authoritative answer"""
         self.authorities.append(record)
+        if self.build_on_fly:
+            if self.set_state(self.State.adding_authoratives):
+                self.write_record(record, 0)
 
     def add_additional_answer(self, record):
         """Adds an additional answer"""
         self.additionals.append(record)
+        if self.build_on_fly:
+            if self.set_state(self.State.adding_additionals):
+                self.write_record(record, 0)
 
     def pack(self, format_, value):
         self.data.append(struct.pack(format_, value))
@@ -887,6 +917,7 @@ class DNSOutgoing(object):
     def write_record(self, record, now):
         """Writes a record (answer, authoritative answer, additional) to
         the packet"""
+        start_data_length, start_size = len(self.data), self.size
         self.write_name(record.name)
         self.write_short(record.type)
         if record.unique and self.multicast:
@@ -898,30 +929,42 @@ class DNSOutgoing(object):
         else:
             self.write_int(record.get_remaining_ttl(now))
         index = len(self.data)
+
         # Adjust size for the short we will write before this record
-        #
         self.size += 2
         record.write(self)
         self.size -= 2
 
-        length = len(b''.join(self.data[index:]))
-        self.insert_short(index, length)  # Here is the short we adjusted for
+        length = sum((len(d) for d in self.data[index:]))
+        # Here is the short we adjusted for
+        self.insert_short(index, length)
+
+        # if we go over, then rollback and quit
+        if self.size > _MAX_MSG_ABSOLUTE:
+            while len(self.data) > start_data_length:
+                self.data.pop()
+            self.size = start_size
+            self.state = self.State.finished
 
     def packet(self):
         """Returns a string containing the packet's bytes
 
         No further parts should be added to the packet once this
         is done."""
-        if not self.finished:
-            self.finished = True
-            for question in self.questions:
-                self.write_question(question)
-            for answer, time_ in self.answers:
-                self.write_record(answer, time_)
-            for authority in self.authorities:
-                self.write_record(authority, 0)
-            for additional in self.additionals:
-                self.write_record(additional, 0)
+        if self.state != self.State.finished:
+            if not self.build_on_fly:
+                for question in self.questions:
+                    self.write_question(question)
+                for answer, time_ in self.answers:
+                    if self.state != self.State.finished:
+                        self.write_record(answer, time_)
+                for authority in self.authorities:
+                    if self.state != self.State.finished:
+                        self.write_record(authority, 0)
+                for additional in self.additionals:
+                    if self.state != self.State.finished:
+                        self.write_record(additional, 0)
+            self.state = self.State.finished
 
             self.insert_short(0, len(self.additionals))
             self.insert_short(0, len(self.authorities))
@@ -1240,13 +1283,15 @@ class ServiceBrowser(threading.Thread):
             if self.zc.done or self.done:
                 return
             now = current_time_millis()
-
             if self.next_time <= now:
-                out = DNSOutgoing(_FLAGS_QR_QUERY)
+                out = DNSOutgoing(_FLAGS_QR_QUERY, build_on_fly=True)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                 for record in self.services.values():
                     if not record.is_expired(now):
                         out.add_answer_at_time(record, now)
+                        if out.state == out.State.finished:
+                            break
+
                 self.zc.send(out)
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)

@@ -179,7 +179,7 @@ class Names(unittest.TestCase):
 
         # create a bunch of servers
         type_ = "_my-service._tcp.local."
-        server_count = 200
+        server_count = 300
         records_per_server = 2
         for i in range(int(server_count / 10)):
             self.generate_many_hosts(zeroconf, type_, 10)
@@ -200,8 +200,6 @@ class Names(unittest.TestCase):
         zeroconf.close()
 
         # now the browser has sent at least one request, verify the size
-        # this assertion is not currently  super useful, but the code above
-        # exercise several code paths.
         assert longest_packet[0] < r._MAX_MSG_ABSOLUTE
 
     def generate_many_hosts(self, zc, type_, number_hosts):
