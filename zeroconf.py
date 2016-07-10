@@ -228,29 +228,33 @@ def service_type_name(type_):
         raise BadTypeInNameException("No Service name found")
 
     if name[0] != '_':
-        raise BadTypeInNameException("Service name must start with '_'")
+        raise BadTypeInNameException(
+            "Service name (%s) must start with '_'" % name)
 
     # remove leading underscore
     name = name[1:]
 
     if len(name) > 15:
-        raise BadTypeInNameException("Service name must be <= 15 bytes")
+        raise BadTypeInNameException(
+            "Service name (%s) must be <= 15 bytes" % name)
 
     if '--' in name:
-        raise BadTypeInNameException("Service name must not contain '--'")
+        raise BadTypeInNameException(
+            "Service name (%s) must not contain '--'" % name)
 
     if '-' in (name[0], name[-1]):
         raise BadTypeInNameException(
-            "Service name may not start or end with '-'")
+            "Service name (%s) may not start or end with '-'" % name)
 
     if not _HAS_A_TO_Z.search(name):
         raise BadTypeInNameException(
-            "Service name must contain at least one letter (eg: 'A-Z')")
+            "Service name (%s) must contain at least one letter (eg: 'A-Z')" %
+            name)
 
     if not _HAS_ONLY_A_TO_Z_NUM_HYPHEN.search(name):
         raise BadTypeInNameException(
-            "Service name must contain only these characters: "
-            "A-Z, a-z, 0-9, hyphen ('-')")
+            "Service name (%s) must contain only these characters: "
+            "A-Z, a-z, 0-9, hyphen ('-')" % name)
 
     if remaining and remaining[-1] == '_sub':
         remaining.pop()
@@ -260,7 +264,8 @@ def service_type_name(type_):
 
     if len(remaining) > 1:
         raise BadTypeInNameException(
-            "Unexpected characters '%s.'" % '.'.join(remaining[1:]))
+            "Unexpected characters '%s.' in %s" % (
+                '.'.join(remaining[1:]), type_))
 
     if remaining:
         length = len(remaining[0].encode('utf-8'))
@@ -297,6 +302,35 @@ class BadTypeInNameException(Error):
     pass
 
 # implementation classes
+
+
+class QuietLogger(object):
+    _seen_logs = {}
+
+    @classmethod
+    def log_exception_warning(cls, logger_data=None):
+        exc_info = sys.exc_info()
+        exc_str = str(exc_info[1])
+        if exc_str not in cls._seen_logs:
+            # log at warning level the first time this is seen
+            cls._seen_logs[exc_str] = exc_info
+            logger = log.warning
+        else:
+            logger = log.debug
+        if logger_data is not None:
+            logger(*logger_data)
+        logger('Exception occurred:', exc_info=exc_info)
+
+    @classmethod
+    def log_warning_once(cls, *args):
+        msg_str = args[0]
+        if msg_str not in cls._seen_logs:
+            cls._seen_logs[msg_str] = 0
+            logger = log.warning
+        else:
+            logger = log.debug
+        cls._seen_logs[msg_str] += 1
+        logger(*args)
 
 
 class DNSEntry(object):
@@ -558,11 +592,9 @@ class DNSService(DNSRecord):
         return self.to_string("%s:%s" % (self.server, self.port))
 
 
-class DNSIncoming(object):
+class DNSIncoming(QuietLogger):
 
     """Object representation of an incoming DNS packet"""
-
-    _seen_exceptions = {}
 
     def __init__(self, data):
         """Constructor from string holding bytes of packet"""
@@ -585,16 +617,8 @@ class DNSIncoming(object):
             self.valid = True
 
         except (IndexError, struct.error, IncomingDecodeError):
-            # log the packet and the exception
-            exc_info = sys.exc_info()
-            exc_str = str(exc_info[1])
-            if exc_str not in self._seen_exceptions:
-                self._seen_exceptions[exc_str] = exc_info
-                logger = log.warn
-            else:
-                logger = log.debug
-            logger('Choked at offset %d while unpacking %r', self.offset, data)
-            logger('Exception occurred:', exc_info=exc_info)
+            self.log_exception_warning((
+                'Choked at offset %d while unpacking %r', self.offset, data))
 
     def unpack(self, format_):
         length = struct.calcsize(format_)
@@ -809,28 +833,49 @@ class DNSOutgoing(object):
         self.write_string(value)
 
     def write_name(self, name):
-        """Writes a domain name to the packet"""
+        """
+        Write names to packet
 
-        if name in self.names:
-            # Find existing instance of this name in packet
-            #
-            index = self.names[name]
+        18.14. Name Compression
 
-            # An index was found, so write a pointer to it
-            #
+        When generating Multicast DNS messages, implementations SHOULD use
+        name compression wherever possible to compress the names of resource
+        records, by replacing some or all of the resource record name with a
+        compact two-byte reference to an appearance of that data somewhere
+        earlier in the message [RFC1035].
+        """
+
+        # split name into each label
+        parts = name.split('.')
+        if not parts[-1]:
+            parts.pop()
+
+        # construct each suffix
+        name_suffices = ['.'.join(parts[i:]) for i in range(len(parts))]
+
+        # look for an existing name or suffix
+        for count, sub_name in enumerate(name_suffices):
+            if sub_name in self.names:
+                break
+        else:
+            count += 1
+
+        # note the new names we are saving into the packet
+        for suffix in name_suffices[:count]:
+            self.names[suffix] = self.size + len(name) - len(suffix) - 1
+
+        # write the new names out.
+        for part in parts[:count]:
+            self.write_utf(part)
+
+        # if we wrote part of the name, create a pointer to the rest
+        if count != len(name_suffices):
+            # Found substring in packet, create pointer
+            index = self.names[name_suffices[count]]
             self.write_byte((index >> 8) | 0xC0)
             self.write_byte(index & 0xFF)
         else:
-            # No record of this name already, so write it
-            # out as normal, recording the location of the name
-            # for future pointers to it.
-            #
-            self.names[name] = self.size
-            parts = str(name).split('.')
-            if parts[-1] == '':
-                parts = parts[:-1]
-            for part in parts:
-                self.write_utf(part)
+            # this is the end of a name
             self.write_byte(0)
 
     def write_question(self, question):
@@ -1000,7 +1045,7 @@ class Engine(threading.Thread):
             self.condition.notify()
 
 
-class Listener(object):
+class Listener(QuietLogger):
 
     """A Listener is used by this module to listen on the multicast
     group to which DNS messages are sent, allowing the implementation
@@ -1014,8 +1059,13 @@ class Listener(object):
         self.data = None
 
     def handle_read(self, socket_):
-        data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
-        log.debug('Received %r from %r:%r', data, addr, port)
+        try:
+            data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
+        except Exception:
+            self.log_exception_warning()
+            return
+
+        log.debug('Received from %r:%r: %r ', addr, port, data)
 
         self.data = data
         msg = DNSIncoming(data)
@@ -1512,7 +1562,7 @@ def get_errno(e):
     return e.args[0]
 
 
-class Zeroconf(object):
+class Zeroconf(QuietLogger):
 
     """Implementation of Zeroconf Multicast DNS Service Discovery
 
@@ -1867,7 +1917,11 @@ class Zeroconf(object):
     def send(self, out, addr=_MDNS_ADDR, port=_MDNS_PORT):
         """Sends an outgoing packet."""
         packet = out.packet()
-        log.debug('Sending %r as %r...', out, packet)
+        if len(packet) > _MAX_MSG_ABSOLUTE:
+            self.log_warning_once("Dropping %r over-sided packet (%d bytes) %r",
+                                  out, len(packet), packet)
+            return
+        log.debug('Sending %r (%d bytes) as %r...', out, len(packet), packet)
         for s in self._respond_sockets:
             if self._GLOBAL_DONE:
                 return

@@ -157,6 +157,72 @@ class Names(unittest.TestCase):
         generated.add_question(question)
         r.DNSIncoming(generated.packet())
 
+    def test_lots_of_names(self):
+        # instantiate a zeroconf instance
+        zeroconf = Zeroconf(interfaces=['127.0.0.1'])
+
+        # we are going to monkey patch the zeroconf send to check packet sizes
+        old_send = zeroconf.send
+
+        # needs to be a list so that we can modify it in our phony send
+        longest_packet = [0]
+
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+            """Sends an outgoing packet."""
+            packet = out.packet()
+            if longest_packet[0] < len(packet):
+                longest_packet[0] = len(packet)
+            old_send(out, addr=addr, port=port)
+
+        # monkey patch the zeroconf send
+        zeroconf.send = send
+
+        # create a bunch of servers
+        type_ = "_my-service._tcp.local."
+        server_count = 200
+        records_per_server = 2
+        for i in range(int(server_count / 10)):
+            self.generate_many_hosts(zeroconf, type_, 10)
+            sleep_count = 0
+            while sleep_count < 20 and server_count * records_per_server > len(
+                    zeroconf.cache.entries_with_name(type_)):
+                sleep_count += 1
+                time.sleep(0.01)
+
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        # start a browser and run for a bit
+        browser = ServiceBrowser(zeroconf, type_, [on_service_state_change])
+        time.sleep(0.1)
+        browser.cancel()
+        zeroconf.close()
+
+        # now the browser has sent at least one request, verify the size
+        # this assertion is not currently  super useful, but the code above
+        # exercise several code paths.
+        assert longest_packet[0] < r._MAX_MSG_ABSOLUTE
+
+    def generate_many_hosts(self, zc, type_, number_hosts):
+        import random
+        for i in range(number_hosts):
+            name = hex(random.randint(0, 1 << 32 - 1))
+            self.generate_host(zc, 'a wonderful service' + name[1:], type_)
+
+    @staticmethod
+    def generate_host(zc, host_name, type_):
+        name = '.'.join((host_name, type_))
+        out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
+        out.add_answer_at_time(
+            r.DNSPointer(type_, r._TYPE_PTR, r._CLASS_IN,
+                         r._DNS_TTL, name), 0)
+        out.add_answer_at_time(
+            r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN,
+                         r._DNS_TTL, 0, 0, 80,
+                         name), 0)
+        zc.send(out)
+
 
 class Framework(unittest.TestCase):
 
@@ -241,7 +307,7 @@ class TestDnsIncoming(unittest.TestCase):
 
     def test_incoming_unknown_type(self):
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress(b'a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
+        answer = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
         generated.add_additional_answer(answer)
         packet = generated.packet()
         parsed = r.DNSIncoming(packet)
