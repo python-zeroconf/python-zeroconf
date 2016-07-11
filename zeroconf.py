@@ -217,10 +217,12 @@ def service_type_name(type_):
     """
     if not (type_.endswith('._tcp.local.') or type_.endswith('._udp.local.')):
         raise BadTypeInNameException(
-            "Type must end with '._tcp.local.' or '._udp.local.'")
+            "Type '%s' must end with '._tcp.local.' or '._udp.local.'" %
+            type_)
 
     if type_.startswith('.'):
-        raise BadTypeInNameException("Type must not start with '.'")
+        raise BadTypeInNameException(
+            "Type '%s' must not start with '.'" % type_)
 
     remaining = type_[:-len('._tcp.local.')].split('.')
     name = remaining.pop()
@@ -264,7 +266,7 @@ def service_type_name(type_):
 
     if len(remaining) > 1:
         raise BadTypeInNameException(
-            "Unexpected characters '%s.' in %s" % (
+            "Unexpected characters '%s.' in '%s'" % (
                 '.'.join(remaining[1:]), type_))
 
     if remaining:
@@ -1039,9 +1041,17 @@ class DNSCache(object):
     def entries_with_name(self, name):
         """Returns a list of entries whose key matches the name."""
         try:
-            return self.cache[name]
+            return self.cache[name.lower()]
         except KeyError:
             return []
+
+    def current_entry_with_name_and_alias(self, name, alias):
+        now = current_time_millis()
+        for record in self.entries_with_name(name):
+            if (record.type == _TYPE_PTR and
+                    not record.is_expired(now) and
+                    record.alias == alias):
+                return record
 
     def entries(self):
         """Returns a list of all entries"""
@@ -1733,12 +1743,12 @@ class Zeroconf(QuietLogger):
         for listener in [k for k in self.browsers]:
             self.remove_service_listener(listener)
 
-    def register_service(self, info, ttl=_DNS_TTL):
+    def register_service(self, info, ttl=_DNS_TTL, allow_name_change=False):
         """Registers service information to the network with a default TTL
         of 60 seconds.  Zeroconf will then respond to requests for
         information for that service.  The name of the service may be
         changed if needed to make it unique on the network."""
-        self.check_service(info)
+        self.check_service(info, allow_name_change)
         self.services[info.name.lower()] = info
         if info.type in self.servicetypes:
             self.servicetypes[info.type] += 1
@@ -1833,28 +1843,42 @@ class Zeroconf(QuietLogger):
                 i += 1
                 next_time += _UNREGISTER_TIME
 
-    def check_service(self, info):
+    def check_service(self, info, allow_name_change):
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
+        service_name = service_type_name(info.name)
+
+        # This asserts breaks on the current subtype based tests
+        # need to make subtypes a first class citizen
+        #          assert service_name == info.type
+        #  instead try:
+        assert service_name == '.'.join(info.type.split('.')[-4:])
+        instance_name = info.name[:-len(service_name) - 1]
+        next_instance_number = 2
+
         now = current_time_millis()
         next_time = now
         i = 0
         while i < 3:
-            for record in self.cache.entries_with_name(info.type):
-                if (record.type == _TYPE_PTR and
-                        not record.is_expired(now) and
-                        record.alias == info.name):
-                    if info.name.find('.') < 0:
-                        info.name = '%s.[%s:%s].%s' % (
-                            info.name, info.address, info.port, info.type)
-
-                        self.check_service(info)
-                        return
+            # check for a name conflict
+            while self.cache.current_entry_with_name_and_alias(
+                    info.type, info.name):
+                if not allow_name_change:
                     raise NonUniqueNameException
+
+                # change the name and look for a conflict
+                info.name = '%s-%s.%s' % (
+                    instance_name, next_instance_number, info.type)
+                next_instance_number += 1
+                service_type_name(info.name)
+                next_time = now
+                i = 0
+
             if now < next_time:
                 self.wait(next_time - now)
                 now = current_time_millis()
                 continue
+
             out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
             self.debug = out
             out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))

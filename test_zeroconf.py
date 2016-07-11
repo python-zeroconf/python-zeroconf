@@ -220,6 +220,15 @@ class Names(unittest.TestCase):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=['127.0.0.1'])
 
+        # create a bunch of servers
+        type_ = "_my-service._tcp.local."
+        name = 'a wonderful service'
+        server_count = 300
+        self.generate_many_hosts(zc, type_, name, server_count)
+
+        # verify that name changing works
+        self.verify_name_change(zc, type_, name, server_count)
+
         # we are going to monkey patch the zeroconf send to check packet sizes
         old_send = zc.send
 
@@ -237,24 +246,14 @@ class Names(unittest.TestCase):
         # monkey patch the zeroconf send
         zc.send = send
 
-        # create a bunch of servers
-        type_ = "_my-service._tcp.local."
-        server_count = 300
-        records_per_server = 2
-        for i in range(int(server_count / 10)):
-            self.generate_many_hosts(zc, type_, 10)
-            sleep_count = 0
-            while sleep_count < 100 and server_count * records_per_server > len(
-                    zc.cache.entries_with_name(type_)):
-                sleep_count += 1
-                time.sleep(0.01)
-
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
 
-        # start a browser and run for a bit
+        # start a browser
         browser = ServiceBrowser(zc, type_, [on_service_state_change])
+
+        # wait until the browse request packet has maxed out in size
         sleep_count = 0
         while sleep_count < 100 and \
                 longest_packet[0] < r._MAX_MSG_ABSOLUTE - 100:
@@ -269,7 +268,7 @@ class Names(unittest.TestCase):
                            sleep_count, longest_packet[0])
 
         # now the browser has sent at least one request, verify the size
-        assert longest_packet[0] < r._MAX_MSG_ABSOLUTE
+        assert longest_packet[0] <= r._MAX_MSG_ABSOLUTE
         assert longest_packet[0] >= r._MAX_MSG_ABSOLUTE - 100
 
         # mock zeroconf's logger warning() and debug()
@@ -337,11 +336,35 @@ class Names(unittest.TestCase):
         mocked_log_warn.stop()
         mocked_log_debug.stop()
 
-    def generate_many_hosts(self, zc, type_, number_hosts):
-        import random
-        for i in range(number_hosts):
-            name = hex(random.randint(0, 1 << 32 - 1))
-            self.generate_host(zc, 'a wonderful service' + name[1:], type_)
+    def verify_name_change(self, zc, type_, name, number_hosts):
+        desc = {'path': '/~paulsm/'}
+        info_service = ServiceInfo(
+            type_, '%s.%s' % (name, type_), socket.inet_aton("10.0.1.2"),
+            80, 0, 0, desc, "ash-2.local.")
+
+        # verify name conflict
+        self.assertRaises(
+            r.NonUniqueNameException,
+            zc.register_service, info_service)
+
+        zc.register_service(info_service, allow_name_change=True)
+        assert info_service.name.split('.')[0] == '%s-%d' % (
+            name, number_hosts + 1)
+
+    def generate_many_hosts(self, zc, type_, name, number_hosts):
+        records_per_server = 2
+        block_size = 25
+        number_hosts = int(((number_hosts - 1) / block_size + 1)) * block_size
+        for i in range(1, number_hosts + 1):
+            next_name = name if i == 1 else '%s-%d' % (name, i)
+            self.generate_host(zc, next_name, type_)
+            if i % block_size == 0:
+                sleep_count = 0
+                while sleep_count < 40 and \
+                        i * records_per_server > len(
+                            zc.cache.entries_with_name(type_)):
+                    sleep_count += 1
+                    time.sleep(0.05)
 
     @staticmethod
     def generate_host(zc, host_name, type_):

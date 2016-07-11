@@ -128,6 +128,7 @@ Changelog
 * Better Handling of DNS Incoming Packets parsing exceptions
 * Many exceptions will now log a warning the first time they are seen
 * Catch and log sendto() errors
+* Fix/Implement duplicate name change
 * Greatly improve handling of oversized packets including:
 
   - Implement name compression per RFC1035
