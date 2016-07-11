@@ -41,7 +41,7 @@ from six.moves import xrange
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.17.6'
+__version__ = '0.17.7.dev'
 __license__ = 'LGPL'
 
 
@@ -1948,8 +1948,8 @@ class Zeroconf(QuietLogger):
                         out.add_additional_answer(DNSAddress(
                             service.server, _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
                             _DNS_TTL, service.address))
-                except Exception as e:  # TODO stop catching all Exceptions
-                    log.exception('Unknown error, possibly benign: %r', e)
+                except Exception:  # TODO stop catching all Exceptions
+                    self.log_exception_warning()
 
         if out is not None and out.answers:
             out.id = msg.id
@@ -1966,11 +1966,16 @@ class Zeroconf(QuietLogger):
         for s in self._respond_sockets:
             if self._GLOBAL_DONE:
                 return
-            bytes_sent = s.sendto(packet, 0, (addr, port))
-            if bytes_sent != len(packet):
-                self.log_warning_once(
-                    '!!! sent %d out of %d bytes to %r' % (
-                        bytes_sent, len(packet)), s)
+            try:
+                bytes_sent = s.sendto(packet, 0, (addr, port))
+            except Exception:   # TODO stop catching all Exceptions
+                # on send errors, log the exception and keep going
+                self.log_exception_warning()
+            else:
+                if bytes_sent != len(packet):
+                    self.log_warning_once(
+                        '!!! sent %d out of %d bytes to %r' % (
+                            bytes_sent, len(packet)), s)
 
     def close(self):
         """Ends the background threads, and prevent this instance from
