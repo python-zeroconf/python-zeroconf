@@ -91,6 +91,10 @@ class TestDunder(unittest.TestCase):
         assert not info != info
         repr(info)
 
+    def test_dns_outgoing_repr(self):
+        dns_outgoing = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        repr(dns_outgoing)
+
 
 class PacketGeneration(unittest.TestCase):
 
@@ -356,7 +360,9 @@ class Names(unittest.TestCase):
 class Framework(unittest.TestCase):
 
     def test_launch_and_close(self):
-        rv = r.Zeroconf(interfaces=['127.0.0.1'])
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
         rv.close()
 
 

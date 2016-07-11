@@ -78,7 +78,7 @@ The easiest way to install python-zeroconf is using pip::
 How do I use it?
 ================
 
-Here's an example:
+Here's an example of browsing for a service:
 
 .. code-block:: python
 
@@ -121,6 +121,20 @@ See examples directory for more.
 
 Changelog
 =========
+
+0.17.7.dev
+------
+
+* Better Handling of DNS Incoming Packets parsing exceptions
+* Many exceptions will now log a warning the first time they are seen
+* Catch and log sendto() errors
+* Greatly improve handling of oversized packets including:
+
+  - Implement name compression per RFC1035
+  - Limit size of generated packets to 9000 bytes as per RFC6762
+  - Better handle over sized incoming packets
+
+* Increased test coverage to 94%
 
 0.17.6
 ------
