@@ -212,34 +212,36 @@ class Names(unittest.TestCase):
         r.DNSIncoming(generated.packet())
 
     def test_lots_of_names(self):
+
         # instantiate a zeroconf instance
-        zeroconf = Zeroconf(interfaces=['127.0.0.1'])
+        zc = Zeroconf(interfaces=['127.0.0.1'])
 
         # we are going to monkey patch the zeroconf send to check packet sizes
-        old_send = zeroconf.send
+        old_send = zc.send
 
         # needs to be a list so that we can modify it in our phony send
-        longest_packet = [0]
+        longest_packet = [0, None]
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
             packet = out.packet()
             if longest_packet[0] < len(packet):
                 longest_packet[0] = len(packet)
+                longest_packet[1] = out
             old_send(out, addr=addr, port=port)
 
         # monkey patch the zeroconf send
-        zeroconf.send = send
+        zc.send = send
 
         # create a bunch of servers
         type_ = "_my-service._tcp.local."
         server_count = 300
         records_per_server = 2
         for i in range(int(server_count / 10)):
-            self.generate_many_hosts(zeroconf, type_, 10)
+            self.generate_many_hosts(zc, type_, 10)
             sleep_count = 0
-            while sleep_count < 20 and server_count * records_per_server > len(
-                    zeroconf.cache.entries_with_name(type_)):
+            while sleep_count < 100 and server_count * records_per_server > len(
+                    zc.cache.entries_with_name(type_)):
                 sleep_count += 1
                 time.sleep(0.01)
 
@@ -248,13 +250,88 @@ class Names(unittest.TestCase):
             pass
 
         # start a browser and run for a bit
-        browser = ServiceBrowser(zeroconf, type_, [on_service_state_change])
-        time.sleep(0.1)
+        browser = ServiceBrowser(zc, type_, [on_service_state_change])
+        sleep_count = 0
+        while sleep_count < 100 and \
+                longest_packet[0] < r._MAX_MSG_ABSOLUTE - 100:
+            sleep_count += 1
+            time.sleep(0.1)
+
         browser.cancel()
-        zeroconf.close()
+        time.sleep(0.5)
+
+        import zeroconf
+        zeroconf.log.debug('sleep_count %d, sized %d',
+                           sleep_count, longest_packet[0])
 
         # now the browser has sent at least one request, verify the size
         assert longest_packet[0] < r._MAX_MSG_ABSOLUTE
+        assert longest_packet[0] >= r._MAX_MSG_ABSOLUTE - 100
+
+        # mock zeroconf's logger warning() and debug()
+        from mock import patch
+        patch_warn = patch('zeroconf.log.warning')
+        patch_debug = patch('zeroconf.log.debug')
+        mocked_log_warn = patch_warn.start()
+        mocked_log_debug = patch_debug.start()
+
+        # now that we have a long packet in our possession, let's verify the
+        # exception handling.
+        out = longest_packet[1]
+        out.data.append(b'\0' * 1000)
+
+        # mock the zeroconf logger and check for the correct logging backoff
+        call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
+        # try to send an oversized packet
+        zc.send(out)
+        assert mocked_log_warn.call_count == call_counts[0] + 1
+        assert mocked_log_debug.call_count == call_counts[0]
+        zc.send(out)
+        assert mocked_log_warn.call_count == call_counts[0] + 1
+        assert mocked_log_debug.call_count == call_counts[0] + 1
+
+        # force a receive of an oversized packet
+        packet = out.packet()
+        s = zc._respond_sockets[0]
+
+        # mock the zeroconf logger and check for the correct logging backoff
+        call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
+        # force receive on oversized packet
+        s.sendto(packet, 0, (r._MDNS_ADDR, r._MDNS_PORT))
+        s.sendto(packet, 0, (r._MDNS_ADDR, r._MDNS_PORT))
+        time.sleep(2.0)
+        zeroconf.log.debug('warn %d debug %d was %s',
+                           mocked_log_warn.call_count,
+                           mocked_log_debug.call_count,
+                           call_counts)
+        assert mocked_log_debug.call_count > call_counts[0]
+
+        # close our zeroconf which will close the sockets
+        zc.close()
+
+        # pop the big chunk off the end of the data and send on a closed socket
+        out.data.pop()
+        zc._GLOBAL_DONE = False
+
+        # mock the zeroconf logger and check for the correct logging backoff
+        call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
+        # send on a closed socket (force a socket error)
+        zc.send(out)
+        zeroconf.log.debug('warn %d debug %d was %s',
+                           mocked_log_warn.call_count,
+                           mocked_log_debug.call_count,
+                           call_counts)
+        assert mocked_log_warn.call_count > call_counts[0]
+        assert mocked_log_debug.call_count > call_counts[0]
+        zc.send(out)
+        zeroconf.log.debug('warn %d debug %d was %s',
+                           mocked_log_warn.call_count,
+                           mocked_log_debug.call_count,
+                           call_counts)
+        assert mocked_log_debug.call_count > call_counts[0] + 2
+
+        mocked_log_warn.stop()
+        mocked_log_debug.stop()
 
     def generate_many_hosts(self, zc, type_, number_hosts):
         import random
