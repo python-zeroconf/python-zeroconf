@@ -83,13 +83,13 @@ _DNS_PORT = 53
 _DNS_TTL = 60 * 60  # one hour default TTL
 
 _MAX_MSG_TYPICAL = 1460  # unused
-_MAX_MSG_ABSOLUTE = 8972
+_MAX_MSG_ABSOLUTE = 8966
 
 _FLAGS_QR_MASK = 0x8000  # query response mask
 _FLAGS_QR_QUERY = 0x0000  # query
 _FLAGS_QR_RESPONSE = 0x8000  # response
 
-_FLAGS_AA = 0x0400  # Authorative answer
+_FLAGS_AA = 0x0400  # Authoritative answer
 _FLAGS_TC = 0x0200  # Truncated
 _FLAGS_RD = 0x0100  # Recursion desired
 _FLAGS_RA = 0x8000  # Recursion available
@@ -750,7 +750,7 @@ class DNSOutgoing(object):
 
     """Object representation of an outgoing packet"""
 
-    def __init__(self, flags, multicast=True, build_on_fly=False):
+    def __init__(self, flags, multicast=True):
         self.finished = False
         self.id = 0
         self.multicast = multicast
@@ -758,7 +758,6 @@ class DNSOutgoing(object):
         self.names = {}
         self.data = []
         self.size = 12
-        self.build_on_fly = build_on_fly
         self.state = self.State.init
 
         self.questions = []
@@ -768,26 +767,11 @@ class DNSOutgoing(object):
 
     class State(enum.Enum):
         init = 0
-        adding_questions = 1
-        adding_answers = 2
-        adding_authoratives = 3
-        adding_additionals = 4
-        finished = 5
-
-    def set_state(self, state):
-        if self.state != state:
-            if self.state.value > state.value:
-                raise Error('Out of order DNSOutgoing build %s -> %s' % (
-                    self.state.name, state.name))
-            self.state = state
-        return self.state != self.State.finished
+        finished = 1
 
     def add_question(self, record):
         """Adds a question"""
         self.questions.append(record)
-        if self.build_on_fly:
-            if self.set_state(self.State.adding_questions):
-                self.write_question(record)
 
     def add_answer(self, inp, record):
         """Adds an answer"""
@@ -799,23 +783,14 @@ class DNSOutgoing(object):
         if record is not None:
             if now == 0 or not record.is_expired(now):
                 self.answers.append((record, now))
-                if self.build_on_fly:
-                    if self.set_state(self.State.adding_answers):
-                        self.write_record(record, now)
 
     def add_authorative_answer(self, record):
         """Adds an authoritative answer"""
         self.authorities.append(record)
-        if self.build_on_fly:
-            if self.set_state(self.State.adding_authoratives):
-                self.write_record(record, 0)
 
     def add_additional_answer(self, record):
         """Adds an additional answer"""
         self.additionals.append(record)
-        if self.build_on_fly:
-            if self.set_state(self.State.adding_additionals):
-                self.write_record(record, 0)
 
     def pack(self, format_, value):
         self.data.append(struct.pack(format_, value))
@@ -916,6 +891,9 @@ class DNSOutgoing(object):
     def write_record(self, record, now):
         """Writes a record (answer, authoritative answer, additional) to
         the packet"""
+        if self.state == self.State.finished:
+            return 1
+
         start_data_length, start_size = len(self.data), self.size
         self.write_name(record.name)
         self.write_short(record.type)
@@ -944,30 +922,31 @@ class DNSOutgoing(object):
                 self.data.pop()
             self.size = start_size
             self.state = self.State.finished
+            return 1
+        return 0
 
     def packet(self):
         """Returns a string containing the packet's bytes
 
         No further parts should be added to the packet once this
         is done."""
+
+        overrun_answers, overrun_authorities, overrun_additionals = 0, 0, 0
+
         if self.state != self.State.finished:
-            if not self.build_on_fly:
-                for question in self.questions:
-                    self.write_question(question)
-                for answer, time_ in self.answers:
-                    if self.state != self.State.finished:
-                        self.write_record(answer, time_)
-                for authority in self.authorities:
-                    if self.state != self.State.finished:
-                        self.write_record(authority, 0)
-                for additional in self.additionals:
-                    if self.state != self.State.finished:
-                        self.write_record(additional, 0)
+            for question in self.questions:
+                self.write_question(question)
+            for answer, time_ in self.answers:
+                overrun_answers += self.write_record(answer, time_)
+            for authority in self.authorities:
+                overrun_authorities += self.write_record(authority, 0)
+            for additional in self.additionals:
+                overrun_additionals += self.write_record(additional, 0)
             self.state = self.State.finished
 
-            self.insert_short(0, len(self.additionals))
-            self.insert_short(0, len(self.authorities))
-            self.insert_short(0, len(self.answers))
+            self.insert_short(0, len(self.additionals) - overrun_additionals)
+            self.insert_short(0, len(self.authorities) - overrun_authorities)
+            self.insert_short(0, len(self.answers) - overrun_answers)
             self.insert_short(0, len(self.questions))
             self.insert_short(0, self.flags)
             if self.multicast:
@@ -1283,13 +1262,11 @@ class ServiceBrowser(threading.Thread):
                 return
             now = current_time_millis()
             if self.next_time <= now:
-                out = DNSOutgoing(_FLAGS_QR_QUERY, build_on_fly=True)
+                out = DNSOutgoing(_FLAGS_QR_QUERY)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                 for record in self.services.values():
                     if not record.is_expired(now):
                         out.add_answer_at_time(record, now)
-                        if out.state == out.State.finished:
-                            break
 
                 self.zc.send(out)
                 self.next_time = now + self.delay
