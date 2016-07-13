@@ -129,13 +129,14 @@ Changelog
 * Many exceptions will now log a warning the first time they are seen
 * Catch and log sendto() errors
 * Fix/Implement duplicate name change
+* Fix overly strict name validation introduced in 0.17.6
 * Greatly improve handling of oversized packets including:
 
   - Implement name compression per RFC1035
   - Limit size of generated packets to 9000 bytes as per RFC6762
   - Better handle over sized incoming packets
 
-* Increased test coverage to 94%
+* Increased test coverage to 95%
 
 0.17.6
 ------
