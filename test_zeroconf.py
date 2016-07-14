@@ -422,19 +422,38 @@ class Exceptions(unittest.TestCase):
             '_22._udp.local.',
             '_2-2._tcp.local.',
             '_1234567890-abcde._udp.local.',
-            '._x._udp.local.',
+            '\x00._x._udp.local.',
         )
         for name in bad_names_to_try:
             self.assertRaises(
                 r.BadTypeInNameException,
                 self.browser.get_service_info, name, 'x.' + name)
 
+    def test_good_instance_names(self):
+        good_names_to_try = (
+            '.._x._tcp.local.',
+            'x.sub._http._tcp.local.',
+            '6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local.'
+        )
+        for name in good_names_to_try:
+            r.service_type_name(name)
+
+    def test_bad_types(self):
+        bad_names_to_try = (
+            '._x._tcp.local.',
+            'a' * 64 + '._sub._http._tcp.local.',
+            'a' * 62 + u'â._sub._http._tcp.local.',
+        )
+        for name in bad_names_to_try:
+            self.assertRaises(
+                r.BadTypeInNameException, r.service_type_name, name)
+
     def test_bad_sub_types(self):
         bad_names_to_try = (
             '_sub._http._tcp.local.',
-            'x.sub._http._tcp.local.',
-            'a' * 64 + '._sub._http._tcp.local.',
-            'a' * 62 + u'â._sub._http._tcp.local.',
+            '._sub._http._tcp.local.',
+            '\x7f._sub._http._tcp.local.',
+            '\x1f._sub._http._tcp.local.',
         )
         for name in bad_names_to_try:
             self.assertRaises(

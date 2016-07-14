@@ -158,6 +158,7 @@ _TYPES = {_TYPE_A: "a",
 
 _HAS_A_TO_Z = re.compile(r'[A-Za-z]')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
+_HAS_ASCII_CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
 
 
 @enum.unique
@@ -212,6 +213,14 @@ def service_type_name(type_):
 
     The instance name <Instance> and sub type <sub> may be up to 63 bytes.
 
+    The portion of the Service Instance Name is a user-
+    friendly name consisting of arbitrary Net-Unicode text [RFC5198]. It
+    MUST NOT contain ASCII control characters (byte values 0x00-0x1F and
+    0x7F) [RFC20] but otherwise is allowed to contain any characters,
+    without restriction, including spaces, uppercase, lowercase,
+    punctuation -- including dots -- accented characters, non-Roman text,
+    and anything else that may be represented using Net-Unicode.
+
     :param type_: Type, SubType or service name to validate
     :return: fully qualified service name (eg: _http._tcp.local.)
     """
@@ -220,14 +229,14 @@ def service_type_name(type_):
             "Type '%s' must end with '._tcp.local.' or '._udp.local.'" %
             type_)
 
-    if type_.startswith('.'):
-        raise BadTypeInNameException(
-            "Type '%s' must not start with '.'" % type_)
-
     remaining = type_[:-len('._tcp.local.')].split('.')
     name = remaining.pop()
     if not name:
         raise BadTypeInNameException("No Service name found")
+
+    if len(remaining) == 1 and len(remaining[0]) == 0:
+        raise BadTypeInNameException(
+            "Type '%s' must not start with '.'" % type_)
 
     if name[0] != '_':
         raise BadTypeInNameException(
@@ -260,19 +269,22 @@ def service_type_name(type_):
 
     if remaining and remaining[-1] == '_sub':
         remaining.pop()
-        if len(remaining) == 0:
+        if len(remaining) == 0 or len(remaining[0]) == 0:
             raise BadTypeInNameException(
                 "_sub requires a subtype name")
 
     if len(remaining) > 1:
-        raise BadTypeInNameException(
-            "Unexpected characters '%s.' in '%s'" % (
-                '.'.join(remaining[1:]), type_))
+        remaining = ['.'.join(remaining)]
 
     if remaining:
         length = len(remaining[0].encode('utf-8'))
         if length > 63:
             raise BadTypeInNameException("Too long: '%s'" % remaining[0])
+
+        if _HAS_ASCII_CONTROL_CHARS.search(remaining[0]):
+            raise BadTypeInNameException(
+                "Ascii control character 0x00-0x1F and 0x7F illegal in '%s'" %
+                remaining[0])
 
     return '_' + name + type_[-len('._tcp.local.'):]
 
@@ -1846,13 +1858,13 @@ class Zeroconf(QuietLogger):
     def check_service(self, info, allow_name_change):
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
-        service_name = service_type_name(info.name)
 
-        # This asserts breaks on the current subtype based tests
+        # This is kind of funky because of the subtype based tests
         # need to make subtypes a first class citizen
-        #          assert service_name == info.type
-        #  instead try:
-        assert service_name == '.'.join(info.type.split('.')[-4:])
+        service_name = service_type_name(info.name)
+        if not info.type.endswith(service_name):
+            raise BadTypeInNameException
+
         instance_name = info.name[:-len(service_name) - 1]
         next_instance_number = 2
 
