@@ -41,7 +41,7 @@ from six.moves import xrange
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.17.7.dev'
+__version__ = '0.17.7.dev.synthego'
 __license__ = 'LGPL'
 
 
@@ -923,8 +923,10 @@ class DNSOutgoing(object):
             count += 1
 
         # note the new names we are saving into the packet
+        index_offset = 0
         for suffix in name_suffices[:count]:
-            self.names[suffix] = self.size + len(name) - len(suffix) - 1
+            self.names[suffix] = self.size + index_offset
+            index_offset += len(suffix)
 
         # write the new names out.
         for part in parts[:count]:
@@ -1113,13 +1115,18 @@ class Engine(threading.Thread):
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
                             if reader:
-                                reader.handle_read(socket_)
+                                try:
+                                    reader.handle_read(socket_)
+                                except Exception as e:
+                                    log.exception('Unknown error, possibly benign: %r', e)
 
                 except socket.error as e:
                     # If the socket was closed by another thread, during
                     # shutdown, ignore it and exit
                     if e.errno != socket.EBADF or not self.zc.done:
                         raise
+                except Exception as e:
+                    log.exception('Unknown error, possibly benign: %r', e)
 
     def add_reader(self, reader, socket_):
         with self.condition:
@@ -1724,10 +1731,19 @@ class Zeroconf(QuietLogger):
         with self.condition:
             self.condition.wait(timeout / 1000.0)
 
+    # patch manually cherry-picked from stephenrauch/python-zeroconf 16db9d10dfe4cff97b609464ab24c4e71bd1aa68
     def notify_all(self):
         """Notifies all waiting threads"""
         with self.condition:
-            self.condition.notify_all()
+            try:
+                self.condition.notify_all()
+            except RuntimeError:
+                # There is a bug in python 3.4 prior to 3.4.2 in which it is
+                # possible for threading.notify() to raise a runtime error
+                # http://bugs.python.org/issue22185
+
+                # retry notify_all() to hopefully insure everyone gets notified
+                self.condition.notify_all()  # second time the charm
 
     def get_service_info(self, type_, name, timeout=3000):
         """Returns network's service information for a particular
