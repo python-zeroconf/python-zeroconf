@@ -41,7 +41,7 @@ from six.moves import xrange
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.17.7.dev'
+__version__ = '0.17.7.dev.synthego'
 __license__ = 'LGPL'
 
 
@@ -923,8 +923,10 @@ class DNSOutgoing(object):
             count += 1
 
         # note the new names we are saving into the packet
+        index_offset = 0
         for suffix in name_suffices[:count]:
-            self.names[suffix] = self.size + len(name) - len(suffix) - 1
+            self.names[suffix] = self.size + index_offset
+            index_offset += len(suffix)
 
         # write the new names out.
         for part in parts[:count]:
@@ -1113,13 +1115,18 @@ class Engine(threading.Thread):
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
                             if reader:
-                                reader.handle_read(socket_)
+                                try:
+                                    reader.handle_read(socket_)
+                                except Exception as e:
+                                    log.exception('Unknown error, possibly benign: %r', e)
 
                 except socket.error as e:
                     # If the socket was closed by another thread, during
                     # shutdown, ignore it and exit
                     if e.errno != socket.EBADF or not self.zc.done:
                         raise
+                except Exception as e:
+                    log.exception('Unknown error, possibly benign: %r', e)
 
     def add_reader(self, reader, socket_):
         with self.condition:
