@@ -11,7 +11,7 @@ env:
 	cp requirements-dev.txt ./env/requirements.built
 
 flake8:
-	flake8 --max-line-length=$(MAX_LINE_LENGTH) examples *.py
+	flake8 --max-line-length=$(MAX_LINE_LENGTH) --import-order-style=google examples *.py
 
 test:
 	nosetests -v
