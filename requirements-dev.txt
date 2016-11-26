@@ -2,7 +2,8 @@ autopep8
 coveralls
 coverage
 enum34
-flake8
+# Upper bound because of https://github.com/PyCQA/flake8-import-order/issues/79
+flake8<3
 flake8-blind-except
 # Upper bound because of https://github.com/public/flake8-import-order/issues/42
 flake8-import-order>=0.4.0, <0.6.0
