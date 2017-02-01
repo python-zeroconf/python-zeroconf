@@ -35,6 +35,7 @@ class MyListener(object):
             print("  No info")
         print('\n')
 
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     if len(sys.argv) > 1:

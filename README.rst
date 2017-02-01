@@ -3,14 +3,14 @@ python-zeroconf
 
 .. image:: https://travis-ci.org/jstasiak/python-zeroconf.svg?branch=master
     :target: https://travis-ci.org/jstasiak/python-zeroconf
-    
+
 .. image:: https://img.shields.io/pypi/v/zeroconf.svg
     :target: https://pypi.python.org/pypi/zeroconf
 
 .. image:: https://img.shields.io/coveralls/jstasiak/python-zeroconf.svg
     :target: https://coveralls.io/r/jstasiak/python-zeroconf
 
-    
+
 This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
 originally by Paul Scott-Murphy (https://github.com/paulsm/pyzeroconf),
 modified by William McBrine (https://github.com/wmcbrine/pyzeroconf).
@@ -21,7 +21,7 @@ The original William McBrine's fork note::
     (and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo.
     Before this, I was tracking the changes for zeroconf.py in three
     separate repos. I figured I should have an authoritative source.
-    
+
     Although I make changes based on my experience with TiVos, I expect that
     they're generally applicable. This version also includes patches found
     on the now-defunct (?) Launchpad repo of pyzeroconf, and elsewhere
@@ -43,7 +43,7 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 Python compatibility
 --------------------
 
-* CPython 2.6, 2.7, 3.3+
+* CPython 2.7, 3.3+
 * PyPy 2.2+ (possibly 1.9-2.1 as well)
 * PyPy3 2.4+
 
@@ -84,18 +84,18 @@ Here's an example of browsing for a service:
 
     from six.moves import input
     from zeroconf import ServiceBrowser, Zeroconf
-    
-    
+
+
     class MyListener(object):
-    
+
         def remove_service(self, zeroconf, type, name):
             print("Service %s removed" % (name,))
-    
+
         def add_service(self, zeroconf, type, name):
             info = zeroconf.get_service_info(type, name)
             print("Service %s added, service info: %s" % (name, info))
-    
-    
+
+
     zeroconf = Zeroconf()
     listener = MyListener()
     browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
@@ -269,7 +269,7 @@ Changelog
   - better TXT record parsing
   - server is now separate from name
   - can cancel a service browser
-  
+
 * modified some unit tests to accommodate these changes
 
 0.09
