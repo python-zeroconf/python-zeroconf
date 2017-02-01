@@ -43,7 +43,7 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 Python compatibility
 --------------------
 
-* CPython 2.6, 2.7, 3.3+
+* CPython 2.7, 3.3+
 * PyPy 2.2+ (possibly 1.9-2.1 as well)
 * PyPy3 2.4+
 
@@ -121,6 +121,11 @@ See examples directory for more.
 
 Changelog
 =========
+
+0.18.0 (not released yet)
+-------------------------
+
+* Dropped Python 2.6 support
 
 0.17.7
 ------

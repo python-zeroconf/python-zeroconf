@@ -45,15 +45,6 @@ __version__ = '0.17.7'
 __license__ = 'LGPL'
 
 
-try:
-    NullHandler = logging.NullHandler
-except AttributeError:
-    # Python 2.6 fallback
-    class NullHandler(logging.Handler):
-
-        def emit(self, record):
-            pass
-
 __all__ = [
     "__version__",
     "Zeroconf", "ServiceInfo", "ServiceBrowser",
@@ -62,7 +53,7 @@ __all__ = [
 
 
 log = logging.getLogger(__name__)
-log.addHandler(NullHandler())
+log.addHandler(logging.NullHandler())
 
 if log.level == logging.NOTSET:
     log.setLevel(logging.WARN)
