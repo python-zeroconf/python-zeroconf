@@ -122,7 +122,7 @@ See examples directory for more.
 Changelog
 =========
 
-0.17.7.dev
+0.17.7
 ------
 
 * Better Handling of DNS Incoming Packets parsing exceptions
