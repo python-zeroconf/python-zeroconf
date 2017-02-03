@@ -126,6 +126,7 @@ Changelog
 -------------------------
 
 * Dropped Python 2.6 support
+* Improved error handling inside code executed when Zeroconf object is being closed
 
 0.17.7
 ------
