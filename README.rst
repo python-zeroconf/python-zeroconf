@@ -129,8 +129,8 @@ Changelog
   work around a bug, see https://github.com/jstasiak/python-zeroconf/issues/84 for
   details
 
-0.18.0 (not released yet)
--------------------------
+0.18.0
+------
 
 * Dropped Python 2.6 support
 * Improved error handling inside code executed when Zeroconf object is being closed
