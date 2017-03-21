@@ -122,6 +122,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.19.0
+------
+
+* Technically backwards incompatible - restricted netifaces dependency version to
+  work around a bug, see https://github.com/jstasiak/python-zeroconf/issues/84 for
+  details
+
 0.18.0 (not released yet)
 -------------------------
 

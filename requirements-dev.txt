@@ -8,7 +8,8 @@ flake8-blind-except
 # Upper bound because of https://github.com/public/flake8-import-order/issues/42
 flake8-import-order>=0.4.0, <0.6.0
 mock
-netifaces
+# See setup.py comment for why this version is restricted
+netifaces<=0.10.4
 nose
 pep8==1.5.7
 pep8-naming

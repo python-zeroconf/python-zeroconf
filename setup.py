@@ -56,7 +56,11 @@ setup(
     ],
     install_requires=[
         'enum-compat',
-        'netifaces',
+        # netifaces 0.10.5 has a bug that results in all interfaces' netmasks
+        # to be 255.255.255.255 on Windows which breaks things. See:
+        # * https://github.com/jstasiak/python-zeroconf/issues/84
+        # * https://bitbucket.org/al45tair/netifaces/issues/39/netmask-is-always-255255255255
+        'netifaces<=0.10.4',
         'six',
     ],
 )
