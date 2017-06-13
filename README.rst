@@ -122,6 +122,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.19.1
+------
+
+* Allowed installation with netifaces >= 0.10.6 (a bug that was concerning us
+  got fixed)
+
 0.19.0
 ------
 
