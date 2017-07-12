@@ -1322,7 +1322,7 @@ class ServiceBrowser(threading.Thread):
                 out = DNSOutgoing(_FLAGS_QR_QUERY)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                 for record in self.services.values():
-                    if not record.is_expired(now):
+                    if not record.is_stale(now):
                         out.add_answer_at_time(record, now)
 
                 self.zc.send(out)
