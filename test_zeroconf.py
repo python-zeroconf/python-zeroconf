@@ -644,6 +644,8 @@ class ListenerTest(unittest.TestCase):
 def test_integration():
     service_added = Event()
     service_removed = Event()
+    unexpected_ttl = Event()
+    got_query = Event()
 
     type_ = "_http._tcp.local."
     registration_name = "xxxyyy.%s" % type_
@@ -656,6 +658,42 @@ def test_integration():
                 service_removed.set()
 
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to monkey patch the zeroconf send to check packet sizes
+    old_send = zeroconf_browser.send
+
+    time_offset = 0
+
+    def current_time_millis():
+        """Current system time in milliseconds"""
+        return time.time() * 1000 + time_offset * 1000
+
+    expected_ttl = r._DNS_TTL
+
+    # needs to be a list so that we can modify it in our phony send
+    nbr_queries = [0, None]
+
+    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packet())
+
+        for answer in pout.answers:
+            nbr_queries[0] += 1
+            if not answer.ttl > expected_ttl / 2:
+                unexpected_ttl.set()
+
+        got_query.set()
+        old_send(out, addr=addr, port=port)
+
+    # monkey patch the zeroconf send
+    zeroconf_browser.send = send
+
+    # monkey patch the zeroconf current_time_millis
+    r.current_time_millis = current_time_millis
+
+    service_added = Event()
+    service_removed = Event()
+
     browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
     zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
@@ -669,6 +707,16 @@ def test_integration():
     try:
         service_added.wait(1)
         assert service_added.is_set()
+
+        sleep_count = 0
+        while nbr_queries[0] < 50:
+            time_offset += expected_ttl / 4
+            zeroconf_browser.notify_all()
+            sleep_count += 1
+            got_query.wait(1)
+            got_query.clear()
+        assert not unexpected_ttl.is_set()
+
         # Don't remove service, allow close() to cleanup
 
     finally:
