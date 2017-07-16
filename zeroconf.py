@@ -71,7 +71,7 @@ _BROWSER_TIME = 500
 _MDNS_ADDR = '224.0.0.251'
 _MDNS_PORT = 5353
 _DNS_PORT = 53
-_DNS_TTL = 60 * 60  # one hour default TTL
+_DNS_TTL = 120  # two minutes default TTL as recommended by RFC6762
 
 _MAX_MSG_TYPICAL = 1460  # unused
 _MAX_MSG_ABSOLUTE = 8966
@@ -1751,6 +1751,7 @@ class Zeroconf(QuietLogger):
         of 60 seconds.  Zeroconf will then respond to requests for
         information for that service.  The name of the service may be
         changed if needed to make it unique on the network."""
+        info.ttl = ttl
         self.check_service(info, allow_name_change)
         self.services[info.name.lower()] = info
         if info.type in self.servicetypes:
@@ -1886,7 +1887,7 @@ class Zeroconf(QuietLogger):
             self.debug = out
             out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
             out.add_authorative_answer(DNSPointer(
-                info.type, _TYPE_PTR, _CLASS_IN, _DNS_TTL, info.name))
+                info.type, _TYPE_PTR, _CLASS_IN, info.ttl, info.name))
             self.send(out)
             i += 1
             next_time += _CHECK_TIME
@@ -1964,7 +1965,7 @@ class Zeroconf(QuietLogger):
                             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
                         out.add_answer(msg, DNSPointer(
                             service.type, _TYPE_PTR,
-                            _CLASS_IN, _DNS_TTL, service.name))
+                            _CLASS_IN, service.ttl, service.name))
             else:
                 try:
                     if out is None:
@@ -1977,7 +1978,7 @@ class Zeroconf(QuietLogger):
                                 out.add_answer(msg, DNSAddress(
                                     question.name, _TYPE_A,
                                     _CLASS_IN | _CLASS_UNIQUE,
-                                    _DNS_TTL, service.address))
+                                    service.ttl, service.address))
 
                     service = self.services.get(question.name.lower(), None)
                     if not service:
@@ -1986,16 +1987,16 @@ class Zeroconf(QuietLogger):
                     if question.type in (_TYPE_SRV, _TYPE_ANY):
                         out.add_answer(msg, DNSService(
                             question.name, _TYPE_SRV, _CLASS_IN | _CLASS_UNIQUE,
-                            _DNS_TTL, service.priority, service.weight,
+                            service.ttl, service.priority, service.weight,
                             service.port, service.server))
                     if question.type in (_TYPE_TXT, _TYPE_ANY):
                         out.add_answer(msg, DNSText(
                             question.name, _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE,
-                            _DNS_TTL, service.text))
+                            service.ttl, service.text))
                     if question.type == _TYPE_SRV:
                         out.add_additional_answer(DNSAddress(
                             service.server, _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
-                            _DNS_TTL, service.address))
+                            service.ttl, service.address))
                 except Exception:  # TODO stop catching all Exceptions
                     self.log_exception_warning()
 
