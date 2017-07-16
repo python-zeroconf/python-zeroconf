@@ -4,6 +4,7 @@
 
 """ Unit tests for zeroconf.py """
 
+import copy
 import logging
 import socket
 import struct
@@ -124,6 +125,49 @@ class PacketGeneration(unittest.TestCase):
         self.assertEqual(len(generated.questions), 1)
         self.assertEqual(len(generated.questions), len(parsed.questions))
         self.assertEqual(question, parsed.questions[0])
+
+    def test_suppress_answer(self):
+        query_generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
+        query_generated.add_question(question)
+        answer1 = r.DNSService(
+            "testname1.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local.")
+        staleanswer2 = r.DNSService(
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL/2, 0, 0, 80, "foo.local.")
+        answer2 = r.DNSService(
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local.")
+        query_generated.add_answer_at_time(answer1, 0)
+        query_generated.add_answer_at_time(staleanswer2, 0)
+        query = r.DNSIncoming(query_generated.packet())
+
+        # Should be suppressed
+        response = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        response.add_answer(query, answer1)
+        assert len(response.answers) == 0
+
+        # Should not be suppressed, TTL in query is too short
+        response.add_answer(query, answer2)
+        assert len(response.answers) == 1
+
+        # Should not be suppressed, name is different
+        tmp = copy.copy(answer1)
+        tmp.name = "testname3.local."
+        response.add_answer(query, tmp)
+        assert len(response.answers) == 2
+
+        # Should not be suppressed, type is different
+        tmp = copy.copy(answer1)
+        tmp.type = r._TYPE_A
+        response.add_answer(query, tmp)
+        assert len(response.answers) == 3
+
+        # Should not be suppressed, class is different
+        tmp = copy.copy(answer1)
+        tmp.class_ = r._CLASS_NONE
+        response.add_answer(query, tmp)
+        assert len(response.answers) == 4
+
+        # ::TODO:: could add additional tests for DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService
 
     def test_dns_hinfo(self):
         generated = r.DNSOutgoing(0)

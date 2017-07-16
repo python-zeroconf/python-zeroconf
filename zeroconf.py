@@ -417,6 +417,10 @@ class DNSRecord(DNSEntry):
         """Abstract method"""
         raise AbstractMethodException
 
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
+
     def suppressed_by(self, msg):
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
@@ -478,7 +482,12 @@ class DNSAddress(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on address"""
-        return isinstance(other, DNSAddress) and self.address == other.address
+        return (isinstance(other, DNSAddress) and DNSEntry.__eq__(self, other) and
+                self.address == other.address)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -510,8 +519,12 @@ class DNSHinfo(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on cpu and os"""
-        return (isinstance(other, DNSHinfo) and
+        return (isinstance(other, DNSHinfo) and DNSEntry.__eq__(self, other) and
                 self.cpu == other.cpu and self.os == other.os)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -532,7 +545,12 @@ class DNSPointer(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on alias"""
-        return isinstance(other, DNSPointer) and self.alias == other.alias
+        return (isinstance(other, DNSPointer) and DNSEntry.__eq__(self, other) and
+                self.alias == other.alias)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -554,7 +572,12 @@ class DNSText(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on text"""
-        return isinstance(other, DNSText) and self.text == other.text
+        return (isinstance(other, DNSText) and DNSEntry.__eq__(self, other) and
+                self.text == other.text)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -586,10 +609,15 @@ class DNSService(DNSRecord):
     def __eq__(self, other):
         """Tests equality on priority, weight, port and server"""
         return (isinstance(other, DNSService) and
+                DNSEntry.__eq__(self, other) and
                 self.priority == other.priority and
                 self.weight == other.weight and
                 self.port == other.port and
                 self.server == other.server)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
