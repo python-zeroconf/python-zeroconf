@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ Example of announcing a service (in this case, a fake HTTP server) """
 

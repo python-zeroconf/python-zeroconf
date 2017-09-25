@@ -43,9 +43,8 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 Python compatibility
 --------------------
 
-* CPython 2.7, 3.3+
-* PyPy 2.2+ (possibly 1.9-2.1 as well)
-* PyPy3 2.4+
+* CPython 3.4+
+* PyPy3 5.8+
 
 Versioning
 ----------
@@ -82,11 +81,10 @@ Here's an example of browsing for a service:
 
 .. code-block:: python
 
-    from six.moves import input
     from zeroconf import ServiceBrowser, Zeroconf
     
     
-    class MyListener(object):
+    class MyListener:
     
         def remove_service(self, zeroconf, type, name):
             print("Service %s removed" % (name,))
@@ -121,6 +119,11 @@ See examples directory for more.
 
 Changelog
 =========
+
+0.20.0
+------
+
+* Dropped support for Python 2 (this includes PyPy) and 3.3
 
 0.19.1
 ------
