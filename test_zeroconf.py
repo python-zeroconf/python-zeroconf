@@ -497,6 +497,19 @@ class TestDnsIncoming(unittest.TestCase):
         pass
 
 
+class TestDNSCache(unittest.TestCase):
+
+    def test_order(self):
+        record1 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        cache = r.DNSCache()
+        cache.add(record1)
+        cache.add(record2)
+        entry = r.DNSEntry('a', r._TYPE_SOA, r._CLASS_IN)
+        cached_record = cache.get(entry)
+        self.assertEqual(cached_record, record2)
+
+
 class ServiceTypesQuery(unittest.TestCase):
 
     def test_integration_with_listener(self):

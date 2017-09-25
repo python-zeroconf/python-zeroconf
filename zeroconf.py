@@ -1014,7 +1014,8 @@ class DNSCache(object):
 
     def add(self, entry):
         """Adds an entry"""
-        self.cache.setdefault(entry.key, []).append(entry)
+        # Insert first in list so get returns newest entry
+        self.cache.setdefault(entry.key, []).insert(0, entry)
 
     def remove(self, entry):
         """Removes an entry"""
