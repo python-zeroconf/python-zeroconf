@@ -120,10 +120,13 @@ See examples directory for more.
 Changelog
 =========
 
-0.20.0
+0.20.0 (not released yet)
 ------
 
 * Dropped support for Python 2 (this includes PyPy) and 3.3
+* Fixed some class' equality operators
+* ServiceBrowser entries are being refreshed when 'stale' now
+* Cache returns new records first now instead of last
 
 0.19.1
 ------
