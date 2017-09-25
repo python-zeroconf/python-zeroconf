@@ -9,7 +9,7 @@ flake8-blind-except
 flake8-import-order>=0.4.0, <0.6.0
 mock
 # See setup.py comment for why this version is restricted
-netifaces<=0.10.4
+netifaces!=0.10.5
 nose
 pep8==1.5.7
 pep8-naming
