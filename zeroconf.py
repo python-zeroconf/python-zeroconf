@@ -32,7 +32,7 @@ import threading
 import time
 from functools import reduce
 
-import netifaces
+import ifaddr
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
@@ -161,7 +161,9 @@ class ServiceStateChange(enum.Enum):
     Removed = 2
 
 
-HOST_ONLY_NETWORK_MASK = '255.255.255.255'
+# CIDR notation for 255.255.255.255
+HOST_ONLY_NETWORK_MASK = 32
+
 
 
 # utility functions
@@ -1608,20 +1610,19 @@ class ZeroconfServiceTypes:
         return tuple(sorted(listener.found_services))
 
 
-def get_all_addresses(address_family):
-    return list(set(
-        addr['addr']
-        for iface in netifaces.interfaces()
-        for addr in netifaces.ifaddresses(iface).get(address_family, [])
-        if addr.get('netmask') != HOST_ONLY_NETWORK_MASK
-    ))
+def get_all_addresses():
+    addresses = []
+    for iface in ifaddr.get_adapters():
+        for addr in iface.ips:
+            if addr.network_prefix == HOST_ONLY_NETWORK_MASK & len(split(addr.ip, ".")) == 4: addresses.append(addr.ip)
+    return addresses
 
 
-def normalize_interface_choice(choice, address_family):
+def normalize_interface_choice(choice):
     if choice is InterfaceChoice.Default:
         choice = ['0.0.0.0']
     elif choice is InterfaceChoice.All:
-        choice = get_all_addresses(address_family)
+        choice = get_all_addresses()
     return choice
 
 
