@@ -1614,7 +1614,7 @@ def get_all_addresses():
     addresses = []
     for iface in ifaddr.get_adapters():
         for addr in iface.ips:
-            if addr.network_prefix == HOST_ONLY_NETWORK_MASK & len(split(addr.ip, ".")) == 4: addresses.append(addr.ip)
+            if addr.network_prefix == HOST_ONLY_NETWORK_MASK & len(addr.ip.split(".")) == 4: addresses.append(addr.ip)
     return addresses
 
 
@@ -1685,7 +1685,7 @@ class Zeroconf(QuietLogger):
         self._GLOBAL_DONE = False
 
         self._listen_socket = new_socket()
-        interfaces = normalize_interface_choice(interfaces, socket.AF_INET)
+        interfaces = normalize_interface_choice(interfaces)
 
         self._respond_sockets = []
 
