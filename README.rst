@@ -120,7 +120,7 @@ See examples directory for more.
 Changelog
 =========
 
-0.20.0 (not released yet)
+0.20.0
 ------
 
 * Dropped support for Python 2 (this includes PyPy) and 3.3
