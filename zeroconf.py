@@ -1223,7 +1223,8 @@ class ServiceBrowser(threading.Thread):
     remove_service() methods called when this browser
     discovers changes in the services availability."""
 
-    def __init__(self, zc, type_, handlers=None, listener=None):
+    def __init__(self, zc, type_, handlers=None, listener=None,
+                 addr=_MDNS_ADDR, port=_MDNS_PORT, delay=_BROWSER_TIME):
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
         if not type_.endswith(service_type_name(type_)):
@@ -1233,9 +1234,11 @@ class ServiceBrowser(threading.Thread):
         self.daemon = True
         self.zc = zc
         self.type = type_
+        self.addr = addr
+        self.port = port
         self.services = {}
         self.next_time = current_time_millis()
-        self.delay = _BROWSER_TIME
+        self.delay = delay
         self._handlers_to_call = []
 
         self._service_state_changed = Signal()
@@ -1325,7 +1328,7 @@ class ServiceBrowser(threading.Thread):
                     if not record.is_expired(now):
                         out.add_answer_at_time(record, now)
 
-                self.zc.send(out)
+                self.zc.send(out, addr=self.addr, port=self.port)
                 self.next_time = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
 
@@ -1599,7 +1602,7 @@ def normalize_interface_choice(choice, address_family):
     return choice
 
 
-def new_socket():
+def new_socket(port=_MDNS_PORT):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -1622,14 +1625,15 @@ def new_socket():
             if not err.errno == errno.ENOPROTOOPT:
                 raise
 
-    # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
-    # IP_MULTICAST_LOOP socket options as an unsigned char.
-    ttl = struct.pack(b'B', 255)
-    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-    loop = struct.pack(b'B', 1)
-    s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+    if port is _MDNS_PORT:
+        # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
+        # IP_MULTICAST_LOOP socket options as an unsigned char.
+        ttl = struct.pack(b'B', 255)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        loop = struct.pack(b'B', 1)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
 
-    s.bind(('', _MDNS_PORT))
+    s.bind(('', port))
     return s
 
 
@@ -1648,6 +1652,7 @@ class Zeroconf(QuietLogger):
     def __init__(
         self,
         interfaces=InterfaceChoice.All,
+        unicast=False
     ):
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
@@ -1656,36 +1661,41 @@ class Zeroconf(QuietLogger):
         """
         # hook for threads
         self._GLOBAL_DONE = False
+        self.unicast = unicast
 
-        self._listen_socket = new_socket()
+        if not unicast:
+            self._listen_socket = new_socket()
         interfaces = normalize_interface_choice(interfaces, socket.AF_INET)
 
         self._respond_sockets = []
 
         for i in interfaces:
-            log.debug('Adding %r to multicast group', i)
-            try:
-                self._listen_socket.setsockopt(
-                    socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                    socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
-            except socket.error as e:
-                if get_errno(e) == errno.EADDRINUSE:
-                    log.info(
-                        'Address in use when adding %s to multicast group, '
-                        'it is expected to happen on some systems', i,
-                    )
-                elif get_errno(e) == errno.EADDRNOTAVAIL:
-                    log.info(
-                        'Address not available when adding %s to multicast '
-                        'group, it is expected to happen on some systems', i,
-                    )
-                    continue
-                else:
-                    raise
+            if not unicast:
+                log.debug('Adding %r to multicast group', i)
+                try:
+                    self._listen_socket.setsockopt(
+                        socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
+                        socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+                except socket.error as e:
+                    if get_errno(e) == errno.EADDRINUSE:
+                        log.info(
+                            'Address in use when adding %s to multicast group, '
+                            'it is expected to happen on some systems', i,
+                        )
+                    elif get_errno(e) == errno.EADDRNOTAVAIL:
+                        log.info(
+                            'Address not available when adding %s to multicast '
+                            'group, it is expected to happen on some systems', i,
+                        )
+                        continue
+                    else:
+                        raise
 
-            respond_socket = new_socket()
-            respond_socket.setsockopt(
-                socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(i))
+                respond_socket = new_socket()
+                respond_socket.setsockopt(
+                    socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(i))
+            else:
+                respond_socket = new_socket(port=0)
 
             self._respond_sockets.append(respond_socket)
 
@@ -1700,7 +1710,11 @@ class Zeroconf(QuietLogger):
 
         self.engine = Engine(self)
         self.listener = Listener(self)
-        self.engine.add_reader(self.listener, self._listen_socket)
+        if not unicast:
+            self.engine.add_reader(self.listener, self._listen_socket)
+        else:
+            for s in self._respond_sockets:
+                self.engine.add_reader(self.listener, s)
         self.reaper = Reaper(self)
 
         self.debug = None
@@ -2035,8 +2049,12 @@ class Zeroconf(QuietLogger):
             self.unregister_all_services()
 
             # shutdown recv socket and thread
-            self.engine.del_reader(self._listen_socket)
-            self._listen_socket.close()
+            if not self.unicast:
+                self.engine.del_reader(self._listen_socket)
+                self._listen_socket.close()
+            else:
+                for s in self._respond_sockets:
+                    self.engine.del_reader(s)
             self.engine.join()
 
             # shutdown the rest
