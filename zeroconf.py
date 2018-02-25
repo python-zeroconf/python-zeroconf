@@ -1236,6 +1236,7 @@ class ServiceBrowser(threading.Thread):
         self.type = type_
         self.addr = addr
         self.port = port
+        self.multicast = (self.addr == _MDNS_ADDR)
         self.services = {}
         self.next_time = current_time_millis()
         self.delay = delay
@@ -1322,7 +1323,7 @@ class ServiceBrowser(threading.Thread):
                 return
             now = current_time_millis()
             if self.next_time <= now:
-                out = DNSOutgoing(_FLAGS_QR_QUERY)
+                out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=self.multicast)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                 for record in self.services.values():
                     if not record.is_expired(now):
