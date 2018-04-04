@@ -46,6 +46,11 @@ __all__ = [
     "Error", "InterfaceChoice", "ServiceStateChange",
 ]
 
+if sys.version_info <= (3, 3):
+    raise ImportError('''
+Python version > 3.3 required for python-zeroconf.
+If you need support for Python 2 or Python 3.3 please use version 19.1
+    ''')
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
