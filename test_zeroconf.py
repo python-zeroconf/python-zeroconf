@@ -538,6 +538,94 @@ class TestDnsIncoming(unittest.TestCase):
         pass
 
 
+class TestRegistrar(unittest.TestCase):
+
+    def test_ttl(self):
+
+        # instantiate a zeroconf instance
+        zc = Zeroconf(interfaces=['127.0.0.1'])
+
+        # service definition
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name,
+            socket.inet_aton("10.0.1.2"), 80, 0, 0,
+            desc, "ash-2.local.")
+
+        # we are going to monkey patch the zeroconf send to check packet sizes
+        old_send = zc.send
+
+        # needs to be a list so that we can modify it in our phony send
+        nbr_answers = [0, None]
+        nbr_additionals = [0, None]
+        nbr_authorities = [0, None]
+
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+            """Sends an outgoing packet."""
+            for answer, time_ in out.answers:
+                nbr_answers[0] += 1
+                assert answer.ttl == expected_ttl
+            for answer in out.additionals:
+                nbr_additionals[0] += 1
+                assert answer.ttl == expected_ttl
+            for answer in out.authorities:
+                nbr_authorities[0] += 1
+                assert answer.ttl == expected_ttl
+            old_send(out, addr=addr, port=port)
+
+        # monkey patch the zeroconf send
+        zc.send = send
+
+        # register service with default TTL
+        expected_ttl = r._DNS_TTL
+        zc.register_service(info)
+        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 3
+        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+
+        # query
+        query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
+        query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
+        zc.handle_query(query, r._MDNS_ADDR, r._MDNS_PORT)
+        assert nbr_answers[0] == 4 and nbr_additionals[0] == 1 and nbr_authorities[0] == 0
+        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+
+        # unregister
+        expected_ttl = 0
+        zc.unregister_service(info)
+        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 0
+        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+
+        # register service with custom TTL
+        expected_ttl = r._DNS_TTL * 2
+        assert expected_ttl != r._DNS_TTL
+        zc.register_service(info, ttl=expected_ttl)
+        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 3
+        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+
+        # query
+        query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
+        query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
+        zc.handle_query(query, r._MDNS_ADDR, r._MDNS_PORT)
+        assert nbr_answers[0] == 4 and nbr_additionals[0] == 1 and nbr_authorities[0] == 0
+        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+
+        # unregister
+        expected_ttl = 0
+        zc.unregister_service(info)
+        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 0
+        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+
+        
 class TestDNSCache(unittest.TestCase):
 
     def test_order(self):
