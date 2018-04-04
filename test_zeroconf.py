@@ -625,7 +625,7 @@ class TestRegistrar(unittest.TestCase):
         assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 0
         nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
 
-        
+
 class TestDNSCache(unittest.TestCase):
 
     def test_order(self):
