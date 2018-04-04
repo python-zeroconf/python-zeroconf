@@ -538,7 +538,6 @@ class TestDnsIncoming(unittest.TestCase):
         pass
 
 
-
 class TestRegistrar(unittest.TestCase):
 
     def test_ttl(self):
