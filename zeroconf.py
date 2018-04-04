@@ -1,6 +1,3 @@
-from __future__ import (
-    absolute_import, division, print_function, unicode_literals)
-
 """ Multicast DNS Service Discovery for Python, v0.14-wmcbrine
     Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
@@ -36,12 +33,10 @@ import time
 from functools import reduce
 
 import netifaces
-from six import binary_type, indexbytes, int2byte, iteritems, text_type
-from six.moves import xrange
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.19.1'
+__version__ = '0.20.0'
 __license__ = 'LGPL'
 
 
@@ -51,6 +46,11 @@ __all__ = [
     "Error", "InterfaceChoice", "ServiceStateChange",
 ]
 
+if sys.version_info <= (3, 3):
+    raise ImportError('''
+Python version > 3.3 required for python-zeroconf.
+If you need support for Python 2 or Python 3.3 please use version 19.1
+    ''')
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -150,6 +150,8 @@ _TYPES = {_TYPE_A: "a",
 _HAS_A_TO_Z = re.compile(r'[A-Za-z]')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
 _HAS_ASCII_CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
+
+int2byte = struct.Struct(">B").pack
 
 
 @enum.unique
@@ -309,7 +311,7 @@ class BadTypeInNameException(Error):
 # implementation classes
 
 
-class QuietLogger(object):
+class QuietLogger:
     _seen_logs = {}
 
     @classmethod
@@ -338,7 +340,7 @@ class QuietLogger(object):
         logger(*args)
 
 
-class DNSEntry(object):
+class DNSEntry:
 
     """A DNS entry"""
 
@@ -417,6 +419,10 @@ class DNSRecord(DNSEntry):
         """Abstract method"""
         raise AbstractMethodException
 
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
+
     def suppressed_by(self, msg):
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
@@ -478,7 +484,12 @@ class DNSAddress(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on address"""
-        return isinstance(other, DNSAddress) and self.address == other.address
+        return (isinstance(other, DNSAddress) and DNSEntry.__eq__(self, other) and
+                self.address == other.address)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -510,8 +521,12 @@ class DNSHinfo(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on cpu and os"""
-        return (isinstance(other, DNSHinfo) and
+        return (isinstance(other, DNSHinfo) and DNSEntry.__eq__(self, other) and
                 self.cpu == other.cpu and self.os == other.os)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -532,7 +547,12 @@ class DNSPointer(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on alias"""
-        return isinstance(other, DNSPointer) and self.alias == other.alias
+        return (isinstance(other, DNSPointer) and DNSEntry.__eq__(self, other) and
+                self.alias == other.alias)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -554,7 +574,12 @@ class DNSText(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on text"""
-        return isinstance(other, DNSText) and self.text == other.text
+        return (isinstance(other, DNSText) and DNSEntry.__eq__(self, other) and
+                self.text == other.text)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -586,10 +611,15 @@ class DNSService(DNSRecord):
     def __eq__(self, other):
         """Tests equality on priority, weight, port and server"""
         return (isinstance(other, DNSService) and
+                DNSEntry.__eq__(self, other) and
                 self.priority == other.priority and
                 self.weight == other.weight and
                 self.port == other.port and
                 self.server == other.server)
+
+    def __ne__(self, other):
+        """Non-equality test"""
+        return not self.__eq__(other)
 
     def __repr__(self):
         """String representation"""
@@ -638,7 +668,7 @@ class DNSIncoming(QuietLogger):
 
     def read_questions(self):
         """Reads questions section of packet"""
-        for i in xrange(self.num_questions):
+        for i in range(self.num_questions):
             name = self.read_name()
             type_, class_ = self.unpack(b'!HH')
 
@@ -651,7 +681,7 @@ class DNSIncoming(QuietLogger):
 
     def read_character_string(self):
         """Reads a character string from the packet"""
-        length = indexbytes(self.data, self.offset)
+        length = self.data[self.offset]
         self.offset += 1
         return self.read_string(length)
 
@@ -669,7 +699,7 @@ class DNSIncoming(QuietLogger):
         """Reads the answers, authorities and additionals section of the
         packet"""
         n = self.num_answers + self.num_authorities + self.num_additionals
-        for i in xrange(n):
+        for i in range(n):
             domain = self.read_name()
             type_, class_, ttl, length = self.unpack(b'!HHiH')
 
@@ -714,7 +744,7 @@ class DNSIncoming(QuietLogger):
 
     def read_utf(self, offset, length):
         """Reads a UTF-8 string of a given length from the packet"""
-        return text_type(self.data[offset:offset + length], 'utf-8', 'replace')
+        return str(self.data[offset:offset + length], 'utf-8', 'replace')
 
     def read_name(self):
         """Reads a domain name from the packet"""
@@ -724,7 +754,7 @@ class DNSIncoming(QuietLogger):
         first = off
 
         while True:
-            length = indexbytes(self.data, off)
+            length = self.data[off]
             off += 1
             if length == 0:
                 break
@@ -735,7 +765,7 @@ class DNSIncoming(QuietLogger):
             elif t == 0xC0:
                 if next_ < 0:
                     next_ = off + 1
-                off = ((length & 0x3F) << 8) | indexbytes(self.data, off)
+                off = ((length & 0x3F) << 8) | self.data[off]
                 if off >= first:
                     raise IncomingDecodeError(
                         "Bad domain name (circular) at %s" % (off,))
@@ -751,7 +781,7 @@ class DNSIncoming(QuietLogger):
         return result
 
 
-class DNSOutgoing(object):
+class DNSOutgoing:
 
     """Object representation of an outgoing packet"""
 
@@ -1005,7 +1035,7 @@ class DNSOutgoing(object):
         return b''.join(self.data)
 
 
-class DNSCache(object):
+class DNSCache:
 
     """A cache of DNS entries"""
 
@@ -1014,7 +1044,8 @@ class DNSCache(object):
 
     def add(self, entry):
         """Adds an entry"""
-        self.cache.setdefault(entry.key, []).append(entry)
+        # Insert first in list so get returns newest entry
+        self.cache.setdefault(entry.key, []).insert(0, entry)
 
     def remove(self, entry):
         """Removes an entry"""
@@ -1188,7 +1219,7 @@ class Reaper(threading.Thread):
                     self.zc.cache.remove(record)
 
 
-class Signal(object):
+class Signal:
     def __init__(self):
         self._handlers = []
 
@@ -1201,7 +1232,7 @@ class Signal(object):
         return SignalRegistrationInterface(self._handlers)
 
 
-class SignalRegistrationInterface(object):
+class SignalRegistrationInterface:
 
     def __init__(self, handlers):
         self._handlers = handlers
@@ -1322,7 +1353,7 @@ class ServiceBrowser(threading.Thread):
                 out = DNSOutgoing(_FLAGS_QR_QUERY)
                 out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                 for record in self.services.values():
-                    if not record.is_expired(now):
+                    if not record.is_stale(now):
                         out.add_answer_at_time(record, now)
 
                 self.zc.send(out)
@@ -1334,7 +1365,7 @@ class ServiceBrowser(threading.Thread):
                 handler(self.zc)
 
 
-class ServiceInfo(object):
+class ServiceInfo:
 
     """Service information"""
 
@@ -1377,15 +1408,15 @@ class ServiceInfo(object):
             self._properties = properties
             list_ = []
             result = b''
-            for key, value in iteritems(properties):
-                if isinstance(key, text_type):
+            for key, value in properties.items():
+                if isinstance(key, str):
                     key = key.encode('utf-8')
 
                 if value is None:
                     suffix = b''
-                elif isinstance(value, text_type):
+                elif isinstance(value, str):
                     suffix = value.encode('utf-8')
-                elif isinstance(value, binary_type):
+                elif isinstance(value, bytes):
                     suffix = value
                 elif isinstance(value, int):
                     if value:
@@ -1409,7 +1440,7 @@ class ServiceInfo(object):
         index = 0
         strs = []
         while index < end:
-            length = indexbytes(text, index)
+            length = text[index]
             index += 1
             strs.append(text[index:index + length])
             index += length
@@ -1542,7 +1573,7 @@ class ServiceInfo(object):
         )
 
 
-class ZeroconfServiceTypes(object):
+class ZeroconfServiceTypes:
     """
     Return all of the advertised services on any local networks
     """

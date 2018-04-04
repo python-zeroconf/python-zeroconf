@@ -4,15 +4,13 @@
 
 """ Unit tests for zeroconf.py """
 
+import copy
 import logging
 import socket
 import struct
 import time
 import unittest
 from threading import Event
-
-from six import indexbytes
-from six.moves import xrange
 
 import zeroconf as r
 from zeroconf import (
@@ -125,6 +123,49 @@ class PacketGeneration(unittest.TestCase):
         self.assertEqual(len(generated.questions), len(parsed.questions))
         self.assertEqual(question, parsed.questions[0])
 
+    def test_suppress_answer(self):
+        query_generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
+        query_generated.add_question(question)
+        answer1 = r.DNSService(
+            "testname1.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local.")
+        staleanswer2 = r.DNSService(
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL/2, 0, 0, 80, "foo.local.")
+        answer2 = r.DNSService(
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local.")
+        query_generated.add_answer_at_time(answer1, 0)
+        query_generated.add_answer_at_time(staleanswer2, 0)
+        query = r.DNSIncoming(query_generated.packet())
+
+        # Should be suppressed
+        response = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        response.add_answer(query, answer1)
+        assert len(response.answers) == 0
+
+        # Should not be suppressed, TTL in query is too short
+        response.add_answer(query, answer2)
+        assert len(response.answers) == 1
+
+        # Should not be suppressed, name is different
+        tmp = copy.copy(answer1)
+        tmp.name = "testname3.local."
+        response.add_answer(query, tmp)
+        assert len(response.answers) == 2
+
+        # Should not be suppressed, type is different
+        tmp = copy.copy(answer1)
+        tmp.type = r._TYPE_A
+        response.add_answer(query, tmp)
+        assert len(response.answers) == 3
+
+        # Should not be suppressed, class is different
+        tmp = copy.copy(answer1)
+        tmp.class_ = r._CLASS_NONE
+        response.add_answer(query, tmp)
+        assert len(response.answers) == 4
+
+        # ::TODO:: could add additional tests for DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService
+
     def test_dns_hinfo(self):
         generated = r.DNSOutgoing(0)
         generated.add_additional_answer(
@@ -145,19 +186,19 @@ class PacketForm(unittest.TestCase):
         """ID must be zero in a DNS-SD packet"""
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
-        id = indexbytes(bytes, 0) << 8 | indexbytes(bytes, 1)
+        id = bytes[0] << 8 | bytes[1]
         self.assertEqual(id, 0)
 
     def test_query_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
-        flags = indexbytes(bytes, 2) << 8 | indexbytes(bytes, 3)
+        flags = bytes[2] << 8 | bytes[3]
         self.assertEqual(flags, 0x0)
 
     def test_response_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
-        flags = indexbytes(bytes, 2) << 8 | indexbytes(bytes, 3)
+        flags = bytes[2] << 8 | bytes[3]
         self.assertEqual(flags, 0x8000)
 
     def test_numbers(self):
@@ -173,7 +214,7 @@ class PacketForm(unittest.TestCase):
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
-        for i in xrange(10):
+        for i in range(10):
             generated.add_question(question)
         bytes = generated.packet()
         (numQuestions, numAnswers, numAuthorities,
@@ -272,7 +313,7 @@ class Names(unittest.TestCase):
         assert longest_packet[0] >= r._MAX_MSG_ABSOLUTE - 100
 
         # mock zeroconf's logger warning() and debug()
-        from mock import patch
+        from unittest.mock import patch
         patch_warn = patch('zeroconf.log.warning')
         patch_debug = patch('zeroconf.log.debug')
         mocked_log_warn = patch_warn.start()
@@ -497,6 +538,7 @@ class TestDnsIncoming(unittest.TestCase):
         pass
 
 
+
 class TestRegistrar(unittest.TestCase):
 
     def test_ttl(self):
@@ -584,6 +626,19 @@ class TestRegistrar(unittest.TestCase):
         assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 0
         nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
 
+        
+class TestDNSCache(unittest.TestCase):
+
+    def test_order(self):
+        record1 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        cache = r.DNSCache()
+        cache.add(record1)
+        cache.add(record2)
+        entry = r.DNSEntry('a', r._TYPE_SOA, r._CLASS_IN)
+        cached_record = cache.get(entry)
+        self.assertEqual(cached_record, record2)
+
 
 class ServiceTypesQuery(unittest.TestCase):
 
@@ -653,7 +708,7 @@ class ListenerTest(unittest.TestCase):
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
 
-        class MyListener(object):
+        class MyListener:
             def add_service(self, zeroconf, type, name):
                 zeroconf.get_service_info(type, name)
                 service_added.set()
@@ -719,6 +774,8 @@ class ListenerTest(unittest.TestCase):
 def test_integration():
     service_added = Event()
     service_removed = Event()
+    unexpected_ttl = Event()
+    got_query = Event()
 
     type_ = "_http._tcp.local."
     registration_name = "xxxyyy.%s" % type_
@@ -731,6 +788,42 @@ def test_integration():
                 service_removed.set()
 
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to monkey patch the zeroconf send to check packet sizes
+    old_send = zeroconf_browser.send
+
+    time_offset = 0
+
+    def current_time_millis():
+        """Current system time in milliseconds"""
+        return time.time() * 1000 + time_offset * 1000
+
+    expected_ttl = r._DNS_TTL
+
+    # needs to be a list so that we can modify it in our phony send
+    nbr_queries = [0, None]
+
+    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packet())
+
+        for answer in pout.answers:
+            nbr_queries[0] += 1
+            if not answer.ttl > expected_ttl / 2:
+                unexpected_ttl.set()
+
+        got_query.set()
+        old_send(out, addr=addr, port=port)
+
+    # monkey patch the zeroconf send
+    zeroconf_browser.send = send
+
+    # monkey patch the zeroconf current_time_millis
+    r.current_time_millis = current_time_millis
+
+    service_added = Event()
+    service_removed = Event()
+
     browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
     zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
@@ -744,6 +837,16 @@ def test_integration():
     try:
         service_added.wait(1)
         assert service_added.is_set()
+
+        sleep_count = 0
+        while nbr_queries[0] < 50:
+            time_offset += expected_ttl / 4
+            zeroconf_browser.notify_all()
+            sleep_count += 1
+            got_query.wait(1)
+            got_query.clear()
+        assert not unexpected_ttl.is_set()
+
         # Don't remove service, allow close() to cleanup
 
     finally:
