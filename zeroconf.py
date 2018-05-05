@@ -22,6 +22,7 @@
 
 import enum
 import errno
+from functools import reduce
 import logging
 import re
 import select
@@ -30,7 +31,6 @@ import struct
 import sys
 import threading
 import time
-from functools import reduce
 
 import netifaces
 
