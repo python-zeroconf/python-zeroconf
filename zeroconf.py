@@ -1705,21 +1705,29 @@ class Zeroconf(QuietLogger):
             if not unicast:
                 log.debug('Adding %r to multicast group', i)
                 try:
+                    _value = socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i)
                     self._listen_socket.setsockopt(
-                        socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                        socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i))
+                        socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value)
                 except socket.error as e:
-                    if get_errno(e) == errno.EADDRINUSE:
+                    _errno = get_errno(e)
+                    if _errno == errno.EADDRINUSE:
                         log.info(
                             'Address in use when adding %s to multicast group, '
                             'it is expected to happen on some systems', i,
                         )
-                    elif get_errno(e) == errno.EADDRNOTAVAIL:
+                    elif _errno == errno.EADDRNOTAVAIL:
                         log.info(
                             'Address not available when adding %s to multicast '
                             'group, it is expected to happen on some systems', i,
                         )
                         continue
+                    elif _errno == errno.EINVAL:
+                        log.info(
+                            'Interface of %s does not support multicast, '
+                            'it is expected in WSL', i
+                        )
+                        continue
+
                     else:
                         raise
 
