@@ -8,9 +8,9 @@ import copy
 import logging
 import socket
 import struct
-from threading import Event
 import time
 import unittest
+from threading import Event
 
 
 import zeroconf as r
