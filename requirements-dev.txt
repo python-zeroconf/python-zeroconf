@@ -10,4 +10,4 @@ flake8-import-order>=0.4.0, <0.6.0
 netifaces!=0.10.5
 nose
 pep8==1.5.7
-pep8-naming
+pep8-naming!=0.6.0

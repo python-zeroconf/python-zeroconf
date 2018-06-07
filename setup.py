@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from io import open
-
 from os.path import abspath, dirname, join
 
 from setuptools import setup

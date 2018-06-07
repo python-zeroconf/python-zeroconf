@@ -12,6 +12,7 @@ import time
 import unittest
 from threading import Event
 
+
 import zeroconf as r
 from zeroconf import (
     DNSHinfo,
