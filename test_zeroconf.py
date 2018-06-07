@@ -205,12 +205,12 @@ class PacketForm(unittest.TestCase):
     def test_numbers(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
-        (numQuestions, numAnswers, numAuthorities,
-         numAdditionals) = struct.unpack('!4H', bytes[4:12])
-        self.assertEqual(numQuestions, 0)
-        self.assertEqual(numAnswers, 0)
-        self.assertEqual(numAuthorities, 0)
-        self.assertEqual(numAdditionals, 0)
+        (num_questions, num_answers, num_authorities,
+         num_additionals) = struct.unpack('!4H', bytes[4:12])
+        self.assertEqual(num_questions, 0)
+        self.assertEqual(num_answers, 0)
+        self.assertEqual(num_authorities, 0)
+        self.assertEqual(num_additionals, 0)
 
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
@@ -218,12 +218,12 @@ class PacketForm(unittest.TestCase):
         for i in range(10):
             generated.add_question(question)
         bytes = generated.packet()
-        (numQuestions, numAnswers, numAuthorities,
-         numAdditionals) = struct.unpack('!4H', bytes[4:12])
-        self.assertEqual(numQuestions, 10)
-        self.assertEqual(numAnswers, 0)
-        self.assertEqual(numAuthorities, 0)
-        self.assertEqual(numAdditionals, 0)
+        (num_questions, num_answers, num_authorities,
+         num_additionals) = struct.unpack('!4H', bytes[4:12])
+        self.assertEqual(num_questions, 10)
+        self.assertEqual(num_answers, 0)
+        self.assertEqual(num_authorities, 0)
+        self.assertEqual(num_additionals, 0)
 
 
 class Names(unittest.TestCase):
