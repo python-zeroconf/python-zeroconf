@@ -4,7 +4,6 @@ coverage
 flake8
 flake8-blind-except
 flake8-import-order
-mypy
 # See setup.py comment for why this version is restricted
 netifaces!=0.10.5
 nose

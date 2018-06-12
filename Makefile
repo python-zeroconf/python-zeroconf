@@ -13,6 +13,9 @@ env:
 flake8:
 	flake8 --max-line-length=$(MAX_LINE_LENGTH) examples *.py
 
+mypy:
+	mypy examples/*.py zeroconf.py
+
 test:
 	nosetests -v
 

@@ -9,4 +9,4 @@ Thumbs.db
 .idea
 .vslick
 .cache
-
+.mypy_cache/
