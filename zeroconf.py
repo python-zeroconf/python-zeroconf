@@ -2079,7 +2079,7 @@ class Zeroconf(QuietLogger):
                 if bytes_sent != len(packet):
                     self.log_warning_once(
                         '!!! sent %d out of %d bytes to %r' % (
-                            bytes_sent, len(packet)), s)
+                            bytes_sent, len(packet), s))
 
     def close(self):
         """Ends the background threads, and prevent this instance from
