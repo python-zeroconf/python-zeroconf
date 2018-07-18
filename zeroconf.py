@@ -941,7 +941,7 @@ class DNSOutgoing:
             if sub_name in self.names:
                 break
         else:
-            count += 1
+            count = len(name_suffices)
 
         # note the new names we are saving into the packet
         for suffix in name_suffices[:count]:
