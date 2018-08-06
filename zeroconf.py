@@ -35,7 +35,7 @@ from types import TracebackType
 from typing import Callable  # noqa # used in type hints
 from typing import Dict, List, Optional, Tuple, Type, Union
 
-import netifaces
+import ifaddr
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
@@ -167,9 +167,6 @@ class InterfaceChoice(enum.Enum):
 class ServiceStateChange(enum.Enum):
     Added = 1
     Removed = 2
-
-
-HOST_ONLY_NETWORK_MASK = '255.255.255.255'
 
 
 # utility functions
@@ -1639,20 +1636,20 @@ class ZeroconfServiceTypes:
         return tuple(sorted(listener.found_services))
 
 
-def get_all_addresses(address_family: int) -> List[str]:
+def get_all_addresses() -> List[str]:
     return list(set(
-        addr['addr']
-        for iface in netifaces.interfaces()
-        for addr in netifaces.ifaddresses(iface).get(address_family, [])
-        if addr.get('netmask') != HOST_ONLY_NETWORK_MASK
+        addr.ip
+        for iface in ifaddr.get_adapters()
+        for addr in iface.ips
+        if addr.is_IPv4 and addr.network_prefix != 32  # Host only netmask 255.255.255.255
     ))
 
 
-def normalize_interface_choice(choice: Union[List[str], InterfaceChoice], address_family: int) -> List[str]:
+def normalize_interface_choice(choice: Union[List[str], InterfaceChoice]) -> List[str]:
     if choice is InterfaceChoice.Default:
         return ['0.0.0.0']
     elif choice is InterfaceChoice.All:
-        return get_all_addresses(address_family)
+        return get_all_addresses()
     else:
         assert isinstance(choice, list)
         return choice
@@ -1721,7 +1718,7 @@ class Zeroconf(QuietLogger):
 
         if not unicast:
             self._listen_socket = new_socket()
-        interfaces = normalize_interface_choice(interfaces, socket.AF_INET)
+        interfaces = normalize_interface_choice(interfaces)
 
         self._respond_sockets = []  # type: List[socket.socket]
 

@@ -4,8 +4,7 @@ coverage
 flake8
 flake8-blind-except
 flake8-import-order
-# See setup.py comment for why this version is restricted
-netifaces!=0.10.5
+ifaddr
 nose
 pep8-naming!=0.6.0
 # Version restricted because of https://github.com/PyCQA/pycodestyle/issues/741
