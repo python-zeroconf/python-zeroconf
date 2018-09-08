@@ -323,7 +323,7 @@ class Names(unittest.TestCase):
         # now that we have a long packet in our possession, let's verify the
         # exception handling.
         out = longest_packet[1]
-        out.data.append(b'\0' * 1000)
+        out.data.append(b'\0' * (r._MAX_MSG_MACOS - longest_packet[0]))
 
         # mock the zeroconf logger and check for the correct logging backoff
         call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
