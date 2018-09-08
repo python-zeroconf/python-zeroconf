@@ -75,6 +75,7 @@ _DNS_TTL = 120  # two minutes default TTL as recommended by RFC6762
 
 _MAX_MSG_TYPICAL = 1460  # unused
 _MAX_MSG_ABSOLUTE = 8966
+_MAX_MSG_MACOS = 9216  # macOS default max UDP datagram size
 
 _FLAGS_QR_MASK = 0x8000  # query response mask
 _FLAGS_QR_QUERY = 0x0000  # query
@@ -668,7 +669,7 @@ class DNSIncoming(QuietLogger):
 
     def read_questions(self):
         """Reads questions section of packet"""
-        for i in range(self.num_questions):
+        for _ in range(self.num_questions):
             name = self.read_name()
             type_, class_ = self.unpack(b'!HH')
 
@@ -699,7 +700,7 @@ class DNSIncoming(QuietLogger):
         """Reads the answers, authorities and additionals section of the
         packet"""
         n = self.num_answers + self.num_authorities + self.num_additionals
-        for i in range(n):
+        for _ in range(n):
             domain = self.read_name()
             type_, class_, ttl, length = self.unpack(b'!HHiH')
 
@@ -944,8 +945,9 @@ class DNSOutgoing:
             count = len(name_suffices)
 
         # note the new names we are saving into the packet
+        name_length = len(name.encode('utf-8'))
         for suffix in name_suffices[:count]:
-            self.names[suffix] = self.size + len(name) - len(suffix) - 1
+            self.names[suffix] = self.size + name_length - len(suffix.encode('utf-8')) - 1
 
         # write the new names out.
         for part in parts[:count]:
@@ -1130,7 +1132,7 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
-                    rr, wr, er = select.select(rs, [], [], self.timeout)
+                    rr, _, _ = select.select(rs, [], [], self.timeout)
                     if not self.zc.done:
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
@@ -1581,6 +1583,7 @@ class ZeroconfServiceTypes:
     """
     Return all of the advertised services on any local networks
     """
+
     def __init__(self):
         self.found_services = set()
 
@@ -2077,7 +2080,7 @@ class Zeroconf(QuietLogger):
             else:
                 if bytes_sent != len(packet):
                     self.log_warning_once(
-                        '!!! sent %d out of %d bytes to %r' % (
+                        '!!! sent %d out of %d bytes' % (
                             bytes_sent, len(packet)), s)
 
     def close(self):

@@ -115,6 +115,14 @@ class PacketGeneration(unittest.TestCase):
                                              r._CLASS_IN))
         r.DNSIncoming(generated.packet())
 
+    def test_parse_own_packet_response(self):
+        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(r.DNSService(
+            "æøå.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local."), 0)
+        parsed = r.DNSIncoming(generated.packet())
+        self.assertEqual(len(generated.answers), 1)
+        self.assertEqual(len(generated.answers), len(parsed.answers))
+
     def test_match_question(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
@@ -215,7 +223,7 @@ class PacketForm(unittest.TestCase):
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
-        for i in range(10):
+        for _ in range(10):
             generated.add_question(question)
         bytes = generated.packet()
         (num_questions, num_answers, num_authorities,
@@ -323,7 +331,7 @@ class Names(unittest.TestCase):
         # now that we have a long packet in our possession, let's verify the
         # exception handling.
         out = longest_packet[1]
-        out.data.append(b'\0' * 1000)
+        out.data.append(b'\0' * (r._MAX_MSG_MACOS - longest_packet[0]))
 
         # mock the zeroconf logger and check for the correct logging backoff
         call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
@@ -567,7 +575,7 @@ class TestRegistrar(unittest.TestCase):
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
-            for answer, time_ in out.answers:
+            for answer, _ in out.answers:
                 nbr_answers[0] += 1
                 assert answer.ttl == expected_ttl
             for answer in out.additionals:
@@ -705,7 +713,7 @@ class ListenerTest(unittest.TestCase):
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
-        name = "xxxyyy"
+        name = "xxxyyyæøå"
         registration_name = "%s.%s" % (name, type_)
 
         class MyListener:
