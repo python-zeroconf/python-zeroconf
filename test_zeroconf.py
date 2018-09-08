@@ -223,7 +223,7 @@ class PacketForm(unittest.TestCase):
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
-        for i in range(10):
+        for _ in range(10):
             generated.add_question(question)
         bytes = generated.packet()
         (num_questions, num_answers, num_authorities,
@@ -575,7 +575,7 @@ class TestRegistrar(unittest.TestCase):
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
-            for answer, time_ in out.answers:
+            for answer, _ in out.answers:
                 nbr_answers[0] += 1
                 assert answer.ttl == expected_ttl
             for answer in out.additionals:

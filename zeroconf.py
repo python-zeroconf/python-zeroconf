@@ -669,7 +669,7 @@ class DNSIncoming(QuietLogger):
 
     def read_questions(self):
         """Reads questions section of packet"""
-        for i in range(self.num_questions):
+        for _ in range(self.num_questions):
             name = self.read_name()
             type_, class_ = self.unpack(b'!HH')
 
@@ -700,7 +700,7 @@ class DNSIncoming(QuietLogger):
         """Reads the answers, authorities and additionals section of the
         packet"""
         n = self.num_answers + self.num_authorities + self.num_additionals
-        for i in range(n):
+        for _ in range(n):
             domain = self.read_name()
             type_, class_, ttl, length = self.unpack(b'!HHiH')
 
@@ -1132,7 +1132,7 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
-                    rr, wr, er = select.select(rs, [], [], self.timeout)
+                    rr, _, _ = select.select(rs, [], [], self.timeout)
                     if not self.zc.done:
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
@@ -2079,7 +2079,7 @@ class Zeroconf(QuietLogger):
             else:
                 if bytes_sent != len(packet):
                     self.log_warning_once(
-                        '!!! sent %d out of %d bytes to %r' % (
+                        '!!! sent %d out of %d bytes' % (
                             bytes_sent, len(packet)), s)
 
     def close(self):
