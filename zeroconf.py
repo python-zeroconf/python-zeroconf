@@ -75,7 +75,7 @@ _DNS_TTL = 120  # two minutes default TTL as recommended by RFC6762
 
 _MAX_MSG_TYPICAL = 1460  # unused
 _MAX_MSG_ABSOLUTE = 8966
-_MAX_MSG_MACOS = 9216 # macOS default max UDP datagram size
+_MAX_MSG_MACOS = 9216  # macOS default max UDP datagram size
 
 _FLAGS_QR_MASK = 0x8000  # query response mask
 _FLAGS_QR_QUERY = 0x0000  # query
@@ -1583,6 +1583,7 @@ class ZeroconfServiceTypes:
     """
     Return all of the advertised services on any local networks
     """
+
     def __init__(self):
         self.found_services = set()
 
