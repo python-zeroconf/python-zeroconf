@@ -115,6 +115,14 @@ class PacketGeneration(unittest.TestCase):
                                              r._CLASS_IN))
         r.DNSIncoming(generated.packet())
 
+    def test_parse_own_packet_response(self):
+        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(r.DNSService(
+            "æøå.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local."), 0)
+        parsed = r.DNSIncoming(generated.packet())
+        self.assertEqual(len(generated.answers), 1)
+        self.assertEqual(len(generated.answers), len(parsed.answers))
+
     def test_match_question(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
@@ -705,7 +713,7 @@ class ListenerTest(unittest.TestCase):
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
-        name = "xxxyyy"
+        name = "xxxyyyæøå"
         registration_name = "%s.%s" % (name, type_)
 
         class MyListener:
