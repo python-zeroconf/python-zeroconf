@@ -944,8 +944,9 @@ class DNSOutgoing:
             count = len(name_suffices)
 
         # note the new names we are saving into the packet
+        name_length = len(name.encode('utf-8'))
         for suffix in name_suffices[:count]:
-            self.names[suffix] = self.size + len(name) - len(suffix) - 1
+            self.names[suffix] = self.size + name_length - len(suffix.encode('utf-8')) - 1
 
         # write the new names out.
         for part in parts[:count]:
