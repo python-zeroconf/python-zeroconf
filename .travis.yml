@@ -6,11 +6,16 @@ python:
     - "pypy3.5-5.8.0"
 matrix:
     fast_finish: true
+    include:
+        - { python: "3.7", dist: xenial, sudo: true }
 install:
     - pip install -r requirements-dev.txt
+    # mypy can't be installed on pypy
+    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then pip install mypy ; fi
 script:
     - make test_coverage
     - flake8 --version
     - make flake8
+    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then make mypy ; fi
 after_success:
     - coveralls
