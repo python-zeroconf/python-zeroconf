@@ -1,13 +1,13 @@
 autopep8
 coveralls
 coverage
-# Upper bound because of https://github.com/PyCQA/flake8-import-order/issues/79
-flake8<3
+flake8
 flake8-blind-except
-# Upper bound because of https://github.com/public/flake8-import-order/issues/42
-flake8-import-order>=0.4.0, <0.6.0
+flake8-import-order
+mypy
 # See setup.py comment for why this version is restricted
 netifaces!=0.10.5
 nose
-pep8==1.5.7
 pep8-naming!=0.6.0
+# Version restricted because of https://github.com/PyCQA/pycodestyle/issues/741
+pycodestyle<2.4.0

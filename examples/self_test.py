@@ -4,7 +4,7 @@ import logging
 import socket
 import sys
 
-from zeroconf import __version__, ServiceInfo, Zeroconf
+from zeroconf import ServiceInfo, Zeroconf, __version__
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
