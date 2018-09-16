@@ -120,6 +120,18 @@ See examples directory for more.
 Changelog
 =========
 
+0.21.0
+------
+
+* Added an error message when importing the package using unsupported Python version
+* Fixed TTL handling for published service
+* Implemented unicast support
+* Fixed WSL (Windows Subsystem for Linux) compatibility
+* Fixed occassional UnboundLocalError issue
+* Fixed UTF-8 multibyte name compression
+* Switched from netifaces to ifaddr (pure Python)
+* Allowed incoming service names to contain underscores
+
 0.20.0
 ------
 
