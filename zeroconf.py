@@ -152,6 +152,7 @@ _TYPES = {_TYPE_A: "a",
 
 _HAS_A_TO_Z = re.compile(r'[A-Za-z]')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
+_HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE = re.compile(r'^[A-Za-z0-9\-\_]+$')
 _HAS_ASCII_CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
 
 int2byte = struct.Struct(">B").pack
@@ -177,7 +178,7 @@ def current_time_millis() -> float:
     return time.time() * 1000
 
 
-def service_type_name(type_):
+def service_type_name(type_, *, allow_underscores: bool = False):
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
 
@@ -255,10 +256,15 @@ def service_type_name(type_):
             "Service name (%s) must contain at least one letter (eg: 'A-Z')" %
             name)
 
-    if not _HAS_ONLY_A_TO_Z_NUM_HYPHEN.search(name):
+    allowed_characters_re = (
+        _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE if allow_underscores
+        else _HAS_ONLY_A_TO_Z_NUM_HYPHEN
+    )
+
+    if not allowed_characters_re.search(name):
         raise BadTypeInNameException(
             "Service name (%s) must contain only these characters: "
-            "A-Z, a-z, 0-9, hyphen ('-')" % name)
+            "A-Z, a-z, 0-9, hyphen ('-')%s" % (name, ", underscore ('_')" if allow_underscores else ""))
 
     if remaining and remaining[-1] == '_sub':
         remaining.pop()

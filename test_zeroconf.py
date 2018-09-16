@@ -521,6 +521,8 @@ class Exceptions(unittest.TestCase):
         for name in good_names_to_try:
             r.service_type_name(name)
 
+        r.service_type_name('_one_two._tcp.local.', allow_underscores=True)
+
 
 class TestDnsIncoming(unittest.TestCase):
 
