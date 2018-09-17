@@ -47,6 +47,7 @@ setup(
         'mDNS',
     ],
     install_requires=[
-        'ifaddr'
+        'ifaddr',
+        'typing;python_version<"3.5"'
     ],
 )
