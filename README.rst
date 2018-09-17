@@ -120,6 +120,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.21.1
+------
+
+* Fixed installation on Python 3.4 (we use typing now but there was no explicit dependency on it)
+
 0.21.0
 ------
 
