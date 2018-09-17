@@ -48,6 +48,6 @@ setup(
     ],
     install_requires=[
         'ifaddr',
-        'typing;python<"3.5"'
+        'typing;python_version<"3.5"'
     ],
 )
