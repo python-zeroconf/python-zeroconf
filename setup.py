@@ -15,7 +15,7 @@ version = (
     .strip().strip('\'"')
 )
 
-install_requires=[
+install_requires = [
     'ifaddr'
 ]
 if sys.version_info[:2] < (3, 5):
