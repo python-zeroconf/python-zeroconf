@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import sys
 from io import open
 from os.path import abspath, dirname, join
-import sys
 
 from setuptools import setup
 
