@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from io import open
 from os.path import abspath, dirname, join
+import sys
 
 from setuptools import setup
 
@@ -13,6 +14,12 @@ version = (
     .split('=')[-1]
     .strip().strip('\'"')
 )
+
+install_requires=[
+    'ifaddr'
+]
+if sys.version_info[:2] < (3, 5):
+    install_requires.append('typing')
 
 setup(
     name='zeroconf',
@@ -46,7 +53,5 @@ setup(
         'Bonjour', 'Avahi', 'Zeroconf', 'Multicast DNS', 'Service Discovery',
         'mDNS',
     ],
-    install_requires=[
-        'ifaddr'
-    ],
+    install_requires=install_requires,
 )
