@@ -31,9 +31,8 @@ import sys
 import threading
 import time
 from functools import reduce
-from types import TracebackType
 from typing import Callable  # noqa # used in type hints
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Union
 
 import ifaddr
 
@@ -317,11 +316,9 @@ class BadTypeInNameException(Error):
 
 # implementation classes
 
-OptionalExcInfo = Tuple[Optional[Type[BaseException]], Optional[BaseException], Optional[TracebackType]]
-
 
 class QuietLogger:
-    _seen_logs = {}  # type: Dict[str, OptionalExcInfo]
+    _seen_logs = {}  # type: Dict[str, tuple]
 
     @classmethod
     def log_exception_warning(cls, logger_data=None):
