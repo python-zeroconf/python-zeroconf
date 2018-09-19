@@ -120,6 +120,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.21.2
+------
+
+* Fixed import-time typing-related TypeError when older typing version is used
+
 0.21.1
 ------
 
