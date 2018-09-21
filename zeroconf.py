@@ -1270,7 +1270,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                  addr: str = _MDNS_ADDR, port: int = _MDNS_PORT, delay: int = _BROWSER_TIME) -> None:
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        if not type_.endswith(service_type_name(type_)):
+        if not type_.endswith(service_type_name(type_, allow_underscores=True)):
             raise BadTypeInNameException
         threading.Thread.__init__(
             self, name='zeroconf-ServiceBrowser_' + type_)
@@ -1403,7 +1403,7 @@ class ServiceInfo(RecordUpdateListener):
                     bytes for the text field)
         server: fully qualified name for service host (defaults to name)"""
 
-        if not type_.endswith(service_type_name(name)):
+        if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
