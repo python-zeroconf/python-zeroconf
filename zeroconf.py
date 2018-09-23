@@ -1419,7 +1419,7 @@ class ServiceInfo(RecordUpdateListener):
         self._set_properties(properties)
         # FIXME: this is here only so that mypy doesn't complain when we set and then use the attribute when
         # registering services. See if setting this to None by default is the right way to go.
-        self.ttl = None  # type: Optional[int]
+        self.ttl = 0  # type: Optional[int]
 
     @property
     def properties(self) -> ServicePropertiesType:
