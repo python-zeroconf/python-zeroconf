@@ -124,7 +124,7 @@ Changelog
 ------
 
 * This time really allowed incoming service names to contain underscores (patch released
-  as part of 0.20.0 was defective)
+  as part of 0.21.0 was defective)
 
 0.21.2
 ------
