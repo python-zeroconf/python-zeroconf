@@ -1,10 +1,9 @@
 autopep8
 coveralls
 coverage
-flake8
+# Version restricted because of https://github.com/PyCQA/pycodestyle/issues/741
+flake8>=3.6.0
 flake8-import-order
 ifaddr
 nose
 pep8-naming!=0.6.0
-# Version restricted because of https://github.com/PyCQA/pycodestyle/issues/741
-pycodestyle<2.4.0
