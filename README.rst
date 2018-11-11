@@ -143,7 +143,7 @@ Changelog
 * Fixed TTL handling for published service
 * Implemented unicast support
 * Fixed WSL (Windows Subsystem for Linux) compatibility
-* Fixed occassional UnboundLocalError issue
+* Fixed occasional UnboundLocalError issue
 * Fixed UTF-8 multibyte name compression
 * Switched from netifaces to ifaddr (pure Python)
 * Allowed incoming service names to contain underscores

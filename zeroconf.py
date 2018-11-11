@@ -1665,7 +1665,7 @@ def new_socket(port: int = _MDNS_PORT) -> socket.socket:
     # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
     # multicast UDP sockets (p 731, "TCP/IP Illustrated,
     # Volume 2"), but some BSD-derived systems require
-    # SO_REUSEPORT to be specified explicity.  Also, not all
+    # SO_REUSEPORT to be specified explicitly.  Also, not all
     # versions of Python have SO_REUSEPORT available.
     # Catch OSError and socket.error for kernel versions <3.9 because lacking
     # SO_REUSEPORT support.
