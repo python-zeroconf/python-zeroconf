@@ -90,6 +90,18 @@ class TestDunder(unittest.TestCase):
         assert not info != info
         repr(info)
 
+    def test_service_info_text_properties_not_given(self):
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+        info = ServiceInfo(
+            type_=type_, name=registration_name,
+            address=socket.inet_aton("10.0.1.2"),
+            port=80, server="ash-2.local.")
+
+        assert isinstance(info.text, bytes)
+        repr(info)
+
     def test_dns_outgoing_repr(self):
         dns_outgoing = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         repr(dns_outgoing)
