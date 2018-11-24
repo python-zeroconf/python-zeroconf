@@ -1389,8 +1389,8 @@ class ServiceInfo(RecordUpdateListener):
 
     """Service information"""
 
-    def __init__(self, type_: str, name: str, address: bytes = None, port: int = None, weight: int = 0,
-                 priority: int = 0, properties=b'', server: str = None) -> None:
+    def __init__(self, type_: str, name: str, address: Optional[bytes] = None, port: Optional[int] = None,
+                 weight: int = 0, priority: int = 0, properties=b'', server: Optional[str] = None) -> None:
         """Create a service description.
 
         type_: fully qualified service type name
