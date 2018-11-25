@@ -32,7 +32,7 @@ import threading
 import time
 from functools import reduce
 from typing import Callable  # noqa # used in type hints
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, cast
 
 import ifaddr
 
@@ -350,7 +350,7 @@ class DNSEntry:
 
     """A DNS entry"""
 
-    def __init__(self, name, type_, class_):
+    def __init__(self, name: str, type_: int, class_):
         self.key = name.lower()
         self.name = name
         self.type = type_
@@ -378,7 +378,7 @@ class DNSEntry:
         """Type accessor"""
         return _TYPES.get(t, "?(%s)" % t)
 
-    def to_string(self, hdr, other):
+    def to_string(self, hdr, other) -> str:
         """String representation with additional information"""
         result = "%s[%s,%s" % (hdr, self.get_type(self.type),
                                self.get_class_(self.class_))
@@ -416,7 +416,7 @@ class DNSRecord(DNSEntry):
 
     """A DNS record - like a DNS entry, but has a TTL"""
 
-    def __init__(self, name, type_, class_, ttl):
+    def __init__(self, name, type_, class_, ttl: float):
         DNSEntry.__init__(self, name, type_, class_)
         self.ttl = ttl
         self.created = current_time_millis()
@@ -442,7 +442,7 @@ class DNSRecord(DNSEntry):
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
 
-    def get_expiration_time(self, percent):
+    def get_expiration_time(self, percent: float) -> float:
         """Returns the time at which this record will have expired
         by a certain percentage."""
         return self.created + (percent * self.ttl * 10)
@@ -451,7 +451,7 @@ class DNSRecord(DNSEntry):
         """Returns the remaining TTL in seconds."""
         return max(0, (self.get_expiration_time(100) - now) / 1000.0)
 
-    def is_expired(self, now) -> bool:
+    def is_expired(self, now: float) -> bool:
         """Returns true if this record has expired."""
         return self.get_expiration_time(100) <= now
 
@@ -643,7 +643,7 @@ class DNSIncoming(QuietLogger):
         self.questions = []
         self.answers = []
         self.id = 0
-        self.flags = 0
+        self.flags = 0  # type: int
         self.num_questions = 0
         self.num_answers = 0
         self.num_authorities = 0
@@ -1230,12 +1230,12 @@ class Signal:
     def __init__(self):
         self._handlers = []
 
-    def fire(self, **kwargs):
+    def fire(self, **kwargs) -> None:
         for h in list(self._handlers):
             h(**kwargs)
 
     @property
-    def registration_interface(self):
+    def registration_interface(self) -> 'SignalRegistrationInterface':
         return SignalRegistrationInterface(self._handlers)
 
 
@@ -1695,7 +1695,7 @@ def new_socket(port: int = _MDNS_PORT) -> socket.socket:
 
 def get_errno(e: Exception) -> int:
     assert isinstance(e, socket.error)
-    return e.args[0]
+    return cast(int, e.args[0])
 
 
 class Zeroconf(QuietLogger):
