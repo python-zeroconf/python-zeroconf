@@ -11,6 +11,8 @@ import struct
 import time
 import unittest
 from threading import Event
+from typing import Dict, Optional  # noqa # used in type hints
+from typing import cast
 
 
 import zeroconf as r
@@ -25,16 +27,18 @@ from zeroconf import (
 )
 
 log = logging.getLogger('zeroconf')
-original_logging_level = [None]
+original_logging_level = logging.NOTSET
 
 
 def setup_module():
-    original_logging_level[0] = log.level
+    global original_logging_level
+    original_logging_level = log.level
     log.setLevel(logging.DEBUG)
 
 
 def teardown_module():
-    log.setLevel(original_logging_level[0])
+    if original_logging_level != logging.NOTSET:
+        log.setLevel(original_logging_level)
 
 
 class TestDunder(unittest.TestCase):
@@ -192,8 +196,9 @@ class PacketGeneration(unittest.TestCase):
         generated.add_additional_answer(
             DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'os'))
         parsed = r.DNSIncoming(generated.packet())
-        self.assertEqual(parsed.answers[0].cpu, u'cpu')
-        self.assertEqual(parsed.answers[0].os, u'os')
+        answer = cast(r.DNSHinfo, parsed.answers[0])
+        self.assertEqual(answer.cpu, u'cpu')
+        self.assertEqual(answer.os, u'os')
 
         generated = r.DNSOutgoing(0)
         generated.add_additional_answer(
@@ -294,19 +299,20 @@ class Names(unittest.TestCase):
         # we are going to monkey patch the zeroconf send to check packet sizes
         old_send = zc.send
 
-        # needs to be a list so that we can modify it in our phony send
-        longest_packet = [0, None]
+        longest_packet_len = 0
+        longest_packet = None  # type: Optional[r.DNSOutgoing]
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
             packet = out.packet()
-            if longest_packet[0] < len(packet):
-                longest_packet[0] = len(packet)
-                longest_packet[1] = out
+            nonlocal longest_packet_len, longest_packet
+            if longest_packet_len < len(packet):
+                longest_packet_len = len(packet)
+                longest_packet = out
             old_send(out, addr=addr, port=port)
 
         # monkey patch the zeroconf send
-        zc.send = send
+        setattr(zc, "send", send)
 
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
@@ -318,7 +324,7 @@ class Names(unittest.TestCase):
         # wait until the browse request packet has maxed out in size
         sleep_count = 0
         while sleep_count < 100 and \
-                longest_packet[0] < r._MAX_MSG_ABSOLUTE - 100:
+                longest_packet_len < r._MAX_MSG_ABSOLUTE - 100:
             sleep_count += 1
             time.sleep(0.1)
 
@@ -327,11 +333,11 @@ class Names(unittest.TestCase):
 
         import zeroconf
         zeroconf.log.debug('sleep_count %d, sized %d',
-                           sleep_count, longest_packet[0])
+                           sleep_count, longest_packet_len)
 
         # now the browser has sent at least one request, verify the size
-        assert longest_packet[0] <= r._MAX_MSG_ABSOLUTE
-        assert longest_packet[0] >= r._MAX_MSG_ABSOLUTE - 100
+        assert longest_packet_len <= r._MAX_MSG_ABSOLUTE
+        assert longest_packet_len >= r._MAX_MSG_ABSOLUTE - 100
 
         # mock zeroconf's logger warning() and debug()
         from unittest.mock import patch
@@ -342,7 +348,8 @@ class Names(unittest.TestCase):
 
         # now that we have a long packet in our possession, let's verify the
         # exception handling.
-        out = longest_packet[1]
+        out = longest_packet
+        assert out is not None
         out.data.append(b'\0' * 1000)
 
         # mock the zeroconf logger and check for the correct logging backoff
@@ -582,32 +589,30 @@ class TestRegistrar(unittest.TestCase):
         # we are going to monkey patch the zeroconf send to check packet sizes
         old_send = zc.send
 
-        # needs to be a list so that we can modify it in our phony send
-        nbr_answers = [0, None]
-        nbr_additionals = [0, None]
-        nbr_authorities = [0, None]
+        nbr_answers = nbr_additionals = nbr_authorities = 0
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
+            nonlocal nbr_answers, nbr_additionals, nbr_authorities
             for answer, time_ in out.answers:
-                nbr_answers[0] += 1
+                nbr_answers += 1
                 assert answer.ttl == expected_ttl
             for answer in out.additionals:
-                nbr_additionals[0] += 1
+                nbr_additionals += 1
                 assert answer.ttl == expected_ttl
             for answer in out.authorities:
-                nbr_authorities[0] += 1
+                nbr_authorities += 1
                 assert answer.ttl == expected_ttl
             old_send(out, addr=addr, port=port)
 
         # monkey patch the zeroconf send
-        zc.send = send
+        setattr(zc, "send", send)
 
         # register service with default TTL
         expected_ttl = r._DNS_TTL
         zc.register_service(info)
-        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 3
-        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
         query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
@@ -615,22 +620,22 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
-        zc.handle_query(query, r._MDNS_ADDR, r._MDNS_PORT)
-        assert nbr_answers[0] == 4 and nbr_additionals[0] == 1 and nbr_authorities[0] == 0
-        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+        zc.handle_query(r.DNSIncoming(query.packet()), r._MDNS_ADDR, r._MDNS_PORT)
+        assert nbr_answers == 4 and nbr_additionals == 1 and nbr_authorities == 0
+        nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
         expected_ttl = 0
         zc.unregister_service(info)
-        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 0
-        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # register service with custom TTL
         expected_ttl = r._DNS_TTL * 2
         assert expected_ttl != r._DNS_TTL
         zc.register_service(info, ttl=expected_ttl)
-        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 3
-        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
         query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
@@ -638,15 +643,15 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
-        zc.handle_query(query, r._MDNS_ADDR, r._MDNS_PORT)
-        assert nbr_answers[0] == 4 and nbr_additionals[0] == 1 and nbr_authorities[0] == 0
-        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+        zc.handle_query(r.DNSIncoming(query.packet()), r._MDNS_ADDR, r._MDNS_PORT)
+        assert nbr_answers == 4 and nbr_additionals == 1 and nbr_authorities == 0
+        nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
         expected_ttl = 0
         zc.unregister_service(info)
-        assert nbr_answers[0] == 12 and nbr_additionals[0] == 0 and nbr_authorities[0] == 0
-        nbr_answers[0] = nbr_additionals[0] = nbr_authorities[0] = 0
+        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        nbr_answers = nbr_additionals = nbr_authorities = 0
 
 
 class TestDNSCache(unittest.TestCase):
@@ -730,7 +735,7 @@ class ListenerTest(unittest.TestCase):
         name = "xxxyyyæøå"
         registration_name = "%s.%s" % (name, type_)
 
-        class MyListener:
+        class MyListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
                 zeroconf.get_service_info(type, name)
                 service_added.set()
@@ -752,7 +757,7 @@ class ListenerTest(unittest.TestCase):
         )
 
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
-        desc = {'path': '/~paulsm/'}
+        desc = {'path': '/~paulsm/'}  # type: r.ServicePropertiesType
         desc.update(properties)
         info_service = ServiceInfo(
             subtype, registration_name,
@@ -773,7 +778,7 @@ class ListenerTest(unittest.TestCase):
 
             # get service info without answer cache
             info = zeroconf_browser.get_service_info(type_, registration_name)
-
+            assert info is not None
             assert info.properties[b'prop_none'] is False
             assert info.properties[b'prop_string'] == properties['prop_string']
             assert info.properties[b'prop_float'] is False
@@ -782,6 +787,7 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_false'] is False
 
             info = zeroconf_browser.get_service_info(subtype, registration_name)
+            assert info is not None
             assert info.properties[b'prop_none'] is False
 
             zeroconf_registrar.unregister_service(info_service)
@@ -814,7 +820,7 @@ def test_integration():
     # we are going to monkey patch the zeroconf send to check packet sizes
     old_send = zeroconf_browser.send
 
-    time_offset = 0
+    time_offset = 0.0
 
     def current_time_millis():
         """Current system time in milliseconds"""
@@ -822,15 +828,14 @@ def test_integration():
 
     expected_ttl = r._DNS_TTL
 
-    # needs to be a list so that we can modify it in our phony send
-    nbr_queries = [0, None]
+    nbr_queries = 0
 
     def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
         """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packet())
-
+        nonlocal nbr_queries
         for answer in pout.answers:
-            nbr_queries[0] += 1
+            nbr_queries += 1
             if not answer.ttl > expected_ttl / 2:
                 unexpected_ttl.set()
 
@@ -838,7 +843,7 @@ def test_integration():
         old_send(out, addr=addr, port=port)
 
     # monkey patch the zeroconf send
-    zeroconf_browser.send = send
+    setattr(zeroconf_browser, "send", send)
 
     # monkey patch the zeroconf current_time_millis
     r.current_time_millis = current_time_millis
@@ -861,7 +866,7 @@ def test_integration():
         assert service_added.is_set()
 
         sleep_count = 0
-        while nbr_queries[0] < 50:
+        while nbr_queries < 50:
             time_offset += expected_ttl / 4
             zeroconf_browser.notify_all()
             sleep_count += 1
