@@ -31,8 +31,8 @@ import sys
 import threading
 import time
 from functools import reduce
-from typing import Callable  # noqa # used in type hints
-from typing import Dict, List, Optional, Union, cast
+from typing import AnyStr, Dict, List, Optional, Union, cast
+from typing import Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
 
@@ -332,7 +332,7 @@ class QuietLogger:
             logger = log.debug
         if logger_data is not None:
             logger(*logger_data)
-        logger('Exception occurred:', exc_info=exc_info)
+        logger('Exception occurred:', exc_info=True)
 
     @classmethod
     def log_warning_once(cls, *args):
@@ -640,8 +640,8 @@ class DNSIncoming(QuietLogger):
         """Constructor from string holding bytes of packet"""
         self.offset = 0
         self.data = data
-        self.questions = []
-        self.answers = []
+        self.questions = []  # type: List[DNSQuestion]
+        self.answers = []  # type: List[DNSRecord]
         self.id = 0
         self.flags = 0  # type: int
         self.num_questions = 0
@@ -709,7 +709,7 @@ class DNSIncoming(QuietLogger):
             domain = self.read_name()
             type_, class_, ttl, length = self.unpack(b'!HHiH')
 
-            rec = None
+            rec = None  # type: Optional[DNSRecord]
             if type_ == _TYPE_A:
                 rec = DNSAddress(
                     domain, type_, class_, ttl, self.read_string(4))
@@ -796,15 +796,15 @@ class DNSOutgoing:
         self.id = 0
         self.multicast = multicast
         self.flags = flags
-        self.names = {}
-        self.data = []
+        self.names = {}  # type: Dict[str, int]
+        self.data = []  # type: List[bytes]
         self.size = 12
         self.state = self.State.init
 
-        self.questions = []
-        self.answers = []
-        self.authorities = []
-        self.additionals = []
+        self.questions = []  # type: List[DNSQuestion]
+        self.answers = []  # type: List[Tuple[DNSEntry, float]]
+        self.authorities = []  # type: List[DNSPointer]
+        self.additionals = []  # type: List[DNSAddress]
 
     def __repr__(self):
         return '<DNSOutgoing:{%s}>' % ', '.join([
@@ -1047,7 +1047,7 @@ class DNSCache:
     """A cache of DNS entries"""
 
     def __init__(self):
-        self.cache = {}
+        self.cache = {}  # type: Dict[str, List[DNSEntry]]
 
     def add(self, entry):
         """Adds an entry"""
@@ -1121,7 +1121,7 @@ class Engine(threading.Thread):
         threading.Thread.__init__(self, name='zeroconf-Engine')
         self.daemon = True
         self.zc = zc
-        self.readers = {}  # maps socket to reader
+        self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
         self.condition = threading.Condition()
         self.start()
@@ -1228,7 +1228,7 @@ class Reaper(threading.Thread):
 
 class Signal:
     def __init__(self):
-        self._handlers = []
+        self._handlers = []  # type: List[Callable[..., None]]
 
     def fire(self, **kwargs) -> None:
         for h in list(self._handlers):
@@ -1255,6 +1255,14 @@ class SignalRegistrationInterface:
 
 class RecordUpdateListener:
     def update_record(self, zc: 'Zeroconf', now: float, record: DNSRecord) -> None:
+        raise NotImplementedError()
+
+
+class ServiceListener:
+    def add_service(self, zc, type_, name) -> None:
+        raise NotImplementedError()
+
+    def remove_service(self, zc, type_, name) -> None:
         raise NotImplementedError()
 
 
@@ -1382,7 +1390,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 handler(self.zc)
 
 
-ServicePropertiesType = Dict[bytes, Union[bool, str]]
+ServicePropertiesType = Dict[AnyStr, Union[None, bool, AnyStr, float]]
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -1458,7 +1466,7 @@ class ServiceInfo(RecordUpdateListener):
     def _set_text(self, text):
         """Sets properties and text given a text field"""
         self.text = text
-        result = {}
+        result = {}  # type: ServicePropertiesType
         end = len(text)
         index = 0
         strs = []
@@ -1599,12 +1607,12 @@ class ServiceInfo(RecordUpdateListener):
         )
 
 
-class ZeroconfServiceTypes:
+class ZeroconfServiceTypes(ServiceListener):
     """
     Return all of the advertised services on any local networks
     """
     def __init__(self):
-        self.found_services = set()
+        self.found_services = set()  # type: Set[str]
 
     def add_service(self, zc, type_, name):
         self.found_services.add(name)
@@ -1764,7 +1772,7 @@ class Zeroconf(QuietLogger):
             self._respond_sockets.append(respond_socket)
 
         self.listeners = []  # type: List[RecordUpdateListener]
-        self.browsers = {}  # type: Dict[RecordUpdateListener, ServiceBrowser]
+        self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
         self.services = {}  # type: Dict[str, ServiceInfo]
         self.servicetypes = {}  # type: Dict[str, int]
 
@@ -1807,14 +1815,14 @@ class Zeroconf(QuietLogger):
             return info
         return None
 
-    def add_service_listener(self, type_: str, listener: RecordUpdateListener) -> None:
+    def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
-        will then have its update_record method called when information
-        arrives for that type."""
+        will then have its add_service and remove_service methods called when
+        services of that type become available and unavailable."""
         self.remove_service_listener(listener)
         self.browsers[listener] = ServiceBrowser(self, type_, listener)
 
-    def remove_service_listener(self, listener: RecordUpdateListener) -> None:
+    def remove_service_listener(self, listener: ServiceListener) -> None:
         """Removes a listener from the set that is currently listening."""
         if listener in self.browsers:
             self.browsers[listener].cancel()
