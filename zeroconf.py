@@ -67,6 +67,7 @@ _CHECK_TIME = 175
 _REGISTER_TIME = 225
 _LISTENER_TIME = 200
 _BROWSER_TIME = 500
+_BROWSER_BACKOFF_LIMIT = 3600
 
 # Some DNS constants
 
@@ -1383,7 +1384,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
                 self.zc.send(out, addr=self.addr, port=self.port)
                 self.next_time = now + self.delay
-                self.delay = min(20 * 1000, self.delay * 2)
+                self.delay = min(_BROWSER_BACKOFF_LIMIT * 1000, self.delay * 2)
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 handler = self._handlers_to_call.pop(0)
