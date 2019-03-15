@@ -803,8 +803,6 @@ def test_backoff():
     got_query = Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
-
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
     # we are going to monkey patch the zeroconf send to check query transmission
@@ -830,7 +828,7 @@ def test_backoff():
     r.current_time_millis = current_time_millis
 
     # monkey patch the backoff limit to prevent test running forever
-    r._BROWSER_BACKOFF_LIMIT = 10 # seconds
+    r._BROWSER_BACKOFF_LIMIT = 10  # seconds
 
     # dummy service callback
     def on_service_state_change(zeroconf, service_type, state_change, name):
@@ -851,7 +849,8 @@ def test_backoff():
                 assert got_query.is_set()
                 got_query.clear()
                 if next_query_interval == r._BROWSER_BACKOFF_LIMIT:
-                    # Only need to test up to the point where we've seen a query after the backoff limit has been hit
+                    # Only need to test up to the point where we've seen a query
+                    # after the backoff limit has been hit
                     break
                 elif next_query_interval == 0:
                     next_query_interval = initial_query_interval
@@ -937,7 +936,8 @@ def test_integration():
         service_added.wait(1)
         assert service_added.is_set()
 
-	# Test that we receive queries containing answers only if the remaining TTL is greater than half the original TTL
+        # Test that we receive queries containing answers only if the remaining TTL
+        # is greater than half the original TTL
         sleep_count = 0
         test_iterations = 50
         while nbr_answers < test_iterations:
