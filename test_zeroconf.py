@@ -828,14 +828,14 @@ def test_integration():
 
     expected_ttl = r._DNS_TTL
 
-    nbr_queries = 0
+    nbr_answers = 0
 
     def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
         """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packet())
-        nonlocal nbr_queries
+        nonlocal nbr_answers
         for answer in pout.answers:
-            nbr_queries += 1
+            nbr_answers += 1
             if not answer.ttl > expected_ttl / 2:
                 unexpected_ttl.set()
 
@@ -847,6 +847,9 @@ def test_integration():
 
     # monkey patch the zeroconf current_time_millis
     r.current_time_millis = current_time_millis
+
+    # monkey patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
+    r._BROWSER_BACKOFF_LIMIT = expected_ttl / 4
 
     service_added = Event()
     service_removed = Event()
@@ -865,13 +868,18 @@ def test_integration():
         service_added.wait(1)
         assert service_added.is_set()
 
+	# Test that we receive queries containing answers only if the remaining TTL is greater than half the original TTL
         sleep_count = 0
-        while nbr_queries < 50:
+        test_iterations = 50
+        while nbr_answers < test_iterations:
+            # Increase simulated time shift by 1/4 of the TTL in seconds
             time_offset += expected_ttl / 4
             zeroconf_browser.notify_all()
             sleep_count += 1
             got_query.wait(1)
             got_query.clear()
+            # Prevent the test running indefinitely in an error condition
+            assert sleep_count < test_iterations * 4
         assert not unexpected_ttl.is_set()
 
         # Don't remove service, allow close() to cleanup
