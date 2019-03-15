@@ -799,6 +799,75 @@ class ListenerTest(unittest.TestCase):
             zeroconf_browser.close()
 
 
+def test_backoff():
+    got_query = Event()
+
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to monkey patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.send
+
+    time_offset = 0.0
+    start_time = time.time() * 1000
+    initial_query_interval = r._BROWSER_TIME / 1000
+
+    def current_time_millis():
+        """Current system time in milliseconds"""
+        return start_time + time_offset * 1000
+
+    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        """Sends an outgoing packet."""
+        got_query.set()
+        old_send(out, addr=addr, port=port)
+
+    # monkey patch the zeroconf send
+    setattr(zeroconf_browser, "send", send)
+
+    # monkey patch the zeroconf current_time_millis
+    r.current_time_millis = current_time_millis
+
+    # monkey patch the backoff limit to prevent test running forever
+    r._BROWSER_BACKOFF_LIMIT = 10 # seconds
+
+    # dummy service callback
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        pass
+
+    browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+
+    try:
+        # Test that queries are sent at increasing intervals
+        sleep_count = 0
+        next_query_interval = 0.0
+        expected_query_time = 0.0
+        while True:
+            zeroconf_browser.notify_all()
+            sleep_count += 1
+            got_query.wait(0.1)
+            if time_offset == expected_query_time:
+                assert got_query.is_set()
+                got_query.clear()
+                if next_query_interval == r._BROWSER_BACKOFF_LIMIT:
+                    # Only need to test up to the point where we've seen a query after the backoff limit has been hit
+                    break
+                elif next_query_interval == 0:
+                    next_query_interval = initial_query_interval
+                    expected_query_time = initial_query_interval
+                else:
+                    next_query_interval = min(2*next_query_interval, r._BROWSER_BACKOFF_LIMIT)
+                    expected_query_time += next_query_interval
+            else:
+                assert not got_query.is_set()
+            time_offset += initial_query_interval
+
+    finally:
+        browser.cancel()
+        zeroconf_browser.close()
+
+
 def test_integration():
     service_added = Event()
     service_removed = Event()
