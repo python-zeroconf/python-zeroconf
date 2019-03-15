@@ -876,7 +876,7 @@ def test_integration():
             time_offset += expected_ttl / 4
             zeroconf_browser.notify_all()
             sleep_count += 1
-            got_query.wait(1)
+            got_query.wait(0.1)
             got_query.clear()
             # Prevent the test running indefinitely in an error condition
             assert sleep_count < test_iterations * 4
