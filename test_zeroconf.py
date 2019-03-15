@@ -917,7 +917,7 @@ def test_integration():
     r.current_time_millis = current_time_millis
 
     # monkey patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
-    r._BROWSER_BACKOFF_LIMIT = expected_ttl / 4
+    r._BROWSER_BACKOFF_LIMIT = int(expected_ttl / 4)
 
     service_added = Event()
     service_removed = Event()
