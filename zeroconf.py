@@ -74,7 +74,8 @@ _BROWSER_BACKOFF_LIMIT = 3600  # s
 _MDNS_ADDR = '224.0.0.251'
 _MDNS_PORT = 5353
 _DNS_PORT = 53
-_DNS_TTL = 120  # two minutes default TTL as recommended by RFC6762
+_DNS_HOST_TTL = 120  # two minute for host records (A, SRV etc) as-per RFC6762
+_DNS_OTHER_TTL = 4500  # 75 minutes for non-host records (PTR, TXT etc) as-per RFC6762
 
 _MAX_MSG_TYPICAL = 1460  # unused
 _MAX_MSG_ABSOLUTE = 8966
@@ -1835,7 +1836,7 @@ class Zeroconf(QuietLogger):
             self.remove_service_listener(listener)
 
     def register_service(
-        self, info: ServiceInfo, ttl: int = _DNS_TTL, allow_name_change: bool = False,
+        self, info: ServiceInfo, ttl: int = _DNS_HOST_TTL, allow_name_change: bool = False,
     ) -> None:
         """Registers service information to the network with a default TTL
         of 60 seconds.  Zeroconf will then respond to requests for
@@ -2048,7 +2049,7 @@ class Zeroconf(QuietLogger):
                             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
                         out.add_answer(msg, DNSPointer(
                             "_services._dns-sd._udp.local.", _TYPE_PTR,
-                            _CLASS_IN, _DNS_TTL, stype))
+                            _CLASS_IN, _DNS_OTHER_TTL, stype))
                 for service in self.services.values():
                     if question.name == service.type:
                         if out is None:
