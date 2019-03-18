@@ -59,7 +59,7 @@ class TestDunder(unittest.TestCase):
 
     def test_dns_pointer_repr(self):
         pointer = r.DNSPointer(
-            'irrelevant', r._TYPE_PTR, r._CLASS_IN, r._DNS_TTL, '123')
+            'irrelevant', r._TYPE_PTR, r._CLASS_IN, r._DNS_HOST_TTL, '123')
         repr(pointer)
 
     def test_dns_address_repr(self):
@@ -74,11 +74,11 @@ class TestDunder(unittest.TestCase):
 
     def test_dns_service_repr(self):
         service = r.DNSService(
-            'irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, b'a')
+            'irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, b'a')
         repr(service)
 
     def test_dns_record_abc(self):
-        record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL)
+        record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
         self.assertRaises(r.AbstractMethodException, record.__eq__, record)
         self.assertRaises(r.AbstractMethodException, record.write, None)
 
@@ -134,7 +134,7 @@ class PacketGeneration(unittest.TestCase):
     def test_parse_own_packet_response(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(r.DNSService(
-            "æøå.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local."), 0)
+            "æøå.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."), 0)
         parsed = r.DNSIncoming(generated.packet())
         self.assertEqual(len(generated.answers), 1)
         self.assertEqual(len(generated.answers), len(parsed.answers))
@@ -153,11 +153,11 @@ class PacketGeneration(unittest.TestCase):
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
         query_generated.add_question(question)
         answer1 = r.DNSService(
-            "testname1.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local.")
+            "testname1.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, "foo.local.")
         staleanswer2 = r.DNSService(
-            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL/2, 0, 0, 80, "foo.local.")
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL/2, 0, 0, 80, "foo.local.")
         answer2 = r.DNSService(
-            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_TTL, 0, 0, 80, "foo.local.")
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, "foo.local.")
         query_generated.add_answer_at_time(answer1, 0)
         query_generated.add_answer_at_time(staleanswer2, 0)
         query = r.DNSIncoming(query_generated.packet())
@@ -441,10 +441,10 @@ class Names(unittest.TestCase):
         out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
         out.add_answer_at_time(
             r.DNSPointer(type_, r._TYPE_PTR, r._CLASS_IN,
-                         r._DNS_TTL, name), 0)
+                         r._DNS_HOST_TTL, name), 0)
         out.add_answer_at_time(
             r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN,
-                         r._DNS_TTL, 0, 0, 80,
+                         r._DNS_HOST_TTL, 0, 0, 80,
                          name), 0)
         zc.send(out)
 
@@ -609,7 +609,7 @@ class TestRegistrar(unittest.TestCase):
         setattr(zc, "send", send)
 
         # register service with default TTL
-        expected_ttl = r._DNS_TTL
+        expected_ttl = r._DNS_HOST_TTL
         zc.register_service(info)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
@@ -631,8 +631,8 @@ class TestRegistrar(unittest.TestCase):
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # register service with custom TTL
-        expected_ttl = r._DNS_TTL * 2
-        assert expected_ttl != r._DNS_TTL
+        expected_ttl = r._DNS_HOST_TTL * 2
+        assert expected_ttl != r._DNS_HOST_TTL
         zc.register_service(info, ttl=expected_ttl)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
@@ -894,7 +894,7 @@ def test_integration():
         """Current system time in milliseconds"""
         return time.time() * 1000 + time_offset * 1000
 
-    expected_ttl = r._DNS_TTL
+    expected_ttl = r._DNS_HOST_TTL
 
     nbr_answers = 0
 
