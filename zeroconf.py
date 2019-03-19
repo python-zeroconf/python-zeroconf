@@ -1400,7 +1400,8 @@ class ServiceInfo(RecordUpdateListener):
     """Service information"""
 
     def __init__(self, type_: str, name: str, address: Optional[bytes] = None, port: Optional[int] = None,
-                 weight: int = 0, priority: int = 0, properties=b'', server: Optional[str] = None) -> None:
+                 weight: int = 0, priority: int = 0, properties=b'', server: Optional[str] = None,
+                 host_ttl: int = _DNS_HOST_TTL, other_ttl: int = _DNS_OTHER_TTL) -> None:
         """Create a service description.
 
         type_: fully qualified service type name
@@ -1411,7 +1412,9 @@ class ServiceInfo(RecordUpdateListener):
         priority: priority of the service
         properties: dictionary of properties (or a string holding the
                     bytes for the text field)
-        server: fully qualified name for service host (defaults to name)"""
+        server: fully qualified name for service host (defaults to name)
+        host_ttl: ttl used for A/SRV records
+        other_ttl: ttl used for PTR/TXT records"""
 
         if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
@@ -1427,8 +1430,8 @@ class ServiceInfo(RecordUpdateListener):
             self.server = name
         self._properties = {}  # type: ServicePropertiesType
         self._set_properties(properties)
-        self.host_ttl = _DNS_HOST_TTL
-        self.other_ttl = _DNS_OTHER_TTL
+        self.host_ttl = host_ttl
+        self.other_ttl = other_ttl
 
     @property
     def properties(self) -> ServicePropertiesType:
@@ -1842,6 +1845,8 @@ class Zeroconf(QuietLogger):
         service.  The name of the service may be changed if needed to make
         it unique on the network."""
         if ttl is not None:
+            # ttl argument is used to maintain backward compatibility
+            # Setting TTLs via ServiceInfo is preferred
             info.host_ttl = ttl
             info.other_ttl = ttl
         self.check_service(info, allow_name_change)
