@@ -1427,9 +1427,8 @@ class ServiceInfo(RecordUpdateListener):
             self.server = name
         self._properties = {}  # type: ServicePropertiesType
         self._set_properties(properties)
-        # FIXME: this is here only so that mypy doesn't complain when we set and then use the attribute when
-        # registering services. See if setting this to None by default is the right way to go.
-        self.ttl = None  # type: Optional[int]
+        self.host_ttl = _DNS_HOST_TTL
+        self.other_ttl = _DNS_OTHER_TTL
 
     @property
     def properties(self) -> ServicePropertiesType:
@@ -1836,13 +1835,15 @@ class Zeroconf(QuietLogger):
             self.remove_service_listener(listener)
 
     def register_service(
-        self, info: ServiceInfo, ttl: int = _DNS_HOST_TTL, allow_name_change: bool = False,
+        self, info: ServiceInfo, ttl: Optional[int] = None, allow_name_change: bool = False,
     ) -> None:
-        """Registers service information to the network with a default TTL
-        of 60 seconds.  Zeroconf will then respond to requests for
-        information for that service.  The name of the service may be
-        changed if needed to make it unique on the network."""
-        info.ttl = ttl
+        """Registers service information to the network with a default TTL.
+        Zeroconf will then respond to requests for information for that
+        service.  The name of the service may be changed if needed to make
+        it unique on the network."""
+        if ttl is not None:
+            info.host_ttl = ttl
+            info.other_ttl = ttl
         self.check_service(info, allow_name_change)
         self.services[info.name.lower()] = info
         if info.type in self.servicetypes:
@@ -1859,18 +1860,18 @@ class Zeroconf(QuietLogger):
                 continue
             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
             out.add_answer_at_time(
-                DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, ttl, info.name), 0)
+                DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name), 0)
             out.add_answer_at_time(
                 DNSService(info.name, _TYPE_SRV, _CLASS_IN,
-                           ttl, info.priority, info.weight, info.port,
+                           info.host_ttl, info.priority, info.weight, info.port,
                            info.server), 0)
 
             out.add_answer_at_time(
-                DNSText(info.name, _TYPE_TXT, _CLASS_IN, ttl, info.text), 0)
+                DNSText(info.name, _TYPE_TXT, _CLASS_IN, info.other_ttl, info.text), 0)
             if info.address:
                 out.add_answer_at_time(
                     DNSAddress(info.server, _TYPE_A, _CLASS_IN,
-                               ttl, info.address), 0)
+                               info.host_ttl, info.address), 0)
             self.send(out)
             i += 1
             next_time += _REGISTER_TIME
@@ -1978,7 +1979,7 @@ class Zeroconf(QuietLogger):
             self.debug = out
             out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
             out.add_authorative_answer(DNSPointer(
-                info.type, _TYPE_PTR, _CLASS_IN, info.ttl, info.name))
+                info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name))
             self.send(out)
             i += 1
             next_time += _CHECK_TIME
@@ -2056,7 +2057,7 @@ class Zeroconf(QuietLogger):
                             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
                         out.add_answer(msg, DNSPointer(
                             service.type, _TYPE_PTR,
-                            _CLASS_IN, service.ttl, service.name))
+                            _CLASS_IN, service.other_ttl, service.name))
             else:
                 try:
                     if out is None:
@@ -2069,7 +2070,7 @@ class Zeroconf(QuietLogger):
                                 out.add_answer(msg, DNSAddress(
                                     question.name, _TYPE_A,
                                     _CLASS_IN | _CLASS_UNIQUE,
-                                    service.ttl, service.address))
+                                    service.host_ttl, service.address))
 
                     name_to_find = question.name.lower()
                     if name_to_find not in self.services:
@@ -2079,16 +2080,16 @@ class Zeroconf(QuietLogger):
                     if question.type in (_TYPE_SRV, _TYPE_ANY):
                         out.add_answer(msg, DNSService(
                             question.name, _TYPE_SRV, _CLASS_IN | _CLASS_UNIQUE,
-                            service.ttl, service.priority, service.weight,
+                            service.host_ttl, service.priority, service.weight,
                             service.port, service.server))
                     if question.type in (_TYPE_TXT, _TYPE_ANY):
                         out.add_answer(msg, DNSText(
                             question.name, _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE,
-                            service.ttl, service.text))
+                            service.other_ttl, service.text))
                     if question.type == _TYPE_SRV:
                         out.add_additional_answer(DNSAddress(
                             service.server, _TYPE_A, _CLASS_IN | _CLASS_UNIQUE,
-                            service.ttl, service.address))
+                            service.host_ttl, service.address))
                 except Exception:  # TODO stop catching all Exceptions
                     self.log_exception_warning()
 

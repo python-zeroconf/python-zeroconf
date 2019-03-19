@@ -59,7 +59,7 @@ class TestDunder(unittest.TestCase):
 
     def test_dns_pointer_repr(self):
         pointer = r.DNSPointer(
-            'irrelevant', r._TYPE_PTR, r._CLASS_IN, r._DNS_HOST_TTL, '123')
+            'irrelevant', r._TYPE_PTR, r._CLASS_IN, r._DNS_OTHER_TTL, '123')
         repr(pointer)
 
     def test_dns_address_repr(self):
@@ -441,7 +441,7 @@ class Names(unittest.TestCase):
         out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
         out.add_answer_at_time(
             r.DNSPointer(type_, r._TYPE_PTR, r._CLASS_IN,
-                         r._DNS_HOST_TTL, name), 0)
+                         r._DNS_OTHER_TTL, name), 0)
         out.add_answer_at_time(
             r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN,
                          r._DNS_HOST_TTL, 0, 0, 80,
@@ -591,25 +591,34 @@ class TestRegistrar(unittest.TestCase):
 
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
+        def get_ttl(record_type):
+            if expected_ttl is not None:
+                return expected_ttl
+            elif record_type in [r._TYPE_A, r._TYPE_SRV]:
+                return r._DNS_HOST_TTL
+            else:
+                return r._DNS_OTHER_TTL
+
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
+
             for answer, time_ in out.answers:
                 nbr_answers += 1
-                assert answer.ttl == expected_ttl
+                assert answer.ttl == get_ttl(answer.type)
             for answer in out.additionals:
                 nbr_additionals += 1
-                assert answer.ttl == expected_ttl
+                assert answer.ttl == get_ttl(answer.type)
             for answer in out.authorities:
                 nbr_authorities += 1
-                assert answer.ttl == expected_ttl
+                assert answer.ttl == get_ttl(answer.type)
             old_send(out, addr=addr, port=port)
 
         # monkey patch the zeroconf send
         setattr(zc, "send", send)
 
         # register service with default TTL
-        expected_ttl = r._DNS_HOST_TTL
+        expected_ttl = None
         zc.register_service(info)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
