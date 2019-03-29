@@ -955,5 +955,7 @@ def test_integration():
 
     finally:
         zeroconf_registrar.close()
+        service_removed.wait(1)
+        assert service_removed.is_set()
         browser.cancel()
         zeroconf_browser.close()
