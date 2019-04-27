@@ -120,6 +120,20 @@ See examples directory for more.
 Changelog
 =========
 
+0.22.0
+------
+
+* A lot of maintenance work (tooling, typing coverage and improvements, spelling) done, thanks to Ville Skyttä
+* Provided saner defaults in ServiceInfo's constructor, thanks to Jorge Miranda
+* Fixed service removal packets not being sent on shutdown, thanks to Andrew Bonney
+* Added a way to define TTL-s through ServiceInfo contructor parameters, thanks to Andrew Bonney
+
+Technically backwards incompatible:
+
+* Adjusted query intervals to match RFC 6762, thanks to Andrew Bonney
+* Made default TTL-s match RFC 6762, thanks to Andrew Bonney
+
+
 0.21.3
 ------
 
