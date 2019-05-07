@@ -1371,7 +1371,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             assert isinstance(record, DNSText)
             expired = record.is_expired(now)
             if not expired:
-                enqueue_callback(ServiceStateChange.Updated, record.name) # New
+                enqueue_callback(ServiceStateChange.Updated, record.name)
 
     def cancel(self):
         self.done = True
