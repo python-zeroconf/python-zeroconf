@@ -38,7 +38,7 @@ import ifaddr
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.21.3'
+__version__ = '0.22.0'
 __license__ = 'LGPL'
 
 
@@ -169,6 +169,7 @@ class InterfaceChoice(enum.Enum):
 class ServiceStateChange(enum.Enum):
     Added = 1
     Removed = 2
+    Updated = 3
 
 
 # utility functions
@@ -1267,6 +1268,8 @@ class ServiceListener:
     def remove_service(self, zc, type_, name) -> None:
         raise NotImplementedError()
 
+    def update_service(self, zc, type_, name) -> None:
+        raise NotImplementedError()
 
 class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
@@ -1312,6 +1315,9 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                     listener.add_service(*args)
                 elif state_change is ServiceStateChange.Removed:
                     listener.remove_service(*args)
+                elif state_change is ServiceStateChange.Updated:
+                    if hasattr(listener, 'update_service'):
+                        listener.update_service(*args)
                 else:
                     raise NotImplementedError(state_change)
             handlers.append(on_change)
@@ -1360,6 +1366,12 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             expires = record.get_expiration_time(75)
             if expires < self.next_time:
                 self.next_time = expires
+
+        elif record.type == _TYPE_TXT and record.name == self.type:
+            assert isinstance(record, DNSText)
+            expired = record.is_expired(now)
+            if not expired:
+                enqueue_callback(ServiceStateChange.Updated, record.name) # New
 
     def cancel(self):
         self.done = True
@@ -2031,9 +2043,12 @@ class Zeroconf(QuietLogger):
                         entry.reset_ttl(record)
             else:
                 self.cache.add(record)
+                if record.type == _TYPE_TXT:
+                    self.update_record(now, record)
 
         for record in msg.answers:
-            self.update_record(now, record)
+            if record.type == _TYPE_PTR:
+                self.update_record(now, record)
 
     def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
