@@ -2061,12 +2061,12 @@ class Zeroconf(QuietLogger):
                         entry.reset_ttl(record)
             else:
                 self.cache.add(record)
-                # if record.type == _TYPE_TXT:
-                # self.update_record(now, record)
+                if record.type == _TYPE_TXT:
+                    self.update_record(now, record)
 
         for record in msg.answers:
-            # if record.type == _TYPE_PTR:
-            self.update_record(now, record)
+            if record.type == _TYPE_PTR:
+                self.update_record(now, record)
 
     def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
