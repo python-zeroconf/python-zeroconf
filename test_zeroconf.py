@@ -878,7 +878,7 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_none'] is False
 
             # Begin material test addition
-            properties.prop_blank=b'an updated string'
+            properties['prop_blank'] = b'an updated string'
             desc.update(properties)
             info_service = ServiceInfo(
                 subtype, registration_name,
@@ -903,6 +903,7 @@ class ListenerTest(unittest.TestCase):
             zeroconf_registrar.close()
             zeroconf_browser.remove_service_listener(listener)
             zeroconf_browser.close()
+
 
 def test_backoff():
     got_query = Event()
