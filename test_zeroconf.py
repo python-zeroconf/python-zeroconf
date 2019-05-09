@@ -835,7 +835,7 @@ class ListenerTest(unittest.TestCase):
                 pass
 
             def update_service(self, zeroconf, type, name):
-                service_updated.set()                
+                service_updated.set()
 
         listener = MyListener()
         zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
