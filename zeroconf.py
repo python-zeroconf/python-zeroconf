@@ -2065,7 +2065,7 @@ class Zeroconf(QuietLogger):
                     self.update_record(now, record)
 
         for record in msg.answers:
-            if record.type == _TYPE_PTR:
+            if record.type != _TYPE_TXT:
                 self.update_record(now, record)
 
     def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
