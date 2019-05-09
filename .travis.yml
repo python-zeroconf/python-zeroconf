@@ -16,6 +16,6 @@ script:
     - make test_coverage
     - flake8 --version
     - make flake8
-    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* && "${TRAVIS_PYTHON_VERSION}" !="3.4" ]] ; then make mypy ; fi
+    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* AND "${TRAVIS_PYTHON_VERSION}" !="3.4" ]] ; then make mypy ; fi
 after_success:
     - coveralls
