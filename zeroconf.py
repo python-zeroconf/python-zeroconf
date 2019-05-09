@@ -1270,6 +1270,7 @@ class ServiceListener:
     def update_service(self, zc, type_, name) -> None:
         raise NotImplementedError()
 
+
 class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
     """Used to browse for a service of a specific type.
@@ -1316,7 +1317,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                     listener.remove_service(*args)
                 elif state_change is ServiceStateChange.Updated:
                     if hasattr(listener, 'update_service'):
-                        listener.update_service(*args)                    
+                        listener.update_service(*args)
                 else:
                     raise NotImplementedError(state_change)
             handlers.append(on_change)
@@ -1866,7 +1867,7 @@ class Zeroconf(QuietLogger):
             self.servicetypes[info.type] += 1
         else:
             self.servicetypes[info.type] = 1
-  
+
         self._broadcast_service(info)
 
     def update_service(
@@ -1882,8 +1883,7 @@ class Zeroconf(QuietLogger):
 
         self._broadcast_service(info)
 
-    def _broadcast_service(self, info: ServiceInfo
-    ) -> None:
+    def _broadcast_service(self, info: ServiceInfo) -> None:
 
         now = current_time_millis()
         next_time = now
@@ -2061,11 +2061,11 @@ class Zeroconf(QuietLogger):
                         entry.reset_ttl(record)
             else:
                 self.cache.add(record)
-#                if record.type == _TYPE_TXT:
-#                    self.update_record(now, record)
+                # if record.type == _TYPE_TXT:
+                # self.update_record(now, record)
 
         for record in msg.answers:
-#           if record.type == _TYPE_PTR:
+            # if record.type == _TYPE_PTR:
             self.update_record(now, record)
 
     def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
