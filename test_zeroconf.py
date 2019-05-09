@@ -779,7 +779,7 @@ class ListenerTest(unittest.TestCase):
             assert service_added.is_set()
 
             # short pause to allow multicast timers to expire
-            time.sleep(2)
+            time.sleep(3)
 
             # clear the answer cache to force query
             for record in zeroconf_browser.cache.entries():
@@ -817,7 +817,7 @@ class ListenerTest(unittest.TestCase):
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
         name = "xxxyyyæøå"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = "%s.%s" % (name, subtype)
 
         class MyListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
@@ -827,8 +827,15 @@ class ListenerTest(unittest.TestCase):
             def remove_service(self, zeroconf, type, name):
                 service_removed.set()
 
+        class MySubListener(r.ServiceListener):
+            def add_service(self, zeroconf, type, name):
+                pass
+
+            def remove_service(self, zeroconf, type, name):
+                pass
+
             def update_service(self, zeroconf, type, name):
-                service_updated.set()
+                service_updated.set()                
 
         listener = MyListener()
         zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
@@ -857,7 +864,7 @@ class ListenerTest(unittest.TestCase):
             assert service_added.is_set()
 
             # short pause to allow multicast timers to expire
-            time.sleep(2)
+            time.sleep(3)
 
             # clear the answer cache to force query
             for record in zeroconf_browser.cache.entries():
@@ -878,6 +885,8 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_none'] is False
 
             # Begin material test addition
+            sublistener = MySubListener()
+            zeroconf_browser.add_service_listener(registration_name, sublistener)
             properties['prop_blank'] = b'an updated string'
             desc.update(properties)
             info_service = ServiceInfo(
@@ -1065,3 +1074,8 @@ def test_integration():
         assert service_removed.is_set()
         browser.cancel()
         zeroconf_browser.close()
+
+# Support for running outside of test tool
+# test = ListenerTest()
+# test.test_integration_with_listener_class()
+# test.test_integration_with_listener_class_with_update()
