@@ -1877,7 +1877,7 @@ class Zeroconf(QuietLogger):
         Zeroconf will then respond to requests for information for that
         service."""
 
-        assert(self.services[info.name.lower()] is not None)
+        assert self.services[info.name.lower()] is not None
 
         self.services[info.name.lower()] = info
 

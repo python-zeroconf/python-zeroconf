@@ -1,6 +1,5 @@
 language: python
 python:
-    - "3.4"
     - "3.5"
     - "3.6"
     - "pypy3.5-5.10.1"
@@ -16,8 +15,6 @@ script:
     - make test_coverage
     - flake8 --version
     - make flake8
-    - if [[ "${TRAVIS_PYTHON_VERSION}" == "3.5" ]] ; then make mypy ; fi
-    - if [[ "${TRAVIS_PYTHON_VERSION}" == "3.6" ]] ; then make mypy ; fi
-    - if [[ "${TRAVIS_PYTHON_VERSION}" == "3.7" ]] ; then make mypy ; fi
+    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then make mypy ; fi
 after_success:
     - coveralls
