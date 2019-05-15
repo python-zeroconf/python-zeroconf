@@ -12,7 +12,7 @@ from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
 
 
 def on_service_state_change(
-    zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange,
+    zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
 ) -> None:
     print("Service %s of type %s state changed: %s" % (name, service_type, state_change))
 

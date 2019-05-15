@@ -11,14 +11,14 @@ with open(join(PROJECT_ROOT, 'README.rst'), encoding='utf-8') as f:
 version = (
     [l for l in open(join(PROJECT_ROOT, 'zeroconf.py')) if '__version__' in l][0]
     .split('=')[-1]
-    .strip().strip('\'"')
+    .strip()
+    .strip('\'"')
 )
 
 setup(
     name='zeroconf',
     version=version,
-    description='Pure Python Multicast DNS Service Discovery Library '
-    '(Bonjour/Avahi compatible)',
+    description='Pure Python Multicast DNS Service Discovery Library ' '(Bonjour/Avahi compatible)',
     long_description=readme,
     author='Paul Scott-Murphy, William McBrine, Jakub Stasiak',
     url='https://github.com/jstasiak/python-zeroconf',
@@ -41,12 +41,6 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
     ],
-    keywords=[
-        'Bonjour', 'Avahi', 'Zeroconf', 'Multicast DNS', 'Service Discovery',
-        'mDNS',
-    ],
-    install_requires=[
-        'ifaddr',
-        'typing;python_version<"3.5"'
-    ],
+    keywords=['Bonjour', 'Avahi', 'Zeroconf', 'Multicast DNS', 'Service Discovery', 'mDNS'],
+    install_requires=['ifaddr', 'typing;python_version<"3.5"'],
 )

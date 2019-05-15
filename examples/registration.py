@@ -17,10 +17,16 @@ if __name__ == '__main__':
 
     desc = {'path': '/~paulsm/'}
 
-    info = ServiceInfo("_http._tcp.local.",
-                       "Paul's Test Web Site._http._tcp.local.",
-                       socket.inet_aton("127.0.0.1"), 80, 0, 0,
-                       desc, "ash-2.local.")
+    info = ServiceInfo(
+        "_http._tcp.local.",
+        "Paul's Test Web Site._http._tcp.local.",
+        socket.inet_aton("127.0.0.1"),
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+    )
 
     zeroconf = Zeroconf()
     print("Registration of a service, press Ctrl-C to exit...")
