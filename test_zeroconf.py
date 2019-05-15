@@ -737,12 +737,13 @@ class ListenerTest(unittest.TestCase):
 
         service_added = Event()
         service_removed = Event()
+        service_updated = Event()
 
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
         name = "xxxyyyæøå"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = "%s.%s" % (name, subtype)
 
         class MyListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
@@ -751,6 +752,16 @@ class ListenerTest(unittest.TestCase):
 
             def remove_service(self, zeroconf, type, name):
                 service_removed.set()
+
+        class MySubListener(r.ServiceListener):
+            def add_service(self, zeroconf, type, name):
+                pass
+
+            def remove_service(self, zeroconf, type, name):
+                pass
+
+            def update_service(self, zeroconf, type, name):
+                service_updated.set()
 
         listener = MyListener()
         zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
@@ -779,7 +790,7 @@ class ListenerTest(unittest.TestCase):
             assert service_added.is_set()
 
             # short pause to allow multicast timers to expire
-            time.sleep(2)
+            time.sleep(3)
 
             # clear the answer cache to force query
             for record in zeroconf_browser.cache.entries():
@@ -799,9 +810,28 @@ class ListenerTest(unittest.TestCase):
             assert info is not None
             assert info.properties[b'prop_none'] is False
 
+            # Begin material test addition
+            sublistener = MySubListener()
+            zeroconf_browser.add_service_listener(registration_name, sublistener)
+            properties['prop_blank'] = b'an updated string'
+            desc.update(properties)
+            info_service = ServiceInfo(
+                subtype, registration_name,
+                socket.inet_aton("10.0.1.2"), 80, 0, 0,
+                desc, "ash-2.local.")
+            zeroconf_registrar.update_service(info_service)
+            service_updated.wait(1)
+            assert service_updated.is_set()
+
+            info = zeroconf_browser.get_service_info(type_, registration_name)
+            assert info is not None
+            assert info.properties[b'prop_blank'] == properties['prop_blank']
+            # End material test addition
+
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
             assert service_removed.is_set()
+
         finally:
             zeroconf_registrar.close()
             zeroconf_browser.remove_service_listener(listener)
