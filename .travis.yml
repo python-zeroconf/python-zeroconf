@@ -12,9 +12,6 @@ install:
     # mypy can't be installed on pypy
     - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then pip install mypy ; fi
 script:
-    - make test_coverage
-    - flake8 --version
-    - make flake8
-    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then make mypy ; fi
+    - make ci
 after_success:
     - coveralls
