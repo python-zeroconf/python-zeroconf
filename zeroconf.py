@@ -1430,6 +1430,9 @@ class ServiceInfo(RecordUpdateListener):
 
     """Service information"""
 
+    # FIXME(dtantsur): black 19.3b0 produces code that is not valid syntax on
+    # Python 3.5: https://github.com/python/black/issues/759
+    # fmt: off
     def __init__(
         self,
         type_: str,
@@ -1491,6 +1494,7 @@ class ServiceInfo(RecordUpdateListener):
         self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
+    # fmt: on
 
     @property
     def address(self):
