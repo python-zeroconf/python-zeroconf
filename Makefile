@@ -33,7 +33,7 @@ flake8:
 
 .PHONY: black_check
 black_check:
-	black --check .
+	black --check *.py examples
 
 mypy:
 	mypy examples/*.py test_zeroconf.py zeroconf.py
