@@ -969,8 +969,20 @@ def test_multiple_addresses():
     # Old way
     info = ServiceInfo(type_, registration_name, address, 80, 0, 0, desc, "ash-2.local.")
 
-    assert not hasattr(info, "address")
+    assert info.address == address
     assert info.addresses == [address]
+
+    # Updating works
+    address2 = socket.inet_aton("10.0.1.3")
+    info.address = address2
+
+    assert info.address == address2
+    assert info.addresses == [address2]
+
+    info.address = None
+
+    assert info.address is None
+    assert info.addresses == []
 
     # Compatibility way
     info = ServiceInfo(type_, registration_name, [address, address], 80, 0, 0, desc, "ash-2.local.")

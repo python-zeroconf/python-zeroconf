@@ -30,6 +30,7 @@ import struct
 import sys
 import threading
 import time
+import warnings
 from functools import reduce
 from typing import AnyStr, Dict, List, Optional, Union, cast
 from typing import Callable, Set, Tuple  # noqa # used in type hints
@@ -1441,13 +1442,14 @@ class ServiceInfo(RecordUpdateListener):
         server: Optional[str] = None,
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
-        addresses: Optional[List[bytes]] = None,
+        *,
+        addresses: Optional[List[bytes]] = None
     ) -> None:
         """Create a service description.
 
         type_: fully qualified service type name
         name: fully qualified service name
-        address: IP address as unsigned short, network byte order (legacy)
+        address: IP address as unsigned short, network byte order (deprecated, use addresses)
         port: port that the service runs on
         weight: weight of the service
         priority: priority of the service
@@ -1461,11 +1463,8 @@ class ServiceInfo(RecordUpdateListener):
         """
 
         # Accept both none, or one, but not both.
-        assert (
-            (address is None and addresses is None)
-            or (address is None and addresses)
-            or (address and addresses is None)
-        )
+        if address is not None and addresses is not None:
+            raise TypeError("address and addresses cannot be provided together")
 
         if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
@@ -1474,6 +1473,7 @@ class ServiceInfo(RecordUpdateListener):
         if addresses is not None:
             self.addresses = addresses
         elif address is not None:
+            warnings.warn("address is deprecated, use addresses instead", DeprecationWarning)
             if isinstance(address, list):
                 self.addresses = address
             else:
@@ -1491,6 +1491,22 @@ class ServiceInfo(RecordUpdateListener):
         self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
+
+    @property
+    def address(self):
+        warnings.warn("ServiceInfo.address is deprecated, use addresses instead", DeprecationWarning)
+        try:
+            return self.addresses[0]
+        except IndexError:
+            return None
+
+    @address.setter
+    def address(self, value):
+        warnings.warn("ServiceInfo.address is deprecated, use addresses instead", DeprecationWarning)
+        if value is None:
+            self.addresses = []
+        else:
+            self.addresses = [value]
 
     @property
     def properties(self) -> ServicePropertiesType:
