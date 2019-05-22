@@ -21,11 +21,9 @@ if __name__ == '__main__':
     info = ServiceInfo(
         "_http._tcp.local.",
         "My Service Name._http._tcp.local.",
-        socket.inet_aton("127.0.0.1"),
-        1234,
-        0,
-        0,
-        desc,
+        addresses=[socket.inet_aton("127.0.0.1")],
+        port=1234,
+        properties=desc,
     )
     print("   Registering service...")
     r.register_service(info)
