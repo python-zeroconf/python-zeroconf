@@ -14,6 +14,7 @@ from threading import Event
 from typing import Dict, Optional  # noqa # used in type hints
 from typing import cast
 
+from nose.plugins.attrib import attr
 
 import zeroconf as r
 from zeroconf import (
@@ -440,6 +441,22 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
         rv.close()
 
+    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @attr('IPv6')
+    def test_launch_and_close_v4_v6(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IpVersion.All)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IpVersion.All)
+        rv.close()
+
+    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @attr('IPv6')
+    def test_launch_and_close_v6_only(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IpVersion.V6Only)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IpVersion.V6Only)
+        rv.close()
+
 
 class Exceptions(unittest.TestCase):
 
@@ -668,6 +685,30 @@ class ServiceTypesQuery(unittest.TestCase):
             assert type_ in service_types
             service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
             assert type_ in service_types
+
+        finally:
+            zeroconf_registrar.close()
+
+    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @attr('IPv6')
+    def test_integration_with_listener_ipv6(self):
+
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+
+        zeroconf_registrar = Zeroconf(ip_version=r.IpVersion.V6Only)
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+        )
+        zeroconf_registrar.register_service(info)
+
+        try:
+            service_types = ZeroconfServiceTypes.find(ip_version=r.IpVersion.V6Only, timeout=0.5)
+            assert type_ in service_types, service_types
+            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
+            assert type_ in service_types, service_types
 
         finally:
             zeroconf_registrar.close()

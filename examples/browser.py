@@ -2,13 +2,13 @@
 
 """ Example of browsing for a service (in this case, HTTP) """
 
+import argparse
 import logging
 import socket
-import sys
 from time import sleep
 from typing import cast
 
-from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+from zeroconf import IpVersion, ServiceBrowser, ServiceStateChange, Zeroconf
 
 
 def on_service_state_change(
@@ -36,11 +36,24 @@ def on_service_state_change(
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    if len(sys.argv) > 1:
-        assert sys.argv[1:] == ['--debug']
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
 
-    zeroconf = Zeroconf()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true')
+    version_group = parser.add_mutually_exclusive_group()
+    version_group.add_argument('--v6', action='store_true')
+    version_group.add_argument('--v6-only', action='store_true')
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+    if args.v6:
+        ip_version = IpVersion.All
+    elif args.v6_only:
+        ip_version = IpVersion.V6Only
+    else:
+        ip_version = IpVersion.V4Only
+
+    zeroconf = Zeroconf(ip_version=ip_version)
     print("\nBrowsing services, press Ctrl-C to exit...\n")
     browser = ServiceBrowser(zeroconf, "_http._tcp.local.", handlers=[on_service_state_change])
 
