@@ -61,6 +61,18 @@ Status
 There are some people using this package. I don't actively use it and as such
 any help I can offer with regard to any issues is very limited.
 
+IPv6 support
+------------
+
+IPv6 support is relatively new and currently limited, specifically:
+* `InterfaceChoice.All` is an alias for `InterfaceChoice.Default` on non-POSIX
+  systems.
+* On Windows specific interfaces can only be requested as interface indexes,
+  not as IP addresses.
+* Dual-stack IPv6 sockets are used, which may not be supported everywhere (some
+  BSD variants do not have them).
+* Listening on localhost (`::1`) does not work. Help with understanding why is
+  appreciated.
 
 How to get python-zeroconf?
 ===========================

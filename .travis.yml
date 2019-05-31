@@ -13,6 +13,7 @@ install:
     - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then pip install mypy ; fi
     - if [[ "${TRAVIS_PYTHON_VERSION}" != *"3.5"* ]] ; then pip install black ; fi
 script:
-    - make ci
+    # no IPv6 support in Travis :(
+    - make TEST_ARGS='-a "!IPv6"' ci
 after_success:
     - coveralls

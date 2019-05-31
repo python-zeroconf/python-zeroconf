@@ -22,7 +22,9 @@
 
 import enum
 import errno
+import ipaddress
 import logging
+import os
 import re
 import select
 import socket
@@ -33,7 +35,7 @@ import time
 import warnings
 from functools import reduce
 from typing import AnyStr, Dict, List, Optional, Union, cast
-from typing import Callable, Set, Tuple  # noqa # used in type hints
+from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
 
@@ -51,6 +53,7 @@ __all__ = [
     "Error",
     "InterfaceChoice",
     "ServiceStateChange",
+    "IpVersion",
 ]
 
 if sys.version_info <= (3, 3):
@@ -79,6 +82,9 @@ _BROWSER_BACKOFF_LIMIT = 3600  # s
 # Some DNS constants
 
 _MDNS_ADDR = '224.0.0.251'
+_MDNS_ADDR_BYTES = socket.inet_aton(_MDNS_ADDR)
+_MDNS_ADDR6 = 'ff02::fb'
+_MDNS_ADDR6_BYTES = socket.inet_pton(socket.AF_INET6, _MDNS_ADDR6)
 _MDNS_PORT = 5353
 _DNS_PORT = 53
 _DNS_HOST_TTL = 120  # two minute for host records (A, SRV etc) as-per RFC6762
@@ -167,6 +173,12 @@ _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE = re.compile(r'^[A-Za-z0-9\-\_]+$')
 _HAS_ASCII_CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
 
+try:
+    _IPPROTO_IPV6 = socket.IPPROTO_IPV6
+except AttributeError:
+    # Sigh: https://bugs.python.org/issue29515
+    _IPPROTO_IPV6 = 41
+
 int2byte = struct.Struct(">B").pack
 
 
@@ -181,6 +193,13 @@ class ServiceStateChange(enum.Enum):
     Added = 1
     Removed = 2
     Updated = 3
+
+
+@enum.unique
+class IpVersion(enum.Enum):
+    V4Only = 1
+    V6Only = 2
+    All = 3
 
 
 # utility functions
@@ -1191,7 +1210,7 @@ class Listener(QuietLogger):
 
     def handle_read(self, socket_):
         try:
-            data, (addr, port) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
+            data, (addr, port, *_v6) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
         except Exception:
             self.log_exception_warning()
             return
@@ -1206,13 +1225,13 @@ class Listener(QuietLogger):
         elif msg.is_query():
             # Always multicast responses
             if port == _MDNS_PORT:
-                self.zc.handle_query(msg, _MDNS_ADDR, _MDNS_PORT)
+                self.zc.handle_query(msg, None, _MDNS_PORT)
 
             # If it's not a multicast query, reply via unicast
             # and multicast
             elif port == _DNS_PORT:
                 self.zc.handle_query(msg, addr, port)
-                self.zc.handle_query(msg, _MDNS_ADDR, _MDNS_PORT)
+                self.zc.handle_query(msg, None, _MDNS_PORT)
 
         else:
             self.zc.handle_response(msg)
@@ -1297,7 +1316,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         type_: str,
         handlers=None,
         listener=None,
-        addr: str = _MDNS_ADDR,
+        addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
     ) -> None:
@@ -1311,7 +1330,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.type = type_
         self.addr = addr
         self.port = port
-        self.multicast = self.addr == _MDNS_ADDR
+        self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
         self.services = {}  # type: Dict[str, DNSRecord]
         self.next_time = current_time_millis()
         self.delay = delay
@@ -1698,16 +1717,18 @@ class ZeroconfServiceTypes(ServiceListener):
         pass
 
     @classmethod
-    def find(cls, zc=None, timeout=5, interfaces=InterfaceChoice.All):
+    def find(cls, zc=None, timeout=5, interfaces=InterfaceChoice.All, ip_version=None):
         """
         Return all of the advertised services on any local networks.
 
         :param zc: Zeroconf() instance.  Pass in if already have an
                 instance running or if non-default interfaces are needed
         :param timeout: seconds to wait for any responses
+        :param interfaces: interfaces to listen on.
+        :param ip_version: IP protocol version to use.
         :return: tuple of service type strings
         """
-        local_zc = zc or Zeroconf(interfaces=interfaces)
+        local_zc = zc or Zeroconf(interfaces=interfaces, ip_version=ip_version)
         listener = cls()
         browser = ServiceBrowser(local_zc, '_services._dns-sd._udp.local.', listener=listener)
 
@@ -1734,18 +1755,106 @@ def get_all_addresses() -> List[str]:
     )
 
 
-def normalize_interface_choice(choice: Union[List[str], InterfaceChoice]) -> List[str]:
+def get_all_addresses_v6() -> List[int]:
+    # IPv6 multicast uses positive indexes for interfaces
+    try:
+        nameindex = socket.if_nameindex
+    except AttributeError:
+        # Requires Python 3.8 on Windows. Fall back to Default.
+        QuietLogger.log_warning_once(
+            'if_nameindex is not available, falling back to using the default IPv6 interface'
+        )
+        return [0]
+
+    return [tpl[0] for tpl in nameindex()]
+
+
+def ip_to_index(adapters: List[Any], ip: str) -> int:
+    if os.name != 'posix':
+        # Adapter names that ifaddr reports are not compatible with what if_nametoindex expects on Windows.
+        # We need https://github.com/pydron/ifaddr/pull/21 but it seems stuck on review.
+        raise RuntimeError('Converting from IP addresses to indexes is not supported on non-POSIX systems')
+
+    ipaddr = ipaddress.ip_address(ip)
+    for adapter in adapters:
+        for adapter_ip in adapter.ips:
+            # IPv6 addresses are represented as tuples
+            if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
+                return socket.if_nametoindex(adapter.name)
+
+    raise RuntimeError('No adapter found for IP address %s' % ip)
+
+
+def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
+    """Convert IPv6 interface addresses to interface indexes.
+
+    IPv4 addresses are ignored. The conversion currently only works on POSIX
+    systems.
+
+    :param interfaces: List of IP addresses and indexes.
+    :returns: List of indexes.
+    """
+    result = []
+    adapters = ifaddr.get_adapters()
+
+    for iface in interfaces:
+        if isinstance(iface, int):
+            result.append(iface)
+        elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
+            result.append(ip_to_index(adapters, iface))
+
+    return result
+
+
+def normalize_interface_choice(
+    choice: Union[List[Union[str, int]], InterfaceChoice], ip_version: IpVersion = IpVersion.V4Only
+) -> List[Union[str, int]]:
+    """Convert the interfaces choice into internal representation.
+
+    :param choice: `InterfaceChoice` or list of interface addresses or indexes (IPv6 only).
+    :param ip_address: IP version to use (ignored if `choice` is a list).
+    :returns: List of IP addresses (for IPv4) and indexes (for IPv6).
+    """
+    result = []  # type: List[Union[str, int]]
     if choice is InterfaceChoice.Default:
-        return ['0.0.0.0']
+        if ip_version != IpVersion.V4Only:
+            # IPv6 multicast uses interface 0 to mean the default
+            result.append(0)
+        if ip_version != IpVersion.V6Only:
+            result.append('0.0.0.0')
     elif choice is InterfaceChoice.All:
-        return get_all_addresses()
+        if ip_version != IpVersion.V4Only:
+            result.extend(get_all_addresses_v6())
+        if ip_version != IpVersion.V6Only:
+            result.extend(get_all_addresses())
+        if not result:
+            raise RuntimeError(
+                'No interfaces to listen on, check that any interfaces have IP version %s' % ip_version
+            )
+    elif isinstance(choice, list):
+        # First, take IPv4 addresses.
+        result = [i for i in choice if isinstance(i, str) and ipaddress.ip_address(i).version == 4]
+        # Unlike IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP requires interface indexes.
+        result += ip6_addresses_to_indexes(choice)
     else:
-        assert isinstance(choice, list)
-        return choice
+        raise TypeError("choice must be a list or InterfaceChoice, got %r" % choice)
+    return result
 
 
-def new_socket(port: int = _MDNS_PORT) -> socket.socket:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def new_socket(port: int = _MDNS_PORT, ip_version: IpVersion = IpVersion.V4Only) -> socket.socket:
+    if ip_version == IpVersion.V4Only:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    else:
+        s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+
+    if ip_version == IpVersion.All:
+        # make V6 sockets work for both V4 and V6 (required for Windows)
+        try:
+            s.setsockopt(_IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+        except OSError:
+            log.error('Support for dual V4-V6 sockets is not present, use IpVersion.V4 or IpVersion.V6')
+            raise
+
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
@@ -1768,20 +1877,99 @@ def new_socket(port: int = _MDNS_PORT) -> socket.socket:
                 raise
 
     if port is _MDNS_PORT:
-        # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
-        # IP_MULTICAST_LOOP socket options as an unsigned char.
         ttl = struct.pack(b'B', 255)
-        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
         loop = struct.pack(b'B', 1)
-        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+        if ip_version != IpVersion.V6Only:
+            # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
+            # IP_MULTICAST_LOOP socket options as an unsigned char.
+            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+        if ip_version != IpVersion.V4Only:
+            # However, char doesn't work here (at least on Linux)
+            s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
+            s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
 
     s.bind(('', port))
     return s
 
 
+def add_multicast_member(listen_socket, interface):
+    # This is based on assumptions in normalize_interface_choice
+    is_v6 = isinstance(interface, int)
+    log.debug('Adding %r to multicast group', interface)
+    try:
+        if is_v6:
+            iface_bin = struct.pack('@I', interface)
+            _value = _MDNS_ADDR6_BYTES + iface_bin
+            listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, _value)
+        else:
+            _value = _MDNS_ADDR_BYTES + socket.inet_aton(interface)
+            listen_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value)
+    except socket.error as e:
+        _errno = get_errno(e)
+        if _errno == errno.EADDRINUSE:
+            log.info(
+                'Address in use when adding %s to multicast group, '
+                'it is expected to happen on some systems',
+                interface,
+            )
+            return
+        elif _errno == errno.EADDRNOTAVAIL:
+            log.info(
+                'Address not available when adding %s to multicast '
+                'group, it is expected to happen on some systems',
+                interface,
+            )
+            return
+        elif _errno == errno.EINVAL:
+            log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
+            return
+        else:
+            raise
+
+    respond_socket = new_socket(ip_version=(IpVersion.V6Only if is_v6 else IpVersion.V4Only))
+    log.debug('Configuring %s with multicast interface %s', respond_socket, interface)
+    if is_v6:
+        respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
+    else:
+        respond_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface))
+    return respond_socket
+
+
+def create_sockets(
+    interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
+    unicast: bool = False,
+    ip_version: IpVersion = IpVersion.V4Only,
+):
+    if unicast:
+        listen_socket = None
+    else:
+        listen_socket = new_socket(ip_version=ip_version)
+
+    interfaces = normalize_interface_choice(interfaces, ip_version)
+
+    respond_sockets = []
+
+    for i in interfaces:
+        if not unicast:
+            respond_socket = add_multicast_member(listen_socket, i)
+        else:
+            respond_socket = new_socket(port=0, ip_version=ip_version)
+
+        if respond_socket is not None:
+            respond_sockets.append(respond_socket)
+
+    return listen_socket, respond_sockets
+
+
 def get_errno(e: Exception) -> int:
     assert isinstance(e, socket.error)
     return cast(int, e.args[0])
+
+
+def can_send_to(sock, address: str):
+    addr = ipaddress.ip_address(address)
+    return addr.version == 6 if sock.family == socket.AF_INET6 else addr.version == 4
 
 
 class Zeroconf(QuietLogger):
@@ -1792,57 +1980,45 @@ class Zeroconf(QuietLogger):
     """
 
     def __init__(
-        self, interfaces: Union[List[str], InterfaceChoice] = InterfaceChoice.All, unicast: bool = False
+        self,
+        interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
+        unicast: bool = False,
+        ip_version: Optional[IpVersion] = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
 
-        :type interfaces: :class:`InterfaceChoice` or sequence of ip addresses
+        :param interfaces: :class:`InterfaceChoice` or a list of IP addresses
+            (IPv4 and IPv6) and interface indexes (IPv6 only).
+
+            IPv6 notes for non-POSIX systems:
+            * IPv6 addresses are not supported, use indexes instead.
+            * `InterfaceChoice.All` is an alias for `InterfaceChoice.Default`
+              on Python versions before 3.8.
+
+            Also listening on loopback (``::1``) doesn't work, use a real address.
+        :param ip_version: IP versions to support. If `choice` is a list, the default is detected
+            from it. Otherwise defaults to V4 only for backward compatibility.
         """
+        if ip_version is None and isinstance(interfaces, list):
+            has_v6 = any(
+                isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
+                for i in interfaces
+            )
+            has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
+            if has_v4 and has_v6:
+                ip_version = IpVersion.All
+            elif has_v6:
+                ip_version = IpVersion.V6Only
+
+        if ip_version is None:
+            ip_version = IpVersion.V4Only
+
         # hook for threads
         self._GLOBAL_DONE = False
         self.unicast = unicast
 
-        if not unicast:
-            self._listen_socket = new_socket()
-        interfaces = normalize_interface_choice(interfaces)
-
-        self._respond_sockets = []  # type: List[socket.socket]
-
-        for i in interfaces:
-            if not unicast:
-                log.debug('Adding %r to multicast group', i)
-                try:
-                    _value = socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(i)
-                    self._listen_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value)
-                except socket.error as e:
-                    _errno = get_errno(e)
-                    if _errno == errno.EADDRINUSE:
-                        log.info(
-                            'Address in use when adding %s to multicast group, '
-                            'it is expected to happen on some systems',
-                            i,
-                        )
-                    elif _errno == errno.EADDRNOTAVAIL:
-                        log.info(
-                            'Address not available when adding %s to multicast '
-                            'group, it is expected to happen on some systems',
-                            i,
-                        )
-                        continue
-                    elif _errno == errno.EINVAL:
-                        log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', i)
-                        continue
-
-                    else:
-                        raise
-
-                respond_socket = new_socket()
-                respond_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(i))
-            else:
-                respond_socket = new_socket(port=0)
-
-            self._respond_sockets.append(respond_socket)
+        self._listen_socket, self._respond_sockets = create_sockets(interfaces, unicast, ip_version)
 
         self.listeners = []  # type: List[RecordUpdateListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
@@ -2130,7 +2306,7 @@ class Zeroconf(QuietLogger):
             if record.type != _TYPE_TXT:
                 self.update_record(now, record)
 
-    def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
+    def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
         out = None
@@ -2231,7 +2407,7 @@ class Zeroconf(QuietLogger):
             out.id = msg.id
             self.send(out, addr, port)
 
-    def send(self, out: DNSOutgoing, addr: str = _MDNS_ADDR, port: int = _MDNS_PORT) -> None:
+    def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""
         packet = out.packet()
         if len(packet) > _MAX_MSG_ABSOLUTE:
@@ -2242,8 +2418,22 @@ class Zeroconf(QuietLogger):
             if self._GLOBAL_DONE:
                 return
             try:
-                bytes_sent = s.sendto(packet, 0, (addr, port))
-            except Exception:  # TODO stop catching all Exceptions
+                if addr is None:
+                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+                elif not can_send_to(s, addr):
+                    continue
+                else:
+                    real_addr = addr
+                bytes_sent = s.sendto(packet, 0, (real_addr, port))
+            except Exception as exc:  # TODO stop catching all Exceptions
+                if (
+                    isinstance(exc, OSError)
+                    and exc.errno == errno.ENETUNREACH
+                    and s.family == socket.AF_INET6
+                ):
+                    # with IPv6 we don't have a reliable way to determine if an interface actually has IPv6
+                    # support, so we have to try and ignore errors.
+                    continue
                 # on send errors, log the exception and keep going
                 self.log_exception_warning()
             else:
