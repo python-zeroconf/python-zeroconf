@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-""" Example of browsing for a service (in this case, HTTP) """
+""" Example of browsing for a service. 
+
+The default is HTTP; use --all to search for all available services in the network
+"""
 
 import logging
 import socket
@@ -8,7 +11,7 @@ import sys
 from time import sleep
 from typing import cast
 
-from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf
+from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf, ZeroconfServiceTypes
 
 
 def on_service_state_change(
@@ -18,6 +21,7 @@ def on_service_state_change(
 
     if state_change is ServiceStateChange.Added:
         info = zeroconf.get_service_info(service_type, name)
+        print("Info from zeroconf.get_service_info: %r" % (info))
         if info:
             addresses = ["%s:%d" % (socket.inet_ntoa(addr), cast(int, info.port)) for addr in info.addresses]
             print("  Addresses: %s" % ", ".join(addresses))
@@ -36,13 +40,18 @@ def on_service_state_change(
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    if len(sys.argv) > 1:
-        assert sys.argv[1:] == ['--debug']
+    if '--debug' in sys.argv[1:]:
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
 
     zeroconf = Zeroconf()
-    print("\nBrowsing services, press Ctrl-C to exit...\n")
-    browser = ServiceBrowser(zeroconf, "_http._tcp.local.", handlers=[on_service_state_change])
+
+    services = ["_http._tcp.local."]
+    if '--find' in sys.argv[1:]:
+        services = list(ZeroconfServiceTypes.find(zc=zeroconf))
+
+    print("\nBrowsing %d service(s), press Ctrl-C to exit...\n" % len(services))
+    for service_type in services:
+        ServiceBrowser(zeroconf, service_type, handlers=[on_service_state_change])
 
     try:
         while True:
