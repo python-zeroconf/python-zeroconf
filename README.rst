@@ -120,6 +120,17 @@ See examples directory for more.
 Changelog
 =========
 
+0.23.0
+------
+
+* Added support for MyListener call getting updates to service TXT records, thanks to Matt Saxon
+* Added support for multiple addresses when publishing a service, getting/setting single address
+  has become deprecated. Change thanks to Dmitry Tantsur
+
+Backwards incompatible:
+
+* Dropped Python 3.4 support
+
 0.22.0
 ------
 
