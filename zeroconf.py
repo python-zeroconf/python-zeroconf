@@ -1185,7 +1185,7 @@ class Engine(threading.Thread):
                 except (select.error, socket.error) as e:
                     # If the socket was closed by another thread, during
                     # shutdown, ignore it and exit
-                    if e.args[0] != socket.EBADF or not self.zc.done:
+                    if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
                         raise
 
     def add_reader(self, reader, socket_):
