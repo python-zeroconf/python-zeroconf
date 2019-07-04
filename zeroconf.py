@@ -1876,7 +1876,7 @@ def normalize_interface_choice(
         result += ip6_addresses_to_indexes(choice)
     else:
         raise TypeError("choice must be a list or InterfaceChoice, got %r" % choice)
-    return result
+    return sorted(result)
 
 
 def new_socket(port: int = _MDNS_PORT, ip_version: IpVersion = IpVersion.V4Only, bindto:str='') -> socket.socket:
