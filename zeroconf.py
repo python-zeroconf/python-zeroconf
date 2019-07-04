@@ -79,6 +79,9 @@ _LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 1000  # ms
 _BROWSER_BACKOFF_LIMIT = 3600  # s
 
+#How many seconds in between rescanning network devices
+_REFRESH_INTERVAL = 180
+
 # Some DNS constants
 
 _MDNS_ADDR = '224.0.0.251'
@@ -1181,11 +1184,22 @@ class Engine(threading.Thread):
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
         self.condition = threading.Condition()
-        self.start()
+    
 
+    
     def run(self):
+        #When was the last time we refreshed the listing of network sockets
+        lastRefresh = time.time()
+
         while not self.zc.done:
             with self.condition:
+
+                try:
+                    if lastRefresh < (time.time()-(_REFRESH_INTERVAL)):
+                        self.zc.refresh_sockets()
+                        lastRefresh = time.time()
+                finally:
+                    pass
                 rs = self.readers.keys()
                 if len(rs) == 0:
                     # No sockets to manage, but we wait for the timeout
@@ -1206,6 +1220,7 @@ class Engine(threading.Thread):
                     # shutdown, ignore it and exit
                     if e.args[0] != socket.EBADF or not self.zc.done:
                         raise
+
 
     def add_reader(self, reader, socket_):
         with self.condition:
@@ -1959,31 +1974,6 @@ def add_multicast_member(listen_socket, interface, bindto:str=''):
     return respond_socket
 
 
-def create_sockets(
-    interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
-    unicast: bool = False,
-    ip_version: IpVersion = IpVersion.V4Only,
-):
-    if unicast:
-        listen_socket = None
-    else:
-        listen_socket = new_socket(ip_version=ip_version)
-
-    interfaces = normalize_interface_choice(interfaces, ip_version)
-
-    respond_sockets = []
-
-    for i in interfaces:
-        if not unicast:
-            respond_socket = add_multicast_member(listen_socket, i, bindto=i)
-        else:
-            respond_socket = new_socket(port=0, ip_version=ip_version, bindto=i)
-
-        if respond_socket is not None:
-            respond_sockets.append(respond_socket)
-
-    return listen_socket, respond_sockets
-
 
 def get_errno(e: Exception) -> int:
     assert isinstance(e, socket.error)
@@ -2040,8 +2030,14 @@ class Zeroconf(QuietLogger):
         # hook for threads
         self._GLOBAL_DONE = False
         self.unicast = unicast
+        
+        #Lets us detect changes in the set of interfaces
+        self._interfaces_last_checked = None
 
-        self._listen_socket, self._respond_sockets = create_sockets(interfaces, unicast, ip_version)
+        #refresh_sockets will populate these
+        self._listen_socket=None
+        self._respond_sockets = []
+
 
         self.listeners = []  # type: List[RecordUpdateListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
@@ -2054,14 +2050,78 @@ class Zeroconf(QuietLogger):
 
         self.engine = Engine(self)
         self.listener = Listener(self)
-        if not unicast:
+        
+        self.refresh_sockets()
+        self.engine.start()
+      
+        self.reaper = Reaper(self)
+
+        self.debug = None  # type: Optional[DNSOutgoing]
+    
+
+    def refresh_sockets(
+        self,
+        interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
+        unicast: bool = False,
+        ip_version: IpVersion = IpVersion.V4Only,
+    ):
+
+        interfaces = normalize_interface_choice(interfaces, ip_version)
+        
+        #Simple polling model, we just check if it matches what
+        #We found last time
+        if interfaces == self._interfaces_last_checked:
+            return
+
+        self._interfaces_last_checked= interfaces
+
+        #Close all existing sockets
+        if self._listen_socket:
+            try:
+                self._listen_socket.close()
+                self.engine.del_reader(self._listen_socket)
+            except KeyError:
+                pass
+            except:
+                raise
+
+        for i in self._respond_sockets:
+            try:
+                i.close()
+                self.engine.del_reader(i)
+            except KeyError:
+                pass
+            except:
+                raise
+
+
+        if unicast:
+            listen_socket = None
+        else:
+            listen_socket = new_socket(ip_version=ip_version)
+
+
+        respond_sockets = []
+
+        for i in interfaces:
+            if not unicast:
+                respond_socket = add_multicast_member(listen_socket, i, bindto=i)
+            else:
+                respond_socket = new_socket(port=0, ip_version=ip_version, bindto=i)
+
+            if respond_socket is not None:
+                respond_sockets.append(respond_socket)
+
+        self._listen_socket, self._respond_sockets = listen_socket, respond_sockets
+        
+        if not self.unicast:
             self.engine.add_reader(self.listener, self._listen_socket)
         else:
             for s in self._respond_sockets:
                 self.engine.add_reader(self.listener, s)
-        self.reaper = Reaper(self)
+        
+        return listen_socket, respond_sockets
 
-        self.debug = None  # type: Optional[DNSOutgoing]
 
     @property
     def done(self) -> bool:
@@ -2433,30 +2493,46 @@ class Zeroconf(QuietLogger):
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""
+        retry = 0
         for s in self._respond_sockets:
-            self.send_from(s, out, addr, port)
+            if self.send_from(s, out, addr, port):
+                retry =1
+                break
 
-    def send_from(self, s: socket.socket, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
+        #Assume everything is idempotent so when
+        #Something fails, we let the refresh take over
+        if retry:
+            for s in self._respond_sockets:
+                self.send_from(s, out, addr, port)
+
+    def send_from(self, s: socket.socket, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> int:
         "Sends the packet out of a specific socket"
         #"compile" the packet to bytes with the addr of the socket as default
         packet = out.packet(default_addr=s.getsockname()[0])
         log.debug('Sending %r (%d bytes) as %r...', out, len(packet), packet)
 
+        scode = 0
+
         if len(packet) > _MAX_MSG_ABSOLUTE:
             self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
-            return
+            return 0
 
         if self._GLOBAL_DONE:
-            return
+            return 0
         try:
             if addr is None:
                 real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
             elif not can_send_to(s, addr):
-                return
+                return 1
             else:
                 real_addr = addr
             bytes_sent = s.sendto(packet, 0, (real_addr, port))
+  
         except Exception as exc:  # TODO stop catching all Exceptions
+            #Probably some network funny business up so we refresh
+            scode = 1
+            self.refresh_sockets()
+
             if (
                 isinstance(exc, OSError)
                 and exc.errno == errno.ENETUNREACH
@@ -2464,13 +2540,13 @@ class Zeroconf(QuietLogger):
             ):
                 # with IPv6 we don't have a reliable way to determine if an interface actually has IPv6
                 # support, so we have to try and ignore errors.
-                return
+                return 0
             # on send errors, log the exception and keep going
             self.log_exception_warning()
         else:
             if bytes_sent != len(packet):
                 self.log_warning_once('!!! sent %d out of %d bytes to %r' % (bytes_sent, len(packet), s))
-
+        return scode
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
