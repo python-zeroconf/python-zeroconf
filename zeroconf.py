@@ -509,9 +509,16 @@ class DNSAddress(DNSRecord):
         DNSRecord.__init__(self, name, type_, class_, ttl)
         self.address = address
 
-    def write(self, out):
-        """Used in constructing an outgoing packet"""
-        out.write_string(self.address)
+    def write(self, out, substitute_addr=None):
+        """Used in constructing an outgoing packet. 
+        Substitute_addr is used to provide  the default address, if self.address
+        is None"""
+        if not self.address:
+            if substitute_addr:
+                substitute_addr = address= socket.inet_aton(substitute_addr)
+            else:
+                raise ValueError("Default address must be provided if address is None")
+        out.write_string(self.address or substitute_addr)
 
     def __eq__(self, other):
         """Tests equality on address"""
@@ -839,7 +846,13 @@ class DNSOutgoing:
         self.answers = []  # type: List[Tuple[DNSEntry, float]]
         self.authorities = []  # type: List[DNSPointer]
         self.additionals = []  # type: List[DNSAddress]
-
+   
+    def reset_data(self):
+        self.data = []
+        self.names = {}
+        self.size = 12
+        self.state = self.State.init
+   
     def __repr__(self):
         return '<DNSOutgoing:{%s}>' % ', '.join(
             [
@@ -1010,7 +1023,7 @@ class DNSOutgoing:
         self.write_short(question.type)
         self.write_short(question.class_)
 
-    def write_record(self, record, now):
+    def write_record(self, record, now, default_addr=None):
         """Writes a record (answer, authoritative answer, additional) to
         the packet"""
         if self.state == self.State.finished:
@@ -1031,7 +1044,10 @@ class DNSOutgoing:
 
         # Adjust size for the short we will write before this record
         self.size += 2
-        record.write(self)
+        if isinstance(record, DNSAddress):
+            record.write(self, default_addr)
+        else:
+            record.write(self)
         self.size -= 2
 
         length = sum((len(d) for d in self.data[index:]))
@@ -1047,11 +1063,18 @@ class DNSOutgoing:
             return 1
         return 0
 
-    def packet(self) -> bytes:
+    def packet(self, default_addr=None) -> bytes:
         """Returns a string containing the packet's bytes
+            If the default_addr is given, any DNSAddresses that
+            are None will be replaced by it. It should
+            be set to the IP of the interface the packet will be sent from.
 
         No further parts should be added to the packet once this
-        is done."""
+        is done. """
+
+        #If we supply a default addr here, we need to recompute everything.
+        if default_addr:
+           self.reset_data()
 
         overrun_answers, overrun_authorities, overrun_additionals = 0, 0, 0
 
@@ -1059,11 +1082,11 @@ class DNSOutgoing:
             for question in self.questions:
                 self.write_question(question)
             for answer, time_ in self.answers:
-                overrun_answers += self.write_record(answer, time_)
+                overrun_answers += self.write_record(answer, time_, default_addr)
             for authority in self.authorities:
-                overrun_authorities += self.write_record(authority, 0)
+                overrun_authorities += self.write_record(authority, 0, default_addr)
             for additional in self.additionals:
-                overrun_additionals += self.write_record(additional, 0)
+                overrun_additionals += self.write_record(additional, 0, default_addr)
             self.state = self.State.finished
 
             self.insert_short(0, len(self.additionals) - overrun_additionals)
@@ -1841,7 +1864,7 @@ def normalize_interface_choice(
     return result
 
 
-def new_socket(port: int = _MDNS_PORT, ip_version: IpVersion = IpVersion.V4Only) -> socket.socket:
+def new_socket(port: int = _MDNS_PORT, ip_version: IpVersion = IpVersion.V4Only, bindto:str='') -> socket.socket:
     if ip_version == IpVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
@@ -1889,11 +1912,11 @@ def new_socket(port: int = _MDNS_PORT, ip_version: IpVersion = IpVersion.V4Only)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
 
-    s.bind(('', port))
+    s.bind((bindto, port))
     return s
 
 
-def add_multicast_member(listen_socket, interface):
+def add_multicast_member(listen_socket, interface, bindto:str=''):
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, int)
     log.debug('Adding %r to multicast group', interface)
@@ -1927,7 +1950,7 @@ def add_multicast_member(listen_socket, interface):
         else:
             raise
 
-    respond_socket = new_socket(ip_version=(IpVersion.V6Only if is_v6 else IpVersion.V4Only))
+    respond_socket = new_socket(ip_version=(IpVersion.V6Only if is_v6 else IpVersion.V4Only),bindto=bindto)
     log.debug('Configuring %s with multicast interface %s', respond_socket, interface)
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
@@ -1952,9 +1975,9 @@ def create_sockets(
 
     for i in interfaces:
         if not unicast:
-            respond_socket = add_multicast_member(listen_socket, i)
+            respond_socket = add_multicast_member(listen_socket, i, bindto=i)
         else:
-            respond_socket = new_socket(port=0, ip_version=ip_version)
+            respond_socket = new_socket(port=0, ip_version=ip_version, bindto=i)
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
@@ -2141,6 +2164,7 @@ class Zeroconf(QuietLogger):
             )
 
             out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, info.other_ttl, info.text), 0)
+            
             for address in info.addresses:
                 out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, info.host_ttl, address), 0)
             self.send(out)
@@ -2409,36 +2433,43 @@ class Zeroconf(QuietLogger):
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""
-        packet = out.packet()
+        for s in self._respond_sockets:
+            self.send_from(s, out, addr, port)
+
+    def send_from(self, s: socket.socket, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
+        "Sends the packet out of a specific socket"
+        #"compile" the packet to bytes with the addr of the socket as default
+        packet = out.packet(default_addr=s.getsockname()[0])
+        log.debug('Sending %r (%d bytes) as %r...', out, len(packet), packet)
+
         if len(packet) > _MAX_MSG_ABSOLUTE:
             self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
             return
-        log.debug('Sending %r (%d bytes) as %r...', out, len(packet), packet)
-        for s in self._respond_sockets:
-            if self._GLOBAL_DONE:
+
+        if self._GLOBAL_DONE:
+            return
+        try:
+            if addr is None:
+                real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+            elif not can_send_to(s, addr):
                 return
-            try:
-                if addr is None:
-                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
-                elif not can_send_to(s, addr):
-                    continue
-                else:
-                    real_addr = addr
-                bytes_sent = s.sendto(packet, 0, (real_addr, port))
-            except Exception as exc:  # TODO stop catching all Exceptions
-                if (
-                    isinstance(exc, OSError)
-                    and exc.errno == errno.ENETUNREACH
-                    and s.family == socket.AF_INET6
-                ):
-                    # with IPv6 we don't have a reliable way to determine if an interface actually has IPv6
-                    # support, so we have to try and ignore errors.
-                    continue
-                # on send errors, log the exception and keep going
-                self.log_exception_warning()
             else:
-                if bytes_sent != len(packet):
-                    self.log_warning_once('!!! sent %d out of %d bytes to %r' % (bytes_sent, len(packet), s))
+                real_addr = addr
+            bytes_sent = s.sendto(packet, 0, (real_addr, port))
+        except Exception as exc:  # TODO stop catching all Exceptions
+            if (
+                isinstance(exc, OSError)
+                and exc.errno == errno.ENETUNREACH
+                and s.family == socket.AF_INET6
+            ):
+                # with IPv6 we don't have a reliable way to determine if an interface actually has IPv6
+                # support, so we have to try and ignore errors.
+                return
+            # on send errors, log the exception and keep going
+            self.log_exception_warning()
+        else:
+            if bytes_sent != len(packet):
+                self.log_warning_once('!!! sent %d out of %d bytes to %r' % (bytes_sent, len(packet), s))
 
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
