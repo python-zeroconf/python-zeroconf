@@ -32,8 +32,11 @@ if __name__ == '__main__':
 
     info = ServiceInfo(
         "_http._tcp.local.",
-        "Paul's Test Web Site._http._tcp.local.",
-        addresses=[socket.inet_aton("127.0.0.1")],
+        "Paul's Test Web Site._http._tcp.local.", 
+        #None indicates automatic addressing, every interface's IP
+        #Is advertised on that interface. You can also specify a
+        #Specific address by passing it through inet_aton.
+        addresses=[None],
         port=80,
         properties=desc,
         server="ash-2.local.",
