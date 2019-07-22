@@ -444,17 +444,17 @@ class Framework(unittest.TestCase):
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
     @attr('IPv6')
     def test_launch_and_close_v4_v6(self):
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IpVersion.All)
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
         rv.close()
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IpVersion.All)
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
         rv.close()
 
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
     @attr('IPv6')
     def test_launch_and_close_v6_only(self):
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IpVersion.V6Only)
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
         rv.close()
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IpVersion.V6Only)
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
         rv.close()
 
 
@@ -697,7 +697,7 @@ class ServiceTypesQuery(unittest.TestCase):
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
 
-        zeroconf_registrar = Zeroconf(ip_version=r.IpVersion.V6Only)
+        zeroconf_registrar = Zeroconf(ip_version=r.IPVersion.V6Only)
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
             type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
@@ -705,7 +705,7 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar.register_service(info)
 
         try:
-            service_types = ZeroconfServiceTypes.find(ip_version=r.IpVersion.V6Only, timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=0.5)
             assert type_ in service_types, service_types
             service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
             assert type_ in service_types, service_types

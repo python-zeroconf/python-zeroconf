@@ -7,7 +7,7 @@ import logging
 import socket
 from time import sleep
 
-from zeroconf import IpVersion, ServiceInfo, Zeroconf
+from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -22,11 +22,11 @@ if __name__ == '__main__':
     if args.debug:
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
     if args.v6:
-        ip_version = IpVersion.All
+        ip_version = IPVersion.All
     elif args.v6_only:
-        ip_version = IpVersion.V6Only
+        ip_version = IPVersion.V6Only
     else:
-        ip_version = IpVersion.V4Only
+        ip_version = IPVersion.V4Only
 
     desc = {'path': '/~paulsm/'}
 

@@ -8,7 +8,7 @@ import socket
 from time import sleep
 from typing import cast
 
-from zeroconf import IpVersion, ServiceBrowser, ServiceStateChange, Zeroconf
+from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
 
 
 def on_service_state_change(
@@ -47,11 +47,11 @@ if __name__ == '__main__':
     if args.debug:
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
     if args.v6:
-        ip_version = IpVersion.All
+        ip_version = IPVersion.All
     elif args.v6_only:
-        ip_version = IpVersion.V6Only
+        ip_version = IPVersion.V6Only
     else:
-        ip_version = IpVersion.V4Only
+        ip_version = IPVersion.V4Only
 
     zeroconf = Zeroconf(ip_version=ip_version)
     print("\nBrowsing services, press Ctrl-C to exit...\n")
