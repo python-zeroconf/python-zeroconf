@@ -53,7 +53,7 @@ __all__ = [
     "Error",
     "InterfaceChoice",
     "ServiceStateChange",
-    "IpVersion",
+    "IPVersion",
 ]
 
 if sys.version_info <= (3, 3):
@@ -196,7 +196,7 @@ class ServiceStateChange(enum.Enum):
 
 
 @enum.unique
-class IpVersion(enum.Enum):
+class IPVersion(enum.Enum):
     V4Only = 1
     V6Only = 2
     All = 3
@@ -1807,7 +1807,7 @@ def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
 
 
 def normalize_interface_choice(
-    choice: Union[List[Union[str, int]], InterfaceChoice], ip_version: IpVersion = IpVersion.V4Only
+    choice: Union[List[Union[str, int]], InterfaceChoice], ip_version: IPVersion = IPVersion.V4Only
 ) -> List[Union[str, int]]:
     """Convert the interfaces choice into internal representation.
 
@@ -1817,15 +1817,15 @@ def normalize_interface_choice(
     """
     result = []  # type: List[Union[str, int]]
     if choice is InterfaceChoice.Default:
-        if ip_version != IpVersion.V4Only:
+        if ip_version != IPVersion.V4Only:
             # IPv6 multicast uses interface 0 to mean the default
             result.append(0)
-        if ip_version != IpVersion.V6Only:
+        if ip_version != IPVersion.V6Only:
             result.append('0.0.0.0')
     elif choice is InterfaceChoice.All:
-        if ip_version != IpVersion.V4Only:
+        if ip_version != IPVersion.V4Only:
             result.extend(get_all_addresses_v6())
-        if ip_version != IpVersion.V6Only:
+        if ip_version != IPVersion.V6Only:
             result.extend(get_all_addresses())
         if not result:
             raise RuntimeError(
@@ -1841,18 +1841,18 @@ def normalize_interface_choice(
     return result
 
 
-def new_socket(port: int = _MDNS_PORT, ip_version: IpVersion = IpVersion.V4Only) -> socket.socket:
-    if ip_version == IpVersion.V4Only:
+def new_socket(port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only) -> socket.socket:
+    if ip_version == IPVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
         s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
 
-    if ip_version == IpVersion.All:
+    if ip_version == IPVersion.All:
         # make V6 sockets work for both V4 and V6 (required for Windows)
         try:
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
         except OSError:
-            log.error('Support for dual V4-V6 sockets is not present, use IpVersion.V4 or IpVersion.V6')
+            log.error('Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6')
             raise
 
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1879,12 +1879,12 @@ def new_socket(port: int = _MDNS_PORT, ip_version: IpVersion = IpVersion.V4Only)
     if port is _MDNS_PORT:
         ttl = struct.pack(b'B', 255)
         loop = struct.pack(b'B', 1)
-        if ip_version != IpVersion.V6Only:
+        if ip_version != IPVersion.V6Only:
             # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
             # IP_MULTICAST_LOOP socket options as an unsigned char.
             s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
             s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
-        if ip_version != IpVersion.V4Only:
+        if ip_version != IPVersion.V4Only:
             # However, char doesn't work here (at least on Linux)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
@@ -1927,7 +1927,7 @@ def add_multicast_member(listen_socket, interface):
         else:
             raise
 
-    respond_socket = new_socket(ip_version=(IpVersion.V6Only if is_v6 else IpVersion.V4Only))
+    respond_socket = new_socket(ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only))
     log.debug('Configuring %s with multicast interface %s', respond_socket, interface)
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
@@ -1939,7 +1939,7 @@ def add_multicast_member(listen_socket, interface):
 def create_sockets(
     interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
     unicast: bool = False,
-    ip_version: IpVersion = IpVersion.V4Only,
+    ip_version: IPVersion = IPVersion.V4Only,
 ):
     if unicast:
         listen_socket = None
@@ -1983,7 +1983,7 @@ class Zeroconf(QuietLogger):
         self,
         interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
         unicast: bool = False,
-        ip_version: Optional[IpVersion] = None,
+        ip_version: Optional[IPVersion] = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
@@ -2007,12 +2007,12 @@ class Zeroconf(QuietLogger):
             )
             has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
             if has_v4 and has_v6:
-                ip_version = IpVersion.All
+                ip_version = IPVersion.All
             elif has_v6:
-                ip_version = IpVersion.V6Only
+                ip_version = IPVersion.V6Only
 
         if ip_version is None:
-            ip_version = IpVersion.V4Only
+            ip_version = IPVersion.V4Only
 
         # hook for threads
         self._GLOBAL_DONE = False
