@@ -621,7 +621,7 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
         zc.handle_query(r.DNSIncoming(query.packet()), r._MDNS_ADDR, r._MDNS_PORT)
-        assert nbr_answers == 4 and nbr_additionals == 1 and nbr_authorities == 0
+        assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
@@ -644,7 +644,7 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
         zc.handle_query(r.DNSIncoming(query.packet()), r._MDNS_ADDR, r._MDNS_PORT)
-        assert nbr_answers == 4 and nbr_additionals == 1 and nbr_authorities == 0
+        assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
@@ -1036,3 +1036,58 @@ def test_multiple_addresses():
     )
 
     assert info.addresses == [address, address]
+
+
+def test_ptr_optimization():
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # service definition
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local.")
+
+    # we are going to monkey patch the zeroconf send to check packet sizes
+    old_send = zc.send
+
+    nbr_answers = nbr_additionals = nbr_authorities = 0
+    has_srv = has_txt = has_a = False
+
+    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal nbr_answers, nbr_additionals, nbr_authorities
+        nonlocal has_srv, has_txt, has_a
+
+        nbr_answers += len(out.answers)
+        nbr_authorities += len(out.authorities)
+        for answer in out.additionals:
+            nbr_additionals += 1
+            if answer.type == r._TYPE_SRV:
+                has_srv = True
+            elif answer.type == r._TYPE_TXT:
+                has_txt = True
+            elif answer.type == r._TYPE_A:
+                has_a = True
+
+        old_send(out, addr=addr, port=port)
+
+    # monkey patch the zeroconf send
+    setattr(zc, "send", send)
+
+    # register
+    zc.register_service(info)
+    nbr_answers = nbr_additionals = nbr_authorities = 0
+
+    # query
+    query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
+    query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
+    zc.handle_query(r.DNSIncoming(query.packet()), r._MDNS_ADDR, r._MDNS_PORT)
+    assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
+    assert has_srv and has_txt and has_a
+
+    # unregister
+    zc.unregister_service(info)

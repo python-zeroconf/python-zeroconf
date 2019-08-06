@@ -2351,7 +2351,7 @@ class Zeroconf(QuietLogger):
                                 service.weight,
                                 service.port,
                                 service.server,
-                            ),
+                            )
                         )
                         out.add_additional_answer(
                             DNSText(
@@ -2360,7 +2360,7 @@ class Zeroconf(QuietLogger):
                                 _CLASS_IN | _CLASS_UNIQUE,
                                 service.other_ttl,
                                 service.text,
-                            ),
+                            )
                         )
                         for address in service.addresses:
                             out.add_additional_answer(
