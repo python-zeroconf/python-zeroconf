@@ -2338,6 +2338,40 @@ class Zeroconf(QuietLogger):
                             msg,
                             DNSPointer(service.type, _TYPE_PTR, _CLASS_IN, service.other_ttl, service.name),
                         )
+
+                        # Add recommended additional answers according to
+                        # https://tools.ietf.org/html/rfc6763#section-12.1.
+                        out.add_additional_answer(
+                            DNSService(
+                                service.name,
+                                _TYPE_SRV,
+                                _CLASS_IN | _CLASS_UNIQUE,
+                                service.host_ttl,
+                                service.priority,
+                                service.weight,
+                                service.port,
+                                service.server,
+                            )
+                        )
+                        out.add_additional_answer(
+                            DNSText(
+                                service.name,
+                                _TYPE_TXT,
+                                _CLASS_IN | _CLASS_UNIQUE,
+                                service.other_ttl,
+                                service.text,
+                            )
+                        )
+                        for address in service.addresses:
+                            out.add_additional_answer(
+                                DNSAddress(
+                                    service.server,
+                                    _TYPE_A,
+                                    _CLASS_IN | _CLASS_UNIQUE,
+                                    service.host_ttl,
+                                    address,
+                                )
+                            )
             else:
                 try:
                     if out is None:
