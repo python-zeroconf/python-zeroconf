@@ -2090,7 +2090,10 @@ def normalize_interface_choice(
 
 
 def new_socket(
-    port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only, apple_p2p: bool = False
+    port: int = _MDNS_PORT,
+    ip_version: IPVersion = IPVersion.V4Only,
+    apple_p2p: bool = False,
+    bind_addr: str = None,
 ) -> socket.socket:
     if ip_version == IPVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -2143,7 +2146,9 @@ def new_socket(
         # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
         s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
 
-    s.bind(('', port))
+    if bind_addr is not None:
+        s.bind((bind_addr, port))
+
     return s
 
 
@@ -2205,7 +2210,7 @@ def create_sockets(
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p)
+        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr='')
 
     interfaces = normalize_interface_choice(interfaces, ip_version)
 
@@ -2215,7 +2220,7 @@ def create_sockets(
         if not unicast:
             respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
         else:
-            respond_socket = new_socket(port=0, ip_version=ip_version, apple_p2p=apple_p2p)
+            respond_socket = new_socket(port=0, ip_version=ip_version, apple_p2p=apple_p2p, bind_addr='')
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
@@ -2306,9 +2311,8 @@ class Zeroconf(QuietLogger):
         self.listener = Listener(self)
         if not unicast:
             self.engine.add_reader(self.listener, cast(socket.socket, self._listen_socket))
-        else:
-            for s in self._respond_sockets:
-                self.engine.add_reader(self.listener, s)
+        for s in self._respond_sockets:
+            self.engine.add_reader(self.listener, s)
         self.reaper = Reaper(self)
 
         self.debug = None  # type: Optional[DNSOutgoing]
