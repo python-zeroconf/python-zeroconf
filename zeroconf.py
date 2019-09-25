@@ -1841,7 +1841,7 @@ def normalize_interface_choice(
     return result
 
 
-def new_socket(port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only) -> socket.socket:
+def new_socket(port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only, bind_addr: str = None) -> socket.socket:
     if ip_version == IPVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
@@ -1889,7 +1889,9 @@ def new_socket(port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
 
-    s.bind(('', port))
+    if bind_addr is not None:
+        s.bind((bind_addr, port))
+
     return s
 
 
@@ -1944,7 +1946,7 @@ def create_sockets(
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(ip_version=ip_version)
+        listen_socket = new_socket(ip_version=ip_version, bind_addr='')
 
     interfaces = normalize_interface_choice(interfaces, ip_version)
 
@@ -1954,7 +1956,7 @@ def create_sockets(
         if not unicast:
             respond_socket = add_multicast_member(listen_socket, i)
         else:
-            respond_socket = new_socket(port=0, ip_version=ip_version)
+            respond_socket = new_socket(port=0, ip_version=ip_version, bind_addr='')
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
@@ -2033,9 +2035,8 @@ class Zeroconf(QuietLogger):
         self.listener = Listener(self)
         if not unicast:
             self.engine.add_reader(self.listener, self._listen_socket)
-        else:
-            for s in self._respond_sockets:
-                self.engine.add_reader(self.listener, s)
+        for s in self._respond_sockets:
+            self.engine.add_reader(self.listener, s)
         self.reaper = Reaper(self)
 
         self.debug = None  # type: Optional[DNSOutgoing]
