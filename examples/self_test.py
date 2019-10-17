@@ -18,10 +18,13 @@ if __name__ == '__main__':
     r = Zeroconf()
     print("1. Testing registration of a service...")
     desc = {'version': '0.10', 'a': 'test value', 'b': 'another value'}
+    addresses = [socket.inet_aton("127.0.0.1")]
+    if socket.has_ipv6:
+        addresses.append(socket.inet_pton(socket.AF_INET6, '::1'))
     info = ServiceInfo(
         "_http._tcp.local.",
         "My Service Name._http._tcp.local.",
-        addresses=[socket.inet_aton("127.0.0.1")],
+        addresses=addresses,
         port=1234,
         properties=desc,
     )

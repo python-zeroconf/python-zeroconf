@@ -556,9 +556,16 @@ class TestDnsIncoming(unittest.TestCase):
         assert parsed.is_query() != parsed.is_response()
 
     def test_incoming_ipv6(self):
-        # ::TODO:: could use a test here if we add IPV6 record handling
-        # ie: _TYPE_AAAA
-        pass
+        addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
+        packed = socket.inet_pton(socket.AF_INET6, addr)
+        generated = r.DNSOutgoing(0)
+        answer = r.DNSAddress('domain', r._TYPE_AAAA, r._CLASS_IN, 1, packed)
+        generated.add_additional_answer(answer)
+        packet = generated.packet()
+        parsed = r.DNSIncoming(packet)
+        record = parsed.answers[0]
+        assert isinstance(record, r.DNSAddress)
+        assert record.address == packed
 
 
 class TestRegistrar(unittest.TestCase):
@@ -677,6 +684,30 @@ class ServiceTypesQuery(unittest.TestCase):
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
             type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+        )
+        zeroconf_registrar.register_service(info)
+
+        try:
+            service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
+            assert type_ in service_types
+            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
+            assert type_ in service_types
+
+        finally:
+            zeroconf_registrar.close()
+
+    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    def test_integration_with_listener_v6_records(self):
+
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+        addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
+
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, socket.inet_pton(socket.AF_INET6, addr), 80, 0, 0, desc, "ash-2.local."
         )
         zeroconf_registrar.register_service(info)
 
@@ -1036,6 +1067,14 @@ def test_multiple_addresses():
     )
 
     assert info.addresses == [address, address]
+
+    if socket.has_ipv6:
+        address_v6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+        info = ServiceInfo(type_, registration_name, [address, address_v6], 80, 0, 0, desc, "ash-2.local.")
+        assert info.addresses == [address, address_v6]
+        assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
+        assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
+        assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6]
 
 
 def test_ptr_optimization():

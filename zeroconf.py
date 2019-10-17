@@ -210,6 +210,10 @@ def current_time_millis() -> float:
     return time.time() * 1000
 
 
+def _is_v6_address(addr):
+    return len(addr) == 16
+
+
 def service_type_name(type_, *, allow_underscores: bool = False):
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
@@ -1536,6 +1540,15 @@ class ServiceInfo(RecordUpdateListener):
     def properties(self) -> ServicePropertiesType:
         return self._properties
 
+    def addresses_by_version(self, version: IPVersion) -> List[bytes]:
+        """List addresses matching IP version."""
+        if version == IPVersion.V4Only:
+            return [addr for addr in self.addresses if not _is_v6_address(addr)]
+        elif version == IPVersion.V6Only:
+            return list(filter(_is_v6_address, self.addresses))
+        else:
+            return self.addresses
+
     def _set_properties(self, properties: Union[bytes, ServicePropertiesType]):
         """Sets properties and text of this info from a dictionary"""
         if isinstance(properties, dict):
@@ -1608,7 +1621,7 @@ class ServiceInfo(RecordUpdateListener):
     def update_record(self, zc: 'Zeroconf', now: float, record: DNSRecord) -> None:
         """Updates service information from a DNS record"""
         if record is not None and not record.is_expired(now):
-            if record.type == _TYPE_A:
+            if record.type in [_TYPE_A, _TYPE_AAAA]:
                 assert isinstance(record, DNSAddress)
                 # if record.name == self.name:
                 if record.name == self.server:
@@ -1623,6 +1636,7 @@ class ServiceInfo(RecordUpdateListener):
                     self.priority = record.priority
                     # self.address = None
                     self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
+                    self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
             elif record.type == _TYPE_TXT:
                 assert isinstance(record, DNSText)
                 if record.name == self.name:
@@ -1640,6 +1654,7 @@ class ServiceInfo(RecordUpdateListener):
         record_types_for_check_cache = [(_TYPE_SRV, _CLASS_IN), (_TYPE_TXT, _CLASS_IN)]
         if self.server is not None:
             record_types_for_check_cache.append((_TYPE_A, _CLASS_IN))
+            record_types_for_check_cache.append((_TYPE_AAAA, _CLASS_IN))
         for record_type in record_types_for_check_cache:
             cached = zc.cache.get_by_details(self.name, *record_type)
             if cached:
@@ -1664,6 +1679,10 @@ class ServiceInfo(RecordUpdateListener):
                     if self.server is not None:
                         out.add_question(DNSQuestion(self.server, _TYPE_A, _CLASS_IN))
                         out.add_answer_at_time(zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN), now)
+                        out.add_question(DNSQuestion(self.server, _TYPE_AAAA, _CLASS_IN))
+                        out.add_answer_at_time(
+                            zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN), now
+                        )
                     zc.send(out)
                     next_ = now + delay
                     delay *= 2
@@ -2143,7 +2162,8 @@ class Zeroconf(QuietLogger):
 
             out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, info.other_ttl, info.text), 0)
             for address in info.addresses:
-                out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, info.host_ttl, address), 0)
+                type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
+                out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, info.host_ttl, address), 0)
             self.send(out)
             i += 1
             next_time += _REGISTER_TIME
@@ -2177,7 +2197,8 @@ class Zeroconf(QuietLogger):
             out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
 
             for address in info.addresses:
-                out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, 0, address), 0)
+                type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
+                out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, 0, address), 0)
             self.send(out)
             i += 1
             next_time += _UNREGISTER_TIME
@@ -2211,7 +2232,8 @@ class Zeroconf(QuietLogger):
                     )
                     out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
                     for address in info.addresses:
-                        out.add_answer_at_time(DNSAddress(info.server, _TYPE_A, _CLASS_IN, 0, address), 0)
+                        type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
+                        out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, 0, address), 0)
                 self.send(out)
                 i += 1
                 next_time += _UNREGISTER_TIME
