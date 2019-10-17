@@ -34,7 +34,7 @@ import threading
 import time
 import warnings
 from functools import reduce
-from typing import AnyStr, Dict, List, Optional, Union, cast
+from typing import AnyStr, Dict, List, Optional, Sequence, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
@@ -341,7 +341,7 @@ class BadTypeInNameException(Error):
 
 
 class QuietLogger:
-    _seen_logs = {}  # type: Dict[str, tuple]
+    _seen_logs = {}  # type: Dict[str, Union[int, tuple]]
 
     @classmethod
     def log_exception_warning(cls, logger_data=None):
@@ -365,7 +365,7 @@ class QuietLogger:
             logger = log.warning
         else:
             logger = log.debug
-        cls._seen_logs[msg_str] += 1
+        cls._seen_logs[msg_str] = cast(int, cls._seen_logs[msg_str]) + 1
         logger(*args)
 
 
@@ -598,7 +598,7 @@ class DNSText(DNSRecord):
 
     """A DNS text record"""
 
-    def __init__(self, name, type_, class_, ttl, text):
+    def __init__(self, name: str, type_: Optional[int], class_: int, ttl: int, text: bytes) -> None:
         assert isinstance(text, (bytes, type(None)))
         DNSRecord.__init__(self, name, type_, class_, ttl)
         self.text = text
@@ -665,7 +665,7 @@ class DNSIncoming(QuietLogger):
 
     """Object representation of an incoming DNS packet"""
 
-    def __init__(self, data):
+    def __init__(self, data: bytes) -> None:
         """Constructor from string holding bytes of packet"""
         self.offset = 0
         self.data = data
@@ -688,13 +688,13 @@ class DNSIncoming(QuietLogger):
         except (IndexError, struct.error, IncomingDecodeError):
             self.log_exception_warning(('Choked at offset %d while unpacking %r', self.offset, data))
 
-    def unpack(self, format_):
+    def unpack(self, format_: bytes) -> tuple:
         length = struct.calcsize(format_)
         info = struct.unpack(format_, self.data[self.offset : self.offset + length])
         self.offset += length
         return info
 
-    def read_header(self):
+    def read_header(self) -> None:
         """Reads header portion of packet"""
         (
             self.id,
@@ -705,7 +705,7 @@ class DNSIncoming(QuietLogger):
             self.num_additionals,
         ) = self.unpack(b'!6H')
 
-    def read_questions(self):
+    def read_questions(self) -> None:
         """Reads questions section of packet"""
         for i in range(self.num_questions):
             name = self.read_name()
@@ -718,23 +718,23 @@ class DNSIncoming(QuietLogger):
     #     """Reads an integer from the packet"""
     #     return self.unpack(b'!I')[0]
 
-    def read_character_string(self):
+    def read_character_string(self) -> bytes:
         """Reads a character string from the packet"""
         length = self.data[self.offset]
         self.offset += 1
         return self.read_string(length)
 
-    def read_string(self, length):
+    def read_string(self, length) -> bytes:
         """Reads a string of a given length from the packet"""
         info = self.data[self.offset : self.offset + length]
         self.offset += length
         return info
 
-    def read_unsigned_short(self):
+    def read_unsigned_short(self) -> int:
         """Reads an unsigned short from the packet"""
-        return self.unpack(b'!H')[0]
+        return cast(int, self.unpack(b'!H')[0])
 
-    def read_others(self):
+    def read_others(self) -> None:
         """Reads the answers, authorities and additionals section of the
         packet"""
         n = self.num_answers + self.num_authorities + self.num_additionals
@@ -779,15 +779,15 @@ class DNSIncoming(QuietLogger):
         """Returns true if this is a query"""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
 
-    def is_response(self):
+    def is_response(self) -> bool:
         """Returns true if this is a response"""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
-    def read_utf(self, offset, length):
+    def read_utf(self, offset: int, length: int) -> str:
         """Reads a UTF-8 string of a given length from the packet"""
         return str(self.data[offset : offset + length], 'utf-8', 'replace')
 
-    def read_name(self):
+    def read_name(self) -> str:
         """Reads a domain name from the packet"""
         result = ''
         off = self.offset
@@ -1171,7 +1171,7 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
-                    rr, wr, er = select.select(rs, [], [], self.timeout)
+                    rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
                     if not self.zc.done:
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
@@ -1411,12 +1411,12 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if not expired:
                 enqueue_callback(ServiceStateChange.Updated, record.name)
 
-    def cancel(self):
+    def cancel(self) -> None:
         self.done = True
         self.zc.remove_listener(self)
         self.join()
 
-    def run(self):
+    def run(self) -> None:
         self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
 
         while True:
@@ -1446,6 +1446,7 @@ ServicePropertiesType = Dict[AnyStr, Union[None, bool, AnyStr, float]]
 
 
 class ServiceInfo(RecordUpdateListener):
+    text = b''
 
     """Service information"""
 

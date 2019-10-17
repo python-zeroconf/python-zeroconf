@@ -460,7 +460,7 @@ class Framework(unittest.TestCase):
 
 class Exceptions(unittest.TestCase):
 
-    browser = None
+    browser = None  # type: Zeroconf
 
     @classmethod
     def setUpClass(cls):
@@ -469,7 +469,7 @@ class Exceptions(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.browser.close()
-        cls.browser = None
+        del cls.browser
 
     def test_bad_service_info_name(self):
         self.assertRaises(r.BadTypeInNameException, self.browser.get_service_info, "type", "type_not")
