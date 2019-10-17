@@ -1067,6 +1067,14 @@ def test_multiple_addresses():
 
     assert info.addresses == [address, address]
 
+    if socket.has_ipv6:
+        address_v6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+        info = ServiceInfo(type_, registration_name, [address, address_v6], 80, 0, 0, desc, "ash-2.local.")
+        assert info.addresses == [address, address_v6]
+        assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
+        assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
+        assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6]
+
 
 def test_ptr_optimization():
 
