@@ -563,8 +563,9 @@ class TestDnsIncoming(unittest.TestCase):
         generated.add_additional_answer(answer)
         packet = generated.packet()
         parsed = r.DNSIncoming(packet)
-        answer = parsed.answers[0]
-        assert answer.address == packed
+        record = parsed.answers[0]
+        assert isinstance(record, r.DNSAddress)
+        assert record.address == packed
 
 
 class TestRegistrar(unittest.TestCase):
@@ -696,7 +697,7 @@ class ServiceTypesQuery(unittest.TestCase):
             zeroconf_registrar.close()
 
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
-    def test_integration_with_listener_AAAA(self):
+    def test_integration_with_listener_v6_records(self):
 
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
