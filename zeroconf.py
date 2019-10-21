@@ -1498,15 +1498,21 @@ class ServiceInfo(RecordUpdateListener):
         self.type = type_
         self.name = name
         if addresses is not None:
-            self.addresses = addresses
+            self._addresses = addresses
         elif address is not None:
             warnings.warn("address is deprecated, use addresses instead", DeprecationWarning)
             if isinstance(address, list):
-                self.addresses = address
+                self._addresses = address
             else:
-                self.addresses = [address]
+                self._addresses = [address]
         else:
-            self.addresses = []
+            self._addresses = []
+        # This results in an ugly error when registering, better check now
+        invalid = [a for a in self._addresses
+                   if not isinstance(a, bytes) or len(a) not in (4, 16)]
+        if invalid:
+            raise TypeError('Addresses must be bytes, got %s. Hint: convert string addresses '
+                            'with socket.inet_pton' % invalid)
         self.port = port
         self.weight = weight
         self.priority = priority
@@ -1524,6 +1530,7 @@ class ServiceInfo(RecordUpdateListener):
     def address(self):
         warnings.warn("ServiceInfo.address is deprecated, use addresses instead", DeprecationWarning)
         try:
+            # Return the first V4 address for compatibility
             return self.addresses[0]
         except IndexError:
             return None
@@ -1532,9 +1539,27 @@ class ServiceInfo(RecordUpdateListener):
     def address(self, value):
         warnings.warn("ServiceInfo.address is deprecated, use addresses instead", DeprecationWarning)
         if value is None:
-            self.addresses = []
+            self._addresses = []
         else:
-            self.addresses = [value]
+            self._addresses = [value]
+
+    @property
+    def addresses(self):
+        """IPv4 addresses of this service.
+
+        Only IPv4 addresses are returned for backward compatibility.
+        Use :meth:`addresses_by_version` or :meth:`parsed_addresses` to
+        include IPv6 addresses as well.
+        """
+        return self.addresses_by_version(IPVersion.V4Only)
+
+    @addresses.setter
+    def addresses(self, value):
+        """Replace the addresses list.
+
+        This replaces all currently stored addresses, both IPv4 and IPv6.
+        """
+        self._addresses = value
 
     @property
     def properties(self) -> ServicePropertiesType:
@@ -1543,11 +1568,19 @@ class ServiceInfo(RecordUpdateListener):
     def addresses_by_version(self, version: IPVersion) -> List[bytes]:
         """List addresses matching IP version."""
         if version == IPVersion.V4Only:
-            return [addr for addr in self.addresses if not _is_v6_address(addr)]
+            return [addr for addr in self._addresses if not _is_v6_address(addr)]
         elif version == IPVersion.V6Only:
-            return list(filter(_is_v6_address, self.addresses))
+            return list(filter(_is_v6_address, self._addresses))
         else:
-            return self.addresses
+            return self._addresses
+
+    def parsed_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
+        """List addresses in their parsed string form."""
+        result = self.addresses_by_version(version)
+        return [
+            socket.inet_ntop(socket.AF_INET6 if _is_v6_address(addr) else socket.AF_INET, addr)
+            for addr in result
+        ]
 
     def _set_properties(self, properties: Union[bytes, ServicePropertiesType]):
         """Sets properties and text of this info from a dictionary"""
@@ -1625,8 +1658,8 @@ class ServiceInfo(RecordUpdateListener):
                 assert isinstance(record, DNSAddress)
                 # if record.name == self.name:
                 if record.name == self.server:
-                    if record.address not in self.addresses:
-                        self.addresses.append(record.address)
+                    if record.address not in self._addresses:
+                        self._addresses.append(record.address)
             elif record.type == _TYPE_SRV:
                 assert isinstance(record, DNSService)
                 if record.name == self.name:
@@ -1660,12 +1693,12 @@ class ServiceInfo(RecordUpdateListener):
             if cached:
                 self.update_record(zc, now, cached)
 
-        if self.server is not None and self.text is not None and self.addresses:
+        if self.server is not None and self.text is not None and self._addresses:
             return True
 
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
-            while self.server is None or self.text is None or not self.addresses:
+            while self.server is None or self.text is None or not self._addresses:
                 if last <= now:
                     return False
                 if next_ <= now:

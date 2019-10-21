@@ -536,6 +536,23 @@ class Exceptions(unittest.TestCase):
 
         r.service_type_name('_one_two._tcp.local.', allow_underscores=True)
 
+    def test_invalid_addresses(self):
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+
+        bad = ('127.0.0.1', '::1', 42)
+        for addr in bad:
+            self.assertRaisesRegex(
+                TypeError,
+                'Addresses must be bytes',
+                ServiceInfo,
+                type_,
+                registration_name,
+                port=80,
+                addresses=[addr],
+            )
+
 
 class TestDnsIncoming(unittest.TestCase):
     def test_incoming_exception_handling(self):
@@ -844,6 +861,9 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_blank'] == properties['prop_blank']
             assert info.properties[b'prop_true'] is True
             assert info.properties[b'prop_false'] is False
+            assert info.addresses == addresses[:1]  # no V6 by default
+            all_addresses = info.addresses_by_version(r.IPVersion.All)
+            assert all_addresses == addresses, all_addresses
 
             info = zeroconf_browser.get_service_info(subtype, registration_name)
             assert info is not None
@@ -1039,7 +1059,8 @@ def test_multiple_addresses():
     type_ = "_http._tcp.local."
     registration_name = "xxxyyy.%s" % type_
     desc = {'path': '/~paulsm/'}
-    address = socket.inet_aton("10.0.1.2")
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
 
     # Old way
     info = ServiceInfo(type_, registration_name, address, 80, 0, 0, desc, "ash-2.local.")
@@ -1059,6 +1080,11 @@ def test_multiple_addresses():
     assert info.address is None
     assert info.addresses == []
 
+    info.addresses = [address2]
+
+    assert info.address == address2
+    assert info.addresses == [address2]
+
     # Compatibility way
     info = ServiceInfo(type_, registration_name, [address, address], 80, 0, 0, desc, "ash-2.local.")
 
@@ -1072,12 +1098,16 @@ def test_multiple_addresses():
     assert info.addresses == [address, address]
 
     if socket.has_ipv6:
-        address_v6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+        address_v6_parsed = "2001:db8::1"
+        address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
         info = ServiceInfo(type_, registration_name, [address, address_v6], 80, 0, 0, desc, "ash-2.local.")
-        assert info.addresses == [address, address_v6]
+        assert info.addresses == [address]
         assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
         assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
         assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6]
+        assert info.parsed_addresses() == [address_parsed, address_v6_parsed]
+        assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
+        assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed]
 
 
 def test_ptr_optimization():
