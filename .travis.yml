@@ -6,6 +6,32 @@ python:
     - "3.8"
     - "pypy3.5"
     - "pypy3"
+matrix:
+    include:
+    - os: osx
+      language: generic
+      python: 3.5
+      env: TRAVIS_PYTHON_VERSION=3.5
+    - os: osx
+      language: generic
+      python: 3.6
+      env: TRAVIS_PYTHON_VERSION=3.6
+    - os: osx
+      language: generic
+      python: 3.7
+      env: TRAVIS_PYTHON_VERSION=3.7
+before_install: 
+    # OS X installation procedure borrowed from https://github.com/ipython/ipython/pull/11471
+    - |
+      if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+          if ! which python$TRAVIS_PYTHON_VERSION; then
+              HOMEBREW_NO_AUTO_UPDATE=1 brew tap minrk/homebrew-python-frameworks
+              HOMEBREW_NO_AUTO_UPDATE=1 brew cask install python-framework-${TRAVIS_PYTHON_VERSION/./}
+          fi;
+          python3 -m pip install virtualenv
+          python3 -m virtualenv -p $(which python$TRAVIS_PYTHON_VERSION) ~/travis-env
+          source ~/travis-env/bin/activate
+      fi;
 install:
     - pip install --upgrade -r requirements-dev.txt
     # mypy can't be installed on pypy
