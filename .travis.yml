@@ -2,6 +2,7 @@ language: python
 python:
     - "3.5"
     - "3.6"
+    - "3.8"
     - "pypy3.5-5.10.1"
 matrix:
     fast_finish: true
