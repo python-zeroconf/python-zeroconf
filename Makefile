@@ -9,7 +9,7 @@ LINT_TARGETS:=flake8
 ifneq ($(findstring PyPy,$(PYTHON_IMPLEMENTATION)),PyPy)
 	LINT_TARGETS:=$(LINT_TARGETS) mypy
 endif
-ifneq ($(findstring 3.5,$(PYTHON_VERSION)),3.5)
+ifeq ($(or $(findstring 3.5,$(PYTHON_VERSION)),$(findstring PyPy,$(PYTHON_IMPLEMENTATION))),)
 	LINT_TARGETS:=$(LINT_TARGETS) black_check
 endif
 
