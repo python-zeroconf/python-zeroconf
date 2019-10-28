@@ -1485,8 +1485,8 @@ class ServiceInfo(RecordUpdateListener):
         server: fully qualified name for service host (defaults to name)
         host_ttl: ttl used for A/SRV records
         other_ttl: ttl used for PTR/TXT records
-        addresses: List of IP addresses as unsigned short, network byte
-                   order
+        addresses: List of IP addresses as unsigned short (IPv4) or unsigned
+                   128 bit number (IPv6), network byte order
         """
 
         # Accept both none, or one, but not both.
@@ -2161,7 +2161,7 @@ class Zeroconf(QuietLogger):
             )
 
             out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, info.other_ttl, info.text), 0)
-            for address in info.addresses:
+            for address in info.addresses_by_version(IPVersion.All):
                 type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
                 out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, info.host_ttl, address), 0)
             self.send(out)
@@ -2196,7 +2196,7 @@ class Zeroconf(QuietLogger):
             )
             out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
 
-            for address in info.addresses:
+            for address in info.addresses_by_version(IPVersion.All):
                 type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
                 out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, 0, address), 0)
             self.send(out)
@@ -2231,7 +2231,7 @@ class Zeroconf(QuietLogger):
                         0,
                     )
                     out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
-                    for address in info.addresses:
+                    for address in info.addresses_by_version(IPVersion.All):
                         type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
                         out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, 0, address), 0)
                 self.send(out)
@@ -2385,11 +2385,12 @@ class Zeroconf(QuietLogger):
                                 service.text,
                             )
                         )
-                        for address in service.addresses:
+                        for address in service.addresses_by_version(IPVersion.All):
+                            type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
                             out.add_additional_answer(
                                 DNSAddress(
                                     service.server,
-                                    _TYPE_A,
+                                    type_,
                                     _CLASS_IN | _CLASS_UNIQUE,
                                     service.host_ttl,
                                     address,
@@ -2404,12 +2405,13 @@ class Zeroconf(QuietLogger):
                     if question.type in (_TYPE_A, _TYPE_ANY):
                         for service in self.services.values():
                             if service.server == question.name.lower():
-                                for address in service.addresses:
+                                for address in service.addresses_by_version(IPVersion.All):
+                                    type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
                                     out.add_answer(
                                         msg,
                                         DNSAddress(
                                             question.name,
-                                            _TYPE_A,
+                                            type_,
                                             _CLASS_IN | _CLASS_UNIQUE,
                                             service.host_ttl,
                                             address,
@@ -2447,11 +2449,12 @@ class Zeroconf(QuietLogger):
                             ),
                         )
                     if question.type == _TYPE_SRV:
-                        for address in service.addresses:
+                        for address in service.addresses_by_version(IPVersion.All):
+                            type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
                             out.add_additional_answer(
                                 DNSAddress(
                                     service.server,
-                                    _TYPE_A,
+                                    type_,
                                     _CLASS_IN | _CLASS_UNIQUE,
                                     service.host_ttl,
                                     address,

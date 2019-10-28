@@ -816,8 +816,11 @@ class ListenerTest(unittest.TestCase):
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
         desc = {'path': '/~paulsm/'}  # type: r.ServicePropertiesType
         desc.update(properties)
+        addresses = [socket.inet_aton("10.0.1.2")]
+        if socket.has_ipv6:
+            addresses.append(socket.inet_pton(socket.AF_INET6, "2001:db8::1"))
         info_service = ServiceInfo(
-            subtype, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+            subtype, registration_name, port=80, properties=desc, server="ash-2.local.", addresses=addresses
         )
         zeroconf_registrar.register_service(info_service)
 
