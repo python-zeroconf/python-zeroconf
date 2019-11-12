@@ -10,6 +10,7 @@ python-zeroconf
 .. image:: https://img.shields.io/coveralls/jstasiak/python-zeroconf.svg
     :target: https://coveralls.io/r/jstasiak/python-zeroconf
 
+`Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
     
 This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
 originally by Paul Scott-Murphy (https://github.com/paulsm/pyzeroconf),
