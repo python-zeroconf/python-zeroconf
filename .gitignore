@@ -10,3 +10,4 @@ Thumbs.db
 .vslick
 .cache
 .mypy_cache/
+docs/_build/
