@@ -30,14 +30,14 @@ ci: test_coverage lint
 lint: $(LINT_TARGETS)
 
 flake8:
-	flake8 --max-line-length=$(MAX_LINE_LENGTH) examples *.py
+	flake8 --max-line-length=$(MAX_LINE_LENGTH) setup.py examples zeroconf
 
 .PHONY: black_check
 black_check:
-	black --check *.py examples
+	black --check setup.py examples zeroconf
 
 mypy:
-	mypy examples/*.py test_zeroconf.py zeroconf.py
+	mypy examples/*.py zeroconf/*.py
 
 test:
 	nosetests -v $(TEST_ARGS)
@@ -46,4 +46,4 @@ test_coverage:
 	nosetests -v --with-coverage --cover-package=zeroconf $(TEST_ARGS)
 
 autopep8:
-	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i examples *.py
+	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf
