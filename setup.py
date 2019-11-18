@@ -9,7 +9,7 @@ with open(join(PROJECT_ROOT, 'README.rst'), encoding='utf-8') as f:
     readme = f.read()
 
 version = (
-    [l for l in open(join(PROJECT_ROOT, 'zeroconf.py')) if '__version__' in l][0]
+    [l for l in open(join(PROJECT_ROOT, 'zeroconf', '__init__.py')) if '__version__' in l][0]
     .split('=')[-1]
     .strip()
     .strip('\'"')
@@ -22,7 +22,8 @@ setup(
     long_description=readme,
     author='Paul Scott-Murphy, William McBrine, Jakub Stasiak',
     url='https://github.com/jstasiak/python-zeroconf',
-    py_modules=['zeroconf'],
+    package_data={"zeroconf": ["py.typed"]},
+    packages=["zeroconf"],
     platforms=['unix', 'linux', 'osx'],
     license='LGPL',
     zip_safe=False,
