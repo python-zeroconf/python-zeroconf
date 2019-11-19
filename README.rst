@@ -133,6 +133,15 @@ See examples directory for more.
 Changelog
 =========
 
+0.24.0
+------
+
+* Added IPv6 support, thanks to Dmitry Tantsur
+* Added additional recommended records to PTR responses, thanks to Scott Mertz
+* Added handling of ENOTCONN being raised during shutdown when using Eventlet, thanks to Tamás Nepusz
+* Included the py.typed marker in the package so that type checkers know to use type hints from the
+  source code, thanks to Dmitry Tantsur
+
 0.23.0
 ------
 
