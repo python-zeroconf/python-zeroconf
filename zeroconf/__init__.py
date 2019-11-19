@@ -188,6 +188,9 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
+InterfacesType = Union[List[Union[str, int]], InterfaceChoice]
+
+
 @enum.unique
 class ServiceStateChange(enum.Enum):
     Added = 1
@@ -1155,7 +1158,7 @@ class Engine(threading.Thread):
     packets.
     """
 
-    def __init__(self, zc):
+    def __init__(self, zc: 'Zeroconf') -> None:
         threading.Thread.__init__(self, name='zeroconf-Engine')
         self.daemon = True
         self.zc = zc
@@ -1164,7 +1167,7 @@ class Engine(threading.Thread):
         self.condition = threading.Condition()
         self.start()
 
-    def run(self):
+    def run(self) -> None:
         while not self.zc.done:
             with self.condition:
                 rs = self.readers.keys()
@@ -1188,12 +1191,12 @@ class Engine(threading.Thread):
                     if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
                         raise
 
-    def add_reader(self, reader, socket_):
+    def add_reader(self, reader: 'Listener', socket_: socket.socket) -> None:
         with self.condition:
             self.readers[socket_] = reader
             self.condition.notify()
 
-    def del_reader(self, socket_):
+    def del_reader(self, socket_: socket.socket) -> None:
         with self.condition:
             del self.readers[socket_]
             self.condition.notify()
@@ -1582,7 +1585,7 @@ class ServiceInfo(RecordUpdateListener):
             for addr in result
         ]
 
-    def _set_properties(self, properties: Union[bytes, ServicePropertiesType]):
+    def _set_properties(self, properties: Union[bytes, ServicePropertiesType]) -> None:
         """Sets properties and text of this info from a dictionary"""
         if isinstance(properties, dict):
             self._properties = properties
@@ -1612,7 +1615,7 @@ class ServiceInfo(RecordUpdateListener):
         else:
             self.text = properties
 
-    def _set_text(self, text):
+    def _set_text(self, text: bytes) -> None:
         """Sets properties and text given a text field"""
         self.text = text
         result = {}  # type: ServicePropertiesType
@@ -1628,7 +1631,7 @@ class ServiceInfo(RecordUpdateListener):
         for s in strs:
             parts = s.split(b'=', 1)
             try:
-                key, value = parts
+                key, value = parts  # type: Tuple[bytes, Union[bool, bytes]]
             except ValueError:
                 # No equals sign at all
                 key = s
@@ -1645,7 +1648,7 @@ class ServiceInfo(RecordUpdateListener):
 
         self._properties = result
 
-    def get_name(self):
+    def get_name(self) -> str:
         """Name accessor"""
         if self.type is not None and self.name.endswith("." + self.type):
             return self.name[: len(self.name) - len(self.type) - 1]
@@ -1760,17 +1763,23 @@ class ZeroconfServiceTypes(ServiceListener):
     Return all of the advertised services on any local networks
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.found_services = set()  # type: Set[str]
 
-    def add_service(self, zc, type_, name):
+    def add_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
         self.found_services.add(name)
 
-    def remove_service(self, zc, type_, name):
+    def remove_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
         pass
 
     @classmethod
-    def find(cls, zc=None, timeout=5, interfaces=InterfaceChoice.All, ip_version=None):
+    def find(
+        cls,
+        zc: Optional['Zeroconf'] = None,
+        timeout: Union[int, float] = 5,
+        interfaces: InterfacesType = InterfaceChoice.All,
+        ip_version: Optional[IPVersion] = None,
+    ) -> Tuple[str, ...]:
         """
         Return all of the advertised services on any local networks.
 
@@ -1860,7 +1869,7 @@ def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
 
 
 def normalize_interface_choice(
-    choice: Union[List[Union[str, int]], InterfaceChoice], ip_version: IPVersion = IPVersion.V4Only
+    choice: InterfacesType, ip_version: IPVersion = IPVersion.V4Only
 ) -> List[Union[str, int]]:
     """Convert the interfaces choice into internal representation.
 
@@ -1946,17 +1955,17 @@ def new_socket(port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only)
     return s
 
 
-def add_multicast_member(listen_socket, interface):
+def add_multicast_member(listen_socket: socket.socket, interface: Union[str, int]) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, int)
     log.debug('Adding %r to multicast group', interface)
     try:
         if is_v6:
-            iface_bin = struct.pack('@I', interface)
+            iface_bin = struct.pack('@I', cast(int, interface))
             _value = _MDNS_ADDR6_BYTES + iface_bin
             listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, _value)
         else:
-            _value = _MDNS_ADDR_BYTES + socket.inet_aton(interface)
+            _value = _MDNS_ADDR_BYTES + socket.inet_aton(cast(str, interface))
             listen_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value)
     except socket.error as e:
         _errno = get_errno(e)
@@ -1966,17 +1975,17 @@ def add_multicast_member(listen_socket, interface):
                 'it is expected to happen on some systems',
                 interface,
             )
-            return
+            return None
         elif _errno == errno.EADDRNOTAVAIL:
             log.info(
                 'Address not available when adding %s to multicast '
                 'group, it is expected to happen on some systems',
                 interface,
             )
-            return
+            return None
         elif _errno == errno.EINVAL:
             log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
-            return
+            return None
         else:
             raise
 
@@ -1985,15 +1994,17 @@ def add_multicast_member(listen_socket, interface):
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
     else:
-        respond_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(interface))
+        respond_socket.setsockopt(
+            socket.IPPROTO_IP, socket.IP_MULTICAST_IF, socket.inet_aton(cast(str, interface))
+        )
     return respond_socket
 
 
 def create_sockets(
-    interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
+    interfaces: InterfacesType = InterfaceChoice.All,
     unicast: bool = False,
     ip_version: IPVersion = IPVersion.V4Only,
-):
+) -> Tuple[Optional[socket.socket], List[socket.socket]]:
     if unicast:
         listen_socket = None
     else:
@@ -2005,7 +2016,7 @@ def create_sockets(
 
     for i in interfaces:
         if not unicast:
-            respond_socket = add_multicast_member(listen_socket, i)
+            respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i)
         else:
             respond_socket = new_socket(port=0, ip_version=ip_version)
 
@@ -2020,9 +2031,9 @@ def get_errno(e: Exception) -> int:
     return cast(int, e.args[0])
 
 
-def can_send_to(sock, address: str):
+def can_send_to(sock: socket.socket, address: str) -> bool:
     addr = ipaddress.ip_address(address)
-    return addr.version == 6 if sock.family == socket.AF_INET6 else addr.version == 4
+    return cast(bool, addr.version == 6 if sock.family == socket.AF_INET6 else addr.version == 4)
 
 
 class Zeroconf(QuietLogger):
@@ -2034,7 +2045,7 @@ class Zeroconf(QuietLogger):
 
     def __init__(
         self,
-        interfaces: Union[List[Union[str, int]], InterfaceChoice] = InterfaceChoice.All,
+        interfaces: InterfacesType = InterfaceChoice.All,
         unicast: bool = False,
         ip_version: Optional[IPVersion] = None,
     ) -> None:
@@ -2085,7 +2096,7 @@ class Zeroconf(QuietLogger):
         self.engine = Engine(self)
         self.listener = Listener(self)
         if not unicast:
-            self.engine.add_reader(self.listener, self._listen_socket)
+            self.engine.add_reader(self.listener, cast(socket.socket, self._listen_socket))
         else:
             for s in self._respond_sockets:
                 self.engine.add_reader(self.listener, s)
@@ -2544,8 +2555,8 @@ class Zeroconf(QuietLogger):
 
             # shutdown recv socket and thread
             if not self.unicast:
-                self.engine.del_reader(self._listen_socket)
-                self._listen_socket.close()
+                self.engine.del_reader(cast(socket.socket, self._listen_socket))
+                cast(socket.socket, self._listen_socket).close()
             else:
                 for s in self._respond_sockets:
                     self.engine.del_reader(s)
