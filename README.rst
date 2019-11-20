@@ -66,6 +66,7 @@ IPv6 support
 ------------
 
 IPv6 support is relatively new and currently limited, specifically:
+
 * `InterfaceChoice.All` is an alias for `InterfaceChoice.Default` on non-POSIX
   systems.
 * On Windows specific interfaces can only be requested as interface indexes,
