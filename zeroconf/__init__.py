@@ -390,10 +390,10 @@ class DNSEntry:
     def __eq__(self, other):
         """Equality test on name, type, and class"""
         return (
-            isinstance(other, DNSEntry)
-            and self.name == other.name
+            self.name == other.name
             and self.type == other.type
             and self.class_ == other.class_
+            and isinstance(other, DNSEntry)
         )
 
     def __ne__(self, other):
@@ -592,7 +592,7 @@ class DNSPointer(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on alias"""
-        return isinstance(other, DNSPointer) and DNSEntry.__eq__(self, other) and self.alias == other.alias
+        return isinstance(other, DNSPointer) and self.alias == other.alias and DNSEntry.__eq__(self, other)
 
     def __ne__(self, other):
         """Non-equality test"""
@@ -618,7 +618,7 @@ class DNSText(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on text"""
-        return isinstance(other, DNSText) and DNSEntry.__eq__(self, other) and self.text == other.text
+        return isinstance(other, DNSText) and self.text == other.text and DNSEntry.__eq__(self, other)
 
     def __ne__(self, other):
         """Non-equality test"""
@@ -654,11 +654,11 @@ class DNSService(DNSRecord):
         """Tests equality on priority, weight, port and server"""
         return (
             isinstance(other, DNSService)
-            and DNSEntry.__eq__(self, other)
             and self.priority == other.priority
             and self.weight == other.weight
             and self.port == other.port
             and self.server == other.server
+            and DNSEntry.__eq__(self, other)
         )
 
     def __ne__(self, other):
