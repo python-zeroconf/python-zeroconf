@@ -33,7 +33,8 @@ import sys
 import threading
 import time
 import warnings
-from functools import reduce
+import itertools
+
 from typing import AnyStr, Dict, List, Optional, Sequence, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
@@ -1142,8 +1143,7 @@ class DNSCache:
         else:
             # avoid size change during iteration by copying the cache
             values = list(self.cache.values())
-            return reduce(lambda a, b: a + b, values)
-
+            return list(itertools.chain.from_iterable(values))
 
 class Engine(threading.Thread):
 
