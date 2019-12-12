@@ -453,6 +453,8 @@ class DNSRecord(DNSEntry):
         DNSEntry.__init__(self, name, type_, class_)
         self.ttl = ttl
         self.created = current_time_millis()
+        self._expiration_time = self.get_expiration_time(100)
+        self._stale_time = self.get_expiration_time(50)
 
     def __eq__(self, other):
         """Abstract method"""
@@ -482,15 +484,15 @@ class DNSRecord(DNSEntry):
 
     def get_remaining_ttl(self, now):
         """Returns the remaining TTL in seconds."""
-        return max(0, (self.get_expiration_time(100) - now) / 1000.0)
+        return max(0, (self._expiration_time - now) / 1000.0)
 
     def is_expired(self, now: float) -> bool:
         """Returns true if this record has expired."""
-        return self.get_expiration_time(100) <= now
+        return self._expiration_time <= now
 
     def is_stale(self, now):
         """Returns true if this record is at least half way expired."""
-        return self.get_expiration_time(50) <= now
+        return self._stale_time <= now
 
     def reset_ttl(self, other):
         """Sets this record's TTL and created time to that of
