@@ -23,6 +23,7 @@
 import enum
 import errno
 import ipaddress
+import itertools
 import logging
 import os
 import re
@@ -33,8 +34,6 @@ import sys
 import threading
 import time
 import warnings
-import itertools
-
 from typing import AnyStr, Dict, List, Optional, Sequence, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
@@ -593,11 +592,7 @@ class DNSPointer(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on alias"""
-        return (
-                isinstance(other, DNSPointer)
-                and self.alias == other.alias
-                and DNSEntry.__eq__(self, other)
-        )
+        return isinstance(other, DNSPointer) and self.alias == other.alias and DNSEntry.__eq__(self, other)
 
     def __ne__(self, other):
         """Non-equality test"""
@@ -623,11 +618,7 @@ class DNSText(DNSRecord):
 
     def __eq__(self, other):
         """Tests equality on text"""
-        return (
-                isinstance(other, DNSText)
-                and self.text == other.text
-                and DNSEntry.__eq__(self, other)
-        )
+        return isinstance(other, DNSText) and self.text == other.text and DNSEntry.__eq__(self, other)
 
     def __ne__(self, other):
         """Non-equality test"""
@@ -659,7 +650,6 @@ class DNSService(DNSRecord):
         out.write_short(self.port)
         out.write_name(self.server)
 
-    @profile
     def __eq__(self, other):
         """Tests equality on priority, weight, port and server"""
         return (
