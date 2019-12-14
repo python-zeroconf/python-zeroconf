@@ -457,6 +457,85 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
         rv.close()
 
+    def test_handle_response(self):
+        def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
+            ttl = 120
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+
+            if service_state_change == r.ServiceStateChange.Updated:
+                generated.add_answer_at_time(
+                    r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
+                )
+                return r.DNSIncoming(generated.packet())
+
+            if service_state_change == r.ServiceStateChange.Removed:
+                ttl = 0
+
+            generated.add_answer_at_time(
+                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_name), 0
+            )
+            generated.add_answer_at_time(
+                r.DNSService(
+                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
+                ),
+                0,
+            )
+            generated.add_answer_at_time(
+                r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
+            )
+            generated.add_answer_at_time(
+                r.DNSAddress(
+                    service_server,
+                    r._TYPE_A,
+                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    ttl,
+                    socket.inet_aton(service_address),
+                ),
+                0,
+            )
+
+            return r.DNSIncoming(generated.packet())
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-2.local.'
+        service_text = b'path=/~paulsm/'
+        service_address = '10.0.1.2'
+
+        zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        try:
+            # service added
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is not None
+            assert dns_text.text == service_text  # service_text is b'path=/~paulsm/'
+
+            # https://tools.ietf.org/html/rfc6762#section-10.2
+            # Instead of merging this new record additively into the cache in addition
+            # to any previous records with the same name, rrtype, and rrclass,
+            # all old records with that name, rrtype, and rrclass that were received
+            # more than one second ago are declared invalid,
+            # and marked to expire from the cache in one second.
+            time.sleep(1.1)
+
+            # service updated. currently only text record can be updated
+            service_text = b'path=/~humingchun/'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is not None
+            assert dns_text.text == service_text  # service_text is b'path=/~humingchun/'
+
+            time.sleep(1.1)
+
+            # service removed
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is None
+
+        finally:
+            zeroconf.close()
+
 
 class Exceptions(unittest.TestCase):
 
