@@ -1412,7 +1412,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if expires < self.next_time:
                 self.next_time = expires
 
-        elif record.type == _TYPE_TXT and record.name == self.type:
+        elif record.type == _TYPE_TXT and record.name.endswith(self.type):
             assert isinstance(record, DNSText)
             expired = record.is_expired(now)
             if not expired:
