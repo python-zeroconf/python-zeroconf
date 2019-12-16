@@ -134,6 +134,14 @@ See examples directory for more.
 Changelog
 =========
 
+0.24.1
+------
+
+* Applied some significant performance optimizations, thanks to Jaime van Kessel for the patch and
+  to Ghostkeeper for performance measurements
+* Fixed flushing outdated cache entries when incoming record is unique, thanks to Michael Hu
+* Fixed handling updates of TXT records (they'd not get recorded previously), thanks to Michael Hu
+
 0.24.0
 ------
 
