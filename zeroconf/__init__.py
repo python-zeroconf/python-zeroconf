@@ -26,6 +26,7 @@ import ipaddress
 import itertools
 import logging
 import os
+import platform
 import re
 import select
 import socket
@@ -1905,7 +1906,9 @@ def normalize_interface_choice(
     return result
 
 
-def new_socket(port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only) -> socket.socket:
+def new_socket(
+    port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only, apple_p2p: bool = False
+) -> socket.socket:
     if ip_version == IPVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
@@ -1953,11 +1956,18 @@ def new_socket(port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
 
+    if apple_p2p:
+        # SO_RECV_ANYIF = 0x1104
+        # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
+        s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
+
     s.bind(('', port))
     return s
 
 
-def add_multicast_member(listen_socket: socket.socket, interface: Union[str, int]) -> Optional[socket.socket]:
+def add_multicast_member(
+    listen_socket: socket.socket, interface: Union[str, int], apple_p2p: bool = False
+) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, int)
     log.debug('Adding %r to multicast group', interface)
@@ -1991,7 +2001,9 @@ def add_multicast_member(listen_socket: socket.socket, interface: Union[str, int
         else:
             raise
 
-    respond_socket = new_socket(ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only))
+    respond_socket = new_socket(
+        ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only), apple_p2p=apple_p2p
+    )
     log.debug('Configuring %s with multicast interface %s', respond_socket, interface)
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
@@ -2006,11 +2018,12 @@ def create_sockets(
     interfaces: InterfacesType = InterfaceChoice.All,
     unicast: bool = False,
     ip_version: IPVersion = IPVersion.V4Only,
+    apple_p2p: bool = False,
 ) -> Tuple[Optional[socket.socket], List[socket.socket]]:
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(ip_version=ip_version)
+        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p)
 
     interfaces = normalize_interface_choice(interfaces, ip_version)
 
@@ -2018,9 +2031,9 @@ def create_sockets(
 
     for i in interfaces:
         if not unicast:
-            respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i)
+            respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
         else:
-            respond_socket = new_socket(port=0, ip_version=ip_version)
+            respond_socket = new_socket(port=0, ip_version=ip_version, apple_p2p=apple_p2p)
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
@@ -2050,6 +2063,7 @@ class Zeroconf(QuietLogger):
         interfaces: InterfacesType = InterfaceChoice.All,
         unicast: bool = False,
         ip_version: Optional[IPVersion] = None,
+        apple_p2p: bool = False,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
@@ -2065,6 +2079,7 @@ class Zeroconf(QuietLogger):
             Also listening on loopback (``::1``) doesn't work, use a real address.
         :param ip_version: IP versions to support. If `choice` is a list, the default is detected
             from it. Otherwise defaults to V4 only for backward compatibility.
+        :param apple_p2p: use AWDL interface (only macOS)
         """
         if ip_version is None and isinstance(interfaces, list):
             has_v6 = any(
@@ -2084,7 +2099,12 @@ class Zeroconf(QuietLogger):
         self._GLOBAL_DONE = False
         self.unicast = unicast
 
-        self._listen_socket, self._respond_sockets = create_sockets(interfaces, unicast, ip_version)
+        if apple_p2p and not platform.system() == 'Darwin':
+            raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
+
+        self._listen_socket, self._respond_sockets = create_sockets(
+            interfaces, unicast, ip_version, apple_p2p=apple_p2p
+        )
 
         self.listeners = []  # type: List[RecordUpdateListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
