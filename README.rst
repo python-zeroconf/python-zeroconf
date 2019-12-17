@@ -134,6 +134,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.24.2
+------
+
+* Added support for AWDL interface on macOS (needed and used by the opendrop project but should be
+  useful in general), thanks to Milan Stute
+* Added missing type hints
+
 0.24.1
 ------
 
