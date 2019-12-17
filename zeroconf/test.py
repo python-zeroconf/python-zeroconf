@@ -46,10 +46,10 @@ class TestDunder(unittest.TestCase):
     def test_dns_text_repr(self):
         # There was an issue on Python 3 that prevented DNSText's repr
         # from working when the text was longer than 10 bytes
-        text = DNSText('irrelevant', None, 0, 0, b'12345678901')
+        text = DNSText('irrelevant', 0, 0, 0, b'12345678901')
         repr(text)
 
-        text = DNSText('irrelevant', None, 0, 0, b'123')
+        text = DNSText('irrelevant', 0, 0, 0, b'123')
         repr(text)
 
     def test_dns_hinfo_repr_eq(self):
@@ -71,7 +71,7 @@ class TestDunder(unittest.TestCase):
         assert not question != question
 
     def test_dns_service_repr(self):
-        service = r.DNSService('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, b'a')
+        service = r.DNSService('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, 'a')
         repr(service)
 
     def test_dns_record_abc(self):
@@ -84,7 +84,7 @@ class TestDunder(unittest.TestCase):
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
         info = ServiceInfo(
-            type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, None, "ash-2.local."
+            type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, b'', "ash-2.local."
         )
 
         assert not info != info
@@ -116,7 +116,7 @@ class PacketGeneration(unittest.TestCase):
         r.DNSIncoming(generated.packet())
 
     def test_parse_own_packet_simple_unicast(self):
-        generated = r.DNSOutgoing(0, 0)
+        generated = r.DNSOutgoing(0, False)
         r.DNSIncoming(generated.packet())
 
     def test_parse_own_packet_flags(self):
@@ -509,7 +509,7 @@ class Framework(unittest.TestCase):
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is not None
-            assert dns_text.text == service_text  # service_text is b'path=/~paulsm/'
+            assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
 
             # https://tools.ietf.org/html/rfc6762#section-10.2
             # Instead of merging this new record additively into the cache in addition
@@ -524,7 +524,7 @@ class Framework(unittest.TestCase):
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is not None
-            assert dns_text.text == service_text  # service_text is b'path=/~humingchun/'
+            assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
             time.sleep(1.1)
 
@@ -913,7 +913,7 @@ class ListenerTest(unittest.TestCase):
         )
 
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
-        desc = {'path': '/~paulsm/'}  # type: r.ServicePropertiesType
+        desc = {'path': '/~paulsm/'}  # type: Dict
         desc.update(properties)
         addresses = [socket.inet_aton("10.0.1.2")]
         if socket.has_ipv6:
