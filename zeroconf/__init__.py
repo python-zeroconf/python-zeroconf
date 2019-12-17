@@ -478,7 +478,7 @@ class DNSRecord(DNSEntry):
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
 
-    def get_expiration_time(self, percent: float) -> float:
+    def get_expiration_time(self, percent: int) -> float:
         """Returns the time at which this record will have expired
         by a certain percentage."""
         return self.created + (percent * self.ttl * 10)
