@@ -134,6 +134,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.24.3
+------
+
+* Fixed import-time "TypeError: 'ellipsis' object is not iterable." on CPython 3.5.2
+
 0.24.2
 ------
 
