@@ -540,9 +540,9 @@ class DNSAddress(DNSRecord):
     def __repr__(self) -> str:
         """String representation"""
         try:
-            return str(socket.inet_ntoa(self.address))
+            return self.to_string(str(socket.inet_ntoa(self.address)))
         except Exception:  # TODO stop catching all Exceptions
-            return str(self.address)
+            return self.to_string(str(self.address))
 
 
 class DNSHinfo(DNSRecord):
@@ -582,7 +582,7 @@ class DNSHinfo(DNSRecord):
 
     def __repr__(self) -> str:
         """String representation"""
-        return self.cpu + " " + self.os
+        return self.to_string(self.cpu + " " + self.os)
 
 
 class DNSPointer(DNSRecord):
