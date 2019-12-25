@@ -498,12 +498,14 @@ class DNSRecord(DNSEntry):
         return self._stale_time <= now
 
     def reset_ttl(self, other: 'DNSRecord') -> None:
-        """Sets this record's TTL, created time and expiration times
-        to that of another record."""
+        """Sets this record's TTL and created time to that of
+        another record."""
         self.created = other.created
-        self.ttl = other.ttl       
-        self._expiration_time = other._expiration_time
-        self._stale_time = other._stale_time
+        self.ttl = other.ttl
+
+        """ reset expiration times """
+        self._expiration_time = self.get_expiration_time(100)
+        self._stale_time = self.get_expiration_time(50)
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Abstract method"""
