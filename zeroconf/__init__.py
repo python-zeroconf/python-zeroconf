@@ -511,7 +511,7 @@ class DNSRecord(DNSEntry):
 
     def to_string(self, other: Union[bytes, str]) -> str:
         """String representation with additional information"""
-        arg = "%s/%s,%s" % (self.ttl, self.get_remaining_ttl(current_time_millis()), cast(Any, other))
+        arg = "%s/%s,%s" % (self.ttl, int(self.get_remaining_ttl(current_time_millis())), cast(Any, other))
         return DNSEntry.entry_to_string(self, "record", arg)
 
 
