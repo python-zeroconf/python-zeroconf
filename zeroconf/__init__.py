@@ -501,7 +501,7 @@ class DNSRecord(DNSEntry):
         """Sets this record's TTL, created time and expiration times
         to that of another record."""
         self.created = other.created
-        self.ttl = other.ttl       
+        self.ttl = other.ttl
         self._expiration_time = other._expiration_time
         self._stale_time = other._stale_time
 
