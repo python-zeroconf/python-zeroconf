@@ -420,7 +420,7 @@ class DNSEntry:
             result += ","
         result += self.name
         if other is not None:
-            result += ",%s]" % cast(Any, other)
+            result += "]=%s" % cast(Any, other)
         else:
             result += "]"
         return result
@@ -509,7 +509,7 @@ class DNSRecord(DNSEntry):
 
     def to_string(self, other: Union[bytes, str]) -> str:
         """String representation with additional information"""
-        arg = "%s/%s,%s" % (self.ttl, self.get_remaining_ttl(current_time_millis()), cast(Any, other))
+        arg = "%s/%s,%s" % (self.ttl, int(self.get_remaining_ttl(current_time_millis())), cast(Any, other))
         return DNSEntry.entry_to_string(self, "record", arg)
 
 
@@ -538,9 +538,9 @@ class DNSAddress(DNSRecord):
     def __repr__(self) -> str:
         """String representation"""
         try:
-            return str(socket.inet_ntoa(self.address))
+            return self.to_string(str(socket.inet_ntoa(self.address)))
         except Exception:  # TODO stop catching all Exceptions
-            return str(self.address)
+            return self.to_string(str(self.address))
 
 
 class DNSHinfo(DNSRecord):
@@ -580,7 +580,7 @@ class DNSHinfo(DNSRecord):
 
     def __repr__(self) -> str:
         """String representation"""
-        return self.cpu + " " + self.os
+        return self.to_string(self.cpu + " " + self.os)
 
 
 class DNSPointer(DNSRecord):
