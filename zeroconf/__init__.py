@@ -420,7 +420,7 @@ class DNSEntry:
             result += ","
         result += self.name
         if other is not None:
-            result += ",%s]" % cast(Any, other)
+            result += "]=%s" % cast(Any, other)
         else:
             result += "]"
         return result
