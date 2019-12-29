@@ -20,8 +20,8 @@ from nose.plugins.attrib import attr
 # ensure I can find this package even when it hasn't been installed (for development purposes)
 sys.path.insert(0, '..')
 
-import zeroconf as r # noqa: E402
-from zeroconf import ( # noqa: E402
+import zeroconf as r  # noqa: E402
+from zeroconf import (  # noqa: E402
     DNSHinfo,
     DNSText,
     ServiceBrowser,
