@@ -8,6 +8,7 @@ import copy
 import logging
 import socket
 import struct
+import sys
 import time
 import unittest
 from threading import Event
@@ -17,11 +18,10 @@ from typing import cast
 from nose.plugins.attrib import attr
 
 # ensure I can find this package even when it hasn't been installed (for development purposes)
-import sys
-sys.path.insert(0,'..')
+sys.path.insert(0, '..')
 
-import zeroconf as r
-from zeroconf import (
+import zeroconf as r # noqa: E402
+from zeroconf import ( # noqa: E402
     DNSHinfo,
     DNSText,
     ServiceBrowser,
@@ -1366,6 +1366,7 @@ def test_ptr_optimization():
 
     # unregister
     zc.unregister_service(info)
+
 
 if __name__ == '__main__':
     unittest.main()
