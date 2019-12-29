@@ -502,8 +502,6 @@ class DNSRecord(DNSEntry):
         another record."""
         self.created = other.created
         self.ttl = other.ttl
-
-        """ reset expiration times """
         self._expiration_time = self.get_expiration_time(100)
         self._stale_time = self.get_expiration_time(50)
 
