@@ -85,15 +85,13 @@ class TestDunder(unittest.TestCase):
 
     def test_dns_record_reset_ttl(self):
         record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
-        
         time.sleep(1)
-
         record2 = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
 
         assert record.created != record2.created
         assert record._expiration_time != record2._expiration_time
         assert record._stale_time != record2._stale_time
-        
+
         record.reset_ttl(record2)
 
         assert record.ttl == record2.ttl
