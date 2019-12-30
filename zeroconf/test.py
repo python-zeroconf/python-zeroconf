@@ -17,11 +17,8 @@ from typing import cast
 
 from nose.plugins.attrib import attr
 
-# ensure I can find this package even when it hasn't been installed (for development purposes)
-sys.path.insert(0, '..')
-
-import zeroconf as r  # noqa: E402
-from zeroconf import (  # noqa: E402
+import zeroconf as r
+from zeroconf import (
     DNSHinfo,
     DNSText,
     ServiceBrowser,
@@ -87,17 +84,16 @@ class TestDunder(unittest.TestCase):
         record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
         time.sleep(1)
         record2 = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+        now = r.current_time_millis()
 
         assert record.created != record2.created
-        assert record._expiration_time != record2._expiration_time
-        assert record._stale_time != record2._stale_time
+        assert record.get_remaining_ttl(now) != record2.get_remaining_ttl(now)
 
         record.reset_ttl(record2)
 
         assert record.ttl == record2.ttl
         assert record.created == record2.created
-        assert record._expiration_time == record2._expiration_time
-        assert record._stale_time == record2._stale_time
+        assert record.get_remaining_ttl(now) == record2.get_remaining_ttl(now)
 
     def test_service_info_dunder(self):
         type_ = "_test-srvc-type._tcp.local."
@@ -1373,7 +1369,3 @@ def test_ptr_optimization():
 
     # unregister
     zc.unregister_service(info)
-
-
-if __name__ == '__main__':
-    unittest.main()
