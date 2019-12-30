@@ -8,7 +8,6 @@ import copy
 import logging
 import socket
 import struct
-import sys
 import time
 import unittest
 from threading import Event
@@ -1369,3 +1368,7 @@ def test_ptr_optimization():
 
     # unregister
     zc.unregister_service(info)
+
+
+if __name__ == '__main__':
+    unittest.main()
