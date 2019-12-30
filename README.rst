@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.24.4
+------
+
+* Fixed resetting TTL in DNSRecord.reset_ttl(), thanks to Matt Saxon
+* Improved various DNS class' string representations, thanks to Jay Hogg
+
 0.24.3
 ------
 
