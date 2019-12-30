@@ -79,6 +79,21 @@ class TestDunder(unittest.TestCase):
         self.assertRaises(r.AbstractMethodException, record.__eq__, record)
         self.assertRaises(r.AbstractMethodException, record.write, None)
 
+    def test_dns_record_reset_ttl(self):
+        record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+        time.sleep(1)
+        record2 = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+        now = r.current_time_millis()
+
+        assert record.created != record2.created
+        assert record.get_remaining_ttl(now) != record2.get_remaining_ttl(now)
+
+        record.reset_ttl(record2)
+
+        assert record.ttl == record2.ttl
+        assert record.created == record2.created
+        assert record.get_remaining_ttl(now) == record2.get_remaining_ttl(now)
+
     def test_service_info_dunder(self):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
