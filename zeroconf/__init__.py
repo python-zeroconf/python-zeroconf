@@ -889,11 +889,13 @@ class DNSOutgoing:
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
 
         """Only support for unique answers"""
-        if record.type == _TYPE_TXT or \
-                record.type == _TYPE_SRV or \
-                record.type == _TYPE_A or \
-                record.type == _TYPE_AAAA:
-            assert(record.unique)
+        if (
+            record.type == _TYPE_TXT
+            or record.type == _TYPE_SRV
+            or record.type == _TYPE_A
+            or record.type == _TYPE_AAAA
+        ):
+            assert record.unique
 
         """Adds an answer"""
         if not record.suppressed_by(inp):
@@ -904,11 +906,13 @@ class DNSOutgoing:
         if record is not None:
 
             """Only support for unique answers"""
-            if record.type == _TYPE_TXT or \
-                    record.type == _TYPE_SRV or \
-                    record.type == _TYPE_A or \
-                    record.type == _TYPE_AAAA:
-                assert(record.unique)
+            if (
+                record.type == _TYPE_TXT
+                or record.type == _TYPE_SRV
+                or record.type == _TYPE_A
+                or record.type == _TYPE_AAAA
+            ):
+                assert record.unique
 
             if now == 0 or not record.is_expired(now):
                 self.answers.append((record, now))
@@ -954,11 +958,13 @@ class DNSOutgoing:
 
         """
         """Only support for unique answers"""
-        if record.type == _TYPE_TXT or \
-                record.type == _TYPE_SRV or \
-                record.type == _TYPE_A or \
-                record.type == _TYPE_AAAA:
-            assert(record.unique)
+        if (
+            record.type == _TYPE_TXT
+            or record.type == _TYPE_SRV
+            or record.type == _TYPE_A
+            or record.type == _TYPE_AAAA
+        ):
+            assert record.unique
 
         self.additionals.append(record)
 

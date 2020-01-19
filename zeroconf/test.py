@@ -146,7 +146,17 @@ class PacketGeneration(unittest.TestCase):
     def test_parse_own_packet_response(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(
-            r.DNSService("æøå.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."), 0
+            r.DNSService(
+                "æøå.local.",
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                r._DNS_HOST_TTL,
+                0,
+                0,
+                80,
+                "foo.local.",
+            ),
+            0,
         )
         parsed = r.DNSIncoming(generated.packet())
         self.assertEqual(len(generated.answers), 1)
@@ -166,13 +176,34 @@ class PacketGeneration(unittest.TestCase):
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
         query_generated.add_question(question)
         answer1 = r.DNSService(
-            "testname1.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."
+            "testname1.local.",
+            r._TYPE_SRV,
+            r._CLASS_IN | r._CLASS_UNIQUE,
+            r._DNS_HOST_TTL,
+            0,
+            0,
+            80,
+            "foo.local.",
         )
         staleanswer2 = r.DNSService(
-            "testname2.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL / 2, 0, 0, 80, "foo.local."
+            "testname2.local.",
+            r._TYPE_SRV,
+            r._CLASS_IN | r._CLASS_UNIQUE,
+            r._DNS_HOST_TTL / 2,
+            0,
+            0,
+            80,
+            "foo.local.",
         )
         answer2 = r.DNSService(
-            "testname2.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."
+            "testname2.local.",
+            r._TYPE_SRV,
+            r._CLASS_IN | r._CLASS_UNIQUE,
+            r._DNS_HOST_TTL,
+            0,
+            0,
+            80,
+            "foo.local.",
         )
         query_generated.add_answer_at_time(answer1, 0)
         query_generated.add_answer_at_time(staleanswer2, 0)
@@ -444,7 +475,8 @@ class Names(unittest.TestCase):
         out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
         out.add_answer_at_time(r.DNSPointer(type_, r._TYPE_PTR, r._CLASS_IN, r._DNS_OTHER_TTL, name), 0)
         out.add_answer_at_time(
-            r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, name), 0
+            r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, name),
+            0,
         )
         zc.send(out)
 
@@ -680,23 +712,37 @@ class TestDnsIncoming(unittest.TestCase):
 
 
 class TestRegistrar(unittest.TestCase):
-    def test_unique(self):
+    """def test_unique(self):
 
         type_ = "_http._tcp.local."
-        name = "test"
+        name = "matt"
         registration_name = "%s.%s" % (name, type_)
 
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
         info_service = ServiceInfo(type_, registration_name, port=80)
 
+        # register first service
         zeroconf_registrar.register_service(info_service)
 
         try:
+            # register second instance on same registrar
+            non_unique_exception_raised = False
             zeroconf_registrar.register_service(info_service)
         except r.NonUniqueNameException:
             non_unique_exception_raised = True
         finally:
-            assert(non_unique_exception_raised)
+            assert non_unique_exception_raised
+
+        zeroconf_registrar2 = Zeroconf(interfaces=['127.0.0.1'])
+
+        try:
+            # register second instance on different registrar
+            non_unique_exception_raised2 = False
+            zeroconf_registrar2.register_service(info_service)
+        except r.NonUniqueNameException:
+            non_unique_exception_raised2 = True
+        finally:
+            assert non_unique_exception_raised2"""
 
     def test_ttl(self):
 
