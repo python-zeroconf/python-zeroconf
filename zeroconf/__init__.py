@@ -2244,7 +2244,7 @@ class Zeroconf(QuietLogger):
                 DNSService(
                     info.name,
                     _TYPE_SRV,
-                    _CLASS_IN,
+                    _CLASS_IN | _CLASS_UNIQUE,
                     info.host_ttl,
                     info.priority,
                     info.weight,
@@ -2254,10 +2254,14 @@ class Zeroconf(QuietLogger):
                 0,
             )
 
-            out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, info.other_ttl, info.text), 0)
+            out.add_answer_at_time(
+                DNSText(info.name, _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE, info.other_ttl, info.text), 0
+            )
             for address in info.addresses_by_version(IPVersion.All):
                 type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
-                out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, info.host_ttl, address), 0)
+                out.add_answer_at_time(
+                    DNSAddress(info.server, type_, _CLASS_IN | _CLASS_UNIQUE, info.host_ttl, address), 0
+                )
             self.send(out)
             i += 1
             next_time += _REGISTER_TIME
@@ -2286,7 +2290,7 @@ class Zeroconf(QuietLogger):
                 DNSService(
                     info.name,
                     _TYPE_SRV,
-                    _CLASS_IN,
+                    _CLASS_IN | _CLASS_UNIQUE,
                     0,
                     info.priority,
                     info.weight,
@@ -2295,11 +2299,13 @@ class Zeroconf(QuietLogger):
                 ),
                 0,
             )
-            out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
+            out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE, 0, info.text), 0)
 
             for address in info.addresses_by_version(IPVersion.All):
                 type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
-                out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, 0, address), 0)
+                out.add_answer_at_time(
+                    DNSAddress(info.server, type_, _CLASS_IN | _CLASS_UNIQUE, 0, address), 0
+                )
             self.send(out)
             i += 1
             next_time += _UNREGISTER_TIME
@@ -2322,7 +2328,7 @@ class Zeroconf(QuietLogger):
                         DNSService(
                             info.name,
                             _TYPE_SRV,
-                            _CLASS_IN,
+                            _CLASS_IN | _CLASS_UNIQUE,
                             0,
                             info.priority,
                             info.weight,
@@ -2331,10 +2337,14 @@ class Zeroconf(QuietLogger):
                         ),
                         0,
                     )
-                    out.add_answer_at_time(DNSText(info.name, _TYPE_TXT, _CLASS_IN, 0, info.text), 0)
+                    out.add_answer_at_time(
+                        DNSText(info.name, _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE, 0, info.text), 0
+                    )
                     for address in info.addresses_by_version(IPVersion.All):
                         type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
-                        out.add_answer_at_time(DNSAddress(info.server, type_, _CLASS_IN, 0, address), 0)
+                        out.add_answer_at_time(
+                            DNSAddress(info.server, type_, _CLASS_IN | _CLASS_UNIQUE, 0, address), 0
+                        )
                 self.send(out)
                 i += 1
                 next_time += _UNREGISTER_TIME
