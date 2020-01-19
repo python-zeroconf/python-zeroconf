@@ -146,7 +146,7 @@ class PacketGeneration(unittest.TestCase):
     def test_parse_own_packet_response(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(
-            r.DNSService("æøå.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."), 0
+            r.DNSService("æøå.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."), 0
         )
         parsed = r.DNSIncoming(generated.packet())
         self.assertEqual(len(generated.answers), 1)
@@ -166,13 +166,13 @@ class PacketGeneration(unittest.TestCase):
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
         query_generated.add_question(question)
         answer1 = r.DNSService(
-            "testname1.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."
+            "testname1.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."
         )
         staleanswer2 = r.DNSService(
-            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL / 2, 0, 0, 80, "foo.local."
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL / 2, 0, 0, 80, "foo.local."
         )
         answer2 = r.DNSService(
-            "testname2.local.", r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."
+            "testname2.local.", r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, "foo.local."
         )
         query_generated.add_answer_at_time(answer1, 0)
         query_generated.add_answer_at_time(staleanswer2, 0)
@@ -444,7 +444,7 @@ class Names(unittest.TestCase):
         out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
         out.add_answer_at_time(r.DNSPointer(type_, r._TYPE_PTR, r._CLASS_IN, r._DNS_OTHER_TTL, name), 0)
         out.add_answer_at_time(
-            r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, name), 0
+            r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, name), 0
         )
         zc.send(out)
 
@@ -670,7 +670,7 @@ class TestDnsIncoming(unittest.TestCase):
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
         packed = socket.inet_pton(socket.AF_INET6, addr)
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress('domain', r._TYPE_AAAA, r._CLASS_IN, 1, packed)
+        answer = r.DNSAddress('domain', r._TYPE_AAAA, r._CLASS_IN | r._CLASS_UNIQUE, 1, packed)
         generated.add_additional_answer(answer)
         packet = generated.packet()
         parsed = r.DNSIncoming(packet)
@@ -680,6 +680,24 @@ class TestDnsIncoming(unittest.TestCase):
 
 
 class TestRegistrar(unittest.TestCase):
+    def test_unique(self):
+
+        type_ = "_http._tcp.local."
+        name = "test"
+        registration_name = "%s.%s" % (name, type_)
+
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+        info_service = ServiceInfo(type_, registration_name, port=80)
+
+        zeroconf_registrar.register_service(info_service)
+
+        try:
+            zeroconf_registrar.register_service(info_service)
+        except r.NonUniqueNameException:
+            non_unique_exception_raised = True
+        finally:
+            assert(non_unique_exception_raised)
+
     def test_ttl(self):
 
         # instantiate a zeroconf instance
@@ -886,6 +904,7 @@ class ListenerTest(unittest.TestCase):
         service_added = Event()
         service_removed = Event()
         service_updated = Event()
+        service_updated2 = Event()
 
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
@@ -902,7 +921,7 @@ class ListenerTest(unittest.TestCase):
                 service_removed.set()
 
             def update_service(self, zeroconf, type, name):
-                pass
+                service_updated2.set()
 
         class MySubListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
@@ -966,7 +985,7 @@ class ListenerTest(unittest.TestCase):
             assert info is not None
             assert info.properties[b'prop_none'] is False
 
-            # Begin material test addition
+            # test TXT record update
             sublistener = MySubListener()
             zeroconf_browser.add_service_listener(registration_name, sublistener)
             properties['prop_blank'] = b'an updated string'
@@ -981,7 +1000,6 @@ class ListenerTest(unittest.TestCase):
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
             assert info.properties[b'prop_blank'] == properties['prop_blank']
-            # End material test addition
 
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
@@ -1368,3 +1386,7 @@ def test_ptr_optimization():
 
     # unregister
     zc.unregister_service(info)
+
+
+if __name__ == "__main__":
+    unittest.main()
