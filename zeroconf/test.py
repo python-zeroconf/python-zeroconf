@@ -712,38 +712,6 @@ class TestDnsIncoming(unittest.TestCase):
 
 
 class TestRegistrar(unittest.TestCase):
-    """def test_unique(self):
-
-        type_ = "_http._tcp.local."
-        name = "matt"
-        registration_name = "%s.%s" % (name, type_)
-
-        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
-        info_service = ServiceInfo(type_, registration_name, port=80)
-
-        # register first service
-        zeroconf_registrar.register_service(info_service)
-
-        try:
-            # register second instance on same registrar
-            non_unique_exception_raised = False
-            zeroconf_registrar.register_service(info_service)
-        except r.NonUniqueNameException:
-            non_unique_exception_raised = True
-        finally:
-            assert non_unique_exception_raised
-
-        zeroconf_registrar2 = Zeroconf(interfaces=['127.0.0.1'])
-
-        try:
-            # register second instance on different registrar
-            non_unique_exception_raised2 = False
-            zeroconf_registrar2.register_service(info_service)
-        except r.NonUniqueNameException:
-            non_unique_exception_raised2 = True
-        finally:
-            assert non_unique_exception_raised2"""
-
     def test_ttl(self):
 
         # instantiate a zeroconf instance
