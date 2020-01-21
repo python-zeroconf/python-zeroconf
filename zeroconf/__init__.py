@@ -1265,6 +1265,9 @@ class Listener(QuietLogger):
                 self.zc.handle_query(msg, addr, port)
                 self.zc.handle_query(msg, None, _MDNS_PORT)
 
+            else:
+                self.zc.handle_query(msg, addr, port)
+
         else:
             self.zc.handle_response(msg)
 
@@ -1935,7 +1938,7 @@ def normalize_interface_choice(
 
 
 def new_socket(
-    port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only, apple_p2p: bool = False
+    port: int = _MDNS_PORT, interface: str = '', ip_version: IPVersion = IPVersion.V4Only, apple_p2p: bool = False
 ) -> socket.socket:
     if ip_version == IPVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1989,7 +1992,7 @@ def new_socket(
         # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
         s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
 
-    s.bind(('', port))
+    s.bind((interface, port))
     return s
 
 
@@ -2030,7 +2033,7 @@ def add_multicast_member(
             raise
 
     respond_socket = new_socket(
-        ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only), apple_p2p=apple_p2p
+        ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only), interface=interface, apple_p2p=apple_p2p
     )
     log.debug('Configuring %s with multicast interface %s', respond_socket, interface)
     if is_v6:
@@ -2061,7 +2064,7 @@ def create_sockets(
         if not unicast:
             respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
         else:
-            respond_socket = new_socket(port=0, ip_version=ip_version, apple_p2p=apple_p2p)
+            respond_socket = new_socket(port=0, interface=i, ip_version=ip_version, apple_p2p=apple_p2p)
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
@@ -2076,6 +2079,9 @@ def get_errno(e: Exception) -> int:
 
 def can_send_to(sock: socket.socket, address: str) -> bool:
     addr = ipaddress.ip_address(address)
+    # To avoid Invalid argument on socket with address 127.0.0.1
+    if sock.family == socket.AF_INET and sock.getsockname()[0] == "127.0.0.1" and address != "127.0.0.1":
+        return False
     return cast(bool, addr.version == 6 if sock.family == socket.AF_INET6 else addr.version == 4)
 
 
