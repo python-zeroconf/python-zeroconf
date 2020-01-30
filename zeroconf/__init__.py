@@ -259,7 +259,7 @@ def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
     :return: fully qualified service name (eg: _http._tcp.local.)
     """
     if not (type_.endswith('._tcp.local.') or type_.endswith('._udp.local.')):
-        raise BadTypeInNameException("Type '%s' must end with '._tcp.local.' or '._udp.local.'" % type_)
+        raise BadTypeInNameException("Type '{}' must end with '._tcp.local.' or '._udp.local.'".format(type_))
 
     remaining = type_[: -len('._tcp.local.')].split('.')
     name = remaining.pop()
@@ -267,25 +267,25 @@ def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
         raise BadTypeInNameException("No Service name found")
 
     if len(remaining) == 1 and len(remaining[0]) == 0:
-        raise BadTypeInNameException("Type '%s' must not start with '.'" % type_)
+        raise BadTypeInNameException("Type '{}' must not start with '.'".format(type_))
 
     if name[0] != '_':
-        raise BadTypeInNameException("Service name (%s) must start with '_'" % name)
+        raise BadTypeInNameException("Service name ({}) must start with '_'".format(name))
 
     # remove leading underscore
     name = name[1:]
 
     if len(name) > 15:
-        raise BadTypeInNameException("Service name (%s) must be <= 15 bytes" % name)
+        raise BadTypeInNameException("Service name ({}) must be <= 15 bytes".format(name))
 
     if '--' in name:
-        raise BadTypeInNameException("Service name (%s) must not contain '--'" % name)
+        raise BadTypeInNameException("Service name ({}) must not contain '--'".format(name))
 
     if '-' in (name[0], name[-1]):
-        raise BadTypeInNameException("Service name (%s) may not start or end with '-'" % name)
+        raise BadTypeInNameException("Service name ({}) may not start or end with '-'".format(name))
 
     if not _HAS_A_TO_Z.search(name):
-        raise BadTypeInNameException("Service name (%s) must contain at least one letter (eg: 'A-Z')" % name)
+        raise BadTypeInNameException("Service name ({}) must contain at least one letter (eg: 'A-Z')".format(name))
 
     allowed_characters_re = (
         _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE if allow_underscores else _HAS_ONLY_A_TO_Z_NUM_HYPHEN
@@ -293,8 +293,8 @@ def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
 
     if not allowed_characters_re.search(name):
         raise BadTypeInNameException(
-            "Service name (%s) must contain only these characters: "
-            "A-Z, a-z, 0-9, hyphen ('-')%s" % (name, ", underscore ('_')" if allow_underscores else "")
+            "Service name ({}) must contain only these characters: "
+"A-Z, a-z, 0-9, hyphen ('-'){}".format(name, ", underscore ('_')" if allow_underscores else "")
         )
 
     if remaining and remaining[-1] == '_sub':
@@ -308,11 +308,11 @@ def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
     if remaining:
         length = len(remaining[0].encode('utf-8'))
         if length > 63:
-            raise BadTypeInNameException("Too long: '%s'" % remaining[0])
+            raise BadTypeInNameException("Too long: '{}'".format(remaining[0]))
 
         if _HAS_ASCII_CONTROL_CHARS.search(remaining[0]):
             raise BadTypeInNameException(
-                "Ascii control character 0x00-0x1F and 0x7F illegal in '%s'" % remaining[0]
+                "Ascii control character 0x00-0x1F and 0x7F illegal in '{}'".format(remaining[0])
             )
 
     return '_' + name + type_[-len('._tcp.local.') :]
@@ -404,23 +404,23 @@ class DNSEntry:
     @staticmethod
     def get_class_(class_: int) -> str:
         """Class accessor"""
-        return _CLASSES.get(class_, "?(%s)" % class_)
+        return _CLASSES.get(class_, "?({})".format(class_))
 
     @staticmethod
     def get_type(t: int) -> str:
         """Type accessor"""
-        return _TYPES.get(t, "?(%s)" % t)
+        return _TYPES.get(t, "?({})".format(t))
 
     def entry_to_string(self, hdr: str, other: Optional[Union[bytes, str]]) -> str:
         """String representation with additional information"""
-        result = "%s[%s,%s" % (hdr, self.get_type(self.type), self.get_class_(self.class_))
+        result = "{}[{},{}".format(hdr, self.get_type(self.type), self.get_class_(self.class_))
         if self.unique:
             result += "-unique,"
         else:
             result += ","
         result += self.name
         if other is not None:
-            result += "]=%s" % cast(Any, other)
+            result += "]={}".format(cast(Any, other))
         else:
             result += "]"
         return result
@@ -511,7 +511,7 @@ class DNSRecord(DNSEntry):
 
     def to_string(self, other: Union[bytes, str]) -> str:
         """String representation with additional information"""
-        arg = "%s/%s,%s" % (self.ttl, int(self.get_remaining_ttl(current_time_millis())), cast(Any, other))
+        arg = "{}/{},{}".format(self.ttl, int(self.get_remaining_ttl(current_time_millis())), cast(Any, other))
         return DNSEntry.entry_to_string(self, "record", arg)
 
 
@@ -684,7 +684,7 @@ class DNSService(DNSRecord):
 
     def __repr__(self) -> str:
         """String representation"""
-        return self.to_string("%s:%s" % (self.server, self.port))
+        return self.to_string("{}:{}".format(self.server, self.port))
 
 
 class DNSIncoming(QuietLogger):
@@ -834,10 +834,10 @@ class DNSIncoming(QuietLogger):
                     next_ = off + 1
                 off = ((length & 0x3F) << 8) | self.data[off]
                 if off >= first:
-                    raise IncomingDecodeError("Bad domain name (circular) at %s" % (off,))
+                    raise IncomingDecodeError("Bad domain name (circular) at {}".format(off))
                 first = off
             else:
-                raise IncomingDecodeError("Bad domain name at %s" % (off,))
+                raise IncomingDecodeError("Bad domain name at {}".format(off,))
 
         if next_ >= 0:
             self.offset = next_
@@ -867,16 +867,16 @@ class DNSOutgoing:
         self.additionals = []  # type: List[DNSRecord]
 
     def __repr__(self) -> str:
-        return '<DNSOutgoing:{%s}>' % ', '.join(
+        return '<DNSOutgoing:{{}}>'.format(', '.join(
             [
-                'multicast=%s' % self.multicast,
-                'flags=%s' % self.flags,
-                'questions=%s' % self.questions,
-                'answers=%s' % self.answers,
-                'authorities=%s' % self.authorities,
-                'additionals=%s' % self.additionals,
+                'multicast={}'.format(self.multicast),
+                'flags={}'.format(self.flags),
+                'questions={}'.format(self.questions),
+                'answers={}'.format(self.answers),
+                'authorities={}'.format(self.authorities),
+                'additionals={}'.format(self.additionals),
             ]
-        )
+        ))
 
     class State(enum.Enum):
         init = 0
@@ -1545,8 +1545,8 @@ class ServiceInfo(RecordUpdateListener):
         invalid = [a for a in self._addresses
                    if not isinstance(a, bytes) or len(a) not in (4, 16)]
         if invalid:
-            raise TypeError('Addresses must be bytes, got %s. Hint: convert string addresses '
-                            'with socket.inet_pton' % invalid)
+            raise TypeError('Addresses must be bytes, got {}. Hint: convert string addresses '
+                            'with socket.inet_pton'.format(invalid))
         self.port = port
         self.weight = weight
         self.priority = priority
@@ -1771,10 +1771,10 @@ class ServiceInfo(RecordUpdateListener):
 
     def __repr__(self) -> str:
         """String representation"""
-        return '%s(%s)' % (
+        return '{}({})'.format(
             type(self).__name__,
             ', '.join(
-                '%s=%r' % (name, getattr(self, name))
+                '{}={}'.format(name, getattr(self, name))
                 for name in (
                     'type',
                     'name',
@@ -1875,7 +1875,7 @@ def ip_to_index(adapters: List[Any], ip: str) -> int:
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
                 return socket.if_nametoindex(adapter.name)
 
-    raise RuntimeError('No adapter found for IP address %s' % ip)
+    raise RuntimeError('No adapter found for IP address {}'.format(ip))
 
 
 def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
@@ -1922,7 +1922,7 @@ def normalize_interface_choice(
             result.extend(get_all_addresses())
         if not result:
             raise RuntimeError(
-                'No interfaces to listen on, check that any interfaces have IP version %s' % ip_version
+                'No interfaces to listen on, check that any interfaces have IP version {}'.format(ip_version)
             )
     elif isinstance(choice, list):
         # First, take IPv4 addresses.
@@ -1930,7 +1930,7 @@ def normalize_interface_choice(
         # Unlike IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP requires interface indexes.
         result += ip6_addresses_to_indexes(choice)
     else:
-        raise TypeError("choice must be a list or InterfaceChoice, got %r" % choice)
+        raise TypeError("choice must be a list or InterfaceChoice, got {}".format(choice))
     return result
 
 
@@ -2011,20 +2011,20 @@ def add_multicast_member(
         _errno = get_errno(e)
         if _errno == errno.EADDRINUSE:
             log.info(
-                'Address in use when adding %s to multicast group, '
+                'Address in use when adding {} to multicast group, '
                 'it is expected to happen on some systems',
                 interface,
             )
             return None
         elif _errno == errno.EADDRNOTAVAIL:
             log.info(
-                'Address not available when adding %s to multicast '
+                'Address not available when adding {} to multicast '
                 'group, it is expected to happen on some systems',
                 interface,
             )
             return None
         elif _errno == errno.EINVAL:
-            log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
+            log.info('Interface of {} does not support multicast, ' 'it is expected in WSL', interface)
             return None
         else:
             raise
@@ -2032,7 +2032,7 @@ def add_multicast_member(
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only), apple_p2p=apple_p2p
     )
-    log.debug('Configuring %s with multicast interface %s', respond_socket, interface)
+    log.debug('Configuring {} with multicast interface {}', respond_socket, interface)
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
     else:
@@ -2362,7 +2362,7 @@ class Zeroconf(QuietLogger):
                     raise NonUniqueNameException
 
                 # change the name and look for a conflict
-                info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
+                info.name = '{}-{}.{}'.format(instance_name, next_instance_number, info.type)
                 next_instance_number += 1
                 service_type_name(info.name)
                 next_time = now
@@ -2600,7 +2600,7 @@ class Zeroconf(QuietLogger):
                 self.log_exception_warning()
             else:
                 if bytes_sent != len(packet):
-                    self.log_warning_once('!!! sent %d out of %d bytes to %r' % (bytes_sent, len(packet), s))
+                    self.log_warning_once('!!! sent {} out of {} bytes to {}'.format(bytes_sent, len(packet), s))
 
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
