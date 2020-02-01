@@ -519,7 +519,7 @@ class Framework(unittest.TestCase):
                 ttl = 0
 
             generated.add_answer_at_time(
-                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_name), 0
+                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
             )
             generated.add_answer_at_time(
                 r.DNSService(
@@ -1075,7 +1075,7 @@ class TestServiceBrowser(unittest.TestCase):
                 ttl = 0
 
             generated.add_answer_at_time(
-                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_name), 0
+                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
             )
             generated.add_answer_at_time(
                 r.DNSService(
