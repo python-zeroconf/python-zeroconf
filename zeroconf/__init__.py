@@ -2196,11 +2196,13 @@ class Zeroconf(QuietLogger):
         for listener in [k for k in self.browsers]:
             self.remove_service_listener(listener)
 
-    def register_service(self,
-                         info: ServiceInfo,
-                         ttl: Optional[int] = None,
-                         allow_name_change: bool = False,
-                         cooperating_responders: bool = False) -> None:
+    def register_service(
+        self,
+        info: ServiceInfo,
+        ttl: Optional[int] = None,
+        allow_name_change: bool = False,
+        cooperating_responders: bool = False,
+    ) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.  The name of the service may be changed if needed to make
