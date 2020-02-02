@@ -1400,7 +1400,3 @@ def test_ptr_optimization():
 
     # unregister
     zc.unregister_service(info)
-
-
-if __name__ == "__main__":
-    unittest.main()
