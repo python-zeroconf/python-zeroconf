@@ -2206,7 +2206,8 @@ class Zeroconf(QuietLogger):
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.  The name of the service may be changed if needed to make
-        it unique on the network."""
+        it unique on the network. Additionally multiple cooperating responders
+        can register the same service on the network for resilience"""
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
             # Setting TTLs via ServiceInfo is preferred
