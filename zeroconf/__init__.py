@@ -2207,7 +2207,8 @@ class Zeroconf(QuietLogger):
         Zeroconf will then respond to requests for information for that
         service.  The name of the service may be changed if needed to make
         it unique on the network. Additionally multiple cooperating responders
-        can register the same service on the network for resilience"""
+        can register the same service on the network for resilience
+        (if you want this behavior set `cooperating_responders` to `True`)."""
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
             # Setting TTLs via ServiceInfo is preferred
