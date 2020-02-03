@@ -886,21 +886,15 @@ class DNSOutgoing:
         init = 0
         finished = 1
 
+    @staticmethod
+    def is_type_unique(type_: int) -> bool:
+        return type_ == _TYPE_TXT or type_ == _TYPE_SRV or type_ == _TYPE_A or type_ == _TYPE_AAAA
+
     def add_question(self, record: DNSQuestion) -> None:
         """Adds a question"""
         self.questions.append(record)
 
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
-
-        """Only support for unique answers"""
-        if (
-            record.type == _TYPE_TXT
-            or record.type == _TYPE_SRV
-            or record.type == _TYPE_A
-            or record.type == _TYPE_AAAA
-        ):
-            assert record.unique
-
         """Adds an answer"""
         if not record.suppressed_by(inp):
             self.add_answer_at_time(record, 0)
@@ -909,13 +903,7 @@ class DNSOutgoing:
         """Adds an answer if it does not expire by a certain time"""
         if record is not None:
 
-            """Only support for unique answers"""
-            if (
-                record.type == _TYPE_TXT
-                or record.type == _TYPE_SRV
-                or record.type == _TYPE_A
-                or record.type == _TYPE_AAAA
-            ):
+            if self.is_type_unique(record.type):
                 assert record.unique
 
             if now == 0 or not record.is_expired(now):
@@ -961,13 +949,7 @@ class DNSOutgoing:
            o  All address records (type "A" and "AAAA") named in the SRV rdata.
 
         """
-        """Only support for unique answers"""
-        if (
-            record.type == _TYPE_TXT
-            or record.type == _TYPE_SRV
-            or record.type == _TYPE_A
-            or record.type == _TYPE_AAAA
-        ):
+        if self.is_type_unique(record.type):
             assert record.unique
 
         self.additionals.append(record)
