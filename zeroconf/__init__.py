@@ -1699,7 +1699,7 @@ class ServiceInfo(RecordUpdateListener):
             else:
                 if value == b'true':
                     value = True
-                elif value == b'false' or not value:
+                elif value == b'false':
                     value = False
 
             # Only update non-existent properties
