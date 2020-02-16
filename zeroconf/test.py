@@ -1115,6 +1115,7 @@ class TestServiceBrowser(unittest.TestCase):
             service_updated_event.clear()
             service_text = b'path=/~humingchun/'
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(1)
             assert service_added is True
             assert service_updated_count == 2

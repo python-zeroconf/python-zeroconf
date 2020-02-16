@@ -2434,8 +2434,15 @@ class Zeroconf(QuietLogger):
         are held in the cache, and listeners are notified."""
         now = current_time_millis()
         for record in msg.answers:
+
+            updated = True
+
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 for entry in self.cache.entries():
+
+                    if entry == record:
+                        updated = False
+
                     if DNSEntry.__eq__(entry, record) and (record.created - entry.created > 1000):
                         self.cache.remove(entry)
 
@@ -2446,7 +2453,8 @@ class Zeroconf(QuietLogger):
                     maybe_entry.reset_ttl(record)
                 else:
                     self.cache.add(record)
-                self.update_record(now, record)
+                if updated:
+                    self.update_record(now, record)
             else:
                 if maybe_entry is not None:
                     self.update_record(now, record)
