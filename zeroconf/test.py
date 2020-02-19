@@ -985,9 +985,9 @@ class ListenerTest(unittest.TestCase):
             # get service info without answer cache
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
-            assert info.properties[b'prop_none'] is False
+            assert info.properties[b'prop_none'] == b''
             assert info.properties[b'prop_string'] == properties['prop_string']
-            assert info.properties[b'prop_float'] is False
+            assert info.properties[b'prop_float'] == b''
             assert info.properties[b'prop_blank'] == properties['prop_blank']
             assert info.properties[b'prop_true'] is True
             assert info.properties[b'prop_false'] is False
@@ -997,7 +997,7 @@ class ListenerTest(unittest.TestCase):
 
             info = zeroconf_browser.get_service_info(subtype, registration_name)
             assert info is not None
-            assert info.properties[b'prop_none'] is False
+            assert info.properties[b'prop_none'] == b''
 
             # test TXT record update
             sublistener = MySubListener()
