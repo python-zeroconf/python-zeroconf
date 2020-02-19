@@ -1867,14 +1867,7 @@ class ZeroconfServiceTypes(ServiceListener):
 
 
 def get_all_addresses() -> List[str]:
-    return list(
-        set(
-            addr.ip
-            for iface in ifaddr.get_adapters()
-            for addr in iface.ips
-            if addr.is_IPv4
-        )
-    )
+    return list(set(addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4))
 
 
 def get_all_addresses_v6() -> List[int]:
