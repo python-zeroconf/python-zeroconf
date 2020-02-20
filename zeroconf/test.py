@@ -463,6 +463,9 @@ class Names(unittest.TestCase):
         # verify name conflict
         self.assertRaises(r.NonUniqueNameException, zc.register_service, info_service)
 
+        # verify no name conflict https://tools.ietf.org/html/rfc6762#section-6.6
+        zc.register_service(info_service, cooperating_responders=True)
+
         zc.register_service(info_service, allow_name_change=True)
         assert info_service.name.split('.')[0] == '%s-%d' % (name, number_hosts + 1)
 

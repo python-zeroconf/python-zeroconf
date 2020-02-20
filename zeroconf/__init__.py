@@ -2205,18 +2205,24 @@ class Zeroconf(QuietLogger):
             self.remove_service_listener(listener)
 
     def register_service(
-        self, info: ServiceInfo, ttl: Optional[int] = None, allow_name_change: bool = False
+        self,
+        info: ServiceInfo,
+        ttl: Optional[int] = None,
+        allow_name_change: bool = False,
+        cooperating_responders: bool = False,
     ) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.  The name of the service may be changed if needed to make
-        it unique on the network."""
+        it unique on the network. Additionally multiple cooperating responders
+        can register the same service on the network for resilience
+        (if you want this behavior set `cooperating_responders` to `True`)."""
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
             # Setting TTLs via ServiceInfo is preferred
             info.host_ttl = ttl
             info.other_ttl = ttl
-        self.check_service(info, allow_name_change)
+        self.check_service(info, allow_name_change, cooperating_responders)
         self.services[info.name.lower()] = info
         if info.type in self.servicetypes:
             self.servicetypes[info.type] += 1
@@ -2357,7 +2363,9 @@ class Zeroconf(QuietLogger):
                 i += 1
                 next_time += _UNREGISTER_TIME
 
-    def check_service(self, info: ServiceInfo, allow_name_change: bool) -> None:
+    def check_service(
+        self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False
+    ) -> None:
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
 
@@ -2374,17 +2382,18 @@ class Zeroconf(QuietLogger):
         next_time = now
         i = 0
         while i < 3:
-            # check for a name conflict
-            while self.cache.current_entry_with_name_and_alias(info.type, info.name):
-                if not allow_name_change:
-                    raise NonUniqueNameException
+            if not cooperating_responders:
+                # check for a name conflict
+                while self.cache.current_entry_with_name_and_alias(info.type, info.name):
+                    if not allow_name_change:
+                        raise NonUniqueNameException
 
-                # change the name and look for a conflict
-                info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
-                next_instance_number += 1
-                service_type_name(info.name)
-                next_time = now
-                i = 0
+                    # change the name and look for a conflict
+                    info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
+                    next_instance_number += 1
+                    service_type_name(info.name)
+                    next_time = now
+                    i = 0
 
             if now < next_time:
                 self.wait(next_time - now)
