@@ -540,8 +540,9 @@ class DNSAddress(DNSRecord):
     def __repr__(self) -> str:
         """String representation"""
         try:
-            return self.to_string(str(
-                socket.inet_ntop(socket.AF_INET6 if _is_v6_address(self.address) else socket.AF_INET, self.address)
+            return self.to_string(socket.inet_ntop(
+                socket.AF_INET6 if _is_v6_address(self.address) else socket.AF_INET,
+                self.address
             ))
         except Exception:  # TODO stop catching all Exceptions
             return self.to_string(str(self.address))
