@@ -66,14 +66,12 @@ class TestDunder(unittest.TestCase):
         assert repr(address).endswith("b'a'")
 
         address_ipv4 = r.DNSAddress(
-            'irrelevant', r._TYPE_SOA, r._CLASS_IN, 1,
-            socket.inet_pton(socket.AF_INET, '127.0.0.1')
+            'irrelevant', r._TYPE_SOA, r._CLASS_IN, 1, socket.inet_pton(socket.AF_INET, '127.0.0.1')
         )
         assert repr(address_ipv4).endswith('127.0.0.1')
 
         address_ipv6 = r.DNSAddress(
-            'irrelevant', r._TYPE_SOA, r._CLASS_IN, 1,
-            socket.inet_pton(socket.AF_INET6, '::1')
+            'irrelevant', r._TYPE_SOA, r._CLASS_IN, 1, socket.inet_pton(socket.AF_INET6, '::1')
         )
         assert repr(address_ipv6).endswith('::1')
 
