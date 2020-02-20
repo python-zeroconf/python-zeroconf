@@ -2345,7 +2345,9 @@ class Zeroconf(QuietLogger):
                 i += 1
                 next_time += _UNREGISTER_TIME
 
-    def check_service(self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False) -> None:
+    def check_service(
+        self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False
+    ) -> None:
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
 
