@@ -1695,12 +1695,7 @@ class ServiceInfo(RecordUpdateListener):
             except ValueError:
                 # No equals sign at all
                 key = s
-                value = False
-            else:
-                if value == b'true':
-                    value = True
-                elif value == b'false':
-                    value = False
+                value = None
 
             # Only update non-existent properties
             if key and result.get(key) is None:
