@@ -1655,20 +1655,12 @@ class ServiceInfo(RecordUpdateListener):
                 if isinstance(key, str):
                     key = key.encode('utf-8')
 
-                if value is None:
-                    suffix = b''
-                elif isinstance(value, str):
-                    suffix = value.encode('utf-8')
-                elif isinstance(value, bytes):
-                    suffix = value
-                elif isinstance(value, int):
-                    if value:
-                        suffix = b'true'
-                    else:
-                        suffix = b'false'
-                else:
-                    suffix = b''
-                list_.append(b'='.join((key, suffix)))
+                record = key
+                if value is not None:
+                    if not isinstance(value, bytes):
+                        value = str(value).encode('utf-8')
+                    record += b'=' + value
+                list_.append(record)
             for item in list_:
                 result = b''.join((result, int2byte(len(item)), item))
             self.text = result
