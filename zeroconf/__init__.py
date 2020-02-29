@@ -2444,12 +2444,21 @@ class Zeroconf(QuietLogger):
             updated = True
 
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                for entry in self.cache.entries():
+                # Since the cache format is keyed on the lower case record name
+                # we can avoid iterating everything in the cache and
+                # only look though entries for the specific name.
+                # entries_with_name will take care of converting to lowercase
+                #
+                # We make a copy of the list that entries_with_name returns
+                # since we cannot iterate over something we might remove
+                for entry in self.cache.entries_with_name(record.name).copy():
 
                     if entry == record:
                         updated = False
 
-                    if DNSEntry.__eq__(entry, record) and (record.created - entry.created > 1000):
+                    # Check the time first because it is far cheaper
+                    # than the __eq__
+                    if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
                         self.cache.remove(entry)
 
             expired = record.is_expired(now)
