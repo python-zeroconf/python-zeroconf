@@ -1136,6 +1136,11 @@ class DNSCache:
         try:
             list_ = self.cache[entry.key]
             list_.remove(entry)
+            # If we remove the last entry in the list
+            # we remove the key from the dict in order
+            # to avoid leaking memory
+            if not list_:
+                del self.cache[entry.key]
         except (KeyError, ValueError):
             pass
 
