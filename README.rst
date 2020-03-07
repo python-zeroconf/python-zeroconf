@@ -134,6 +134,19 @@ See examples directory for more.
 Changelog
 =========
 
+0.24.5
+------
+
+* Fixed issues with shared records being used where they shouldn't be (TXT, SRV, A records are
+  unique now), thanks to Matt Saxon
+* Stopped unnecessarily excluding host-only interfaces from InterfaceChoice.all as they don't
+  forbid multicast, thanks to Andreas Oberritter
+* Fixed repr() of IPv6 DNSAddress, thanks to Aldo Hoeben
+* Removed duplicate update messages sent to listeners, thanks to Matt Saxon
+* Added support for cooperating responders, thanks to Matt Saxon
+* Optimized handle_response cache check, thanks to J. Nick Koston
+* Fixed memory leak in DNSCache, thanks to J. Nick Koston
+
 0.24.4
 ------
 
