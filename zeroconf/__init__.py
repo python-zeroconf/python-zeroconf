@@ -1683,7 +1683,7 @@ class ServiceInfo(RecordUpdateListener):
         for s in strs:
             parts = s.split(b'=', 1)
             try:
-                key, value = parts  # type: Tuple[bytes, Union[bool, bytes]]
+                key, value = parts  # type: Tuple[bytes, Optional[bytes]]
             except ValueError:
                 # No equals sign at all
                 key = s
