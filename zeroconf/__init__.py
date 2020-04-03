@@ -1531,7 +1531,7 @@ class ServiceInfo(RecordUpdateListener):
         port: Optional[int] = None,
         weight: int = 0,
         priority: int = 0,
-        properties: Union[bytes, Dict[Union[bytes, str], Any]] = b'',
+        properties: Union[bytes, Dict] = b'',
         server: Optional[str] = None,
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
@@ -1638,7 +1638,7 @@ class ServiceInfo(RecordUpdateListener):
             for addr in result
         ]
 
-    def _set_properties(self, properties: Union[bytes, Dict[Union[bytes, str], Any]]) -> None:
+    def _set_properties(self, properties: Union[bytes, Dict]) -> None:
         """Sets properties and text of this info from a dictionary"""
         if isinstance(properties, dict):
             self._properties = properties
