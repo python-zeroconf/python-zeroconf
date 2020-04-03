@@ -1497,9 +1497,28 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
 
 class ServiceInfo(RecordUpdateListener):
-    text = b''
+    """Service information.
 
-    """Service information"""
+    Constructor parameters are as follows:
+
+    * type_: fully qualified service type name
+    * name: fully qualified service name
+    * address: IP address as unsigned short, network byte order (deprecated, use addresses)
+    * port: port that the service runs on
+    * weight: weight of the service
+    * priority: priority of the service
+    * properties: dictionary of properties (or a bytes object holding the contents of the `text` field).
+      converted to str and then encoded to bytes using UTF-8. Keys with `None` values are converted to
+      value-less attributes.
+    * server: fully qualified name for service host (defaults to name)
+    * host_ttl: ttl used for A/SRV records
+    * other_ttl: ttl used for PTR/TXT records
+    * addresses: List of IP addresses as unsigned short (IPv4) or unsigned 128 bit number (IPv6),
+      network byte order
+
+    """
+
+    text = b''
 
     # FIXME(dtantsur): black 19.3b0 produces code that is not valid syntax on
     # Python 3.5: https://github.com/python/black/issues/759
@@ -1519,23 +1538,6 @@ class ServiceInfo(RecordUpdateListener):
         *,
         addresses: Optional[List[bytes]] = None
     ) -> None:
-        """Create a service description.
-
-        type_: fully qualified service type name
-        name: fully qualified service name
-        address: IP address as unsigned short, network byte order (deprecated, use addresses)
-        port: port that the service runs on
-        weight: weight of the service
-        priority: priority of the service
-        properties: dictionary of properties (or a string holding the
-                    bytes for the text field)
-        server: fully qualified name for service host (defaults to name)
-        host_ttl: ttl used for A/SRV records
-        other_ttl: ttl used for PTR/TXT records
-        addresses: List of IP addresses as unsigned short (IPv4) or unsigned
-                   128 bit number (IPv6), network byte order
-        """
-
         # Accept both none, or one, but not both.
         if address is not None and addresses is not None:
             raise TypeError("address and addresses cannot be provided together")
@@ -1610,6 +1612,13 @@ class ServiceInfo(RecordUpdateListener):
 
     @property
     def properties(self) -> Dict:
+        """If properties were set in the constructor this property returns the original dictionary
+        of type `Dict[Union[bytes, str], Any]`.
+
+        If properties are coming from the network, after decoding a TXT record, the keys are always
+        bytes and the values are either bytes, if there was a value, even empty, or `None`, if there
+        was none. No further decoding is attempted. The type returned is `Dict[bytes, Optional[bytes]]`.
+        """
         return self._properties
 
     def addresses_by_version(self, version: IPVersion) -> List[bytes]:
