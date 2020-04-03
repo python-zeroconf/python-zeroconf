@@ -902,10 +902,6 @@ class DNSOutgoing:
     def add_answer_at_time(self, record: Optional[DNSRecord], now: Union[float, int]) -> None:
         """Adds an answer if it does not expire by a certain time"""
         if record is not None:
-
-            if self.is_type_unique(record.type):
-                assert record.unique
-
             if now == 0 or not record.is_expired(now):
                 self.answers.append((record, now))
 
@@ -949,9 +945,6 @@ class DNSOutgoing:
            o  All address records (type "A" and "AAAA") named in the SRV rdata.
 
         """
-        if self.is_type_unique(record.type):
-            assert record.unique
-
         self.additionals.append(record)
 
     def pack(self, format_: Union[bytes, str], value: Any) -> None:
