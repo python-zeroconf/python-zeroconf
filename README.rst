@@ -134,6 +134,18 @@ See examples directory for more.
 Changelog
 =========
 
+0.25.0
+------
+
+* Reverted uniqueness assertions when browsing, they caused a regression
+
+Backwards incompatible:
+
+* Rationalized handling of TXT records. Non-bytes values are converted to str and encoded to bytes
+  using UTF-8 now, None values mean value-less attributes. When receiving TXT records no decoding
+  is performed now, keys are always bytes and values are either bytes or None in value-less
+  attributes.
+
 0.24.5
 ------
 
