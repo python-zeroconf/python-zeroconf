@@ -197,7 +197,9 @@ class ServiceStateChange(enum.Enum):
     Added = 1
     Removed = 2
     Updated = 3
-
+    TextUpdated = 4
+    ServiceUpdated = 5
+    AddressUpdated = 6
 
 @enum.unique
 class IPVersion(enum.Enum):
@@ -1383,7 +1385,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.services = {}  # type: Dict[str, DNSRecord]
         self.next_time = current_time_millis()
         self.delay = delay
-        self._handlers_to_call = []  # type: List[Callable[[Zeroconf], None]]
+        self._handlers_to_call = []  # type: List[str, ServiceStateChange]
 
         self._service_state_changed = Signal()
 
@@ -1428,14 +1430,48 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     def update_record(self, zc: 'Zeroconf', now: float, record: DNSRecord) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
-        Updates information required by browser in the Zeroconf cache."""
+        Updates information required by browser in the Zeroconf cache.
+
+        Ensures that there is are no unecessary duplicates in the list
+
+        """
 
         def enqueue_callback(state_change: ServiceStateChange, name: str) -> None:
-            self._handlers_to_call.append(
-                lambda zeroconf: self._service_state_changed.fire(
-                    zeroconf=zeroconf, service_type=self.type, name=name, state_change=state_change
-                )
-            )
+
+            if state_change == ServiceStateChange.Updated:
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Removed]) == 1:
+                    return
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                    return
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
+                    return
+
+            elif state_change == ServiceStateChange.Added:
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Removed]) == 1:
+                    self._handlers_to_call.remove([name, ServiceStateChange.Removed])
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
+                    self._handlers_to_call.remove([name, ServiceStateChange.Updated])
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                    return
+
+            elif state_change == ServiceStateChange.Removed:
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                    self._handlers_to_call.remove([name, ServiceStateChange.Added])
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
+                    self._handlers_to_call.remove([name, ServiceStateChange.Updated])
+
+                if self._handlers_to_call.count([name, ServiceStateChange.Removed]) == 1:
+                    return
+
+            self._handlers_to_call.append([name, state_change])
 
         if record.type == _TYPE_PTR and record.name == self.type:
             assert isinstance(record, DNSPointer)
@@ -1459,8 +1495,19 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if expires < self.next_time:
                 self.next_time = expires
 
-        elif record.type == _TYPE_TXT and record.name.endswith(self.type):
-            assert isinstance(record, DNSText)
+        elif record.type == _TYPE_A or record.type == _TYPE_AAAA:
+            assert isinstance(record, DNSAddress)
+
+            # Iterate through the DNSCache and callback any services that use this address
+            for service in zc.cache.entries():
+                if isinstance(service, DNSService):
+                    if service.name.endswith(self.type):
+                        if service.server == record.name:
+                            expired = record.is_expired(now)
+                            if not expired:
+                                enqueue_callback(ServiceStateChange.Updated, service.name)
+
+        elif record.name.endswith(self.type):
             expired = record.is_expired(now)
             if not expired:
                 enqueue_callback(ServiceStateChange.Updated, record.name)
@@ -1493,7 +1540,9 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 handler = self._handlers_to_call.pop(0)
-                handler(self.zc)
+                self._service_state_changed.fire(
+                    zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
+                )
 
 
 class ServiceInfo(RecordUpdateListener):
