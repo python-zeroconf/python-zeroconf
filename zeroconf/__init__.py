@@ -35,6 +35,7 @@ import sys
 import threading
 import time
 import warnings
+from collections import OrderedDict
 from typing import Dict, List, Optional, Sequence, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
@@ -1121,8 +1122,9 @@ class DNSCache:
 
     def add(self, entry: DNSRecord) -> None:
         """Adds an entry"""
-        # Insert first in list so get returns newest entry
-        self.cache.setdefault(entry.key, []).insert(0, entry)
+        # Insert last in list, get will return newest entry
+        # iteration will result in last update winning
+        self.cache.setdefault(entry.key, []).append(entry)
 
     def remove(self, entry: DNSRecord) -> None:
         """Removes an entry"""
@@ -1142,7 +1144,7 @@ class DNSCache:
         matching entry."""
         try:
             list_ = self.cache[entry.key]
-            for cached_entry in list_:
+            for cached_entry in reversed(list_):
                 if entry.__eq__(cached_entry):
                     return cached_entry
             return None
@@ -1164,7 +1166,7 @@ class DNSCache:
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
-        for record in self.entries_with_name(name):
+        for record in reversed(self.entries_with_name(name)):
             if (
                 record.type == _TYPE_PTR
                 and not record.is_expired(now)
@@ -1400,7 +1402,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.services = {}  # type: Dict[str, DNSRecord]
         self.next_time = current_time_millis()
         self.delay = delay
-        self._handlers_to_call = []  # type: List[Callable[[Zeroconf], None]]
+        self._handlers_to_call = OrderedDict()  # type: OrderedDict[str, ServiceStateChange]
 
         self._service_state_changed = Signal()
 
@@ -1445,14 +1447,30 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     def update_record(self, zc: 'Zeroconf', now: float, record: DNSRecord) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
-        Updates information required by browser in the Zeroconf cache."""
+        Updates information required by browser in the Zeroconf cache.
+
+        Ensures that there is are no unecessary duplicates in the list
+
+        """
 
         def enqueue_callback(state_change: ServiceStateChange, name: str) -> None:
-            self._handlers_to_call.append(
-                lambda zeroconf: self._service_state_changed.fire(
-                    zeroconf=zeroconf, service_type=self.type, name=name, state_change=state_change
+
+            # Code to ensure we only do a single update message
+            # Precedence is; Added, Remove, Update
+
+            if (
+                state_change is ServiceStateChange.Added
+                or (
+                    state_change is ServiceStateChange.Removed
+                    and (
+                        self._handlers_to_call.get(name) is ServiceStateChange.Updated
+                        or self._handlers_to_call.get(name) is ServiceStateChange.Added
+                        or self._handlers_to_call.get(name) is None
+                    )
                 )
-            )
+                or (state_change is ServiceStateChange.Updated and name not in self._handlers_to_call)
+            ):
+                self._handlers_to_call[name] = state_change
 
         if record.type == _TYPE_PTR and record.name == self.type:
             assert isinstance(record, DNSPointer)
@@ -1476,8 +1494,20 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if expires < self.next_time:
                 self.next_time = expires
 
-        elif record.type == _TYPE_TXT and record.name.endswith(self.type):
-            assert isinstance(record, DNSText)
+        elif record.type == _TYPE_A or record.type == _TYPE_AAAA:
+            assert isinstance(record, DNSAddress)
+
+            # Iterate through the DNSCache and callback any services that use this address
+            for service in zc.cache.entries():
+                if (
+                    isinstance(service, DNSService)
+                    and service.name.endswith(self.type)
+                    and service.server == record.name
+                    and not record.is_expired(now)
+                ):
+                    enqueue_callback(ServiceStateChange.Updated, service.name)
+
+        elif record.name.endswith(self.type):
             expired = record.is_expired(now)
             if not expired:
                 enqueue_callback(ServiceStateChange.Updated, record.name)
@@ -1509,8 +1539,11 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 self.delay = min(_BROWSER_BACKOFF_LIMIT * 1000, self.delay * 2)
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
-                handler = self._handlers_to_call.pop(0)
-                handler(self.zc)
+                with self.zc._handlers_lock:
+                    handler = self._handlers_to_call.popitem(False)
+                    self._service_state_changed.fire(
+                        zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
+                    )
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -2173,6 +2206,8 @@ class Zeroconf(QuietLogger):
 
         self.debug = None  # type: Optional[DNSOutgoing]
 
+        self._handlers_lock = threading.Lock()  # ensure we process a full message in one go
+
     @property
     def done(self) -> bool:
         return self._GLOBAL_DONE
@@ -2449,42 +2484,45 @@ class Zeroconf(QuietLogger):
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
-        now = current_time_millis()
-        for record in msg.answers:
 
-            updated = True
+        with self._handlers_lock:
 
-            if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                # Since the cache format is keyed on the lower case record name
-                # we can avoid iterating everything in the cache and
-                # only look though entries for the specific name.
-                # entries_with_name will take care of converting to lowercase
-                #
-                # We make a copy of the list that entries_with_name returns
-                # since we cannot iterate over something we might remove
-                for entry in self.cache.entries_with_name(record.name).copy():
+            now = current_time_millis()
+            for record in msg.answers:
 
-                    if entry == record:
-                        updated = False
+                updated = True
 
-                    # Check the time first because it is far cheaper
-                    # than the __eq__
-                    if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
-                        self.cache.remove(entry)
+                if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
+                    # Since the cache format is keyed on the lower case record name
+                    # we can avoid iterating everything in the cache and
+                    # only look though entries for the specific name.
+                    # entries_with_name will take care of converting to lowercase
+                    #
+                    # We make a copy of the list that entries_with_name returns
+                    # since we cannot iterate over something we might remove
+                    for entry in self.cache.entries_with_name(record.name).copy():
 
-            expired = record.is_expired(now)
-            maybe_entry = self.cache.get(record)
-            if not expired:
-                if maybe_entry is not None:
-                    maybe_entry.reset_ttl(record)
+                        if entry == record:
+                            updated = False
+
+                        # Check the time first because it is far cheaper
+                        # than the __eq__
+                        if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
+                            self.cache.remove(entry)
+
+                expired = record.is_expired(now)
+                maybe_entry = self.cache.get(record)
+                if not expired:
+                    if maybe_entry is not None:
+                        maybe_entry.reset_ttl(record)
+                    else:
+                        self.cache.add(record)
+                    if updated:
+                        self.update_record(now, record)
                 else:
-                    self.cache.add(record)
-                if updated:
-                    self.update_record(now, record)
-            else:
-                if maybe_entry is not None:
-                    self.update_record(now, record)
-                    self.cache.remove(maybe_entry)
+                    if maybe_entry is not None:
+                        self.update_record(now, record)
+                        self.cache.remove(maybe_entry)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if

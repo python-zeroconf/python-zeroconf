@@ -292,7 +292,7 @@ class PacketForm(unittest.TestCase):
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
-        for i in range(10):
+        for i in range(10):  # pylint: disable=unused-variable
             generated.add_question(question)
         bytes = generated.packet()
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
@@ -756,7 +756,7 @@ class TestRegistrar(unittest.TestCase):
             """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
 
-            for answer, time_ in out.answers:
+            for answer, time_ in out.answers:  # pylint: disable=unused-variable
                 nbr_answers += 1
                 assert answer.ttl == get_ttl(answer.type)
             for answer in out.additionals:
@@ -1053,12 +1053,12 @@ class TestServiceBrowser(unittest.TestCase):
 
         service_name = 'name._type._tcp.local.'
         service_type = '_type._tcp.local.'
-        service_server = 'ash-2.local.'
-        service_text = b'path=/~paulsm/'
+        service_server = 'ash-1.local.'
+        service_text = b'path=/~matt1/'
         service_address = '10.0.1.2'
 
-        service_added = False
-        service_removed = False
+        service_added_count = 0
+        service_removed_count = 0
         service_updated_count = 0
         service_add_event = Event()
         service_removed_event = Event()
@@ -1066,49 +1066,44 @@ class TestServiceBrowser(unittest.TestCase):
 
         class MyServiceListener(r.ServiceListener):
             def add_service(self, zc, type_, name) -> None:
-                nonlocal service_added
-                service_added = True
+                nonlocal service_added_count
+                service_added_count += 1
                 service_add_event.set()
 
             def remove_service(self, zc, type_, name) -> None:
-                nonlocal service_added, service_removed
-                service_added = False
-                service_removed = True
+                nonlocal service_removed_count
+                service_removed_count += 1
                 service_removed_event.set()
 
             def update_service(self, zc, type_, name) -> None:
                 nonlocal service_updated_count
                 service_updated_count += 1
-
                 service_info = zc.get_service_info(type_, name)
+                assert service_info.addresses[0] == socket.inet_aton(service_address)
                 assert service_info.text == service_text
+                assert service_info.server == service_server
                 service_updated_event.set()
 
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
-            ttl = 120
-            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
 
-            if service_state_change == r.ServiceStateChange.Updated:
-                generated.add_answer_at_time(
-                    r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
-                )
-                return r.DNSIncoming(generated.packet())
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
 
             if service_state_change == r.ServiceStateChange.Removed:
                 ttl = 0
+            else:
+                ttl = 120
 
             generated.add_answer_at_time(
-                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
+                r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
             )
+
             generated.add_answer_at_time(
                 r.DNSService(
                     service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
                 ),
                 0,
             )
-            generated.add_answer_at_time(
-                r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
-            )
+
             generated.add_answer_at_time(
                 r.DNSAddress(
                     service_server,
@@ -1120,36 +1115,69 @@ class TestServiceBrowser(unittest.TestCase):
                 0,
             )
 
+            generated.add_answer_at_time(
+                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
+            )
+
             return r.DNSIncoming(generated.packet())
 
         zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
         service_browser = r.ServiceBrowser(zeroconf, service_type, listener=MyServiceListener())
 
         try:
+            wait_time = 3
+
             # service added
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
-            service_add_event.wait(1)
-            service_updated_event.wait(1)
-            assert service_added is True
-            assert service_updated_count == 1
-            assert service_removed is False
+            service_add_event.wait(wait_time)
+            assert service_added_count == 1
+            assert service_updated_count == 0
+            assert service_removed_count == 0
 
-            # service updated. currently only text record can be updated
+            # service SRV updated
             service_updated_event.clear()
-            service_text = b'path=/~humingchun/'
+            service_server = 'ash-2.local.'
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
+            assert service_added_count == 1
+            assert service_updated_count == 1
+            assert service_removed_count == 0
+
+            # service TXT updated
+            service_updated_event.clear()
+            service_text = b'path=/~matt2/'
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
-            service_updated_event.wait(1)
-            assert service_added is True
+            service_updated_event.wait(wait_time)
+            assert service_added_count == 1
             assert service_updated_count == 2
-            assert service_removed is False
+            assert service_removed_count == 0
+
+            # service A updated
+            service_updated_event.clear()
+            service_address = '10.0.1.3'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
+            assert service_added_count == 1
+            assert service_updated_count == 3
+            assert service_removed_count == 0
+
+            # service all updated
+            service_updated_event.clear()
+            service_server = 'ash-3.local.'
+            service_text = b'path=/~matt3/'
+            service_address = '10.0.1.3'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
+            assert service_added_count == 1
+            assert service_updated_count == 4
+            assert service_removed_count == 0
 
             # service removed
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
-            service_removed_event.wait(1)
-            assert service_added is False
-            assert service_updated_count == 2
-            assert service_removed is True
+            service_removed_event.wait(wait_time)
+            assert service_added_count == 1
+            assert service_updated_count == 4
+            assert service_removed_count == 1
 
         finally:
             service_browser.cancel()
