@@ -1054,8 +1054,8 @@ class TestServiceBrowser(unittest.TestCase):
 
         service_name = 'name._type._tcp.local.'
         service_type = '_type._tcp.local.'
-        service_server = 'ash-2.local.'
-        service_text = b'path=/~paulsm/'
+        service_server = 'ash-1.local.'
+        service_text = b'path=/~matt1/'
         service_address = '10.0.1.2'
 
         service_added = False
@@ -1080,9 +1080,10 @@ class TestServiceBrowser(unittest.TestCase):
             def update_service(self, zc, type_, name) -> None:
                 nonlocal service_updated_count
                 service_updated_count += 1
-
                 service_info = zc.get_service_info(type_, name)
+                assert service_info.address == socket.inet_aton(service_address)
                 assert service_info.text == service_text
+                assert service_info.server == service_server
                 service_updated_event.set()
 
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
@@ -1118,6 +1119,7 @@ class TestServiceBrowser(unittest.TestCase):
                 )
 
             if service_state_change == r.ServiceStateChange.AddressUpdated or \
+                    service_state_change == r.ServiceStateChange.ServiceUpdated or \
                     service_state_change == r.ServiceStateChange.Updated or \
                     service_state_change == r.ServiceStateChange.Removed or \
                     service_state_change == r.ServiceStateChange.Added:
@@ -1147,24 +1149,24 @@ class TestServiceBrowser(unittest.TestCase):
             # service added
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
             service_add_event.wait(1)
-            service_updated_event.wait(1)
             assert service_added is True
             assert service_updated_count == 0
             assert service_removed is False
 
-            # service all updated
+            # service SRV updated
             service_updated_count = 0
             service_updated_event.clear()
-            service_text = b'path=/~humingchun/'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_server = 'ash-2.local.'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.ServiceUpdated))
             service_updated_event.wait(1)
             assert service_added is True
             assert service_updated_count == 1
             assert service_removed is False
 
             # service TXT updated
+            service_updated_count = 0
             service_updated_event.clear()
-            service_text = b'path=/~humingchun/'
+            service_text = b'path=/~matt2/'
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.TextUpdated))
             service_updated_event.wait(1)
             assert service_added is True
@@ -1174,18 +1176,20 @@ class TestServiceBrowser(unittest.TestCase):
             # service A updated
             service_updated_count = 0
             service_updated_event.clear()
-            service_text = b'path=/~humingchun/'
+            service_address = '10.0.1.3'
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.AddressUpdated))
             service_updated_event.wait(1)
             assert service_added is True
             assert service_updated_count == 1
             assert service_removed is False
 
-            # service SRV updated
+            # service all updated
             service_updated_count = 0
             service_updated_event.clear()
-            service_text = b'path=/~humingchun/'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.ServiceUpdated))
+            service_server = 'ash-3.local.'
+            service_text = b'path=/~matt3/'
+            service_address = '10.0.1.3'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(1)
             assert service_added is True
             assert service_updated_count == 1
@@ -1196,7 +1200,6 @@ class TestServiceBrowser(unittest.TestCase):
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
             service_removed_event.wait(1)
             assert service_added is False
-            print(service_updated_count)
             assert service_updated_count == 0
             assert service_removed is True
 

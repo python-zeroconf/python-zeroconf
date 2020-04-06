@@ -201,6 +201,7 @@ class ServiceStateChange(enum.Enum):
     ServiceUpdated = 5
     AddressUpdated = 6
 
+
 @enum.unique
 class IPVersion(enum.Enum):
     V4Only = 1
