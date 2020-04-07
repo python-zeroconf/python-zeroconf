@@ -1095,16 +1095,12 @@ class TestServiceBrowser(unittest.TestCase):
                 ttl = 120
 
             generated.add_answer_at_time(
-                r.DNSText(
-                    service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text
-                ),
-                0
+                r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
             )
 
             generated.add_answer_at_time(
                 r.DNSService(
-                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE,
-                    ttl, 0, 0, 80, service_server
+                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
                 ),
                 0,
             )
