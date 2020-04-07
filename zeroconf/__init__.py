@@ -197,9 +197,6 @@ class ServiceStateChange(enum.Enum):
     Added = 1
     Removed = 2
     Updated = 3
-    TextUpdated = 4
-    ServiceUpdated = 5
-    AddressUpdated = 6
 
 
 @enum.unique
@@ -1386,7 +1383,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.services = {}  # type: Dict[str, DNSRecord]
         self.next_time = current_time_millis()
         self.delay = delay
-        self._handlers_to_call = []  # type: List[str, ServiceStateChange]
+        self._handlers_to_call = []  # type: List[List[Any]]
 
         self._service_state_changed = Signal()
 
