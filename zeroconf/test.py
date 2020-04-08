@@ -1132,6 +1132,8 @@ class TestServiceBrowser(unittest.TestCase):
             # service added
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
             service_add_event.wait(wait_time)
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
+            service_add_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 0
             assert service_removed_count == 0
@@ -1141,6 +1143,8 @@ class TestServiceBrowser(unittest.TestCase):
             # service SRV updated
             service_updated_event.clear()
             service_server = 'ash-2.local.'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
@@ -1154,6 +1158,8 @@ class TestServiceBrowser(unittest.TestCase):
             service_text = b'path=/~matt2/'
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 2
             assert service_removed_count == 0
@@ -1163,6 +1169,8 @@ class TestServiceBrowser(unittest.TestCase):
             # service A updated
             service_updated_event.clear()
             service_address = '10.0.1.3'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
@@ -1178,6 +1186,8 @@ class TestServiceBrowser(unittest.TestCase):
             service_address = '10.0.1.3'
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 4
             assert service_removed_count == 0
@@ -1185,6 +1195,8 @@ class TestServiceBrowser(unittest.TestCase):
             time.sleep(wait_time_2)
 
             # service removed
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
+            service_removed_event.wait(wait_time)
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
             service_removed_event.wait(wait_time)
             assert service_added_count == 1
