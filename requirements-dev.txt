@@ -7,3 +7,4 @@ flake8-import-order
 ifaddr
 pep8-naming!=0.6.0
 pytest
+pytest-cov
