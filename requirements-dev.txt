@@ -5,5 +5,6 @@ coverage
 flake8>=3.6.0
 flake8-import-order
 ifaddr
-nose
 pep8-naming!=0.6.0
+pytest
+pytest-cov

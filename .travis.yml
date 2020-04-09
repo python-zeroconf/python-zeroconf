@@ -7,13 +7,13 @@ python:
     - "pypy3.5"
     - "pypy3"
 install:
-    - pip install -r requirements-dev.txt
+    - pip install --upgrade -r requirements-dev.txt
     # mypy can't be installed on pypy
     - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then pip install mypy ; fi
     - if [[ "${TRAVIS_PYTHON_VERSION}" != *"3.5"* && "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then
         pip install black ; fi
 script:
     # no IPv6 support in Travis :(
-    - make TEST_ARGS='-a "!IPv6"' ci
+    - SKIP_IPV6=1 make ci
 after_success:
     - coveralls
