@@ -39,10 +39,10 @@ mypy:
 	mypy examples/*.py zeroconf/*.py
 
 test:
-	PYTHONPATH=.:$(PYTHONPATH) pytest -v zeroconf/test.py
+	pytest -v zeroconf/test.py
 
 test_coverage:
-	PYTHONPATH=.:$(PYTHONPATH) pytest -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing zeroconf/test.py
+	pytest -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing zeroconf/test.py
 
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf
