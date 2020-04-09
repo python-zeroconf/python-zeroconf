@@ -14,6 +14,6 @@ install:
         pip install black ; fi
 script:
     # no IPv6 support in Travis :(
-    - make TEST_ARGS='-a "!IPv6"' ci
+    - SKIP_IPV6=1 make ci
 after_success:
     - coveralls
