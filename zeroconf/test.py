@@ -1015,7 +1015,9 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_true'] == b'1'
             assert info.properties[b'prop_false'] == b'0'
             assert info.addresses == addresses[:1]  # no V6 by default
-            assert info.addresses_by_version(r.IPVersion.All) == addresses
+            # This needs to be stored in a variable for pytest to show the contents in case of failure
+            all_addresses = info.addresses_by_version(r.IPVersion.All)
+            assert all_addresses == addresses
 
             info = zeroconf_browser.get_service_info(subtype, registration_name)
             assert info is not None
