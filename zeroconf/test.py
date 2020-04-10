@@ -1124,8 +1124,7 @@ class TestServiceBrowser(unittest.TestCase):
         service_browser = r.ServiceBrowser(zeroconf, service_type, listener=MyServiceListener())
 
         try:
-            wait_time = 1
-            wait_time_2 = 1
+            wait_time = 2
 
             # service added
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
@@ -1133,8 +1132,6 @@ class TestServiceBrowser(unittest.TestCase):
             assert service_added_count == 1
             assert service_updated_count == 0
             assert service_removed_count == 0
-
-            time.sleep(wait_time_2)
 
             # service SRV updated
             service_updated_event.clear()
@@ -1145,8 +1142,6 @@ class TestServiceBrowser(unittest.TestCase):
             assert service_updated_count == 1
             assert service_removed_count == 0
 
-            time.sleep(wait_time_2)
-
             # service TXT updated
             service_updated_event.clear()
             service_text = b'path=/~matt2/'
@@ -1156,8 +1151,6 @@ class TestServiceBrowser(unittest.TestCase):
             assert service_updated_count == 2
             assert service_removed_count == 0
 
-            time.sleep(wait_time_2)
-
             # service A updated
             service_updated_event.clear()
             service_address = '10.0.1.3'
@@ -1166,8 +1159,6 @@ class TestServiceBrowser(unittest.TestCase):
             assert service_added_count == 1
             assert service_updated_count == 3
             assert service_removed_count == 0
-
-            time.sleep(wait_time_2)
 
             # service all updated
             service_updated_event.clear()
@@ -1179,8 +1170,6 @@ class TestServiceBrowser(unittest.TestCase):
             assert service_added_count == 1
             assert service_updated_count == 4
             assert service_removed_count == 0
-
-            time.sleep(wait_time_2)
 
             # service removed
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))

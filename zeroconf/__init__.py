@@ -1442,6 +1442,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                     return
 
                 if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                    warnings.warn("not adding update as adding", DeprecationWarning)
                     return
 
                 if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
@@ -1453,6 +1454,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                     self._handlers_to_call.remove([name, ServiceStateChange.Removed])
 
                 if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
+                    warnings.warn("removing update as adding", DeprecationWarning)
                     self._handlers_to_call.remove([name, ServiceStateChange.Updated])
 
                 if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
