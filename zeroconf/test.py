@@ -863,6 +863,7 @@ class ServiceTypesQuery(unittest.TestCase):
             zeroconf_registrar.close()
 
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_v6_records(self):
 
         type_ = "_test-srvc-type._tcp.local."
@@ -987,7 +988,7 @@ class ListenerTest(unittest.TestCase):
         desc = {'path': '/~paulsm/'}  # type: Dict
         desc.update(properties)
         addresses = [socket.inet_aton("10.0.1.2")]
-        if socket.has_ipv6:
+        if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
             addresses.append(socket.inet_pton(socket.AF_INET6, "2001:db8::1"))
         info_service = ServiceInfo(
             subtype, registration_name, port=80, properties=desc, server="ash-2.local.", addresses=addresses
@@ -1357,7 +1358,7 @@ def test_multiple_addresses():
 
     assert info.addresses == [address, address]
 
-    if socket.has_ipv6:
+    if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
         info = ServiceInfo(type_, registration_name, [address, address_v6], 80, 0, 0, desc, "ash-2.local.")
