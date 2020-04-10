@@ -1537,10 +1537,11 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 self.delay = min(_BROWSER_BACKOFF_LIMIT * 1000, self.delay * 2)
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
-                handler = self._handlers_to_call.pop(0)
-                self._service_state_changed.fire(
-                    zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
-                )
+                with self.zc._handlers_lock:
+                    handler = self._handlers_to_call.pop(0)
+                    self._service_state_changed.fire(
+                        zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
+                    )
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -2203,6 +2204,8 @@ class Zeroconf(QuietLogger):
 
         self.debug = None  # type: Optional[DNSOutgoing]
 
+        self._handlers_lock = threading.Lock()
+
     @property
     def done(self) -> bool:
         return self._GLOBAL_DONE
@@ -2479,42 +2482,45 @@ class Zeroconf(QuietLogger):
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
-        now = current_time_millis()
-        for record in msg.answers:
 
-            updated = True
+        with self._handlers_lock:
 
-            if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                # Since the cache format is keyed on the lower case record name
-                # we can avoid iterating everything in the cache and
-                # only look though entries for the specific name.
-                # entries_with_name will take care of converting to lowercase
-                #
-                # We make a copy of the list that entries_with_name returns
-                # since we cannot iterate over something we might remove
-                for entry in self.cache.entries_with_name(record.name).copy():
+            now = current_time_millis()
+            for record in msg.answers:
 
-                    if entry == record:
-                        updated = False
+                updated = True
 
-                    # Check the time first because it is far cheaper
-                    # than the __eq__
-                    if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
-                        self.cache.remove(entry)
+                if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
+                    # Since the cache format is keyed on the lower case record name
+                    # we can avoid iterating everything in the cache and
+                    # only look though entries for the specific name.
+                    # entries_with_name will take care of converting to lowercase
+                    #
+                    # We make a copy of the list that entries_with_name returns
+                    # since we cannot iterate over something we might remove
+                    for entry in self.cache.entries_with_name(record.name).copy():
 
-            expired = record.is_expired(now)
-            maybe_entry = self.cache.get(record)
-            if not expired:
-                if maybe_entry is not None:
-                    maybe_entry.reset_ttl(record)
+                        if entry == record:
+                            updated = False
+
+                        # Check the time first because it is far cheaper
+                        # than the __eq__
+                        if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
+                            self.cache.remove(entry)
+
+                expired = record.is_expired(now)
+                maybe_entry = self.cache.get(record)
+                if not expired:
+                    if maybe_entry is not None:
+                        maybe_entry.reset_ttl(record)
+                    else:
+                        self.cache.add(record)
+                    if updated:
+                        self.update_record(now, record)
                 else:
-                    self.cache.add(record)
-                if updated:
-                    self.update_record(now, record)
-            else:
-                if maybe_entry is not None:
-                    self.update_record(now, record)
-                    self.cache.remove(maybe_entry)
+                    if maybe_entry is not None:
+                        self.update_record(now, record)
+                        self.cache.remove(maybe_entry)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if

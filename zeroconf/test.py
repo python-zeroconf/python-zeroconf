@@ -1125,7 +1125,7 @@ class TestServiceBrowser(unittest.TestCase):
         service_browser = r.ServiceBrowser(zeroconf, service_type, listener=MyServiceListener())
 
         try:
-            wait_time = 2
+            wait_time = 3
 
             # service added
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
