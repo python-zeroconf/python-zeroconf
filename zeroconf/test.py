@@ -6,6 +6,7 @@
 
 import copy
 import logging
+import os
 import socket
 import struct
 import time
@@ -13,8 +14,6 @@ import unittest
 from threading import Event
 from typing import Dict, Optional  # noqa # used in type hints
 from typing import cast
-
-from nose.plugins.attrib import attr
 
 import zeroconf as r
 from zeroconf import (
@@ -169,17 +168,17 @@ class PacketGeneration(unittest.TestCase):
             0,
         )
         parsed = r.DNSIncoming(generated.packet())
-        self.assertEqual(len(generated.answers), 1)
-        self.assertEqual(len(generated.answers), len(parsed.answers))
+        assert len(generated.answers) == 1
+        assert len(generated.answers) == len(parsed.answers)
 
     def test_match_question(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
         generated.add_question(question)
         parsed = r.DNSIncoming(generated.packet())
-        self.assertEqual(len(generated.questions), 1)
-        self.assertEqual(len(generated.questions), len(parsed.questions))
-        self.assertEqual(question, parsed.questions[0])
+        assert len(generated.questions) == 1
+        assert len(generated.questions) == len(parsed.questions)
+        assert question == parsed.questions[0]
 
     def test_suppress_answer(self):
         query_generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
@@ -253,8 +252,8 @@ class PacketGeneration(unittest.TestCase):
         generated.add_additional_answer(DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'os'))
         parsed = r.DNSIncoming(generated.packet())
         answer = cast(r.DNSHinfo, parsed.answers[0])
-        self.assertEqual(answer.cpu, u'cpu')
-        self.assertEqual(answer.os, u'os')
+        assert answer.cpu == u'cpu'
+        assert answer.os == u'os'
 
         generated = r.DNSOutgoing(0)
         generated.add_additional_answer(DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
@@ -267,28 +266,28 @@ class PacketForm(unittest.TestCase):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
         id = bytes[0] << 8 | bytes[1]
-        self.assertEqual(id, 0)
+        assert id == 0
 
     def test_query_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
         bytes = generated.packet()
         flags = bytes[2] << 8 | bytes[3]
-        self.assertEqual(flags, 0x0)
+        assert flags == 0x0
 
     def test_response_header_bits(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         flags = bytes[2] << 8 | bytes[3]
-        self.assertEqual(flags, 0x8000)
+        assert flags == 0x8000
 
     def test_numbers(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
-        self.assertEqual(num_questions, 0)
-        self.assertEqual(num_answers, 0)
-        self.assertEqual(num_authorities, 0)
-        self.assertEqual(num_additionals, 0)
+        assert num_questions == 0
+        assert num_answers == 0
+        assert num_authorities == 0
+        assert num_additionals == 0
 
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
@@ -297,10 +296,10 @@ class PacketForm(unittest.TestCase):
             generated.add_question(question)
         bytes = generated.packet()
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
-        self.assertEqual(num_questions, 10)
-        self.assertEqual(num_answers, 0)
-        self.assertEqual(num_authorities, 0)
-        self.assertEqual(num_additionals, 0)
+        assert num_questions == 10
+        assert num_answers == 0
+        assert num_authorities == 0
+        assert num_additionals == 0
 
 
 class Names(unittest.TestCase):
@@ -502,7 +501,7 @@ class Framework(unittest.TestCase):
         rv.close()
 
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
-    @attr('IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v4_v6(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
         rv.close()
@@ -510,7 +509,7 @@ class Framework(unittest.TestCase):
         rv.close()
 
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
-    @attr('IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v6_only(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
         rv.close()
@@ -826,7 +825,7 @@ class TestDNSCache(unittest.TestCase):
         cache.add(record2)
         entry = r.DNSEntry('a', r._TYPE_SOA, r._CLASS_IN)
         cached_record = cache.get(entry)
-        self.assertEqual(cached_record, record2)
+        assert cached_record == record2
 
     def test_cache_empty_does_not_leak_memory_by_leaving_empty_list(self):
         record1 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
@@ -888,7 +887,7 @@ class ServiceTypesQuery(unittest.TestCase):
             zeroconf_registrar.close()
 
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
-    @attr('IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_ipv6(self):
 
         type_ = "_test-srvc-type._tcp.local."
@@ -904,9 +903,9 @@ class ServiceTypesQuery(unittest.TestCase):
 
         try:
             service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=0.5)
-            assert type_ in service_types, service_types
+            assert type_ in service_types
             service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
-            assert type_ in service_types, service_types
+            assert type_ in service_types
 
         finally:
             zeroconf_registrar.close()
@@ -1016,8 +1015,7 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_true'] == b'1'
             assert info.properties[b'prop_false'] == b'0'
             assert info.addresses == addresses[:1]  # no V6 by default
-            all_addresses = info.addresses_by_version(r.IPVersion.All)
-            assert all_addresses == addresses, all_addresses
+            assert info.addresses_by_version(r.IPVersion.All) == addresses
 
             info = zeroconf_browser.get_service_info(subtype, registration_name)
             assert info is not None
