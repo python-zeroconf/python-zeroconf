@@ -1445,6 +1445,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                         return
 
                     if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                        warnings.warn("not adding update as adding", DeprecationWarning)
                         return
 
                     if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
@@ -1456,6 +1457,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                         self._handlers_to_call.remove([name, ServiceStateChange.Removed])
 
                     if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
+                        warnings.warn("removing update as adding", DeprecationWarning)
                         self._handlers_to_call.remove([name, ServiceStateChange.Updated])
 
                     if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
@@ -1522,7 +1524,6 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
 
         while True:
-
             now = current_time_millis()
             if len(self._handlers_to_call) == 0 and self.next_time > now:
                 self.zc.wait(self.next_time - now)
@@ -1540,12 +1541,12 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 self.next_time = now + self.delay
                 self.delay = min(_BROWSER_BACKOFF_LIMIT * 1000, self.delay * 2)
 
-            with self._handler_lock:
-                if len(self._handlers_to_call) > 0 and not self.zc.done:
+            if len(self._handlers_to_call) > 0 and not self.zc.done:
+                with self._handler_lock:
                     handler = self._handlers_to_call.pop(0)
-                    self._service_state_changed.fire(
-                        zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
-                    )
+                self._service_state_changed.fire(
+                    zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
+                )
 
 
 class ServiceInfo(RecordUpdateListener):
