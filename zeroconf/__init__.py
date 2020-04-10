@@ -1436,6 +1436,9 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
         def enqueue_callback(state_change: ServiceStateChange, name: str) -> None:
 
+            # Code to ensure we only do a single update message
+            # Preceence is; Add, Remove, Update
+
             if state_change == ServiceStateChange.Updated:
 
                 if self._handlers_to_call.count([name, ServiceStateChange.Removed]) == 1:
@@ -1461,7 +1464,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             elif state_change == ServiceStateChange.Removed:
 
                 if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
-                    self._handlers_to_call.remove([name, ServiceStateChange.Added])
+                    return
 
                 if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
                     self._handlers_to_call.remove([name, ServiceStateChange.Updated])
@@ -2204,7 +2207,7 @@ class Zeroconf(QuietLogger):
 
         self.debug = None  # type: Optional[DNSOutgoing]
 
-        self._handlers_lock = threading.Lock()
+        self._handlers_lock = threading.Lock()  # ensure we process a full message in one go
 
     @property
     def done(self) -> bool:
