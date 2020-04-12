@@ -1926,7 +1926,7 @@ def ip_to_index(adapters: List[Any], ip: str) -> int:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return socket.if_nametoindex(adapter.name)
+                return socket.if_nametoindex(adapter.name) # pylint: disable=no-member
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
@@ -2684,7 +2684,7 @@ class Zeroconf(QuietLogger):
             except Exception as exc:  # TODO stop catching all Exceptions
                 if (
                     isinstance(exc, OSError)
-                    and exc.errno == errno.ENETUNREACH
+                    and exc.errno == errno.ENETUNREACH # pylint: disable=no-member
                     and s.family == socket.AF_INET6
                 ):
                     # with IPv6 we don't have a reliable way to determine if an interface actually has IPv6
