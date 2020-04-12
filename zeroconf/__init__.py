@@ -1164,7 +1164,7 @@ class DNSCache:
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
-        for record in self.entries_with_name(name):
+        for record in reversed(self.entries_with_name(name)):
             if (
                 record.type == _TYPE_PTR
                 and not record.is_expired(now)
