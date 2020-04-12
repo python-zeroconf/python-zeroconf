@@ -1216,7 +1216,7 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
-                    rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
+                    rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)  # pylint: disable=unused-variable # noqa: E501
                     if not self.zc.done:
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
