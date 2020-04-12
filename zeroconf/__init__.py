@@ -737,7 +737,7 @@ class DNSIncoming(QuietLogger):
 
     def read_questions(self) -> None:
         """Reads questions section of packet"""
-        for i in range(self.num_questions):
+        for i in range(self.num_questions):  # pylint: disable=unused-variable
             name = self.read_name()
             type_, class_ = self.unpack(b'!HH')
 
@@ -768,7 +768,7 @@ class DNSIncoming(QuietLogger):
         """Reads the answers, authorities and additionals section of the
         packet"""
         n = self.num_answers + self.num_authorities + self.num_additionals
-        for i in range(n):
+        for i in range(n): # pylint: disable=unused-variable
             domain = self.read_name()
             type_, class_, ttl, length = self.unpack(b'!HHiH')
 
@@ -1216,7 +1216,7 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
-                    rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
+                    rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout) # pylint: disable=unused-variable
                     if not self.zc.done:
                         for socket_ in rr:
                             reader = self.readers.get(socket_)
