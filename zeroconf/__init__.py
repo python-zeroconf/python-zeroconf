@@ -1203,8 +1203,10 @@ class Engine(threading.Thread):
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
         self.condition = threading.Condition()
+        # The pipe will be used for fast notify the thread, but can't select() a pipe in windows
         if os.name == 'posix':
             self.pipe = os.pipe()
+            os.set_blocking(self.pipe[0], False)
         self.start()
 
     def run(self) -> None:
@@ -1227,6 +1229,13 @@ class Engine(threading.Thread):
                             if reader:
                                 reader.handle_read(socket_)
 
+                        # Try clearing the pipe's buffer
+                        if os.name == 'posix':
+                            os.read(self.pipe[0], 1)
+
+                except (BlockingIOError):
+                    # No data in the pipe's buffer
+                    pass
                 except (select.error, socket.error) as e:
                     # If the socket was closed by another thread, during
                     # shutdown, ignore it and exit
