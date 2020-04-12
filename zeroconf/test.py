@@ -1077,7 +1077,6 @@ class TestServiceBrowser(unittest.TestCase):
 
             def update_service(self, zc, type_, name) -> None:
                 nonlocal service_updated_count
-                time.sleep(1.1)  # wait for expiry of old records before reading
                 service_updated_count += 1
                 service_info = zc.get_service_info(type_, name)
                 assert service_info.addresses[0] == socket.inet_aton(service_address)

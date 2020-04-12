@@ -1122,7 +1122,7 @@ class DNSCache:
     def add(self, entry: DNSRecord) -> None:
         """Adds an entry"""
         # Insert first in list so get returns newest entry
-        self.cache.setdefault(entry.key, []).insert(0, entry)
+        self.cache.setdefault(entry.key, []).append(entry)
 
     def remove(self, entry: DNSRecord) -> None:
         """Removes an entry"""
@@ -1142,7 +1142,7 @@ class DNSCache:
         matching entry."""
         try:
             list_ = self.cache[entry.key]
-            for cached_entry in list_:
+            for cached_entry in reversed(list_):
                 if entry.__eq__(cached_entry):
                     return cached_entry
             return None
