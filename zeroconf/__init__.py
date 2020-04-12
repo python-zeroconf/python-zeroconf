@@ -1232,8 +1232,8 @@ class Engine(threading.Thread):
                             # Clear the pipe's buffer
                             try:
                                 os.read(self.pipe[0], 1)
-                            except Exception:
-                                self.log_exception_warning()
+                            except os.error:
+                                pass
 
                 except (select.error, socket.error) as e:
                     # If the socket was closed by another thread, during
