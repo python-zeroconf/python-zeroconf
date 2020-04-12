@@ -1212,7 +1212,7 @@ class Engine(threading.Thread):
     def run(self) -> None:
         while not self.zc.done:
             with self.condition:
-                rs = self.readers.keys()
+                rs = list(self.readers.keys())  # type: List[Union[socket.socket, int]]
                 if len(rs) == 0:
                     # No sockets to manage, but we wait for the timeout
                     # or addition of a socket
@@ -1221,7 +1221,7 @@ class Engine(threading.Thread):
             if len(rs) != 0:
                 try:
                     if os.name == 'posix':
-                        rs = list(rs) + [self.pipe[0]]
+                        rs = rs + [self.pipe[0]]
                     rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
                     if not self.zc.done:
                         for socket_ in rr:
