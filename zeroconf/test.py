@@ -292,7 +292,7 @@ class PacketForm(unittest.TestCase):
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
-        for i in range(10): # pylint: disable=unused-variable
+        for i in range(10):  # pylint: disable=unused-variable
             generated.add_question(question)
         bytes = generated.packet()
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
@@ -756,7 +756,7 @@ class TestRegistrar(unittest.TestCase):
             """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
 
-            for answer, time in out.answers: # pylint: disable=unused-variable
+            for answer, time_ in out.answers:  # pylint: disable=unused-variable
                 nbr_answers += 1
                 assert answer.ttl == get_ttl(answer.type)
             for answer in out.additionals:
