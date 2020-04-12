@@ -1230,7 +1230,10 @@ class Engine(threading.Thread):
 
                         if os.name == 'posix' and self.pipe in rr:
                             # Clear the pipe's buffer
-                            os.read(self.pipe[0], 1)
+                            try:
+                                os.read(self.pipe[0], 1)
+                            except Exception:
+                                self.log_exception_warning()
 
                 except (select.error, socket.error) as e:
                     # If the socket was closed by another thread, during
