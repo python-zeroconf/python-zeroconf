@@ -756,7 +756,7 @@ class TestRegistrar(unittest.TestCase):
             """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
 
-            for answer in out.answers:
+            for answer, time in out.answers: # pylint: disable=unused-variable
                 nbr_answers += 1
                 assert answer.ttl == get_ttl(answer.type)
             for answer in out.additionals:
