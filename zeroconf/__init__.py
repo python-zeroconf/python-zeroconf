@@ -1203,6 +1203,8 @@ class Engine(threading.Thread):
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
         self.condition = threading.Condition()
+        if os.name == 'posix':
+            self.pipe = os.pipe()
         self.start()
 
     def run(self) -> None:
@@ -1216,6 +1218,8 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
+                    if os.name == 'posix':
+                        rs = list(rs) + [self.pipe[0]]
                     rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
                     if not self.zc.done:
                         for socket_ in rr:
@@ -1229,15 +1233,20 @@ class Engine(threading.Thread):
                     if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
                         raise
 
+    def _notify(self) -> None:
+        self.condition.notify()
+        if os.name == 'posix':
+            os.write(self.pipe[1], b'x')
+
     def add_reader(self, reader: 'Listener', socket_: socket.socket) -> None:
         with self.condition:
             self.readers[socket_] = reader
-            self.condition.notify()
+            self._notify()
 
     def del_reader(self, socket_: socket.socket) -> None:
         with self.condition:
             del self.readers[socket_]
-            self.condition.notify()
+            self._notify()
 
 
 class Listener(QuietLogger):
