@@ -1234,6 +1234,11 @@ class Engine(threading.Thread):
                     # shutdown, ignore it and exit
                     if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
                         raise
+        try:
+            self.socketpair[0].close()
+            self.socketpair[1].close()
+        except socket.error:
+            pass
 
     def _notify(self) -> None:
         self.condition.notify()
