@@ -1385,7 +1385,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.services = {}  # type: Dict[str, DNSRecord]
         self.next_time = current_time_millis()
         self.delay = delay
-        self._handlers_to_call = []  # type: List[List[Any]]
+        self._handlers_to_call = []  # type: List[Tuple[str,ServiceStateChange]]
 
         self._service_state_changed = Signal()
 
@@ -1443,38 +1443,38 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             if state_change == ServiceStateChange.Updated:
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Removed]) == 1:
+                if self._handlers_to_call.count((name, ServiceStateChange.Removed)) == 1:
                     return
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                if self._handlers_to_call.count((name, ServiceStateChange.Added)) == 1:
                     return
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
+                if self._handlers_to_call.count((name, ServiceStateChange.Updated)) == 1:
                     return
 
             elif state_change == ServiceStateChange.Added:
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Removed]) == 1:
-                    self._handlers_to_call.remove([name, ServiceStateChange.Removed])
+                if self._handlers_to_call.count((name, ServiceStateChange.Removed)) == 1:
+                    self._handlers_to_call.remove((name, ServiceStateChange.Removed))
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
-                    self._handlers_to_call.remove([name, ServiceStateChange.Updated])
+                if self._handlers_to_call.count((name, ServiceStateChange.Updated)) == 1:
+                    self._handlers_to_call.remove((name, ServiceStateChange.Updated))
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                if self._handlers_to_call.count((name, ServiceStateChange.Added)) == 1:
                     return
 
             elif state_change == ServiceStateChange.Removed:
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Added]) == 1:
+                if self._handlers_to_call.count((name, ServiceStateChange.Added)) == 1:
                     return
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Updated]) == 1:
-                    self._handlers_to_call.remove([name, ServiceStateChange.Updated])
+                if self._handlers_to_call.count((name, ServiceStateChange.Updated)) == 1:
+                    self._handlers_to_call.remove((name, ServiceStateChange.Updated))
 
-                if self._handlers_to_call.count([name, ServiceStateChange.Removed]) == 1:
+                if self._handlers_to_call.count((name, ServiceStateChange.Removed)) == 1:
                     return
 
-            self._handlers_to_call.append([name, state_change])
+            self._handlers_to_call.append((name, state_change))
 
         if record.type == _TYPE_PTR and record.name == self.type:
             assert isinstance(record, DNSPointer)
