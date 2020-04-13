@@ -1203,15 +1203,13 @@ class Engine(threading.Thread):
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
         self.condition = threading.Condition()
-        # The pipe will be used for fast notify the thread, but can't select() a pipe in windows
-        if os.name == 'posix':
-            self.pipe = os.pipe()
+        self.socketpair = socket.socketpair()
         self.start()
 
     def run(self) -> None:
         while not self.zc.done:
             with self.condition:
-                rs = list(self.readers.keys())  # type: List[Union[socket.socket, int]]
+                rs = list(self.readers.keys())
                 if len(rs) == 0:
                     # No sockets to manage, but we wait for the timeout
                     # or addition of a socket
@@ -1219,8 +1217,7 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
-                    if os.name == 'posix':
-                        rs = rs + [self.pipe[0]]
+                    rs = rs + [self.socketpair[0]]
                     rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
                     if not self.zc.done:
                         for socket_ in rr:
@@ -1228,12 +1225,9 @@ class Engine(threading.Thread):
                             if reader:
                                 reader.handle_read(socket_)
 
-                        if os.name == 'posix' and self.pipe in rr:
-                            # Clear the pipe's buffer
-                            try:
-                                os.read(self.pipe[0], 1)
-                            except os.error:
-                                pass
+                        if self.socketpair[0] in rr:
+                            # Clear the socket's buffer
+                            self.socketpair[0].recv(128)
 
                 except (select.error, socket.error) as e:
                     # If the socket was closed by another thread, during
@@ -1243,8 +1237,7 @@ class Engine(threading.Thread):
 
     def _notify(self) -> None:
         self.condition.notify()
-        if os.name == 'posix':
-            os.write(self.pipe[1], b'x')
+        self.socketpair[1].send(b'x')
 
     def add_reader(self, reader: 'Listener', socket_: socket.socket) -> None:
         with self.condition:
