@@ -1242,7 +1242,10 @@ class Engine(threading.Thread):
 
     def _notify(self) -> None:
         self.condition.notify()
-        self.socketpair[1].send(b'x')
+        try:
+            self.socketpair[1].send(b'x')
+        except socket.error:
+            pass
 
     def add_reader(self, reader: 'Listener', socket_: socket.socket) -> None:
         with self.condition:
