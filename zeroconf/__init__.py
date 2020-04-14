@@ -1234,18 +1234,17 @@ class Engine(threading.Thread):
                     # shutdown, ignore it and exit
                     if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
                         raise
-        try:
-            self.socketpair[0].close()
-            self.socketpair[1].close()
-        except socket.error:
-            pass
+        self.socketpair[0].close()
+        self.socketpair[1].close()
 
     def _notify(self) -> None:
         self.condition.notify()
         try:
             self.socketpair[1].send(b'x')
         except socket.error:
-            pass
+            # The socketpair may already be closed during shutdown, ignore it
+            if not self.zc.done:
+                raise
 
     def add_reader(self, reader: 'Listener', socket_: socket.socket) -> None:
         with self.condition:
