@@ -134,6 +134,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.25.1
+------
+
+* Eliminated 5s hangup when calling Zeroconf.close(), thanks to Erik Montnemery
+
 0.25.0
 ------
 
