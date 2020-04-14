@@ -1203,12 +1203,13 @@ class Engine(threading.Thread):
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
         self.condition = threading.Condition()
+        self.socketpair = socket.socketpair()
         self.start()
 
     def run(self) -> None:
         while not self.zc.done:
             with self.condition:
-                rs = self.readers.keys()
+                rs = list(self.readers.keys())
                 if len(rs) == 0:
                     # No sockets to manage, but we wait for the timeout
                     # or addition of a socket
@@ -1216,6 +1217,7 @@ class Engine(threading.Thread):
 
             if len(rs) != 0:
                 try:
+                    rs = rs + [self.socketpair[0]]
                     rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
                     if not self.zc.done:
                         for socket_ in rr:
@@ -1223,21 +1225,36 @@ class Engine(threading.Thread):
                             if reader:
                                 reader.handle_read(socket_)
 
+                        if self.socketpair[0] in rr:
+                            # Clear the socket's buffer
+                            self.socketpair[0].recv(128)
+
                 except (select.error, socket.error) as e:
                     # If the socket was closed by another thread, during
                     # shutdown, ignore it and exit
                     if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
                         raise
+        self.socketpair[0].close()
+        self.socketpair[1].close()
+
+    def _notify(self) -> None:
+        self.condition.notify()
+        try:
+            self.socketpair[1].send(b'x')
+        except socket.error:
+            # The socketpair may already be closed during shutdown, ignore it
+            if not self.zc.done:
+                raise
 
     def add_reader(self, reader: 'Listener', socket_: socket.socket) -> None:
         with self.condition:
             self.readers[socket_] = reader
-            self.condition.notify()
+            self._notify()
 
     def del_reader(self, socket_: socket.socket) -> None:
         with self.condition:
             del self.readers[socket_]
-            self.condition.notify()
+            self._notify()
 
 
 class Listener(QuietLogger):
