@@ -737,7 +737,7 @@ class DNSIncoming(QuietLogger):
 
     def read_questions(self) -> None:
         """Reads questions section of packet"""
-        for i in range(self.num_questions):  # pylint: disable=unused-variable
+        for i in range(self.num_questions):
             name = self.read_name()
             type_, class_ = self.unpack(b'!HH')
 
@@ -1121,7 +1121,8 @@ class DNSCache:
 
     def add(self, entry: DNSRecord) -> None:
         """Adds an entry"""
-        # Insert first in list so get returns newest entry
+        # Insert last in list, get will return newest entry
+        # iteration will result in last update winning
         self.cache.setdefault(entry.key, []).append(entry)
 
     def remove(self, entry: DNSRecord) -> None:
@@ -1503,12 +1504,13 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             # Iterate through the DNSCache and callback any services that use this address
             for service in zc.cache.entries():
-                if isinstance(service, DNSService):
-                    if service.name.endswith(self.type):
-                        if service.server == record.name:
-                            expired = record.is_expired(now)
-                            if not expired:
-                                enqueue_callback(ServiceStateChange.Updated, service.name)
+                if (
+                    isinstance(service, DNSService)
+                    and service.name.endswith(self.type)
+                    and service.server == record.name
+                    and not record.is_expired(now)
+                ):
+                    enqueue_callback(ServiceStateChange.Updated, service.name)
 
         elif record.name.endswith(self.type):
             expired = record.is_expired(now)

@@ -11,4 +11,3 @@ Thumbs.db
 .cache
 .mypy_cache/
 docs/_build/
-.vscode/
