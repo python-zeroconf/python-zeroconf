@@ -25,7 +25,7 @@ import errno
 import ipaddress
 import itertools
 import logging
-import collections
+from collections import OrderedDict
 import os
 import platform
 import re
@@ -1385,7 +1385,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.services = {}  # type: Dict[str, DNSRecord]
         self.next_time = current_time_millis()
         self.delay = delay
-        self._handlers_to_call = collections.OrderedDict()  # type: OrderedDict[str, ServiceStateChange]
+        self._handlers_to_call = OrderedDict()  # type: OrderedDict[str, ServiceStateChange]
 
         self._service_state_changed = Signal()
 
@@ -1523,7 +1523,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
-                    handler = self._handlers_to_call.popitem(0)
+                    handler = self._handlers_to_call.popitem(False)
                     self._service_state_changed.fire(
                         zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
                     )
