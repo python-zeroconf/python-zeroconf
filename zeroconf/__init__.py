@@ -25,6 +25,7 @@ import errno
 import ipaddress
 import itertools
 import logging
+import collections
 import os
 import platform
 import re
@@ -1384,7 +1385,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.services = {}  # type: Dict[str, DNSRecord]
         self.next_time = current_time_millis()
         self.delay = delay
-        self._handlers_to_call = []  # type: List[Tuple[str,ServiceStateChange]]
+        self._handlers_to_call = collections.OrderedDict()  # type: OrderedDict[str, ServiceStateChange]
 
         self._service_state_changed = Signal()
 
@@ -1438,42 +1439,21 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         def enqueue_callback(state_change: ServiceStateChange, name: str) -> None:
 
             # Code to ensure we only do a single update message
-            # Preceence is; Add, Remove, Update
+            # Precedence is; Added, Remove, Update
 
-            if state_change == ServiceStateChange.Updated:
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Removed)) == 1:
-                    return
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Added)) == 1:
-                    return
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Updated)) == 1:
-                    return
-
-            elif state_change == ServiceStateChange.Added:
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Removed)) == 1:
-                    self._handlers_to_call.remove((name, ServiceStateChange.Removed))
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Updated)) == 1:
-                    self._handlers_to_call.remove((name, ServiceStateChange.Updated))
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Added)) == 1:
-                    return
-
-            elif state_change == ServiceStateChange.Removed:
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Added)) == 1:
-                    return
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Updated)) == 1:
-                    self._handlers_to_call.remove((name, ServiceStateChange.Updated))
-
-                if self._handlers_to_call.count((name, ServiceStateChange.Removed)) == 1:
-                    return
-
-            self._handlers_to_call.append((name, state_change))
+            if (
+                state_change is ServiceStateChange.Added
+                or (
+                    state_change is ServiceStateChange.Removed
+                    and (
+                        self._handlers_to_call.get(name) is ServiceStateChange.Updated
+                        or self._handlers_to_call.get(name) is ServiceStateChange.Added
+                        or self._handlers_to_call.get(name) is None
+                    )
+                )
+                or (state_change is ServiceStateChange.Updated and name not in self._handlers_to_call)
+            ):
+                self._handlers_to_call[name] = state_change
 
         if record.type == _TYPE_PTR and record.name == self.type:
             assert isinstance(record, DNSPointer)
@@ -1543,7 +1523,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
-                    handler = self._handlers_to_call.pop(0)
+                    handler = self._handlers_to_call.popitem(0)
                     self._service_state_changed.fire(
                         zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
                     )
