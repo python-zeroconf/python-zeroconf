@@ -25,7 +25,6 @@ import errno
 import ipaddress
 import itertools
 import logging
-from collections import OrderedDict
 import os
 import platform
 import re
@@ -36,6 +35,7 @@ import sys
 import threading
 import time
 import warnings
+from collections import OrderedDict
 from typing import Dict, List, Optional, Sequence, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
