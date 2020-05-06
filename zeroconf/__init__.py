@@ -1496,6 +1496,20 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
         elif record.type == _TYPE_A or record.type == _TYPE_AAAA:
             assert isinstance(record, DNSAddress)
+            if record.is_expired(now):
+                return
+
+            address_changed = False
+            for service in zc.cache.entries_with_name(record.name):
+                if isinstance(service, DNSAddress) and service.address != record.address:
+                    address_changed = True
+                    break
+
+            # Avoid iterating the entire DNSCache if the address has not changed
+            # as this is an expensive operation when there many hosts
+            # generating zeroconf traffic.
+            if not address_changed:
+                return
 
             # Iterate through the DNSCache and callback any services that use this address
             for service in zc.cache.entries():
@@ -1503,7 +1517,6 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                     isinstance(service, DNSService)
                     and service.name.endswith(self.type)
                     and service.server == record.name
-                    and not record.is_expired(now)
                 ):
                     enqueue_callback(ServiceStateChange.Updated, service.name)
 
