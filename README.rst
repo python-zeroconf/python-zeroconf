@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.26.1
+------
+
+* Fixed a performance regression introduced in 0.26.0, thanks to J. Nick Koston (this is close in
+  spirit to an optimization made in 0.24.5 by the same author)
+
 0.26.0
 ------
 
