@@ -865,7 +865,7 @@ class DNSOutgoing:
 
         # these 3 are per-packet -- see also reset_for_next_packet()
         self.names = {}  # type: Dict[str, int]
-        self.data = []  # type List[bytes]
+        self.data = []  # type: List[bytes]
         self.size = 12
 
         self.state = self.State.init
@@ -1109,8 +1109,8 @@ class DNSOutgoing:
         while (answer_offset < len(self.answers) or
                authority_offset < len(self.authorities) or
                additional_offset < len(self.additionals)):
-            log.warning("offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
-            log.warning("lengths = %d, %d, %d", len(self.answers), len(self.authorities), len(self.additionals))
+            log.debug("offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
+            log.debug("lengths = %d, %d, %d", len(self.answers), len(self.authorities), len(self.additionals))
 
             additionals_written = 0
             authorities_written = 0
@@ -1146,7 +1146,7 @@ class DNSOutgoing:
             answer_offset += answers_written
             authority_offset += authorities_written
             additional_offset += additionals_written
-            log.warning("now offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
+            log.debug("now offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
             if answers_written == 0 and authorities_written == 0 and additional_offset == 0:
                 log.warning("packets() made no progress adding records; returning")
                 break
@@ -2725,8 +2725,8 @@ class Zeroconf(QuietLogger):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
-            log.warn('Sending (%d bytes #%d) %r as %r...',
-                     len(packet), packet_num, out, packet)
+            log.debug('Sending (%d bytes #%d) %r as %r...',
+                      len(packet), packet_num, out, packet)
             for s in self._respond_sockets:
                 if self._GLOBAL_DONE:
                     return
