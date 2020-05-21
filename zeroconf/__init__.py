@@ -1092,6 +1092,14 @@ class DNSOutgoing:
             return False
         return True
 
+    def packet(self) -> bytes:
+        """Returns a string containing the first packet's bytes.
+
+        Generally, you want to use packets() in case the response
+        does not fit in a single packet, but this exists for
+        backward compatibility."""
+        return self.packets()[0]
+
     def packets(self) -> List[bytes]:
         """Returns a list of strings containing the packets' bytes
 
