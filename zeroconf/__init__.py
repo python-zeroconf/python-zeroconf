@@ -1098,7 +1098,11 @@ class DNSOutgoing:
         Generally, you want to use packets() in case the response
         does not fit in a single packet, but this exists for
         backward compatibility."""
-        return self.packets()[0]
+        p = self.packets()
+        if len(p) > 0:
+            return p[0]
+        else:
+            return b''.join("")
 
     def packets(self) -> List[bytes]:
         """Returns a list of strings containing the packets' bytes
