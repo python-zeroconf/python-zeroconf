@@ -2208,6 +2208,11 @@ class Zeroconf(QuietLogger):
 
         self.condition = threading.Condition()
 
+        # Ensure we create the lock before
+        # we add the listener as we could get
+        # a message before the lock is created.
+        self._handlers_lock = threading.Lock()  # ensure we process a full message in one go
+
         self.engine = Engine(self)
         self.listener = Listener(self)
         if not unicast:
@@ -2218,8 +2223,6 @@ class Zeroconf(QuietLogger):
         self.reaper = Reaper(self)
 
         self.debug = None  # type: Optional[DNSOutgoing]
-
-        self._handlers_lock = threading.Lock()  # ensure we process a full message in one go
 
     @property
     def done(self) -> bool:
