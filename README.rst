@@ -134,6 +134,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.26.2
+------
+
+* Added support for multiple types to ServiceBrowser, thanks to J. Nick Koston
+* Fixed a race condition where a listener gets a message before the lock is created, thanks to
+  J. Nick Koston
+
 0.26.1
 ------
 
