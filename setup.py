@@ -9,7 +9,7 @@ with open(join(PROJECT_ROOT, 'README.rst'), encoding='utf-8') as f:
     readme = f.read()
 
 version = (
-    [l for l in open(join(PROJECT_ROOT, 'zeroconf', '__init__.py')) if '__version__' in l][0]
+    [ln for ln in open(join(PROJECT_ROOT, 'zeroconf', '__init__.py')) if '__version__' in ln][0]
     .split('=')[-1]
     .strip()
     .strip('\'"')
