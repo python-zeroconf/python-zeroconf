@@ -1436,7 +1436,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     def __init__(
         self,
         zc: 'Zeroconf',
-        type_: str,
+        type_: Union[str, list],
         # NOTE: Callable quoting needed on Python 3.5.2, see
         # https://github.com/jstasiak/python-zeroconf/issues/208 for details.
         handlers: Optional[Union[ServiceListener, List['Callable[..., None]']]] = None,
@@ -1447,19 +1447,23 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     ) -> None:
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        if not type_.endswith(service_type_name(type_, allow_underscores=True)):
-            raise BadTypeInNameException
-        threading.Thread.__init__(self, name='zeroconf-ServiceBrowser_' + type_)
+        self.types = set(type_ if isinstance(type_, list) else [type_])
+        for check_type_ in self.types:
+            if not check_type_.endswith(service_type_name(check_type_, allow_underscores=True)):
+                raise BadTypeInNameException
+        threading.Thread.__init__(self, name='zeroconf-ServiceBrowser_' + '-'.join(self.types))
         self.daemon = True
         self.zc = zc
-        self.type = type_
         self.addr = addr
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
-        self.services = {}  # type: Dict[str, DNSRecord]
-        self.next_time = current_time_millis()
-        self.delay = delay
-        self._handlers_to_call = OrderedDict()  # type: OrderedDict[str, ServiceStateChange]
+        self._services = {
+            check_type_: {} for check_type_ in self.types
+        }  # type: Dict[str, Dict[str, DNSRecord]]
+        current_time = current_time_millis()
+        self._next_time = {check_type_: current_time for check_type_ in self.types}
+        self._delay = {check_type_: delay for check_type_ in self.types}
+        self._handlers_to_call = OrderedDict()  # type: OrderedDict[str, Tuple[str, ServiceStateChange]]
 
         self._service_state_changed = Signal()
 
@@ -1510,7 +1514,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
         """
 
-        def enqueue_callback(state_change: ServiceStateChange, name: str) -> None:
+        def enqueue_callback(state_change: ServiceStateChange, type_: str, name: str) -> None:
 
             # Code to ensure we only do a single update message
             # Precedence is; Added, Remove, Update
@@ -1527,29 +1531,29 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 )
                 or (state_change is ServiceStateChange.Updated and name not in self._handlers_to_call)
             ):
-                self._handlers_to_call[name] = state_change
+                self._handlers_to_call[name] = (type_, state_change)
 
-        if record.type == _TYPE_PTR and record.name == self.type:
+        if record.type == _TYPE_PTR and record.name in self.types:
             assert isinstance(record, DNSPointer)
             expired = record.is_expired(now)
             service_key = record.alias.lower()
             try:
-                old_record = self.services[service_key]
+                old_record = self._services[record.name][service_key]
             except KeyError:
                 if not expired:
-                    self.services[service_key] = record
-                    enqueue_callback(ServiceStateChange.Added, record.alias)
+                    self._services[record.name][service_key] = record
+                    enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
             else:
                 if not expired:
                     old_record.reset_ttl(record)
                 else:
-                    del self.services[service_key]
-                    enqueue_callback(ServiceStateChange.Removed, record.alias)
+                    del self._services[record.name][service_key]
+                    enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
                     return
 
             expires = record.get_expiration_time(75)
-            if expires < self.next_time:
-                self.next_time = expires
+            if expires < self._next_time[record.name]:
+                self._next_time[record.name] = expires
 
         elif record.type == _TYPE_A or record.type == _TYPE_AAAA:
             assert isinstance(record, DNSAddress)
@@ -1570,17 +1574,16 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             # Iterate through the DNSCache and callback any services that use this address
             for service in zc.cache.entries():
-                if (
-                    isinstance(service, DNSService)
-                    and service.name.endswith(self.type)
-                    and service.server == record.name
-                ):
-                    enqueue_callback(ServiceStateChange.Updated, service.name)
+                if not isinstance(service, DNSService) or not service.server == record.name:
+                    continue
+                for type_ in self.types:
+                    if service.name.endswith(type_):
+                        enqueue_callback(ServiceStateChange.Updated, type_, service.name)
 
-        elif record.name.endswith(self.type):
-            expired = record.is_expired(now)
-            if not expired:
-                enqueue_callback(ServiceStateChange.Updated, record.name)
+        elif not record.is_expired(now):
+            for type_ in self.types:
+                if record.name.endswith(type_):
+                    enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
         self.done = True
@@ -1588,31 +1591,39 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.join()
 
     def run(self) -> None:
-        self.zc.add_listener(self, DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
+        for type_ in self.types:
+            self.zc.add_listener(self, DNSQuestion(type_, _TYPE_PTR, _CLASS_IN))
 
         while True:
             now = current_time_millis()
-            if len(self._handlers_to_call) == 0 and self.next_time > now:
-                self.zc.wait(self.next_time - now)
+            # Wait for the type has the smallest next time
+            next_time = min(self._next_time.values())
+            if len(self._handlers_to_call) == 0 and next_time > now:
+                self.zc.wait(next_time - now)
             if self.zc.done or self.done:
                 return
             now = current_time_millis()
-            if self.next_time <= now:
+            for type_ in self.types:
+                if self._next_time[type_] > now:
+                    continue
                 out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=self.multicast)
-                out.add_question(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
-                for record in self.services.values():
+                out.add_question(DNSQuestion(type_, _TYPE_PTR, _CLASS_IN))
+                for record in self._services[type_].values():
                     if not record.is_stale(now):
                         out.add_answer_at_time(record, now)
 
                 self.zc.send(out, addr=self.addr, port=self.port)
-                self.next_time = now + self.delay
-                self.delay = min(_BROWSER_BACKOFF_LIMIT * 1000, self.delay * 2)
+                self._next_time[type_] = now + self._delay[type_]
+                self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
-                    handler = self._handlers_to_call.popitem(False)
+                    (name, service_type_state_change) = self._handlers_to_call.popitem(False)
                     self._service_state_changed.fire(
-                        zeroconf=self.zc, service_type=self.type, name=handler[0], state_change=handler[1]
+                        zeroconf=self.zc,
+                        service_type=service_type_state_change[0],
+                        name=name,
+                        state_change=service_type_state_change[1],
                     )
 
 
@@ -2265,6 +2276,11 @@ class Zeroconf(QuietLogger):
 
         self.condition = threading.Condition()
 
+        # Ensure we create the lock before
+        # we add the listener as we could get
+        # a message before the lock is created.
+        self._handlers_lock = threading.Lock()  # ensure we process a full message in one go
+
         self.engine = Engine(self)
         self.listener = Listener(self)
         if not unicast:
@@ -2275,8 +2291,6 @@ class Zeroconf(QuietLogger):
         self.reaper = Reaper(self)
 
         self.debug = None  # type: Optional[DNSOutgoing]
-
-        self._handlers_lock = threading.Lock()  # ensure we process a full message in one go
 
     @property
     def done(self) -> bool:
