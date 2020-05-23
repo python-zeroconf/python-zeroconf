@@ -852,7 +852,7 @@ class DNSIncoming(QuietLogger):
         return result
 
 
-class DNSOutgoing:
+class DNSOutgoing(QuietLogger):
 
     """Object representation of an outgoing packet"""
 
@@ -1100,6 +1100,8 @@ class DNSOutgoing:
         backward compatibility."""
         p = self.packets()
         if len(p) > 0:
+            if len(p[0]) > _MAX_MSG_ABSOLUTE:
+                self.log_warning_once("Created over-sized packet (%d bytes) %r", len(p[0]), p[0])
             return p[0]
         else:
             return b''

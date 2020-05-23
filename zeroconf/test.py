@@ -320,7 +320,7 @@ class Names(unittest.TestCase):
 
     def test_extra_exceedingly_long_name(self):
         generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
-        name = "%slocal." % ("part." * 2000)
+        name = "%slocal." % ("part." * 4000)
         question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
         generated.add_question(question)
         r.DNSIncoming(generated.packet())
