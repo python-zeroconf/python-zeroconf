@@ -355,12 +355,12 @@ class Names(unittest.TestCase):
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
-            packet = out.packet()
-            nonlocal longest_packet_len, longest_packet
-            if longest_packet_len < len(packet):
-                longest_packet_len = len(packet)
-                longest_packet = out
-            old_send(out, addr=addr, port=port)
+            for packet in out.packets():
+                nonlocal longest_packet_len, longest_packet
+                if longest_packet_len < len(packet):
+                    longest_packet_len = len(packet)
+                    longest_packet = out
+                old_send(out, addr=addr, port=port)
 
         # monkey patch the zeroconf send
         setattr(zc, "send", send)
@@ -374,7 +374,8 @@ class Names(unittest.TestCase):
 
         # wait until the browse request packet has maxed out in size
         sleep_count = 0
-        while sleep_count < 100 and longest_packet_len < r._MAX_MSG_ABSOLUTE - 100:
+        while (sleep_count < 100 and longest_packet_len <
+               (5*r._MAX_MSG_TYPICAL) - 100):
             sleep_count += 1
             time.sleep(0.1)
 
@@ -386,8 +387,8 @@ class Names(unittest.TestCase):
         zeroconf.log.debug('sleep_count %d, sized %d', sleep_count, longest_packet_len)
 
         # now the browser has sent at least one request, verify the size
-        assert longest_packet_len <= r._MAX_MSG_ABSOLUTE
-        assert longest_packet_len >= r._MAX_MSG_ABSOLUTE - 100
+        assert longest_packet_len <= r._MAX_MSG_TYPICAL
+        assert longest_packet_len >= r._MAX_MSG_TYPICAL - 100
 
         # mock zeroconf's logger warning() and debug()
         from unittest.mock import patch
@@ -407,13 +408,11 @@ class Names(unittest.TestCase):
         call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
         # try to send an oversized packet
         zc.send(out)
-        assert mocked_log_warn.call_count == call_counts[0] + 1
-        assert mocked_log_debug.call_count == call_counts[0]
+        assert mocked_log_warn.call_count == call_counts[0]
         zc.send(out)
-        assert mocked_log_warn.call_count == call_counts[0] + 1
-        assert mocked_log_debug.call_count == call_counts[0] + 1
+        assert mocked_log_warn.call_count == call_counts[0]
 
-        # force a receive of an oversized packet
+        # force a receive of a packet
         packet = out.packet()
         s = zc._respond_sockets[0]
 

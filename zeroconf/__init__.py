@@ -1102,7 +1102,7 @@ class DNSOutgoing:
         if len(p) > 0:
             return p[0]
         else:
-            return b''.join("")
+            return b''
 
     def packets(self) -> List[bytes]:
         """Returns a list of strings containing the packets' bytes
@@ -1117,10 +1117,14 @@ class DNSOutgoing:
         authority_offset = 0
         additional_offset = 0
 
+        # we have to at least write out the question
+        first_time = True
 
-        while (answer_offset < len(self.answers) or
+        while (first_time or
+               answer_offset < len(self.answers) or
                authority_offset < len(self.authorities) or
                additional_offset < len(self.additionals)):
+            first_time = False
             log.debug("offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
             log.debug("lengths = %d, %d, %d", len(self.answers), len(self.authorities), len(self.additionals))
 
