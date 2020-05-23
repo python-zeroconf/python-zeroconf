@@ -1120,10 +1120,12 @@ class DNSOutgoing:
         # we have to at least write out the question
         first_time = True
 
-        while (first_time or answer_offset
-               < len(self.answers) or authority_offset
-               < len(self.authorities) or additional_offset
-               < len(self.additionals)):
+        while (
+            first_time
+            or answer_offset < len(self.answers)
+            or authority_offset < len(self.authorities)
+            or additional_offset < len(self.additionals)
+        ):
             first_time = False
             log.debug("offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
             log.debug("lengths = %d, %d, %d", len(self.answers), len(self.authorities), len(self.additionals))
@@ -2755,8 +2757,7 @@ class Zeroconf(QuietLogger):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
-            log.debug('Sending (%d bytes #%d) %r as %r...',
-                      len(packet), packet_num, out, packet)
+            log.debug('Sending (%d bytes #%d) %r as %r...', len(packet), packet_num, out, packet)
             for s in self._respond_sockets:
                 if self._GLOBAL_DONE:
                     return
