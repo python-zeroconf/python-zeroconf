@@ -374,8 +374,8 @@ class Names(unittest.TestCase):
 
         # wait until the browse request packet has maxed out in size
         sleep_count = 0
-        while (sleep_count < 100 and longest_packet_len <
-               (5*r._MAX_MSG_TYPICAL) - 100):
+        while (sleep_count < 100 and longest_packet_len
+               < (5 * r._MAX_MSG_TYPICAL) - 100):
             sleep_count += 1
             time.sleep(0.1)
 
