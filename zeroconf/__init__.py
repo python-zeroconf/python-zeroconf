@@ -1054,7 +1054,7 @@ class DNSOutgoing:
         self.write_short(question.type)
         self.write_short(question.class_)
 
-    def write_record(self, record: DNSRecord, now: float, allow_long: bool=False) -> bool:
+    def write_record(self, record: DNSRecord, now: float, allow_long: bool = False) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
         the packet.  Returns True on success. """
         if self.state == self.State.finished:
@@ -1120,10 +1120,10 @@ class DNSOutgoing:
         # we have to at least write out the question
         first_time = True
 
-        while (first_time or
-               answer_offset < len(self.answers) or
-               authority_offset < len(self.authorities) or
-               additional_offset < len(self.additionals)):
+        while (first_time or answer_offset
+               < len(self.answers) or authority_offset
+               < len(self.authorities) or additional_offset
+               < len(self.additionals)):
             first_time = False
             log.debug("offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
             log.debug("lengths = %d, %d, %d", len(self.answers), len(self.authorities), len(self.additionals))
@@ -2760,14 +2760,14 @@ class Zeroconf(QuietLogger):
                         and exc.errno == errno.ENETUNREACH
                         and s.family == socket.AF_INET6
                     ):
-                        # with IPv6 we don't have a reliable way to determine if an interface actually has IPv6
-                        # support, so we have to try and ignore errors.
+                        # with IPv6 we don't have a reliable way to determine if an interface actually has
+                        # IPV6 support, so we have to try and ignore errors.
                         continue
                     # on send errors, log the exception and keep going
                     self.log_exception_warning()
                 else:
                     if bytes_sent != len(packet):
-                        self.log_warning_once('!!! sent %d out of %d bytes to %r' % (bytes_sent, len(packet), s))
+                        self.log_warning_once('!!! sent %d of %d bytes to %r' % (bytes_sent, len(packet), s))
 
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
