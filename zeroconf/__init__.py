@@ -1296,11 +1296,9 @@ class Listener(QuietLogger):
         self.data = data
         msg = DNSIncoming(data)
         if msg.valid:
-            log.debug('Received from %r:%r: %r (%d bytes) as [%r]',
-                      addr, port, msg, len(data), data)
+            log.debug('Received from %r:%r: %r (%d bytes) as [%r]', addr, port, msg, len(data), data)
         else:
-            log.debug('Received from %r:%r: (%d bytes) [%r]',
-                      addr, port, len(data), data)
+            log.debug('Received from %r:%r: (%d bytes) [%r]', addr, port, len(data), data)
 
         if not msg.valid:
             pass
