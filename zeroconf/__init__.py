@@ -43,7 +43,7 @@ import ifaddr
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.26.1'
+__version__ = '0.26.2'
 __license__ = 'LGPL'
 
 
@@ -719,6 +719,20 @@ class DNSIncoming(QuietLogger):
         except (IndexError, struct.error, IncomingDecodeError):
             self.log_exception_warning(('Choked at offset %d while unpacking %r', self.offset, data))
 
+    def __repr__(self) -> str:
+        return '<DNSIncoming:{%s}>' % ', '.join(
+            [
+                'id=%s' % self.id,
+                'flags=%s' % self.flags,
+                'n_q=%s' % self.num_questions,
+                'n_ans=%s' % self.num_answers,
+                'n_auth=%s' % self.num_authorities,
+                'n_add=%s' % self.num_additionals,
+                'questions=%s' % self.questions,
+                'answers=%s' % self.answers,
+            ]
+        )
+
     def unpack(self, format_: bytes) -> tuple:
         length = struct.calcsize(format_)
         info = struct.unpack(format_, self.data[self.offset : self.offset + length])
@@ -1348,10 +1362,13 @@ class Listener(QuietLogger):
             self.log_exception_warning()
             return
 
-        log.debug('Received from %r:%r: %r ', addr, port, data)
-
         self.data = data
         msg = DNSIncoming(data)
+        if msg.valid:
+            log.debug('Received from %r:%r: %r (%d bytes) as [%r]', addr, port, msg, len(data), data)
+        else:
+            log.debug('Received from %r:%r: (%d bytes) [%r]', addr, port, len(data), data)
+
         if not msg.valid:
             pass
 
@@ -2116,7 +2133,7 @@ def new_socket(
             if not err.errno == errno.ENOPROTOOPT:
                 raise
 
-    if port is _MDNS_PORT:
+    if port == _MDNS_PORT:
         ttl = struct.pack(b'B', 255)
         loop = struct.pack(b'B', 1)
         if ip_version != IPVersion.V6Only:
