@@ -381,7 +381,10 @@ class Names(unittest.TestCase):
 
         # wait until the browse request packet has maxed out in size
         sleep_count = 0
-        while sleep_count < 100 and longest_packet_len < (5 * r._MAX_MSG_TYPICAL) - 100:
+        # we will never get to this large of a packet given the application-layer
+        # splitting of packets, but we still want to track the longest_packet_len
+        # for the debug message below
+        while sleep_count < 100 and longest_packet_len < r._MAX_MSG_ABSOLUTE - 100:
             sleep_count += 1
             time.sleep(0.1)
 

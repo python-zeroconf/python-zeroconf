@@ -852,7 +852,7 @@ class DNSIncoming(QuietLogger):
         return result
 
 
-class DNSOutgoing(QuietLogger):
+class DNSOutgoing:
 
     """Object representation of an outgoing packet"""
 
@@ -1056,7 +1056,9 @@ class DNSOutgoing(QuietLogger):
 
     def write_record(self, record: DNSRecord, now: float, allow_long: bool = False) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
-        the packet.  Returns True on success. """
+        the packet.  Returns True on success, or False if we did not (either
+        because the packet was already finished or because the record does
+        not fit."""
         if self.state == self.State.finished:
             return False
 
@@ -1093,24 +1095,30 @@ class DNSOutgoing(QuietLogger):
         return True
 
     def packet(self) -> bytes:
-        """Returns a string containing the first packet's bytes.
+        """Returns a bytestring containing the first packet's bytes.
 
         Generally, you want to use packets() in case the response
         does not fit in a single packet, but this exists for
         backward compatibility."""
-        p = self.packets()
-        if len(p) > 0:
-            if len(p[0]) > _MAX_MSG_ABSOLUTE:
-                self.log_warning_once("Created over-sized packet (%d bytes) %r", len(p[0]), p[0])
-            return p[0]
+        packets = self.packets()
+        if len(packets) > 0:
+            if len(packets[0]) > _MAX_MSG_ABSOLUTE:
+                QuietLogger.log_warning_once(
+                    "Created over-sized packet (%d bytes) %r", len(packets[0]), packets[0]
+                )
+            return packets[0]
         else:
             return b''
 
     def packets(self) -> List[bytes]:
-        """Returns a list of strings containing the packets' bytes
+        """Returns a list of bytestrings containing the packets' bytes
 
         No further parts should be added to the packet once this
-        is done."""
+        is done.  The packets are each restricted to _MAX_MSG_TYPICAL
+        or less in length, except for the case of a single answer which
+        will be written out to a single oversized packet no more than
+        _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
+        fragmentation potentially).  """
 
         if self.state == self.State.finished:
             return self.packets_data
