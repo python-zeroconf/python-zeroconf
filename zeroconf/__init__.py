@@ -719,6 +719,20 @@ class DNSIncoming(QuietLogger):
         except (IndexError, struct.error, IncomingDecodeError):
             self.log_exception_warning(('Choked at offset %d while unpacking %r', self.offset, data))
 
+    def __repr__(self) -> str:
+        return '<DNSIncoming:{%s}>' % ', '.join(
+            [
+                'id=%s' % self.id,
+                'flags=%s' % self.flags,
+                'n_q=%s' % self.num_questions,
+                'n_ans=%s' % self.num_answers,
+                'n_auth=%s' % self.num_authorities,
+                'n_add=%s' % self.num_additionals,
+                'questions=%s' % self.questions,
+                'answers=%s' % self.answers,
+            ]
+        )
+
     def unpack(self, format_: bytes) -> tuple:
         length = struct.calcsize(format_)
         info = struct.unpack(format_, self.data[self.offset : self.offset + length])
@@ -1279,10 +1293,13 @@ class Listener(QuietLogger):
             self.log_exception_warning()
             return
 
-        log.debug('Received from %r:%r: %r ', addr, port, data)
-
         self.data = data
         msg = DNSIncoming(data)
+        if msg.valid:
+            log.debug('Received from %r:%r: %r (%d bytes) as [%r]', addr, port, msg, len(data), data)
+        else:
+            log.debug('Received from %r:%r: (%d bytes) [%r]', addr, port, len(data), data)
+
         if not msg.valid:
             pass
 
@@ -2695,7 +2712,7 @@ class Zeroconf(QuietLogger):
         if len(packet) > _MAX_MSG_ABSOLUTE:
             self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
             return
-        log.debug('Sending %r (%d bytes) as %r...', out, len(packet), packet)
+        log.debug('Sending %r (%d bytes) as [%r]', out, len(packet), packet)
         for s in self._respond_sockets:
             if self._GLOBAL_DONE:
                 return
