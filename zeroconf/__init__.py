@@ -2064,7 +2064,7 @@ def new_socket(
             if not err.errno == errno.ENOPROTOOPT:
                 raise
 
-    if port is _MDNS_PORT:
+    if port == _MDNS_PORT:
         ttl = struct.pack(b'B', 255)
         loop = struct.pack(b'B', 1)
         if ip_version != IPVersion.V6Only:
