@@ -1221,7 +1221,7 @@ class Engine(threading.Thread):
         self.condition = threading.Condition()
         self.socketpair = socket.socketpair()
         self.start()
-        self.name = "zeroconf-Engine-%s" % self.native_id if hasattr(self, 'native_id') else self.ident
+        self.name = "zeroconf-Engine-%s" % self.native_id if hasattr(self, 'native_id') else self.ident  # type: ignore
 
     def run(self) -> None:
         while not self.zc.done:
@@ -1329,7 +1329,7 @@ class Reaper(threading.Thread):
         self.daemon = True
         self.zc = zc
         self.start()
-        self.name = "zeroconf-Reaper_%u" % self.native_id if hasattr(self, 'native_id') else self.ident
+        self.name = "zeroconf-Reaper_%u" % self.native_id if hasattr(self, 'native_id') else self.ident  # type: ignore
 
     def run(self) -> None:
         while True:
@@ -1463,8 +1463,8 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
         self.start()
         self.name = "zeroconf-ServiceBrowser_%s_%u" % (
-            '-'.join(self.types),
-            self.native_id if hasattr(self, 'native_id') else self.ident,
+            '-'.join(self.types),  # type: ignore
+            self.native_id if hasattr(self, 'native_id') else self.ident,  # type: ignore
         )
 
     @property
