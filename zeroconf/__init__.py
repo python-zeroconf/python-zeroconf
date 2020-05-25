@@ -1521,6 +1521,12 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 elif state_change is ServiceStateChange.Updated:
                     if hasattr(listener, 'update_service'):
                         listener.update_service(*args)
+                    else:
+                        warnings.warn(
+                            "%r has no update_service method. Provide one (it can be empty if you "
+                            "don't care about the updates), it'll become mandatory." % (listener,),
+                            FutureWarning,
+                        )
                 else:
                     raise NotImplementedError(state_change)
 
