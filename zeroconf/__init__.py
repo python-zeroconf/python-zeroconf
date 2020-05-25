@@ -1213,7 +1213,7 @@ class Engine(threading.Thread):
     """
 
     def __init__(self, zc: 'Zeroconf') -> None:
-        threading.Thread.__init__(self, name='zeroconf-Engine')
+        threading.Thread.__init__(self)
         self.daemon = True
         self.zc = zc
         self.readers = {}  # type: Dict[socket.socket, Listener]
@@ -1221,6 +1221,7 @@ class Engine(threading.Thread):
         self.condition = threading.Condition()
         self.socketpair = socket.socketpair()
         self.start()
+        self.name = "zeroconf-Engine-%s" % (getattr(self, 'native_id', self.ident),)
 
     def run(self) -> None:
         while not self.zc.done:
@@ -1324,10 +1325,11 @@ class Reaper(threading.Thread):
     have expired."""
 
     def __init__(self, zc: 'Zeroconf') -> None:
-        threading.Thread.__init__(self, name='zeroconf-Reaper')
+        threading.Thread.__init__(self)
         self.daemon = True
         self.zc = zc
         self.start()
+        self.name = "zeroconf-Reaper_%s" % (getattr(self, 'native_id', self.ident),)
 
     def run(self) -> None:
         while True:
@@ -1411,7 +1413,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         for check_type_ in self.types:
             if not check_type_.endswith(service_type_name(check_type_, allow_underscores=True)):
                 raise BadTypeInNameException
-        threading.Thread.__init__(self, name='zeroconf-ServiceBrowser_' + '-'.join(self.types))
+        threading.Thread.__init__(self)
         self.daemon = True
         self.zc = zc
         self.addr = addr
@@ -1460,6 +1462,10 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             self.service_state_changed.register_handler(h)
 
         self.start()
+        self.name = "zeroconf-ServiceBrowser_%s_%s" % (
+            '-'.join(self.types),
+            getattr(self, 'native_id', self.ident),
+        )
 
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
