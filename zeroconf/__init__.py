@@ -1616,7 +1616,6 @@ class ServiceInfo(RecordUpdateListener):
         self,
         type_: str,
         name: str,
-        address: Optional[Union[bytes, List[bytes]]] = None,
         port: Optional[int] = None,
         weight: int = 0,
         priority: int = 0,
@@ -1627,10 +1626,6 @@ class ServiceInfo(RecordUpdateListener):
         *,
         addresses: Optional[List[bytes]] = None
     ) -> None:
-        # Accept both none, or one, but not both.
-        if address is not None and addresses is not None:
-            raise TypeError("address and addresses cannot be provided together")
-
         if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
