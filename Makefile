@@ -8,7 +8,7 @@ LINT_TARGETS:=flake8
 ifneq ($(findstring PyPy,$(PYTHON_IMPLEMENTATION)),PyPy)
 	LINT_TARGETS:=$(LINT_TARGETS) mypy
 endif
-ifneq ($(findstring 3.5,$(PYTHON_VERSION)),3.5)
+ifeq ($(or $(findstring 3.5,$(PYTHON_VERSION)),$(findstring PyPy,$(PYTHON_IMPLEMENTATION))),)
 	LINT_TARGETS:=$(LINT_TARGETS) black_check
 endif
 
@@ -29,20 +29,20 @@ ci: test_coverage lint
 lint: $(LINT_TARGETS)
 
 flake8:
-	flake8 --max-line-length=$(MAX_LINE_LENGTH) examples *.py
+	flake8 --max-line-length=$(MAX_LINE_LENGTH) setup.py examples zeroconf
 
 .PHONY: black_check
 black_check:
-	black --check *.py examples
+	black --check setup.py examples zeroconf
 
 mypy:
-	mypy examples/*.py test_zeroconf.py zeroconf.py
+	mypy examples/*.py zeroconf/*.py
 
 test:
-	nosetests -v
+	pytest -v zeroconf/test.py
 
 test_coverage:
-	nosetests -v --with-coverage --cover-package=zeroconf
+	pytest -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing zeroconf/test.py
 
 autopep8:
-	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i examples *.py
+	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf

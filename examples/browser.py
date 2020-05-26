@@ -1,22 +1,17 @@
 #!/usr/bin/env python3
 
-USE="""usage: example.py [--help] [--debug] [--find]
+""" Example of browsing for a service. 
 
-Scan network for available mDNS services.
+The default is HTTP; use --all to search for all available services in the network
+"""
 
-  --help     This help
-  --debug    Set logging level to DEBUG
-  --find     Browse all available services:
-    """
-SVC="\n    "
-
+import argparse
 import logging
 import socket
-import sys
 from time import sleep
 from typing import cast
 
-from zeroconf import ServiceBrowser, ServiceStateChange, Zeroconf, ZeroconfServiceTypes
+from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf, ZeroconfServiceTypes
 
 
 def on_service_state_change(
@@ -26,6 +21,7 @@ def on_service_state_change(
 
     if state_change is ServiceStateChange.Added:
         info = zeroconf.get_service_info(service_type, name)
+        print("Info from zeroconf.get_service_info: %r" % (info))
         if info:
             addresses = ["%s:%d" % (socket.inet_ntoa(addr), cast(int, info.port)) for addr in info.addresses]
             print("  Addresses: %s" % ", ".join(addresses))
@@ -44,20 +40,33 @@ def on_service_state_change(
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    if '--debug' in sys.argv[1:]:
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
 
-    zeroconf = Zeroconf()
-    services = ("_http._tcp.local.",)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true')
+    version_group = parser.add_mutually_exclusive_group()
+    version_group.add_argument('--v6', action='store_true')
+    version_group.add_argument('--v6-only', action='store_true')
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+    if args.v6:
+        ip_version = IPVersion.All
+    elif args.v6_only:
+        ip_version = IPVersion.V6Only
+    else:
+        ip_version = IPVersion.V4Only
+
+    zeroconf = Zeroconf(ip_version=ip_version)
+
+    services = ["_http._tcp.local.", "_hap._tcp.local."]
     if '--find' in sys.argv[1:]:
-        services = ZeroconfServiceTypes.find(zc=zeroconf)
-    if '--help' in sys.argv[1:]:
-        print(USE + (SVC.join( services )))
-        sys.exit(0)
+        services = list(ZeroconfServiceTypes.find(zc=zeroconf))
 
     print("\nBrowsing %d service(s), press Ctrl-C to exit...\n" % len(services))
-    for service_type in services:
-        ServiceBrowser(zeroconf, service_type, handlers=[on_service_state_change])
+    browser = ServiceBrowser(
+        zeroconf, services, handlers=[on_service_state_change]
+    )
 
     try:
         while True:
