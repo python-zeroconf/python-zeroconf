@@ -34,7 +34,6 @@ import struct
 import sys
 import threading
 import time
-import warnings
 from collections import OrderedDict
 from typing import Dict, List, Optional, Sequence, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
@@ -1600,7 +1599,6 @@ class ServiceInfo(RecordUpdateListener):
 
     * type_: fully qualified service type name
     * name: fully qualified service name
-    * address: IP address as unsigned short, network byte order (deprecated, use addresses)
     * port: port that the service runs on
     * weight: weight of the service
     * priority: priority of the service
@@ -1624,7 +1622,6 @@ class ServiceInfo(RecordUpdateListener):
         self,
         type_: str,
         name: str,
-        address: Optional[Union[bytes, List[bytes]]] = None,
         port: Optional[int] = None,
         weight: int = 0,
         priority: int = 0,
@@ -1635,22 +1632,12 @@ class ServiceInfo(RecordUpdateListener):
         *,
         addresses: Optional[List[bytes]] = None
     ) -> None:
-        # Accept both none, or one, but not both.
-        if address is not None and addresses is not None:
-            raise TypeError("address and addresses cannot be provided together")
-
         if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
         if addresses is not None:
             self._addresses = addresses
-        elif address is not None:
-            warnings.warn("address is deprecated, use addresses instead", DeprecationWarning)
-            if isinstance(address, list):
-                self._addresses = address
-            else:
-                self._addresses = [address]
         else:
             self._addresses = []
         # This results in an ugly error when registering, better check now
@@ -1671,23 +1658,6 @@ class ServiceInfo(RecordUpdateListener):
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
     # fmt: on
-
-    @property
-    def address(self) -> Optional[bytes]:
-        warnings.warn("ServiceInfo.address is deprecated, use addresses instead", DeprecationWarning)
-        try:
-            # Return the first V4 address for compatibility
-            return self.addresses[0]
-        except IndexError:
-            return None
-
-    @address.setter
-    def address(self, value: bytes) -> None:
-        warnings.warn("ServiceInfo.address is deprecated, use addresses instead", DeprecationWarning)
-        if value is None:
-            self._addresses = []
-        else:
-            self._addresses = [value]
 
     @property
     def addresses(self) -> List[bytes]:

@@ -108,7 +108,7 @@ class TestDunder(unittest.TestCase):
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
         info = ServiceInfo(
-            type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, b'', "ash-2.local."
+            type_, registration_name, 80, 0, 0, b'', "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         assert not info != info
@@ -121,7 +121,7 @@ class TestDunder(unittest.TestCase):
         info = ServiceInfo(
             type_=type_,
             name=registration_name,
-            address=socket.inet_aton("10.0.1.2"),
+            addresses=[socket.inet_aton("10.0.1.2")],
             port=80,
             server="ash-2.local.",
         )
@@ -456,7 +456,14 @@ class Names(unittest.TestCase):
     def verify_name_change(self, zc, type_, name, number_hosts):
         desc = {'path': '/~paulsm/'}
         info_service = ServiceInfo(
-            type_, '%s.%s' % (name, type_), socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+            type_,
+            '%s.%s' % (name, type_),
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         # verify name conflict
@@ -736,7 +743,14 @@ class TestRegistrar(unittest.TestCase):
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         # we are going to monkey patch the zeroconf send to check packet sizes
@@ -849,7 +863,14 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
         zeroconf_registrar.register_service(info)
 
@@ -874,7 +895,14 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_, registration_name, socket.inet_pton(socket.AF_INET6, addr), 80, 0, 0, desc, "ash-2.local."
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_pton(socket.AF_INET6, addr)],
         )
         zeroconf_registrar.register_service(info)
 
@@ -898,7 +926,14 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar = Zeroconf(ip_version=r.IPVersion.V6Only)
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
         zeroconf_registrar.register_service(info)
 
@@ -922,7 +957,14 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            discovery_type, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+            discovery_type,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
         zeroconf_registrar.register_service(info)
 
@@ -1028,7 +1070,14 @@ class ListenerTest(unittest.TestCase):
             properties['prop_blank'] = b'an updated string'
             desc.update(properties)
             info_service = ServiceInfo(
-                subtype, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local."
+                subtype,
+                registration_name,
+                80,
+                0,
+                0,
+                desc,
+                "ash-2.local.",
+                addresses=[socket.inet_aton("10.0.1.2")],
             )
             zeroconf_registrar.update_service(info_service)
             service_updated.wait(1)
@@ -1385,7 +1434,9 @@ def test_integration():
 
     zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
     desc = {'path': '/~paulsm/'}
-    info = ServiceInfo(type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local.")
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
     zeroconf_registrar.register_service(info)
 
     try:
@@ -1424,45 +1475,17 @@ def test_multiple_addresses():
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
 
-    # Old way
-    info = ServiceInfo(type_, registration_name, address, 80, 0, 0, desc, "ash-2.local.")
-
-    assert info.address == address
-    assert info.addresses == [address]
-
-    # Updating works
-    address2 = socket.inet_aton("10.0.1.3")
-    info.address = address2
-
-    assert info.address == address2
-    assert info.addresses == [address2]
-
-    info.address = None
-
-    assert info.address is None
-    assert info.addresses == []
-
-    info.addresses = [address2]
-
-    assert info.address == address2
-    assert info.addresses == [address2]
-
-    # Compatibility way
-    info = ServiceInfo(type_, registration_name, [address, address], 80, 0, 0, desc, "ash-2.local.")
-
-    assert info.addresses == [address, address]
-
     # New kwarg way
-    info = ServiceInfo(
-        type_, registration_name, None, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address])
 
     assert info.addresses == [address, address]
 
     if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
-        info = ServiceInfo(type_, registration_name, [address, address_v6], 80, 0, 0, desc, "ash-2.local.")
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address_v6],
+        )
         assert info.addresses == [address]
         assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
         assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
@@ -1483,7 +1506,9 @@ def test_ptr_optimization():
     registration_name = "%s.%s" % (name, type_)
 
     desc = {'path': '/~paulsm/'}
-    info = ServiceInfo(type_, registration_name, socket.inet_aton("10.0.1.2"), 80, 0, 0, desc, "ash-2.local.")
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
 
     # we are going to monkey patch the zeroconf send to check packet sizes
     old_send = zc.send
