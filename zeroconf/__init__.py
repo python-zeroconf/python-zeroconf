@@ -874,15 +874,24 @@ class DNSOutgoing:
         self.id = 0
         self.multicast = multicast
         self.flags = flags
+        self.packets_data = []  # type: List[bytes]
+
+        # these 3 are per-packet -- see also reset_for_next_packet()
         self.names = {}  # type: Dict[str, int]
         self.data = []  # type: List[bytes]
         self.size = 12
+
         self.state = self.State.init
 
         self.questions = []  # type: List[DNSQuestion]
         self.answers = []  # type: List[Tuple[DNSRecord, float]]
         self.authorities = []  # type: List[DNSPointer]
         self.additionals = []  # type: List[DNSRecord]
+
+    def reset_for_next_packet(self) -> None:
+        self.names = {}
+        self.data = []
+        self.size = 12
 
     def __repr__(self) -> str:
         return '<DNSOutgoing:{%s}>' % ', '.join(
@@ -1058,11 +1067,13 @@ class DNSOutgoing:
         self.write_short(question.type)
         self.write_short(question.class_)
 
-    def write_record(self, record: DNSRecord, now: float) -> int:
+    def write_record(self, record: DNSRecord, now: float, allow_long: bool = False) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
-        the packet"""
+        the packet.  Returns True on success, or False if we did not (either
+        because the packet was already finished or because the record does
+        not fit."""
         if self.state == self.State.finished:
-            return 1
+            return False
 
         start_data_length, start_size = len(self.data), self.size
         self.write_name(record.name)
@@ -1086,44 +1097,102 @@ class DNSOutgoing:
         # Here is the short we adjusted for
         self.insert_short(index, length)
 
+        len_limit = _MAX_MSG_ABSOLUTE if allow_long else _MAX_MSG_TYPICAL
+
         # if we go over, then rollback and quit
-        if self.size > _MAX_MSG_ABSOLUTE:
+        if self.size > len_limit:
             while len(self.data) > start_data_length:
                 self.data.pop()
             self.size = start_size
-            self.state = self.State.finished
-            return 1
-        return 0
+            return False
+        return True
 
     def packet(self) -> bytes:
-        """Returns a string containing the packet's bytes
+        """Returns a bytestring containing the first packet's bytes.
+
+        Generally, you want to use packets() in case the response
+        does not fit in a single packet, but this exists for
+        backward compatibility."""
+        packets = self.packets()
+        if len(packets) > 0:
+            if len(packets[0]) > _MAX_MSG_ABSOLUTE:
+                QuietLogger.log_warning_once(
+                    "Created over-sized packet (%d bytes) %r", len(packets[0]), packets[0]
+                )
+            return packets[0]
+        else:
+            return b''
+
+    def packets(self) -> List[bytes]:
+        """Returns a list of bytestrings containing the packets' bytes
 
         No further parts should be added to the packet once this
-        is done."""
+        is done.  The packets are each restricted to _MAX_MSG_TYPICAL
+        or less in length, except for the case of a single answer which
+        will be written out to a single oversized packet no more than
+        _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
+        fragmentation potentially).  """
 
-        overrun_answers, overrun_authorities, overrun_additionals = 0, 0, 0
+        if self.state == self.State.finished:
+            return self.packets_data
 
-        if self.state != self.State.finished:
+        answer_offset = 0
+        authority_offset = 0
+        additional_offset = 0
+
+        # we have to at least write out the question
+        first_time = True
+
+        while (
+            first_time
+            or answer_offset < len(self.answers)
+            or authority_offset < len(self.authorities)
+            or additional_offset < len(self.additionals)
+        ):
+            first_time = False
+            log.debug("offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
+            log.debug("lengths = %d, %d, %d", len(self.answers), len(self.authorities), len(self.additionals))
+
+            additionals_written = 0
+            authorities_written = 0
+            answers_written = 0
+            questions_written = 0
             for question in self.questions:
                 self.write_question(question)
-            for answer, time_ in self.answers:
-                overrun_answers += self.write_record(answer, time_)
-            for authority in self.authorities:
-                overrun_authorities += self.write_record(authority, 0)
-            for additional in self.additionals:
-                overrun_additionals += self.write_record(additional, 0)
-            self.state = self.State.finished
+                questions_written += 1
+            allow_long = True  # at most one answer is allowed to be a long packet
+            for answer, time_ in self.answers[answer_offset:]:
+                if self.write_record(answer, time_, allow_long):
+                    answers_written += 1
+                allow_long = False
+            for authority in self.authorities[authority_offset:]:
+                if self.write_record(authority, 0):
+                    authorities_written += 1
+            for additional in self.additionals[additional_offset:]:
+                if self.write_record(additional, 0):
+                    additionals_written += 1
 
-            self.insert_short(0, len(self.additionals) - overrun_additionals)
-            self.insert_short(0, len(self.authorities) - overrun_authorities)
-            self.insert_short(0, len(self.answers) - overrun_answers)
-            self.insert_short(0, len(self.questions))
+            self.insert_short(0, additionals_written)
+            self.insert_short(0, authorities_written)
+            self.insert_short(0, answers_written)
+            self.insert_short(0, questions_written)
             self.insert_short(0, self.flags)
             if self.multicast:
                 self.insert_short(0, 0)
             else:
                 self.insert_short(0, self.id)
-        return b''.join(self.data)
+            self.packets_data.append(b''.join(self.data))
+            self.reset_for_next_packet()
+
+            answer_offset += answers_written
+            authority_offset += authorities_written
+            additional_offset += additionals_written
+            log.debug("now offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
+            if answers_written == 0 and authorities_written == 0 and additional_offset == 0:
+                log.warning("packets() made no progress adding records; returning")
+                break
+        self.state = self.State.finished
+        return self.packets_data
 
 
 class DNSCache:
@@ -2684,36 +2753,39 @@ class Zeroconf(QuietLogger):
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""
-        packet = out.packet()
-        if len(packet) > _MAX_MSG_ABSOLUTE:
-            self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
-            return
-        log.debug('Sending %r (%d bytes) as [%r]', out, len(packet), packet)
-        for s in self._respond_sockets:
-            if self._GLOBAL_DONE:
+        packets = out.packets()
+        packet_num = 0
+        for packet in packets:
+            packet_num += 1
+            if len(packet) > _MAX_MSG_ABSOLUTE:
+                self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
-            try:
-                if addr is None:
-                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
-                elif not can_send_to(s, addr):
-                    continue
+            log.debug('Sending (%d bytes #%d) %r as %r...', len(packet), packet_num, out, packet)
+            for s in self._respond_sockets:
+                if self._GLOBAL_DONE:
+                    return
+                try:
+                    if addr is None:
+                        real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+                    elif not can_send_to(s, addr):
+                        continue
+                    else:
+                        real_addr = addr
+                    bytes_sent = s.sendto(packet, 0, (real_addr, port))
+                except Exception as exc:  # TODO stop catching all Exceptions
+                    if (
+                        isinstance(exc, OSError)
+                        and exc.errno == errno.ENETUNREACH
+                        and s.family == socket.AF_INET6
+                    ):
+                        # with IPv6 we don't have a reliable way to determine if an interface actually has
+                        # IPV6 support, so we have to try and ignore errors.
+                        continue
+                    # on send errors, log the exception and keep going
+                    self.log_exception_warning()
                 else:
-                    real_addr = addr
-                bytes_sent = s.sendto(packet, 0, (real_addr, port))
-            except Exception as exc:  # TODO stop catching all Exceptions
-                if (
-                    isinstance(exc, OSError)
-                    and exc.errno == errno.ENETUNREACH
-                    and s.family == socket.AF_INET6
-                ):
-                    # with IPv6 we don't have a reliable way to determine if an interface actually has IPv6
-                    # support, so we have to try and ignore errors.
-                    continue
-                # on send errors, log the exception and keep going
-                self.log_exception_warning()
-            else:
-                if bytes_sent != len(packet):
-                    self.log_warning_once('!!! sent %d out of %d bytes to %r' % (bytes_sent, len(packet), s))
+                    if bytes_sent != len(packet):
+                        self.log_warning_once('!!! sent %d of %d bytes to %r' % (bytes_sent, len(packet), s))
 
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
