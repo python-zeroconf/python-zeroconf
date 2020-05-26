@@ -134,6 +134,15 @@ See examples directory for more.
 Changelog
 =========
 
+0.26.3
+------
+
+* Improved readability of logged incoming data, thanks to Erik Montnemery
+* Threads are given unique names now to aid debugging, thanks to Erik Montnemery
+* Fixed a regression where get_service_info() called within a listener add_service method
+  would deadlock, timeout and incorrectly return None, fix thanks to Erik Montnemery, but
+  Matt Saxon and Hmmbob were also involved in debugging it.
+
 0.26.2
 ------
 
