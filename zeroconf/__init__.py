@@ -1585,12 +1585,12 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
                     (name, service_type_state_change) = self._handlers_to_call.popitem(False)
-                    self._service_state_changed.fire(
-                        zeroconf=self.zc,
-                        service_type=service_type_state_change[0],
-                        name=name,
-                        state_change=service_type_state_change[1],
-                    )
+                self._service_state_changed.fire(
+                    zeroconf=self.zc,
+                    service_type=service_type_state_change[0],
+                    name=name,
+                    state_change=service_type_state_change[1],
+                )
 
 
 class ServiceInfo(RecordUpdateListener):
