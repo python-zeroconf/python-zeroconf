@@ -1077,7 +1077,7 @@ class ListenerTest(unittest.TestCase):
                 0,
                 desc,
                 "ash-2.local.",
-                parsed_addresses=[socket.inet_aton("10.0.1.2")],
+                addresses=[socket.inet_aton("10.0.1.2")],
             )
             zeroconf_registrar.update_service(info_service)
             service_updated.wait(1)
