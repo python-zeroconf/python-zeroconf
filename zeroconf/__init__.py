@@ -219,6 +219,12 @@ def _is_v6_address(addr: bytes) -> bool:
     return len(addr) == 16
 
 
+def _encode_address(address: str) -> bytes:
+    is_ipv6 = ':' in address
+    address_family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    return socket.inet_pton(address_family, address)
+
+
 def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
@@ -1696,8 +1702,8 @@ class ServiceInfo(RecordUpdateListener):
     * server: fully qualified name for service host (defaults to name)
     * host_ttl: ttl used for A/SRV records
     * other_ttl: ttl used for PTR/TXT records
-    * addresses: List of IP addresses as unsigned short (IPv4) or unsigned 128 bit number (IPv6),
-      network byte order
+    * addresses and parsed_addresses: List of IP addresses (either as bytes, network byte order, or in parsed
+      form as text; at most one of those parameters can be provided)
 
     """
 
@@ -1718,14 +1724,20 @@ class ServiceInfo(RecordUpdateListener):
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
         *,
-        addresses: Optional[List[bytes]] = None
+        addresses: Optional[List[bytes]] = None,
+        parsed_addresses: Optional[List[str]] = None
     ) -> None:
+        # Accept both none, or one, but not both.
+        if addresses is not None and parsed_addresses is not None:
+            raise TypeError("addresses and parsed_addresses cannot be provided together")
         if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
         if addresses is not None:
             self._addresses = addresses
+        elif parsed_addresses is not None:
+            self._addresses = [_encode_address(a) for a in parsed_addresses]
         else:
             self._addresses = []
         # This results in an ugly error when registering, better check now
