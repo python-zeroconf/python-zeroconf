@@ -121,7 +121,7 @@ class TestDunder(unittest.TestCase):
         info = ServiceInfo(
             type_=type_,
             name=registration_name,
-            address=socket.inet_aton("10.0.1.2"),
+            addresses=[socket.inet_aton("10.0.1.2")],
             port=80,
             server="ash-2.local.",
         )
@@ -1424,45 +1424,17 @@ def test_multiple_addresses():
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
 
-    # Old way
-    info = ServiceInfo(type_, registration_name, address, 80, 0, 0, desc, "ash-2.local.")
-
-    assert info.address == address
-    assert info.addresses == [address]
-
-    # Updating works
-    address2 = socket.inet_aton("10.0.1.3")
-    info.address = address2
-
-    assert info.address == address2
-    assert info.addresses == [address2]
-
-    info.address = None
-
-    assert info.address is None
-    assert info.addresses == []
-
-    info.addresses = [address2]
-
-    assert info.address == address2
-    assert info.addresses == [address2]
-
-    # Compatibility way
-    info = ServiceInfo(type_, registration_name, [address, address], 80, 0, 0, desc, "ash-2.local.")
-
-    assert info.addresses == [address, address]
-
     # New kwarg way
-    info = ServiceInfo(
-        type_, registration_name, None, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address])
 
     assert info.addresses == [address, address]
 
     if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
-        info = ServiceInfo(type_, registration_name, [address, address_v6], 80, 0, 0, desc, "ash-2.local.")
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address_v6],
+        )
         assert info.addresses == [address]
         assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
         assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
