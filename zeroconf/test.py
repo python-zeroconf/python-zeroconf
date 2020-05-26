@@ -1480,19 +1480,44 @@ def test_multiple_addresses():
 
     assert info.addresses == [address, address]
 
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        parsed_addresses=[address_parsed, address_parsed],
+    )
+    assert info.addresses == [address, address]
+
     if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
-        info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address_v6],
-        )
-        assert info.addresses == [address]
-        assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
-        assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
-        assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6]
-        assert info.parsed_addresses() == [address_parsed, address_v6_parsed]
-        assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
-        assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed]
+        infos = [
+            ServiceInfo(
+                type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address_v6],
+            ),
+            ServiceInfo(
+                type_,
+                registration_name,
+                80,
+                0,
+                0,
+                desc,
+                "ash-2.local.",
+                parsed_addresses=[address_parsed, address_v6_parsed],
+            ),
+        ]
+        for info in infos:
+            assert info.addresses == [address]
+            assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
+            assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
+            assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6]
+            assert info.parsed_addresses() == [address_parsed, address_v6_parsed]
+            assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
+            assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed]
 
 
 def test_ptr_optimization():
