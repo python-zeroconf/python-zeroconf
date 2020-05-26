@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--find', action='store_true')
+    parser.add_argument('--find', action='store_true', help='Browse all available services')
     version_group = parser.add_mutually_exclusive_group()
     version_group.add_argument('--v6', action='store_true')
     version_group.add_argument('--v6-only', action='store_true')
