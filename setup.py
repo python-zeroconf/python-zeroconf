@@ -43,5 +43,5 @@ setup(
         'Programming Language :: Python :: Implementation :: PyPy',
     ],
     keywords=['Bonjour', 'Avahi', 'Zeroconf', 'Multicast DNS', 'Service Discovery', 'mDNS'],
-    install_requires=['ifaddr', 'typing;python_version<"3.5"'],
+    install_requires=['ifaddr'],
 )
