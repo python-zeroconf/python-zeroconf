@@ -134,6 +134,20 @@ See examples directory for more.
 Changelog
 =========
 
+0.27.0
+------
+
+* Large multi-resource responses are now split into separate packets which fixes a bad
+  mdns-repeater/ChromeCast Audio interaction ending with ChromeCast Audio crash (and possibly
+  some others) and improves RFC 6762 compliance, thanks to Greg Badros
+* Added a warning presented when the listener passed to ServiceBrowser lacks update_service()
+  callback
+* Added support for finding all services available in the browser example, thanks to Perry Kunder
+
+Backwards incompatible:
+
+* Removed previously deprecated ServiceInfo address constructor parameter and property
+
 0.26.3
 ------
 
