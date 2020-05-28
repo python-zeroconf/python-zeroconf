@@ -554,18 +554,10 @@ class DNSHinfo(DNSRecord):
 
     """A DNS host information record"""
 
-    def __init__(
-        self, name: str, type_: int, class_: int, ttl: int, cpu: Union[bytes, str], os: Union[bytes, str]
-    ) -> None:
+    def __init__(self, name: str, type_: int, class_: int, ttl: int, cpu: str, os: str) -> None:
         DNSRecord.__init__(self, name, type_, class_, ttl)
-        try:
-            self.cpu = cast(bytes, cpu).decode('utf-8')
-        except AttributeError:
-            self.cpu = cast(str, cpu)
-        try:
-            self.os = cast(bytes, os).decode('utf-8')
-        except AttributeError:
-            self.os = cast(str, os)
+        self.cpu = cpu
+        self.os = os
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -807,7 +799,12 @@ class DNSIncoming(QuietLogger):
                 )
             elif type_ == _TYPE_HINFO:
                 rec = DNSHinfo(
-                    domain, type_, class_, ttl, self.read_character_string(), self.read_character_string()
+                    domain,
+                    type_,
+                    class_,
+                    ttl,
+                    self.read_character_string().decode('utf-8'),
+                    self.read_character_string().decode('utf-8'),
                 )
             elif type_ == _TYPE_AAAA:
                 rec = DNSAddress(domain, type_, class_, ttl, self.read_string(16))
