@@ -799,7 +799,12 @@ class DNSIncoming(QuietLogger):
                 )
             elif type_ == _TYPE_HINFO:
                 rec = DNSHinfo(
-                    domain, type_, class_, ttl, self.read_character_string().decode('utf-8'), self.read_character_string().decode('utf-8'),
+                    domain,
+                    type_,
+                    class_,
+                    ttl,
+                    self.read_character_string().decode('utf-8'),
+                    self.read_character_string().decode('utf-8'),
                 )
             elif type_ == _TYPE_AAAA:
                 rec = DNSAddress(domain, type_, class_, ttl, self.read_string(16))
