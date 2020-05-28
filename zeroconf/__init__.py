@@ -58,11 +58,11 @@ __all__ = [
     "IPVersion",
 ]
 
-if sys.version_info <= (3, 3):
+if sys.version_info <= (3, 4):
     raise ImportError(
         '''
-Python version > 3.3 required for python-zeroconf.
-If you need support for Python 2 or Python 3.3 please use version 19.1
+Python version > 3.4 required for python-zeroconf.
+If you need support for Python 2 or Python 3.3-3.4 please use version 19.1
     '''
     )
 
