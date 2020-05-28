@@ -2111,8 +2111,7 @@ def new_socket(
     else:
         try:
             s.setsockopt(socket.SOL_SOCKET, reuseport, 1)
-        except (OSError, socket.error) as err:
-            # OSError on python 3, socket.error on python 2
+        except OSError as err:
             if not err.errno == errno.ENOPROTOOPT:
                 raise
 
