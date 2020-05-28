@@ -554,18 +554,10 @@ class DNSHinfo(DNSRecord):
 
     """A DNS host information record"""
 
-    def __init__(
-        self, name: str, type_: int, class_: int, ttl: int, cpu: Union[bytes, str], os: Union[bytes, str]
-    ) -> None:
+    def __init__(self, name: str, type_: int, class_: int, ttl: int, cpu: bytes, os: bytes) -> None:
         DNSRecord.__init__(self, name, type_, class_, ttl)
-        try:
-            self.cpu = cast(bytes, cpu).decode('utf-8')
-        except AttributeError:
-            self.cpu = cast(str, cpu)
-        try:
-            self.os = cast(bytes, os).decode('utf-8')
-        except AttributeError:
-            self.os = cast(str, os)
+        self.cpu = cpu.decode('utf-8')
+        self.os = os.decode('utf-8')
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
