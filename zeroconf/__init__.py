@@ -353,7 +353,7 @@ class QuietLogger:
     _seen_logs = {}  # type: Dict[str, Union[int, tuple]]
 
     @classmethod
-    def log_exception_warning(cls, logger_data: Optional[Tuple] = None) -> None:
+    def log_exception_warning(cls, *logger_data: Any) -> None:
         exc_info = sys.exc_info()
         exc_str = str(exc_info[1])
         if exc_str not in cls._seen_logs:
@@ -362,9 +362,7 @@ class QuietLogger:
             logger = log.warning
         else:
             logger = log.debug
-        if logger_data is not None:
-            logger(*logger_data)
-        logger('Exception occurred:', exc_info=True)
+        logger(*(logger_data or ['Exception occurred']), exc_info=True)
 
     @classmethod
     def log_warning_once(cls, *args: Any) -> None:
@@ -709,7 +707,7 @@ class DNSIncoming(QuietLogger):
             self.valid = True
 
         except (IndexError, struct.error, IncomingDecodeError):
-            self.log_exception_warning(('Choked at offset %d while unpacking %r', self.offset, data))
+            self.log_exception_warning('Choked at offset %d while unpacking %r', self.offset, data)
 
     def __repr__(self) -> str:
         return '<DNSIncoming:{%s}>' % ', '.join(
@@ -1357,15 +1355,30 @@ class Listener(QuietLogger):
         try:
             data, (addr, port, *_v6) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
         except Exception:
-            self.log_exception_warning()
+            self.log_exception_warning('Error reading from socket %d', socket_.fileno())
             return
 
         self.data = data
         msg = DNSIncoming(data)
         if msg.valid:
-            log.debug('Received from %r:%r: %r (%d bytes) as [%r]', addr, port, msg, len(data), data)
+            log.debug(
+                'Received from %r:%r (socket %d): %r (%d bytes) as [%r]',
+                addr,
+                port,
+                socket_.fileno(),
+                msg,
+                len(data),
+                data,
+            )
         else:
-            log.debug('Received from %r:%r: (%d bytes) [%r]', addr, port, len(data), data)
+            log.debug(
+                'Received from %r:%r (socket %d): (%d bytes) [%r]',
+                addr,
+                port,
+                socket_.fileno(),
+                len(data),
+                data,
+            )
 
         if not msg.valid:
             pass
@@ -2139,7 +2152,7 @@ def add_multicast_member(
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, int)
-    log.debug('Adding %r to multicast group', interface)
+    log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
             iface_bin = struct.pack('@I', cast(int, interface))
@@ -2173,7 +2186,7 @@ def add_multicast_member(
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only), apple_p2p=apple_p2p
     )
-    log.debug('Configuring %s with multicast interface %s', respond_socket, interface)
+    log.debug('Configuring socket %d with multicast interface %s', respond_socket, interface)
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
     else:
@@ -2785,7 +2798,7 @@ class Zeroconf(QuietLogger):
                         # IPV6 support, so we have to try and ignore errors.
                         continue
                     # on send errors, log the exception and keep going
-                    self.log_exception_warning()
+                    self.log_exception_warning('Error sending through socket %d', s.fileno())
                 else:
                     if bytes_sent != len(packet):
                         self.log_warning_once('!!! sent %d of %d bytes to %r' % (bytes_sent, len(packet), s))
