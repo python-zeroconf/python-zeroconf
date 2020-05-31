@@ -2292,6 +2292,7 @@ class Zeroconf(QuietLogger):
         self._listen_socket, self._respond_sockets = create_sockets(
             interfaces, unicast, ip_version, apple_p2p=apple_p2p
         )
+        log.debug('Listen socket %r, respond sockets %s', self._listen_socket, self._respond_sockets)
 
         self.listeners = []  # type: List[RecordUpdateListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
