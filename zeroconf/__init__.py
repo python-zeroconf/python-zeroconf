@@ -2163,11 +2163,11 @@ def add_multicast_member(
     listen_socket: socket.socket, interface: Union[str, Tuple[str, int]], apple_p2p: bool = False
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
-    is_v6 = isinstance(interface, int)
+    is_v6 = isinstance(interface, tuple)
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
-            iface_bin = struct.pack('@I', cast(int, interface))
+            iface_bin = struct.pack('@I', cast(int, interface[1]))
             _value = _MDNS_ADDR6_BYTES + iface_bin
             listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, _value)
         else:
