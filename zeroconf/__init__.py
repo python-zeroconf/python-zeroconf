@@ -2057,9 +2057,8 @@ def ip6_addresses_to_indexes(
 
     for iface in interfaces:
         if isinstance(iface, int):
-            # Temporarily disabled to validate something else
+            assert False, 'Temporarily disabled to test something else'
             # result.append(iface)
-            pass
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
             result.append(ip6_to_address_and_index(adapters, iface))
 
