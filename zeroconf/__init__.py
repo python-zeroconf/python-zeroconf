@@ -2175,7 +2175,6 @@ def add_multicast_member(
     apple_p2p: bool = False,
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
-    print(interface)
     is_v6 = isinstance(interface, tuple)
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
