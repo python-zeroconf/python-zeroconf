@@ -2006,7 +2006,7 @@ def get_all_addresses() -> List[str]:
 def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     try:
-        nameindex = socket.if_nametoindex
+        socket.if_nametoindex
     except AttributeError:
         # Requires Python 3.8 on Windows. Fall back to Default.
         QuietLogger.log_warning_once(
