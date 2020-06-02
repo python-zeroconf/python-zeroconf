@@ -190,7 +190,7 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
-InterfacesType = Union[List[Union[str, int]], InterfaceChoice]
+InterfacesType = Union[List[Union[str, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
 
 
 @enum.unique
@@ -2003,7 +2003,7 @@ def get_all_addresses() -> List[str]:
     return list(set(addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4))
 
 
-def get_all_addresses_v6() -> List[Tuple[str, int]]:
+def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     try:
         nameindex = socket.if_nametoindex
@@ -2012,7 +2012,7 @@ def get_all_addresses_v6() -> List[Tuple[str, int]]:
         QuietLogger.log_warning_once(
             'if_nameindex is not available, falling back to using the default IPv6 interface'
         )
-        return [('', 0)]
+        return [(('', 0, 0), 0)]
 
     # TODO: What about multi-address interfaces?
     return list(
@@ -2025,7 +2025,7 @@ def get_all_addresses_v6() -> List[Tuple[str, int]]:
     )
 
 
-def ip_to_index(adapters: List[Any], ip: str) -> int:
+def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, int, int], int]:
     if os.name != 'posix':
         # Adapter names that ifaddr reports are not compatible with what if_nametoindex expects on Windows.
         # We need https://github.com/pydron/ifaddr/pull/21 but it seems stuck on review.
@@ -2036,12 +2036,14 @@ def ip_to_index(adapters: List[Any], ip: str) -> int:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return socket.if_nametoindex(adapter.name)
+                return (cast(Tuple[str, int, int], adapter_ip.ip), socket.if_nametoindex(adapter.name))
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
 
-def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[Tuple[str, int]]:
+def ip6_addresses_to_indexes(
+    interfaces: List[Union[str, Tuple[Tuple[str, int, int], int]]]
+) -> List[Tuple[Tuple[str, int, int], int]]:
     """Convert IPv6 interface addresses to interface indexes.
 
     IPv4 addresses are ignored. The conversion currently only works on POSIX
@@ -2055,27 +2057,29 @@ def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[Tuple[st
 
     for iface in interfaces:
         if isinstance(iface, int):
-            result.append(iface)
+            # Temporarily disabled to validate something else
+            # result.append(iface)
+            pass
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
-            result.append(ip_to_index(adapters, iface))
+            result.append(ip6_to_address_and_index(adapters, iface))
 
     return result
 
 
 def normalize_interface_choice(
     choice: InterfacesType, ip_version: IPVersion = IPVersion.V4Only
-) -> List[Union[str, Tuple[str, int]]]:
+) -> List[Union[str, Tuple[Tuple[str, int, int], int]]]:
     """Convert the interfaces choice into internal representation.
 
     :param choice: `InterfaceChoice` or list of interface addresses or indexes (IPv6 only).
     :param ip_address: IP version to use (ignored if `choice` is a list).
     :returns: List of IP addresses (for IPv4) and indexes (for IPv6).
     """
-    result = []  # type: List[Union[str, int]]
+    result = []  # type: List[Union[str, Tuple[Tuple[str, int, int], int]]]
     if choice is InterfaceChoice.Default:
         if ip_version != IPVersion.V4Only:
             # IPv6 multicast uses interface 0 to mean the default
-            result.append(0)
+            result.append((('', 0, 0), 0))
         if ip_version != IPVersion.V6Only:
             result.append('0.0.0.0')
     elif choice is InterfaceChoice.All:
@@ -2098,11 +2102,18 @@ def normalize_interface_choice(
 
 
 def new_socket(
+    bind_addr: Union[Tuple[str], Tuple[str, int, int]],
     port: int = _MDNS_PORT,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
-    bind_addr: str = '',
 ) -> socket.socket:
+    log.debug(
+        'Creating new socket with port %s, ip_version %s, apple_p2p %s and bind_addr %r',
+        port,
+        ip_version,
+        apple_p2p,
+        bind_addr,
+    )
     if ip_version == IPVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
@@ -2154,15 +2165,18 @@ def new_socket(
         # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
         s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
 
-    s.bind((bind_addr, port))
-
+    s.bind((bind_addr[0], port, *bind_addr[1:]))
+    log.debug('Created socket %s', s)
     return s
 
 
 def add_multicast_member(
-    listen_socket: socket.socket, interface: Union[str, Tuple[str, int]], apple_p2p: bool = False
+    listen_socket: socket.socket,
+    interface: Union[str, Tuple[Tuple[str, int, int], int]],
+    apple_p2p: bool = False,
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
+    print(interface)
     is_v6 = isinstance(interface, tuple)
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
@@ -2198,9 +2212,9 @@ def add_multicast_member(
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
         apple_p2p=apple_p2p,
-        bind_addr=interface[0] if is_v6 else interface,
+        bind_addr=cast(Tuple[Tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
     )
-    log.debug('Configuring socket %d with multicast interface %s', respond_socket, interface)
+    log.debug('Configuring socket %s with multicast interface %s', respond_socket, interface)
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
     else:
@@ -2219,7 +2233,7 @@ def create_sockets(
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr='')
+        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=('',))
 
     interfaces = normalize_interface_choice(interfaces, ip_version)
 
@@ -2229,7 +2243,12 @@ def create_sockets(
         if not unicast:
             respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
         else:
-            respond_socket = new_socket(port=0, ip_version=ip_version, apple_p2p=apple_p2p, bind_addr='')
+            respond_socket = new_socket(
+                port=0,
+                ip_version=ip_version,
+                apple_p2p=apple_p2p,
+                bind_addr=i[0] if isinstance(i, tuple) else (i,),
+            )
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
