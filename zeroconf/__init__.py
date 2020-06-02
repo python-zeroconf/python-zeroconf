@@ -1184,7 +1184,9 @@ class DNSOutgoing:
             authority_offset += authorities_written
             additional_offset += additionals_written
             log.debug("now offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
-            if answers_written == 0 and authorities_written == 0 and additional_offset == 0:
+            if (answers_written + authorities_written + additionals_written) == 0 and (
+                len(self.answers) + len(self.authorities) + len(self.additionals)
+            ) > 0:
                 log.warning("packets() made no progress adding records; returning")
                 break
         self.state = self.State.finished
