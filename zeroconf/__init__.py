@@ -2043,6 +2043,22 @@ def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, i
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
 
+def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str, int, int]:
+    if os.name != 'posix':
+        # Adapter names that ifaddr reports are not compatible with what if_nametoindex expects on Windows.
+        # We need https://github.com/pydron/ifaddr/pull/21 but it seems stuck on review.
+        raise RuntimeError('Converting from adapter names to indexes is not supported on non-POSIX systems')
+
+    for adapter in adapters:
+        if socket.if_nametoindex(adapter.name) == index:
+            for adapter_ip in adapter.ips:
+                # IPv6 addresses are represented as tuples
+                if isinstance(adapter_ip.ip, tuple):
+                    return cast(Tuple[str, int, int], adapter_ip.ip)
+
+    raise RuntimeError('No adapter found for index %s' % index)
+
+
 def ip6_addresses_to_indexes(
     interfaces: List[Union[str, Tuple[Tuple[str, int, int], int]]]
 ) -> List[Tuple[Tuple[str, int, int], int]]:
@@ -2059,8 +2075,7 @@ def ip6_addresses_to_indexes(
 
     for iface in interfaces:
         if isinstance(iface, int):
-            assert False, 'Temporarily disabled to test something else'
-            # result.append(iface)
+            result.append((interface_index_to_ip6_address(adapters, iface), iface))
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
             result.append(ip6_to_address_and_index(adapters, iface))
 
