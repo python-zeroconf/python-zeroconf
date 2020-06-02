@@ -2864,9 +2864,8 @@ class Zeroconf(QuietLogger):
             if not self.unicast:
                 self.engine.del_reader(cast(socket.socket, self._listen_socket))
                 cast(socket.socket, self._listen_socket).close()
-            else:
-                for s in self._respond_sockets:
-                    self.engine.del_reader(s)
+            for s in self._respond_sockets:
+                self.engine.del_reader(s)
             self.engine.join()
 
             # shutdown the rest
