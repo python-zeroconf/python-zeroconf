@@ -2154,6 +2154,9 @@ def add_multicast_member(
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, int)
+    err_einval = {errno.EINVAL}
+    if sys.platform == 'win32':
+        err_einval |= {errno.WSAEINVAL}
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
@@ -2179,7 +2182,7 @@ def add_multicast_member(
                 interface,
             )
             return None
-        elif _errno == errno.EINVAL:
+        elif _errno in err_einval:
             log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
             return None
         else:
