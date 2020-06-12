@@ -2203,7 +2203,7 @@ def add_multicast_member(
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only), apple_p2p=apple_p2p
     )
-    log.debug('Configuring socket %d with multicast interface %s', respond_socket, interface)
+    log.debug('Configuring socket %s with multicast interface %s', respond_socket, interface)
     if is_v6:
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
     else:
