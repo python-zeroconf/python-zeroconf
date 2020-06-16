@@ -190,7 +190,7 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
-InterfacesType = Union[List[Union[str, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
+InterfacesType = Union[List[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
 
 
 @enum.unique
@@ -2060,7 +2060,7 @@ def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str
 
 
 def ip6_addresses_to_indexes(
-    interfaces: List[Union[str, Tuple[Tuple[str, int, int], int]]]
+    interfaces: List[Union[str, int, Tuple[Tuple[str, int, int], int]]]
 ) -> List[Tuple[Tuple[str, int, int], int]]:
     """Convert IPv6 interface addresses to interface indexes.
 
@@ -2250,11 +2250,11 @@ def create_sockets(
     else:
         listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=('',))
 
-    interfaces = normalize_interface_choice(interfaces, ip_version)
+    normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
     respond_sockets = []
 
-    for i in interfaces:
+    for i in normalized_interfaces:
         if not unicast:
             respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
         else:
