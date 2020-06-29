@@ -2032,17 +2032,12 @@ def get_all_addresses_v6() -> List[int]:
 
 
 def ip_to_index(adapters: List[Any], ip: str) -> int:
-    if os.name != 'posix':
-        # Adapter names that ifaddr reports are not compatible with what if_nametoindex expects on Windows.
-        # We need https://github.com/pydron/ifaddr/pull/21 but it seems stuck on review.
-        raise RuntimeError('Converting from IP addresses to indexes is not supported on non-POSIX systems')
-
     ipaddr = ipaddress.ip_address(ip)
     for adapter in adapters:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return socket.if_nametoindex(adapter.name)
+                return adapter.index
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
