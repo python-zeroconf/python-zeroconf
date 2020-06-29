@@ -2045,8 +2045,7 @@ def ip_to_index(adapters: List[Any], ip: str) -> int:
 def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
     """Convert IPv6 interface addresses to interface indexes.
 
-    IPv4 addresses are ignored. The conversion currently only works on POSIX
-    systems.
+    IPv4 addresses are ignored.
 
     :param interfaces: List of IP addresses and indexes.
     :returns: List of indexes.
@@ -2266,7 +2265,6 @@ class Zeroconf(QuietLogger):
             (IPv4 and IPv6) and interface indexes (IPv6 only).
 
             IPv6 notes for non-POSIX systems:
-            * IPv6 addresses are not supported, use indexes instead.
             * `InterfaceChoice.All` is an alias for `InterfaceChoice.Default`
               on Python versions before 3.8.
 
