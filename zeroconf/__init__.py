@@ -25,7 +25,6 @@ import errno
 import ipaddress
 import itertools
 import logging
-import os
 import platform
 import re
 import select
