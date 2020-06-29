@@ -25,7 +25,6 @@ import errno
 import ipaddress
 import itertools
 import logging
-import os
 import platform
 import re
 import select
@@ -2032,17 +2031,12 @@ def get_all_addresses_v6() -> List[int]:
 
 
 def ip_to_index(adapters: List[Any], ip: str) -> int:
-    if os.name != 'posix':
-        # Adapter names that ifaddr reports are not compatible with what if_nametoindex expects on Windows.
-        # We need https://github.com/pydron/ifaddr/pull/21 but it seems stuck on review.
-        raise RuntimeError('Converting from IP addresses to indexes is not supported on non-POSIX systems')
-
     ipaddr = ipaddress.ip_address(ip)
     for adapter in adapters:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return socket.if_nametoindex(adapter.name)
+                return adapter.index
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
@@ -2050,8 +2044,7 @@ def ip_to_index(adapters: List[Any], ip: str) -> int:
 def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
     """Convert IPv6 interface addresses to interface indexes.
 
-    IPv4 addresses are ignored. The conversion currently only works on POSIX
-    systems.
+    IPv4 addresses are ignored.
 
     :param interfaces: List of IP addresses and indexes.
     :returns: List of indexes.
@@ -2271,7 +2264,6 @@ class Zeroconf(QuietLogger):
             (IPv4 and IPv6) and interface indexes (IPv6 only).
 
             IPv6 notes for non-POSIX systems:
-            * IPv6 addresses are not supported, use indexes instead.
             * `InterfaceChoice.All` is an alias for `InterfaceChoice.Default`
               on Python versions before 3.8.
 
