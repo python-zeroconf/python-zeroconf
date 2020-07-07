@@ -2018,16 +2018,7 @@ def get_all_addresses() -> List[str]:
 
 def get_all_addresses_v6() -> List[int]:
     # IPv6 multicast uses positive indexes for interfaces
-    try:
-        nameindex = socket.if_nameindex
-    except AttributeError:
-        # Requires Python 3.8 on Windows. Fall back to Default.
-        QuietLogger.log_warning_once(
-            'if_nameindex is not available, falling back to using the default IPv6 interface'
-        )
-        return [0]
-
-    return [tpl[0] for tpl in nameindex()]
+    return [adapter.index for adapter in ifaddr.get_adapters()]
 
 
 def ip_to_index(adapters: List[Any], ip: str) -> int:
