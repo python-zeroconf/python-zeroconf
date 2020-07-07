@@ -12,3 +12,5 @@ Thumbs.db
 .mypy_cache/
 docs/_build/
 .vscode
+/dist/
+/zeroconf.egg-info/
