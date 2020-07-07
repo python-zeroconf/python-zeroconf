@@ -2018,19 +2018,10 @@ def get_all_addresses() -> List[str]:
 
 def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
-    try:
-        socket.if_nametoindex
-    except AttributeError:
-        # Requires Python 3.8 on Windows. Fall back to Default.
-        QuietLogger.log_warning_once(
-            'if_nameindex is not available, falling back to using the default IPv6 interface'
-        )
-        return [(('', 0, 0), 0)]
-
     # TODO: What about multi-address interfaces?
     return list(
         set(
-            (addr.ip, socket.if_nametoindex(iface.name))
+            (addr.ip, iface.index)
             for iface in ifaddr.get_adapters()
             for addr in iface.ips
             if addr.is_IPv6
@@ -2039,11 +2030,6 @@ def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
 
 
 def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, int, int], int]:
-    if os.name != 'posix':
-        # Adapter names that ifaddr reports are not compatible with what if_nametoindex expects on Windows.
-        # We need https://github.com/pydron/ifaddr/pull/21 but it seems stuck on review.
-        raise RuntimeError('Converting from IP addresses to indexes is not supported on non-POSIX systems')
-
     ipaddr = ipaddress.ip_address(ip)
     for adapter in adapters:
         for adapter_ip in adapter.ips:
@@ -2055,13 +2041,8 @@ def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, i
 
 
 def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str, int, int]:
-    if os.name != 'posix':
-        # Adapter names that ifaddr reports are not compatible with what if_nametoindex expects on Windows.
-        # We need https://github.com/pydron/ifaddr/pull/21 but it seems stuck on review.
-        raise RuntimeError('Converting from adapter names to indexes is not supported on non-POSIX systems')
-
     for adapter in adapters:
-        if socket.if_nametoindex(adapter.name) == index:
+        if adapter.index == index:
             for adapter_ip in adapter.ips:
                 # IPv6 addresses are represented as tuples
                 if isinstance(adapter_ip.ip, tuple):
