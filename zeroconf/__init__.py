@@ -2036,7 +2036,7 @@ def ip_to_index(adapters: List[Any], ip: str) -> int:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return adapter.index
+                return cast(int, adapter.index)
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
