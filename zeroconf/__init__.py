@@ -189,7 +189,7 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
-InterfacesType = Union[List[Union[str, int]], InterfaceChoice]
+InterfacesType = Union[List[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
 
 
 @enum.unique
@@ -2016,23 +2016,39 @@ def get_all_addresses() -> List[str]:
     return list(set(addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4))
 
 
-def get_all_addresses_v6() -> List[int]:
+def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
-    return [adapter.index for adapter in ifaddr.get_adapters()]
+    # TODO: What about multi-address interfaces?
+    return list(
+        set((addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6)
+    )
 
 
-def ip_to_index(adapters: List[Any], ip: str) -> int:
+def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, int, int], int]:
     ipaddr = ipaddress.ip_address(ip)
     for adapter in adapters:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return cast(int, adapter.index)
+                return (cast(Tuple[str, int, int], adapter_ip.ip), cast(int, adapter.index))
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
 
-def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
+def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str, int, int]:
+    for adapter in adapters:
+        if adapter.index == index:
+            for adapter_ip in adapter.ips:
+                # IPv6 addresses are represented as tuples
+                if isinstance(adapter_ip.ip, tuple):
+                    return cast(Tuple[str, int, int], adapter_ip.ip)
+
+    raise RuntimeError('No adapter found for index %s' % index)
+
+
+def ip6_addresses_to_indexes(
+    interfaces: List[Union[str, int, Tuple[Tuple[str, int, int], int]]]
+) -> List[Tuple[Tuple[str, int, int], int]]:
     """Convert IPv6 interface addresses to interface indexes.
 
     IPv4 addresses are ignored.
@@ -2045,27 +2061,27 @@ def ip6_addresses_to_indexes(interfaces: List[Union[str, int]]) -> List[int]:
 
     for iface in interfaces:
         if isinstance(iface, int):
-            result.append(iface)
+            result.append((interface_index_to_ip6_address(adapters, iface), iface))
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
-            result.append(ip_to_index(adapters, iface))
+            result.append(ip6_to_address_and_index(adapters, iface))
 
     return result
 
 
 def normalize_interface_choice(
     choice: InterfacesType, ip_version: IPVersion = IPVersion.V4Only
-) -> List[Union[str, int]]:
+) -> List[Union[str, Tuple[Tuple[str, int, int], int]]]:
     """Convert the interfaces choice into internal representation.
 
     :param choice: `InterfaceChoice` or list of interface addresses or indexes (IPv6 only).
     :param ip_address: IP version to use (ignored if `choice` is a list).
     :returns: List of IP addresses (for IPv4) and indexes (for IPv6).
     """
-    result = []  # type: List[Union[str, int]]
+    result = []  # type: List[Union[str, Tuple[Tuple[str, int, int], int]]]
     if choice is InterfaceChoice.Default:
         if ip_version != IPVersion.V4Only:
             # IPv6 multicast uses interface 0 to mean the default
-            result.append(0)
+            result.append((('', 0, 0), 0))
         if ip_version != IPVersion.V6Only:
             result.append('0.0.0.0')
     elif choice is InterfaceChoice.All:
@@ -2088,8 +2104,18 @@ def normalize_interface_choice(
 
 
 def new_socket(
-    port: int = _MDNS_PORT, ip_version: IPVersion = IPVersion.V4Only, apple_p2p: bool = False
+    bind_addr: Union[Tuple[str], Tuple[str, int, int]],
+    port: int = _MDNS_PORT,
+    ip_version: IPVersion = IPVersion.V4Only,
+    apple_p2p: bool = False,
 ) -> socket.socket:
+    log.debug(
+        'Creating new socket with port %s, ip_version %s, apple_p2p %s and bind_addr %r',
+        port,
+        ip_version,
+        apple_p2p,
+        bind_addr,
+    )
     if ip_version == IPVersion.V4Only:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     else:
@@ -2141,22 +2167,25 @@ def new_socket(
         # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
         s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
 
-    s.bind(('', port))
+    s.bind((bind_addr[0], port, *bind_addr[1:]))
+    log.debug('Created socket %s', s)
     return s
 
 
 def add_multicast_member(
-    listen_socket: socket.socket, interface: Union[str, int], apple_p2p: bool = False
+    listen_socket: socket.socket,
+    interface: Union[str, Tuple[Tuple[str, int, int], int]],
+    apple_p2p: bool = False,
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
-    is_v6 = isinstance(interface, int)
+    is_v6 = isinstance(interface, tuple)
     err_einval = {errno.EINVAL}
     if sys.platform == 'win32':
         err_einval |= {errno.WSAEINVAL}
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
-            iface_bin = struct.pack('@I', cast(int, interface))
+            iface_bin = struct.pack('@I', cast(int, interface[1]))
             _value = _MDNS_ADDR6_BYTES + iface_bin
             listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, _value)
         else:
@@ -2185,7 +2214,9 @@ def add_multicast_member(
             raise
 
     respond_socket = new_socket(
-        ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only), apple_p2p=apple_p2p
+        ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
+        apple_p2p=apple_p2p,
+        bind_addr=cast(Tuple[Tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
     )
     log.debug('Configuring socket %s with multicast interface %s', respond_socket, interface)
     if is_v6:
@@ -2206,17 +2237,22 @@ def create_sockets(
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p)
+        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=('',))
 
-    interfaces = normalize_interface_choice(interfaces, ip_version)
+    normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
     respond_sockets = []
 
-    for i in interfaces:
+    for i in normalized_interfaces:
         if not unicast:
             respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
         else:
-            respond_socket = new_socket(port=0, ip_version=ip_version, apple_p2p=apple_p2p)
+            respond_socket = new_socket(
+                port=0,
+                ip_version=ip_version,
+                apple_p2p=apple_p2p,
+                bind_addr=i[0] if isinstance(i, tuple) else (i,),
+            )
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
@@ -2307,9 +2343,8 @@ class Zeroconf(QuietLogger):
         self.listener = Listener(self)
         if not unicast:
             self.engine.add_reader(self.listener, cast(socket.socket, self._listen_socket))
-        else:
-            for s in self._respond_sockets:
-                self.engine.add_reader(self.listener, s)
+        for s in self._respond_sockets:
+            self.engine.add_reader(self.listener, s)
         self.reaper = Reaper(self)
 
         self.debug = None  # type: Optional[DNSOutgoing]
@@ -2817,9 +2852,8 @@ class Zeroconf(QuietLogger):
             if not self.unicast:
                 self.engine.del_reader(cast(socket.socket, self._listen_socket))
                 cast(socket.socket, self._listen_socket).close()
-            else:
-                for s in self._respond_sockets:
-                    self.engine.del_reader(s)
+            for s in self._respond_sockets:
+                self.engine.del_reader(s)
             self.engine.join()
 
             # shutdown the rest
