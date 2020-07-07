@@ -134,6 +134,20 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.0
+======
+
+* Improved Windows support when using socket errno checks, thanks to Sandy Patterson.
+* Added support for passing text addresses to ServiceInfo.
+* Improved logging (includes fixing an incorrect logging call)
+* Improved Windows compatibility by using Adapter.index from ifaddr, thanks to PhilippSelenium.
+* Improved Windows compatibility by stopping using socket.if_nameindex.
+* Fixed an OS X edge case which should also eliminate a memory leak, thanks to Emil Styrke.
+
+Technically backwards incompatible:
+
+* ``ifaddr`` 0.1.7 or newer is required now.
+
 0.27.1
 ------
 
