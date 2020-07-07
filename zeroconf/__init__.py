@@ -2020,12 +2020,7 @@ def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     # TODO: What about multi-address interfaces?
     return list(
-        set(
-            (addr.ip, iface.index)
-            for iface in ifaddr.get_adapters()
-            for addr in iface.ips
-            if addr.is_IPv6
-        )
+        set((addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6)
     )
 
 
