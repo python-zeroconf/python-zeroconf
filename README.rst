@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.27.1
+------
+
+* Improved the logging situation (includes fixing a false-positive "packets() made no progress
+  adding records", thanks to Greg Badros)
+
 0.27.0
 ------
 

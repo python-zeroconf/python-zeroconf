@@ -25,7 +25,6 @@ import errno
 import ipaddress
 import itertools
 import logging
-import os
 import platform
 import re
 import select
@@ -43,7 +42,7 @@ import ifaddr
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.27.0'
+__version__ = '0.27.1'
 __license__ = 'LGPL'
 
 
@@ -217,6 +216,12 @@ def current_time_millis() -> float:
 
 def _is_v6_address(addr: bytes) -> bool:
     return len(addr) == 16
+
+
+def _encode_address(address: str) -> bytes:
+    is_ipv6 = ':' in address
+    address_family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    return socket.inet_pton(address_family, address)
 
 
 def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
@@ -1696,8 +1701,8 @@ class ServiceInfo(RecordUpdateListener):
     * server: fully qualified name for service host (defaults to name)
     * host_ttl: ttl used for A/SRV records
     * other_ttl: ttl used for PTR/TXT records
-    * addresses: List of IP addresses as unsigned short (IPv4) or unsigned 128 bit number (IPv6),
-      network byte order
+    * addresses and parsed_addresses: List of IP addresses (either as bytes, network byte order, or in parsed
+      form as text; at most one of those parameters can be provided)
 
     """
 
@@ -1718,14 +1723,20 @@ class ServiceInfo(RecordUpdateListener):
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
         *,
-        addresses: Optional[List[bytes]] = None
+        addresses: Optional[List[bytes]] = None,
+        parsed_addresses: Optional[List[str]] = None
     ) -> None:
+        # Accept both none, or one, but not both.
+        if addresses is not None and parsed_addresses is not None:
+            raise TypeError("addresses and parsed_addresses cannot be provided together")
         if not type_.endswith(service_type_name(name, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
         if addresses is not None:
             self._addresses = addresses
+        elif parsed_addresses is not None:
+            self._addresses = [_encode_address(a) for a in parsed_addresses]
         else:
             self._addresses = []
         # This results in an ugly error when registering, better check now
@@ -2038,7 +2049,7 @@ def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, i
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return (cast(Tuple[str, int, int], adapter_ip.ip), socket.if_nametoindex(adapter.name))
+                return (cast(Tuple[str, int, int], adapter_ip.ip), cast(int, adapter.index))
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
 
@@ -2064,8 +2075,7 @@ def ip6_addresses_to_indexes(
 ) -> List[Tuple[Tuple[str, int, int], int]]:
     """Convert IPv6 interface addresses to interface indexes.
 
-    IPv4 addresses are ignored. The conversion currently only works on POSIX
-    systems.
+    IPv4 addresses are ignored.
 
     :param interfaces: List of IP addresses and indexes.
     :returns: List of indexes.
@@ -2193,6 +2203,9 @@ def add_multicast_member(
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, tuple)
+    err_einval = {errno.EINVAL}
+    if sys.platform == 'win32':
+        err_einval |= {errno.WSAEINVAL}
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
@@ -2218,7 +2231,7 @@ def add_multicast_member(
                 interface,
             )
             return None
-        elif _errno == errno.EINVAL:
+        elif _errno in err_einval:
             log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
             return None
         else:
@@ -2302,7 +2315,6 @@ class Zeroconf(QuietLogger):
             (IPv4 and IPv6) and interface indexes (IPv6 only).
 
             IPv6 notes for non-POSIX systems:
-            * IPv6 addresses are not supported, use indexes instead.
             * `InterfaceChoice.All` is an alias for `InterfaceChoice.Default`
               on Python versions before 3.8.
 
@@ -2335,7 +2347,7 @@ class Zeroconf(QuietLogger):
         self._listen_socket, self._respond_sockets = create_sockets(
             interfaces, unicast, ip_version, apple_p2p=apple_p2p
         )
-        log.debug('Listen socket %r, respond sockets %s', self._listen_socket, self._respond_sockets)
+        log.debug('Listen socket %s, respond sockets %s', self._listen_socket, self._respond_sockets)
 
         self.listeners = []  # type: List[RecordUpdateListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
