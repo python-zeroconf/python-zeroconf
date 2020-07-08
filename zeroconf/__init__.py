@@ -35,7 +35,8 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import Dict, List, Optional, Sequence, Union, cast
+from types import TracebackType  # noqa # used in type hints
+from typing import Dict, List, Optional, Sequence, Type, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
@@ -2861,3 +2862,15 @@ class Zeroconf(QuietLogger):
             self.reaper.join()
             for s in self._respond_sockets:
                 s.close()
+
+    def __enter__(self) -> 'Zeroconf':
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> 'Literal[False]':  # type: ignore # noqa
+        self.close()
+        return False

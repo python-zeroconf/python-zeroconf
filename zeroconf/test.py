@@ -515,6 +515,15 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
         rv.close()
 
+    def test_launch_and_close_context_manager(self):
+        with r.Zeroconf(interfaces=r.InterfaceChoice.All) as rv:
+            assert rv.done is False
+        assert rv.done is True
+
+        with r.Zeroconf(interfaces=r.InterfaceChoice.Default) as rv:
+            assert rv.done is False
+        assert rv.done is True
+
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v4_v6(self):
