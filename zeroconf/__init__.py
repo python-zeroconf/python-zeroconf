@@ -2061,7 +2061,7 @@ def ip6_addresses_to_indexes(
     for iface in interfaces:
         if isinstance(iface, int):
             ip6_addr = (interface_index_to_ip6_address(adapters, iface), iface)
-            if ip6_addr != ("", 0, 0):
+            if ip6_addr != (("", 0, 0), iface):
                 result.append(ip6_addr)
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
             result.append(ip6_to_address_and_index(adapters, iface))
@@ -2097,6 +2097,7 @@ def normalize_interface_choice(
     elif isinstance(choice, list):
         # First, take IPv4 addresses.
         result = [i for i in choice if isinstance(i, str) and ipaddress.ip_address(i).version == 4]
+        breakpoint()
         # Unlike IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP requires interface indexes.
         result += ip6_addresses_to_indexes(choice)
     else:
@@ -2240,7 +2241,7 @@ def create_sockets(
     else:
         listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=('',))
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
-
+    breakpoint()
     respond_sockets = []
 
     for i in normalized_interfaces:
