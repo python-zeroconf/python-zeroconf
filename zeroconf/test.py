@@ -538,9 +538,9 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V4Only)
         rv.close()
 
-    def test_handle_response_interface_index(self):    
+    def test_interface_index(self):    
         adapters = ifaddr.get_adapters()
-        zeroconf = r.Zeroconf(interfaces=[adapters[0].index])
+        zeroconf = r.Zeroconf(interfaces=[list(adapters)[0].index])
         zeroconf.close()
 
     def test_handle_response(self):
