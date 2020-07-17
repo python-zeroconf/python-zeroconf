@@ -16,6 +16,7 @@ from typing import Dict, Optional  # noqa # used in type hints
 from typing import cast
 import ifaddr
 
+
 import zeroconf as r
 from zeroconf import (
     DNSHinfo,
@@ -537,11 +538,6 @@ class Framework(unittest.TestCase):
         rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V4Only)
         rv.close()
-
-    def test_interface_index(self):    
-        adapters = ifaddr.get_adapters()
-        zeroconf = r.Zeroconf(interfaces=[list(adapters)[0].index])
-        zeroconf.close()
 
     def test_handle_response(self):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
