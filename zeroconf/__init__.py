@@ -2179,7 +2179,6 @@ def add_multicast_member(
     apple_p2p: bool = False,
 ) -> Optional[socket.socket]:
     # This is based on assumptions in normalize_interface_choice
-    #breakpoint()
     is_v6 = isinstance(interface, tuple)
     err_einval = {errno.EINVAL}
     if sys.platform == 'win32':
