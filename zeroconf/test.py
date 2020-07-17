@@ -14,6 +14,8 @@ import unittest
 from threading import Event
 from typing import Dict, Optional  # noqa # used in type hints
 from typing import cast
+import ifaddr
+from unittest.mock import patch
 
 
 import zeroconf as r
@@ -537,6 +539,16 @@ class Framework(unittest.TestCase):
         rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V4Only)
         rv.close()
+    
+
+    @patch('ifaddr.get_adapters')
+    def test_interface_index(self, fake_adapter):
+        sample_ip = ifaddr.IP("127.0.0.1", 0, "fake_ipaddr")
+        adapter = ifaddr.Adapter("eth0", "fake_adapter", [sample_ip], 1)
+        fake_adapter.return_value = [adapter]
+        zeroconf = Zeroconf(interfaces=[1])
+        zeroconf.close()
+        
 
     def test_handle_response(self):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
