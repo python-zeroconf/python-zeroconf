@@ -2042,7 +2042,7 @@ def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str
                 # IPv6 addresses are represented as tuples
                 if isinstance(adapter_ip.ip, tuple):
                     return cast(Tuple[str, int, int], adapter_ip.ip)
-    return None
+    return ("", 0, 0)
 
 
 def ip6_addresses_to_indexes(
@@ -2061,7 +2061,7 @@ def ip6_addresses_to_indexes(
     for iface in interfaces:
         if isinstance(iface, int):
             ip6_addr = (interface_index_to_ip6_address(adapters, iface), iface)
-            if ip6_addr:
+            if ip6_addr != ("", 0, 0):
                 result.append(ip6_addr)
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
             result.append(ip6_to_address_and_index(adapters, iface))
