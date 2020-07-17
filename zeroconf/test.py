@@ -531,6 +531,12 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
         rv.close()
 
+    def test_launch_and_close_v4_only(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V4Only)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V4Only)
+        rv.close()
+
     def test_handle_response(self):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
             ttl = 120
