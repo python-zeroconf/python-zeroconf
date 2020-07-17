@@ -2042,8 +2042,7 @@ def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str
                 # IPv6 addresses are represented as tuples
                 if isinstance(adapter_ip.ip, tuple):
                     return cast(Tuple[str, int, int], adapter_ip.ip)
-
-    raise RuntimeError('No adapter found for index %s' % index)
+    return None
 
 
 def ip6_addresses_to_indexes(
@@ -2061,7 +2060,9 @@ def ip6_addresses_to_indexes(
 
     for iface in interfaces:
         if isinstance(iface, int):
-            result.append((interface_index_to_ip6_address(adapters, iface), iface))
+            ip6_addr = (interface_index_to_ip6_address(adapters, iface), iface)
+            if ip6_addr:
+                result.append(ip6_addr)
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
             result.append(ip6_to_address_and_index(adapters, iface))
 
@@ -2074,7 +2075,7 @@ def normalize_interface_choice(
     """Convert the interfaces choice into internal representation.
 
     :param choice: `InterfaceChoice` or list of interface addresses or indexes (IPv6 only).
-    :param ip_address: IP version to use (ignored if `choice` is a list).
+    :param ip_version: IP version to use (ignored if `choice` is a list).
     :returns: List of IP addresses (for IPv4) and indexes (for IPv6).
     """
     result = []  # type: List[Union[str, Tuple[Tuple[str, int, int], int]]]
@@ -2238,7 +2239,6 @@ def create_sockets(
         listen_socket = None
     else:
         listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=('',))
-
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
     respond_sockets = []
@@ -2300,16 +2300,19 @@ class Zeroconf(QuietLogger):
         :param apple_p2p: use AWDL interface (only macOS)
         """
         if ip_version is None and isinstance(interfaces, list):
-            has_v6 = any(
-                isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
-                for i in interfaces
-            )
-            has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
+            adapters = ifaddr.get_adapters()
+            has_v6, has_v4 = False, False
+            for i in interfaces:
+                if isinstance(i, int):
+                    adapter = next(a for a in adapters if a.index == i)
+                    has_v6 |= any(ip.is_IPv6 for ip in adapter.ips)
+                    has_v4 |= any(ip.is_IPv4 for ip in adapter.ips)
+                has_v6 |= isinstance(i, str) and ipaddress.ip_address(i).version == 6
+                has_v4 |= isinstance(i, str) and ipaddress.ip_address(i).version == 4
             if has_v4 and has_v6:
                 ip_version = IPVersion.All
             elif has_v6:
                 ip_version = IPVersion.V6Only
-
         if ip_version is None:
             ip_version = IPVersion.V4Only
 
@@ -2319,7 +2322,6 @@ class Zeroconf(QuietLogger):
 
         if apple_p2p and not platform.system() == 'Darwin':
             raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
-
         self._listen_socket, self._respond_sockets = create_sockets(
             interfaces, unicast, ip_version, apple_p2p=apple_p2p
         )
