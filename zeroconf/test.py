@@ -543,8 +543,9 @@ class Framework(unittest.TestCase):
 
     @patch('ifaddr.get_adapters')
     def test_interface_index(self, fake_adapter):
-        sample_ip = ifaddr.IP("127.0.0.1", 0, "fake_ipaddr")
-        adapter = ifaddr.Adapter("eth0", "fake_adapter", [sample_ip], 1)
+        sample_ip_v4 = ifaddr.IP('127.0.0.1', 0, 'fake_ipaddr')
+        sample_ip_v6 = ifaddr.IP('fe80::9dfd:c2d5:931e:d23b', 0, 18)
+        adapter = ifaddr.Adapter("eth0", "fake_adapter", [sample_ip_v4, sample_ip_v6], 1)
         fake_adapter.return_value = [adapter]
         zeroconf = Zeroconf(interfaces=[1])
         zeroconf.close()
