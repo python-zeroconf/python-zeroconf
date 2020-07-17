@@ -14,8 +14,6 @@ import unittest
 from threading import Event
 from typing import Dict, Optional  # noqa # used in type hints
 from typing import cast
-import ifaddr
-
 
 
 import zeroconf as r
