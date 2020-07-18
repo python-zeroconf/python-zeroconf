@@ -17,6 +17,7 @@ from typing import cast
 from unittest.mock import patch
 
 import ifaddr
+
 import zeroconf as r
 from zeroconf import (
     DNSHinfo,
