@@ -2638,45 +2638,52 @@ class Zeroconf(QuietLogger):
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
+        updates = []  # type: List[Tuple[float, DNSRecord, Optional[DNSRecord]]]
+        now = current_time_millis()
+        for record in msg.answers:
 
-        with self._handlers_lock:
+            updated = True
 
-            now = current_time_millis()
-            for record in msg.answers:
+            if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
+                # Since the cache format is keyed on the lower case record name
+                # we can avoid iterating everything in the cache and
+                # only look though entries for the specific name.
+                # entries_with_name will take care of converting to lowercase
+                #
+                # We make a copy of the list that entries_with_name returns
+                # since we cannot iterate over something we might remove
+                for entry in self.cache.entries_with_name(record.name).copy():
 
-                updated = True
+                    if entry == record:
+                        updated = False
 
-                if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                    # Since the cache format is keyed on the lower case record name
-                    # we can avoid iterating everything in the cache and
-                    # only look though entries for the specific name.
-                    # entries_with_name will take care of converting to lowercase
-                    #
-                    # We make a copy of the list that entries_with_name returns
-                    # since we cannot iterate over something we might remove
-                    for entry in self.cache.entries_with_name(record.name).copy():
+                    # Check the time first because it is far cheaper
+                    # than the __eq__
+                    if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
+                        self.cache.remove(entry)
 
-                        if entry == record:
-                            updated = False
-
-                        # Check the time first because it is far cheaper
-                        # than the __eq__
-                        if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
-                            self.cache.remove(entry)
-
-                expired = record.is_expired(now)
-                maybe_entry = self.cache.get(record)
-                if not expired:
-                    if maybe_entry is not None:
-                        maybe_entry.reset_ttl(record)
-                    else:
-                        self.cache.add(record)
-                    if updated:
-                        self.update_record(now, record)
+            expired = record.is_expired(now)
+            maybe_entry = self.cache.get(record)
+            if not expired:
+                if maybe_entry is not None:
+                    maybe_entry.reset_ttl(record)
                 else:
-                    if maybe_entry is not None:
-                        self.update_record(now, record)
-                        self.cache.remove(maybe_entry)
+                    self.cache.add(record)
+                if updated:
+                    updates.append((now, record, None))
+            elif maybe_entry is not None:
+                updates.append((now, record, maybe_entry))
+
+        if not updates:
+            return
+
+        # Only hold the lock if we have updates
+        with self._handlers_lock:
+            for update in updates:
+                now, record, entry_to_remove = update
+                self.update_record(update[0], update[1])
+                if entry_to_remove:
+                    self.cache.remove(entry_to_remove)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
