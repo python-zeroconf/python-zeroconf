@@ -174,6 +174,10 @@ _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE = re.compile(r'^[A-Za-z0-9\-\_]+$')
 _HAS_ASCII_CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
 
+_EXPIRE_FULL_TIME_PERCENT = 100
+_EXPIRE_STALE_TIME_PERCENT = 50
+_EXPIRE_REFRESH_TIME_PERCENT = 75
+
 try:
     _IPPROTO_IPV6 = socket.IPPROTO_IPV6
 except AttributeError:
@@ -459,8 +463,8 @@ class DNSRecord(DNSEntry):
         DNSEntry.__init__(self, name, type_, class_)
         self.ttl = ttl
         self.created = current_time_millis()
-        self._expiration_time = self.get_expiration_time(100)
-        self._stale_time = self.get_expiration_time(50)
+        self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
+        self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
 
     def __eq__(self, other: Any) -> bool:
         """Abstract method"""
@@ -506,8 +510,8 @@ class DNSRecord(DNSEntry):
         another record."""
         self.created = other.created
         self.ttl = other.ttl
-        self._expiration_time = self.get_expiration_time(100)
-        self._stale_time = self.get_expiration_time(50)
+        self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
+        self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Abstract method"""
@@ -1609,7 +1613,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                     enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
                     return
 
-            expires = record.get_expiration_time(75)
+            expires = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
             if expires < self._next_time[record.name]:
                 self._next_time[record.name] = expires
 
@@ -1649,8 +1653,8 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.join()
 
     def run(self) -> None:
-        for type_ in self.types:
-            self.zc.add_listener(self, DNSQuestion(type_, _TYPE_PTR, _CLASS_IN))
+        questions = [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types]
+        self.zc.add_listener(self, questions)
 
         while True:
             now = current_time_millis()
@@ -2595,16 +2599,20 @@ class Zeroconf(QuietLogger):
             i += 1
             next_time += _CHECK_TIME
 
-    def add_listener(self, listener: RecordUpdateListener, question: Optional[DNSQuestion]) -> None:
+    def add_listener(
+        self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
+    ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
-        answer the question."""
+        answer the question(s)."""
         now = current_time_millis()
         self.listeners.append(listener)
         if question is not None:
-            for record in self.cache.entries_with_name(question.name):
-                if question.answered_by(record) and not record.is_expired(now):
-                    listener.update_record(self, now, record)
+            questions = [question] if isinstance(question, DNSQuestion) else question
+            for single_question in questions:
+                for record in self.cache.entries_with_name(single_question.name):
+                    if single_question.answered_by(record) and not record.is_expired(now):
+                        listener.update_record(self, now, record)
         self.notify_all()
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
