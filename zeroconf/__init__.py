@@ -1915,7 +1915,7 @@ class ServiceInfo(RecordUpdateListener):
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
                     cached_entry = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
                     if not cached_entry or cached_entry.created < first:
-                        out.add_question(DNSQuestion(self.name, _TYPE_SRV, _CLASS_IN)) 
+                        out.add_question(DNSQuestion(self.name, _TYPE_SRV, _CLASS_IN))
                         out.add_answer_at_time(cached_entry, now)
                     cached_entry = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
                     if not cached_entry or cached_entry.created < first:
