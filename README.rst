@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.1
+======
+
+* Fixed a resource leak connected to using ServiceBrowser with multiple types, thanks to
+  J. Nick Koston.
+
 0.28.0
 ======
 
