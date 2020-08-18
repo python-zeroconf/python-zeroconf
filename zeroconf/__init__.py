@@ -1891,7 +1891,6 @@ class ServiceInfo(RecordUpdateListener):
         now = current_time_millis()
         delay = _LISTENER_TIME
         next_ = now + delay
-        first = next_
         last = now + timeout
 
         record_types_for_check_cache = [(_TYPE_SRV, _CLASS_IN), (_TYPE_TXT, _CLASS_IN)]
