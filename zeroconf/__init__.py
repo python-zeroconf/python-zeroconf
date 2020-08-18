@@ -1914,21 +1914,21 @@ class ServiceInfo(RecordUpdateListener):
                 if next_ <= now:
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
                     cached_entry = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
-                    if not cached_entry or cached_entry.created < first:
+                    if not cached_entry:
                         out.add_question(DNSQuestion(self.name, _TYPE_SRV, _CLASS_IN))
                         out.add_answer_at_time(cached_entry, now)
                     cached_entry = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
-                    if not cached_entry or cached_entry.created < first:
+                    if not cached_entry:
                         out.add_question(DNSQuestion(self.name, _TYPE_TXT, _CLASS_IN))
                         out.add_answer_at_time(cached_entry, now)
 
                     if self.server is not None:
                         cached_entry = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
-                        if not cached_entry or cached_entry.created < first:
+                        if not cached_entry:
                             out.add_question(DNSQuestion(self.server, _TYPE_A, _CLASS_IN))
                             out.add_answer_at_time(cached_entry, now)
                         cached_entry = zc.cache.get_by_details(self.name, _TYPE_AAAA, _CLASS_IN)
-                        if not cached_entry or cached_entry.created < first:
+                        if not cached_entry:
                             out.add_question(DNSQuestion(self.server, _TYPE_AAAA, _CLASS_IN))
                             out.add_answer_at_time(cached_entry, now)
                     zc.send(out)
