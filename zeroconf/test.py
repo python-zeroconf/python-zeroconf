@@ -1258,7 +1258,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent = None
+        last_sent = None  # type: Optional[r.DNSOutgoing]
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
@@ -1294,6 +1294,7 @@ class TestServiceInfo(unittest.TestCase):
 
             # Expext query for SRV, TXT, A, AAAA
             send_event.wait(wait_time)
+            assert last_sent is not None
             assert len(last_sent.questions) == 4
             assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
             assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
@@ -1310,6 +1311,7 @@ class TestServiceInfo(unittest.TestCase):
                 )
             )
             send_event.wait(wait_time)
+            assert last_sent is not None
             assert len(last_sent.questions) == 3
             assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
             assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
@@ -1336,6 +1338,7 @@ class TestServiceInfo(unittest.TestCase):
                 )
             )
             send_event.wait(wait_time)
+            assert last_sent is not None
             assert len(last_sent.questions) == 2
             assert r.DNSQuestion(service_server, r._TYPE_A, r._CLASS_IN) in last_sent.questions
             assert r.DNSQuestion(service_server, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
@@ -1381,7 +1384,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent = None
+        last_sent = None  # type: Optional[r.DNSOutgoing]
 
         def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
             """Sends an outgoing packet."""
@@ -1417,6 +1420,7 @@ class TestServiceInfo(unittest.TestCase):
 
             # Expext query for SRV, TXT, A, AAAA
             send_event.wait(wait_time)
+            assert last_sent is not None
             assert len(last_sent.questions) == 4
             assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
             assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
