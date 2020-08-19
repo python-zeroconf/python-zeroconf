@@ -9,6 +9,7 @@ import logging
 import os
 import socket
 import struct
+import threading
 import time
 import unittest
 from threading import Event
@@ -1243,6 +1244,230 @@ class TestServiceBrowser(unittest.TestCase):
             assert len(zeroconf.listeners) == 0
             zeroconf.remove_all_service_listeners()
             zeroconf.close()
+
+
+class TestServiceInfo(unittest.TestCase):
+    def test_get_info_partial(self):
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_text = b'path=/~matt1/'
+        service_address = '10.0.1.2'
+
+        service_info = None
+        send_event = Event()
+        service_info_event = Event()
+
+        last_sent = None  # type: Optional[r.DNSOutgoing]
+
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+            """Sends an outgoing packet."""
+            nonlocal last_sent
+
+            last_sent = out
+            send_event.set()
+
+        # monkey patch the zeroconf send
+        setattr(zc, "send", send)
+
+        def mock_incoming_msg(records) -> r.DNSIncoming:
+
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+
+            for record in records:
+                generated.add_answer_at_time(record, 0)
+
+            return r.DNSIncoming(generated.packet())
+
+        def get_service_info_helper(zc, type, name):
+            nonlocal service_info
+            service_info = zc.get_service_info(type, name)
+            service_info_event.set()
+
+        try:
+            ttl = 120
+            helper_thread = threading.Thread(
+                target=get_service_info_helper, args=(zc, service_type, service_name)
+            )
+            helper_thread.start()
+            wait_time = 1
+
+            # Expext query for SRV, TXT, A, AAAA
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 4
+            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert service_info is None
+
+            # Expext query for SRV, A, AAAA
+            last_sent = None
+            send_event.clear()
+            zc.handle_response(
+                mock_incoming_msg(
+                    [r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text)]
+                )
+            )
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 3
+            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert service_info is None
+
+            # Expext query for A, AAAA
+            last_sent = None
+            send_event.clear()
+            zc.handle_response(
+                mock_incoming_msg(
+                    [
+                        r.DNSService(
+                            service_name,
+                            r._TYPE_SRV,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            0,
+                            0,
+                            80,
+                            service_server,
+                        )
+                    ]
+                )
+            )
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 2
+            assert r.DNSQuestion(service_server, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_server, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            last_sent = None
+            assert service_info is None
+
+            # Expext no further queries
+            last_sent = None
+            send_event.clear()
+            zc.handle_response(
+                mock_incoming_msg(
+                    [
+                        r.DNSAddress(
+                            service_server,
+                            r._TYPE_A,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            socket.inet_pton(socket.AF_INET, service_address),
+                        )
+                    ]
+                )
+            )
+            send_event.wait(wait_time)
+            assert last_sent is None
+            assert service_info is not None
+
+        finally:
+            helper_thread.join()
+            zc.remove_all_service_listeners()
+            zc.close()
+
+    def test_get_info_single(self):
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_text = b'path=/~matt1/'
+        service_address = '10.0.1.2'
+
+        service_info = None
+        send_event = Event()
+        service_info_event = Event()
+
+        last_sent = None  # type: Optional[r.DNSOutgoing]
+
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+            """Sends an outgoing packet."""
+            nonlocal last_sent
+
+            last_sent = out
+            send_event.set()
+
+        # monkey patch the zeroconf send
+        setattr(zc, "send", send)
+
+        def mock_incoming_msg(records) -> r.DNSIncoming:
+
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+
+            for record in records:
+                generated.add_answer_at_time(record, 0)
+
+            return r.DNSIncoming(generated.packet())
+
+        def get_service_info_helper(zc, type, name):
+            nonlocal service_info
+            service_info = zc.get_service_info(type, name)
+            service_info_event.set()
+
+        try:
+            ttl = 120
+            helper_thread = threading.Thread(
+                target=get_service_info_helper, args=(zc, service_type, service_name)
+            )
+            helper_thread.start()
+            wait_time = 1
+
+            # Expext query for SRV, TXT, A, AAAA
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 4
+            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert service_info is None
+
+            # Expext no further queries
+            last_sent = None
+            send_event.clear()
+            zc.handle_response(
+                mock_incoming_msg(
+                    [
+                        r.DNSText(
+                            service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text
+                        ),
+                        r.DNSService(
+                            service_name,
+                            r._TYPE_SRV,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            0,
+                            0,
+                            80,
+                            service_server,
+                        ),
+                        r.DNSAddress(
+                            service_server,
+                            r._TYPE_A,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            socket.inet_pton(socket.AF_INET, service_address),
+                        ),
+                    ]
+                )
+            )
+            send_event.wait(wait_time)
+            assert last_sent is None
+            assert service_info is not None
+
+        finally:
+            helper_thread.join()
+            zc.remove_all_service_listeners()
+            zc.close()
 
 
 class TestServiceBrowserMultipleTypes(unittest.TestCase):

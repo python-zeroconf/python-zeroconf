@@ -1916,19 +1916,24 @@ class ServiceInfo(RecordUpdateListener):
                     return False
                 if next_ <= now:
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
-                    out.add_question(DNSQuestion(self.name, _TYPE_SRV, _CLASS_IN))
-                    out.add_answer_at_time(zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN), now)
-
-                    out.add_question(DNSQuestion(self.name, _TYPE_TXT, _CLASS_IN))
-                    out.add_answer_at_time(zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN), now)
+                    cached_entry = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
+                    if not cached_entry:
+                        out.add_question(DNSQuestion(self.name, _TYPE_SRV, _CLASS_IN))
+                        out.add_answer_at_time(cached_entry, now)
+                    cached_entry = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
+                    if not cached_entry:
+                        out.add_question(DNSQuestion(self.name, _TYPE_TXT, _CLASS_IN))
+                        out.add_answer_at_time(cached_entry, now)
 
                     if self.server is not None:
-                        out.add_question(DNSQuestion(self.server, _TYPE_A, _CLASS_IN))
-                        out.add_answer_at_time(zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN), now)
-                        out.add_question(DNSQuestion(self.server, _TYPE_AAAA, _CLASS_IN))
-                        out.add_answer_at_time(
-                            zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN), now
-                        )
+                        cached_entry = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
+                        if not cached_entry:
+                            out.add_question(DNSQuestion(self.server, _TYPE_A, _CLASS_IN))
+                            out.add_answer_at_time(cached_entry, now)
+                        cached_entry = zc.cache.get_by_details(self.name, _TYPE_AAAA, _CLASS_IN)
+                        if not cached_entry:
+                            out.add_question(DNSQuestion(self.server, _TYPE_AAAA, _CLASS_IN))
+                            out.add_answer_at_time(cached_entry, now)
                     zc.send(out)
                     next_ = now + delay
                     delay *= 2
