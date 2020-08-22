@@ -862,6 +862,20 @@ class TestDNSCache(unittest.TestCase):
         cache.remove(record2)
         assert 'a' not in cache.cache
 
+    def test_cache_empty_multiple_calls_does_not_throw(self):
+        record1 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        cache = r.DNSCache()
+        cache.add(record1)
+        cache.add(record2)
+        assert 'a' in cache.cache
+        cache.remove(record1)
+        cache.remove(record2)
+        # Ensure multiple removes does not throw
+        cache.remove(record1)
+        cache.remove(record2)
+        assert 'a' not in cache.cache
+
 
 class ServiceTypesQuery(unittest.TestCase):
     def test_integration_with_listener(self):
