@@ -938,7 +938,7 @@ class DNSOutgoing:
         self.authorities.append(record)
 
     def add_additional_answer(self, record: DNSRecord) -> None:
-        """ Adds an additional answer
+        """Adds an additional answer
 
         From: RFC 6763, DNS-Based Service Discovery, February 2013
 
@@ -1136,7 +1136,7 @@ class DNSOutgoing:
         or less in length, except for the case of a single answer which
         will be written out to a single oversized packet no more than
         _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
-        fragmentation potentially).  """
+        fragmentation potentially)."""
 
         if self.state == self.State.finished:
             return self.packets_data

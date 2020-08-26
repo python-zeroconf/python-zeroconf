@@ -110,7 +110,14 @@ class TestDunder(unittest.TestCase):
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, b'', "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")],
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            b'',
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         assert not info != info
@@ -1765,7 +1772,14 @@ def test_multiple_addresses():
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
         infos = [
             ServiceInfo(
-                type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address_v6],
+                type_,
+                registration_name,
+                80,
+                0,
+                0,
+                desc,
+                "ash-2.local.",
+                addresses=[address, address_v6],
             ),
             ServiceInfo(
                 type_,
