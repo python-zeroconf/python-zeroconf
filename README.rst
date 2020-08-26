@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.2
+======
+
+* Stopped asking questions we already have answers for in cache, thanks to Paul Daumlechner.
+* Removed initial delay before querying for service info, thanks to Erik Montnemery.
+
 0.28.1
 ======
 
