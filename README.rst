@@ -137,7 +137,8 @@ Changelog
 0.28.3
 ======
 
-* Reduced a time an internal lock is held which should eliminate deadlocks in high-traffic networks.
+* Reduced a time an internal lock is held which should eliminate deadlocks in high-traffic networks,
+  thanks to J. Nick Koston.
 
 0.28.2
 ======
