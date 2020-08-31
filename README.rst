@@ -134,6 +134,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.3
+======
+
+* Reduced a time an internal lock is held which should eliminate deadlocks in high-traffic networks.
+
 0.28.2
 ======
 
