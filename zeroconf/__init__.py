@@ -35,7 +35,7 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import Dict, List, Optional, Sequence, Union, cast
+from typing import Dict, Iterable, List, Optional, Sequence, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
@@ -1268,10 +1268,21 @@ class DNSCache:
         """Returns a list of all entries"""
         if not self.cache:
             return []
-        else:
-            # avoid size change during iteration by copying the cache
-            values = list(self.cache.values())
-            return list(itertools.chain.from_iterable(values))
+
+        # avoid size change during iteration by copying the cache
+        return list(itertools.chain.from_iterable(list(self.cache.values())))
+
+    def iterable_entries(self) -> Iterable[DNSRecord]:
+        """Returns an iterable of all entries.
+
+        This function is provided to avoid copying
+        the entries but is not threadsafe as the
+        contents of the cache can change during iteration.
+
+        Callers should trap RuntimeError and fallback
+        to calling entries.
+        """
+        return itertools.chain.from_iterable(self.cache.values())
 
 
 class Engine(threading.Thread):
@@ -1422,15 +1433,29 @@ class Reaper(threading.Thread):
         self.name = "zeroconf-Reaper_%s" % (getattr(self, 'native_id', self.ident),)
 
     def run(self) -> None:
+        """Perodic removal of expired entries from the cache."""
         while True:
-            self.zc.wait(10 * 1000)
+            with self.zc.reaper_condition:
+                self.zc.reaper_condition.wait(10)
+
             if self.zc.done:
                 return
-            now = current_time_millis()
-            for record in self.zc.cache.entries():
-                if record.is_expired(now):
-                    self.zc.update_record(now, record)
-                    self.zc.cache.remove(record)
+            try:
+                # We try to iterate the cache without copying the whole
+                # cache as this can be quite an expensive operation.
+                self._cleanup_cache(self.zc.cache.iterable_entries())
+            except RuntimeError:
+                # If the cache changes during iteration, we fallback
+                # to making a copy before iteraiton.
+                self._cleanup_cache(self.zc.cache.entries())
+
+    def _cleanup_cache(self, entries: Iterable[DNSRecord]) -> None:
+        """Remove expired entries from the cache."""
+        now = current_time_millis()
+        for record in entries:
+            if record.is_expired(now):
+                self.zc.update_record(now, record)
+                self.zc.cache.remove(record)
 
 
 class Signal:
@@ -2342,6 +2367,7 @@ class Zeroconf(QuietLogger):
         self.cache = DNSCache()
 
         self.condition = threading.Condition()
+        self.reaper_condition = threading.Condition()
 
         # Ensure we create the lock before
         # we add the listener as we could get
@@ -2372,6 +2398,11 @@ class Zeroconf(QuietLogger):
         """Notifies all waiting threads"""
         with self.condition:
             self.condition.notify_all()
+
+    def notify_reaper(self) -> None:
+        """Notifies reaper"""
+        with self.reaper_condition:
+            self.reaper_condition.notify_all()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
@@ -2878,6 +2909,7 @@ class Zeroconf(QuietLogger):
 
             # shutdown the rest
             self.notify_all()
+            self.notify_reaper()
             self.reaper.join()
             for s in self._respond_sockets:
                 s.close()

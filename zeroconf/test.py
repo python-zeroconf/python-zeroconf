@@ -884,6 +884,54 @@ class TestDNSCache(unittest.TestCase):
         assert 'a' not in cache.cache
 
 
+class TestReaper(unittest.TestCase):
+    def test_reaper(self):
+        zeroconf = Zeroconf(interfaces=['127.0.0.1'])
+        original_entries = zeroconf.cache.entries()
+        record_with_10s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 10, b'a')
+        record_with_1s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        zeroconf.cache.add(record_with_10s_ttl)
+        zeroconf.cache.add(record_with_1s_ttl)
+        entries_with_cache = zeroconf.cache.entries()
+        time.sleep(1.05)
+        zeroconf.notify_reaper()
+        time.sleep(0.05)
+        entries = zeroconf.cache.entries()
+
+        try:
+            iterable_entries = list(zeroconf.cache.iterable_entries())
+        finally:
+            zeroconf.close()
+
+        assert entries != original_entries
+        assert entries_with_cache != original_entries
+        assert record_with_10s_ttl in entries
+        assert record_with_1s_ttl not in entries
+        assert record_with_10s_ttl in iterable_entries
+        assert record_with_1s_ttl not in iterable_entries
+
+    def test_reaper_with_dict_change_during_iteration(self):
+        zeroconf = Zeroconf(interfaces=['127.0.0.1'])
+        original_entries = zeroconf.cache.entries()
+        record_with_10s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 10, b'a')
+        record_with_1s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        zeroconf.cache.add(record_with_10s_ttl)
+        zeroconf.cache.add(record_with_1s_ttl)
+        entries_with_cache = zeroconf.cache.entries()
+        with unittest.mock.patch("zeroconf.DNSCache.iterable_entries", side_effect=RuntimeError):
+            time.sleep(1.05)
+            zeroconf.notify_reaper()
+            time.sleep(0.05)
+
+        entries = zeroconf.cache.entries()
+        zeroconf.close()
+
+        assert entries != original_entries
+        assert entries_with_cache != original_entries
+        assert record_with_10s_ttl in entries
+        assert record_with_1s_ttl not in entries
+
+
 class ServiceTypesQuery(unittest.TestCase):
     def test_integration_with_listener(self):
 
