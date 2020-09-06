@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.4
+======
+
+* Improved cache reaper performance significantly, thanks to J. Nick Koston.
+* Added ServiceListener to __all__ as it's part of the public API, thanks to Justin Nesselrotte.
+
 0.28.3
 ======
 
