@@ -51,6 +51,7 @@ __all__ = [
     "Zeroconf",
     "ServiceInfo",
     "ServiceBrowser",
+    "ServiceListener",
     "Error",
     "InterfaceChoice",
     "ServiceStateChange",
