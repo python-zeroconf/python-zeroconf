@@ -1381,6 +1381,17 @@ class Listener(QuietLogger):
             self.log_exception_warning('Error reading from socket %d', socket_.fileno())
             return
 
+        if self.data == data:
+            log.debug(
+                'Ignoring duplicate message received from %r:%r (socket %d) (%d bytes) as [%r]',
+                addr,
+                port,
+                socket_.fileno(),
+                len(data),
+                data,
+            )
+            return
+
         self.data = data
         msg = DNSIncoming(data)
         if msg.valid:
