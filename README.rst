@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.5
+======
+
+* Enabled ignoring duplicated messages which decreases CPU usage, thanks to J. Nick Koston.
+* Fixed spurious AttributeError: module 'unittest' has no attribute 'mock' in tests.
+
 0.28.4
 ======
 
