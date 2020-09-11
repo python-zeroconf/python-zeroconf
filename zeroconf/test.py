@@ -12,6 +12,7 @@ import struct
 import threading
 import time
 import unittest
+import unittest.mock
 from threading import Event
 from typing import Dict, Optional  # noqa # used in type hints
 from typing import cast
