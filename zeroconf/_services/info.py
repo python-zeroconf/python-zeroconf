@@ -21,8 +21,9 @@
 """
 
 import asyncio
+import ipaddress
 import socket
-from typing import Dict, List, Optional, TYPE_CHECKING, Union, cast
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
@@ -85,6 +86,8 @@ class ServiceInfo(RecordUpdateListener):
     * `other_ttl`: ttl used for PTR/TXT records
     * `addresses` and `parsed_addresses`: List of IP addresses (either as bytes, network byte order,
       or in parsed form as text; at most one of those parameters can be provided)
+    * interface_index: scope_id or zone_id for IPv6 link-local addresses i.e. an identifier of the interface
+      where the peer is connected to
     """
 
     text = b''
@@ -103,6 +106,7 @@ class ServiceInfo(RecordUpdateListener):
         *,
         addresses: Optional[List[bytes]] = None,
         parsed_addresses: Optional[List[str]] = None,
+        interface_index: Optional[int] = None,
     ) -> None:
         # Accept both none, or one, but not both.
         if addresses is not None and parsed_addresses is not None:
@@ -137,6 +141,7 @@ class ServiceInfo(RecordUpdateListener):
             self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
+        self.interface_index = interface_index
 
     @property
     def name(self) -> str:
@@ -193,6 +198,21 @@ class ServiceInfo(RecordUpdateListener):
             socket.inet_ntop(socket.AF_INET6 if _is_v6_address(addr) else socket.AF_INET, addr)
             for addr in result
         ]
+
+    def parsed_scoped_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
+        """Equivalent to parsed_addresses, with the exception that IPv6 Link-Local
+        addresses are qualified with %<interface_index> when available
+        """
+        if self.interface_index is None:
+            return self.parsed_addresses(version)
+
+        def is_link_local(addr_str: str) -> Any:
+            addr = ipaddress.ip_address(addr_str)
+            return addr.version == 6 and addr.is_link_local
+
+        ll_addrs = list(filter(is_link_local, self.parsed_addresses(version)))
+        other_addrs = list(filter(lambda addr: not is_link_local(addr), self.parsed_addresses(version)))
+        return ["{}%{}".format(addr, self.interface_index) for addr in ll_addrs] + other_addrs
 
     def _set_properties(self, properties: Dict) -> None:
         """Sets properties and text of this info from a dictionary"""
@@ -289,6 +309,8 @@ class ServiceInfo(RecordUpdateListener):
         if isinstance(record, DNSAddress):
             if record.key == self.server_key and record.address not in self._addresses:
                 self._addresses.append(record.address)
+                if record.type is _TYPE_AAAA and ipaddress.IPv6Address(record.address).is_link_local:
+                    self.interface_index = record.scope_id
             return
 
         if isinstance(record, DNSService):
@@ -320,7 +342,7 @@ class ServiceInfo(RecordUpdateListener):
                 _CLASS_IN | _CLASS_UNIQUE,
                 override_ttl if override_ttl is not None else self.host_ttl,
                 address,
-                created,
+                created=created,
             )
             for address in self.addresses_by_version(version)
         ]
@@ -474,6 +496,7 @@ class ServiceInfo(RecordUpdateListener):
                     'priority',
                     'server',
                     'properties',
+                    'interface_index',
                 )
             ),
         )

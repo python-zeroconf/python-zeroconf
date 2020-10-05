@@ -242,13 +242,22 @@ class DNSAddress(DNSRecord):
 
     """A DNS address record"""
 
-    __slots__ = ('address',)
+    __slots__ = ('address', 'scope_id')
 
     def __init__(
-        self, name: str, type_: int, class_: int, ttl: int, address: bytes, created: Optional[float] = None
+        self,
+        name: str,
+        type_: int,
+        class_: int,
+        ttl: int,
+        address: bytes,
+        *,
+        scope_id: Optional[int] = None,
+        created: Optional[float] = None,
     ) -> None:
         super().__init__(name, type_, class_, ttl, created)
         self.address = address
+        self.scope_id = scope_id
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -257,12 +266,15 @@ class DNSAddress(DNSRecord):
     def __eq__(self, other: Any) -> bool:
         """Tests equality on address"""
         return (
-            isinstance(other, DNSAddress) and DNSEntry.__eq__(self, other) and self.address == other.address
+            isinstance(other, DNSAddress)
+            and DNSEntry.__eq__(self, other)
+            and self.address == other.address
+            and self.scope_id == other.scope_id
         )
 
     def __hash__(self) -> int:
         """Hash to compare like DNSAddresses."""
-        return hash((*self._entry_tuple(), self.address))
+        return hash((*self._entry_tuple(), self.address, self.scope_id))
 
     def __repr__(self) -> str:
         """String representation"""
