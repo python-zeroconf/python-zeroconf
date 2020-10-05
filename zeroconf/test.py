@@ -111,14 +111,7 @@ class TestDunder(unittest.TestCase):
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
         info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            b'',
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            type_, registration_name, 80, 0, 0, b'', "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
         )
 
         assert not info != info
@@ -370,7 +363,7 @@ class Names(unittest.TestCase):
         longest_packet_len = 0
         longest_packet = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT, _v6=None):
             """Sends an outgoing packet."""
             for packet in out.packets():
                 nonlocal longest_packet_len, longest_packet
@@ -770,6 +763,21 @@ class TestDnsIncoming(unittest.TestCase):
         packed = socket.inet_pton(socket.AF_INET6, addr)
         generated = r.DNSOutgoing(0)
         answer = r.DNSAddress('domain', r._TYPE_AAAA, r._CLASS_IN | r._CLASS_UNIQUE, 1, packed)
+        assert answer.scope_id is None
+        generated.add_additional_answer(answer)
+        packet = generated.packet()
+        parsed = r.DNSIncoming(packet)
+        record = parsed.answers[0]
+        assert isinstance(record, r.DNSAddress)
+        assert record.address == packed
+
+    def test_incoming_ipv6_link_local(self):
+        addr = "fe80::52e:c2f2:bc5f:e9c6"  # IPv6 link local address
+        scope_id = 12
+        packed = socket.inet_pton(socket.AF_INET6, addr)
+        generated = r.DNSOutgoing(0)
+        answer = r.DNSAddress('domain', r._TYPE_AAAA, r._CLASS_IN | r._CLASS_UNIQUE, 1, packed, scope_id)
+        assert answer.scope_id == scope_id
         generated.add_additional_answer(answer)
         packet = generated.packet()
         parsed = r.DNSIncoming(packet)
@@ -791,14 +799,7 @@ class TestRegistrar(unittest.TestCase):
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
         )
 
         # we are going to monkey patch the zeroconf send to check packet sizes
@@ -814,7 +815,7 @@ class TestRegistrar(unittest.TestCase):
             else:
                 return r._DNS_OTHER_TTL
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT, _v6=None):
             """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
 
@@ -973,14 +974,7 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
         )
         zeroconf_registrar.register_service(info)
 
@@ -1036,14 +1030,7 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar = Zeroconf(ip_version=r.IPVersion.V6Only)
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
         )
         zeroconf_registrar.register_service(info)
 
@@ -1356,6 +1343,8 @@ class TestServiceInfo(unittest.TestCase):
         service_server = 'ash-1.local.'
         service_text = b'path=/~matt1/'
         service_address = '10.0.1.2'
+        service_address_v6_ll = 'fe80::52e:c2f2:bc5f:e9c6'
+        service_scope_id = 12
 
         service_info = None
         send_event = Event()
@@ -1363,7 +1352,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT, _v6=None):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
@@ -1460,7 +1449,15 @@ class TestServiceInfo(unittest.TestCase):
                             r._CLASS_IN | r._CLASS_UNIQUE,
                             ttl,
                             socket.inet_pton(socket.AF_INET, service_address),
-                        )
+                        ),
+                        r.DNSAddress(
+                            service_server,
+                            r._TYPE_AAAA,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            socket.inet_pton(socket.AF_INET6, service_address_v6_ll),
+                            service_scope_id,
+                        ),
                     ]
                 )
             )
@@ -1489,7 +1486,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT, _v6=None):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
@@ -1678,7 +1675,7 @@ def test_backoff():
         """Current system time in milliseconds"""
         return start_time + time_offset * 1000
 
-    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT, _v6=None):
         """Sends an outgoing packet."""
         got_query.set()
         old_send(out, addr=addr, port=port)
@@ -1760,7 +1757,7 @@ def test_integration():
 
     nbr_answers = 0
 
-    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT, _v6=None):
         """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packet())
         nonlocal nbr_answers
@@ -1851,14 +1848,7 @@ def test_multiple_addresses():
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
         infos = [
             ServiceInfo(
-                type_,
-                registration_name,
-                80,
-                0,
-                0,
-                desc,
-                "ash-2.local.",
-                addresses=[address, address_v6],
+                type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address_v6]
             ),
             ServiceInfo(
                 type_,
@@ -1879,6 +1869,83 @@ def test_multiple_addresses():
             assert info.parsed_addresses() == [address_parsed, address_v6_parsed]
             assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed]
+            assert info.parsed_scoped_addresses() == [address_parsed, address_v6_parsed]
+            assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
+            assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [address_v6_parsed]
+
+
+def test_multiple_addresses_with_ipv6_link_local():
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address])
+
+    assert info.addresses == [address, address]
+
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        parsed_addresses=[address_parsed, address_parsed],
+    )
+    assert info.addresses == [address, address]
+
+    if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
+        address_v6_parsed = "2001:db8::1"
+        address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
+        address_v6_ll_parsed = "fe80::52e:c2f2:bc5f:e9c6"
+        address_v6_ll = socket.inet_pton(socket.AF_INET6, address_v6_ll_parsed)
+        interface_index = 12
+        infos = [
+            ServiceInfo(
+                type_,
+                registration_name,
+                80,
+                0,
+                0,
+                desc,
+                "ash-2.local.",
+                addresses=[address, address_v6, address_v6_ll],
+                interface_index=interface_index,
+            ),
+            ServiceInfo(
+                type_,
+                registration_name,
+                80,
+                0,
+                0,
+                desc,
+                "ash-2.local.",
+                parsed_addresses=[address_parsed, address_v6_parsed, address_v6_ll_parsed],
+                interface_index=interface_index,
+            ),
+        ]
+        for info in infos:
+            assert info.addresses == [address]
+            assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6, address_v6_ll]
+            assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
+            assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6, address_v6_ll]
+            assert info.parsed_addresses() == [address_parsed, address_v6_parsed, address_v6_ll_parsed]
+            assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
+            assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed, address_v6_ll_parsed]
+            assert info.parsed_scoped_addresses() == [
+                address_v6_ll_parsed + "%" + str(info.interface_index),
+                address_parsed,
+                address_v6_parsed,
+            ]
+            assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
+            assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [
+                address_v6_ll_parsed + "%" + str(info.interface_index),
+                address_v6_parsed,
+            ]
 
 
 def test_ptr_optimization():
@@ -1902,7 +1969,7 @@ def test_ptr_optimization():
     nbr_answers = nbr_additionals = nbr_authorities = 0
     has_srv = has_txt = has_a = False
 
-    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT, _v6=None):
         """Sends an outgoing packet."""
         nonlocal nbr_answers, nbr_additionals, nbr_authorities
         nonlocal has_srv, has_txt, has_a
