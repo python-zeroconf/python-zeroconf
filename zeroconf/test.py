@@ -657,22 +657,6 @@ class Exceptions(unittest.TestCase):
         for name in bad_names_to_try:
             self.assertRaises(r.BadTypeInNameException, self.browser.get_service_info, name, 'x.' + name)
 
-    def test_good_names_for_get_service_info(self):
-        good_names_to_try = (
-            "Rachio-C73233.local.",
-            'YeelightColorBulb-3AFD.local.',
-            'YeelightTunableBulb-7220.local.',
-            "AlexanderHomeAssistant 74651D.local.",
-            'iSmartGate-152.local.',
-            'MyQ-FGA.local.',
-            'lutron-02c4392a.local.',
-            'WICED-hap-3E2734.local.',
-            'MyHost.local.',
-            'MyHost.sub.local.',
-        )
-        for name in good_names_to_try:
-            self.browser.get_service_info('_http._tcp.local.', name)
-
     def test_bad_local_names_for_get_service_info(self):
         bad_names_to_try = (
             'homekitdev._nothttp._tcp.local.',
