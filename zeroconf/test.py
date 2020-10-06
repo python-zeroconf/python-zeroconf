@@ -715,12 +715,18 @@ class Exceptions(unittest.TestCase):
             self.assertRaises(r.BadTypeInNameException, r.service_type_name, name)
 
     def test_good_service_names(self):
-        assert r.service_type_name('_x._tcp.local.') == '_x._tcp.local.'
-        assert r.service_type_name('_x._udp.local.') == '_x._udp.local.'
-        assert r.service_type_name('_12345-67890-abc._udp.local.') == '_12345-67890-abc._udp.local.'
-        assert r.service_type_name('x._sub._http._tcp.local.') == '_http._tcp.local.'
-        assert r.service_type_name('a' * 63 + '._sub._http._tcp.local.') == '_http._tcp.local.'
-        assert r.service_type_name('a' * 61 + u'â._sub._http._tcp.local.') == '_http._tcp.local.'
+        good_names_to_try = (
+            ('_x._tcp.local.', '_x._tcp.local.'),
+            ('_x._udp.local.', '_x._udp.local.'),
+            ('_12345-67890-abc._udp.local.', '_12345-67890-abc._udp.local.'),
+            ('x._sub._http._tcp.local.', '_http._tcp.local.'),
+            ('a' * 63 + '._sub._http._tcp.local.', '_http._tcp.local.'),
+            ('a' * 61 + u'â._sub._http._tcp.local.', '_http._tcp.local.'),
+        )
+
+        for name, result in good_names_to_try:
+            assert r.service_type_name(name) == result
+
         assert r.service_type_name('_one_two._tcp.local.', allow_underscores=True) == '_one_two._tcp.local.'
 
     def test_invalid_addresses(self):
@@ -760,7 +766,6 @@ class Exceptions(unittest.TestCase):
                 registration_name,
                 port=80,
                 addresses=[socket.inet_aton("10.0.1.2")],
-                strict=False,
             )
 
 

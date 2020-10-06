@@ -2446,7 +2446,7 @@ class Zeroconf(QuietLogger):
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
         which defaults to 3 seconds."""
-        info = ServiceInfo(type_, name, strict=False)
+        info = ServiceInfo(type_, name)
         if info.request(self, timeout):
             return info
         return None
