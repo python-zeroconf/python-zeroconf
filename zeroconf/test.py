@@ -746,28 +746,6 @@ class Exceptions(unittest.TestCase):
                 addresses=[addr],
             )
 
-    def test_service_info_for_local_name(self):
-        type_ = "_hap._tcp.local."
-        registration_names = (
-            "Rachio-C73233.local.",
-            'YeelightColorBulb-3AFD.local.',
-            'YeelightTunableBulb-7220.local.',
-            "AlexanderHomeAssistant 74651D.local.",
-            'iSmartGate-152.local.',
-            'MyQ-FGA.local.',
-            'lutron-02c4392a.local.',
-            'WICED-hap-3E2734.local.',
-            'MyHost.local.',
-        )
-
-        for registration_name in registration_names:
-            ServiceInfo(
-                type_,
-                registration_name,
-                port=80,
-                addresses=[socket.inet_aton("10.0.1.2")],
-            )
-
 
 class TestDnsIncoming(unittest.TestCase):
     def test_incoming_exception_handling(self):
