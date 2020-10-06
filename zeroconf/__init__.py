@@ -183,9 +183,6 @@ _LOCAL_TRAILER = '.local.'
 _TCP_PROTOCOL_LOCAL_TRAILER = '._tcp.local.'
 _NONTCP_PROTOCOL_LOCAL_TRAILER = '._udp.local.'
 
-_LOCAL_LEN = len(_LOCAL_TRAILER)
-_PROTOCOL_LOCAL_LEN = len(_TCP_PROTOCOL_LOCAL_TRAILER)
-
 try:
     _IPPROTO_IPV6 = socket.IPPROTO_IPV6
 except AttributeError:
@@ -280,8 +277,8 @@ def service_type_name(type_: str, *, allow_underscores: bool = False, strict: bo
     """
 
     if type_.endswith(_TCP_PROTOCOL_LOCAL_TRAILER) or type_.endswith(_NONTCP_PROTOCOL_LOCAL_TRAILER):
-        remaining = type_[:-_PROTOCOL_LOCAL_LEN].split('.')
-        trailer = type_[-_PROTOCOL_LOCAL_LEN:]
+        remaining = type_[:-len(_TCP_PROTOCOL_LOCAL_TRAILER)].split('.')
+        trailer = type_[-len(_TCP_PROTOCOL_LOCAL_TRAILER):]
         has_protocol = True
     elif strict:
         raise BadTypeInNameException(
@@ -289,8 +286,8 @@ def service_type_name(type_: str, *, allow_underscores: bool = False, strict: bo
             % (type_, _TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)
         )
     elif type_.endswith(_LOCAL_TRAILER):
-        remaining = type_[:-_LOCAL_LEN].split('.')
-        trailer = type_[-_LOCAL_LEN + 1 :]
+        remaining = type_[:-len(_LOCAL_TRAILER)].split('.')
+        trailer = type_[-len(_LOCAL_TRAILER) + 1 :]
         has_protocol = False
     else:
         raise BadTypeInNameException("Type '%s' must end with '%s'" % (type_, _LOCAL_TRAILER))
