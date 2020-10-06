@@ -1770,7 +1770,6 @@ class ServiceInfo(RecordUpdateListener):
     * other_ttl: ttl used for PTR/TXT records
     * addresses and parsed_addresses: List of IP addresses (either as bytes, network byte order, or in parsed
       form as text; at most one of those parameters can be provided)
-    * strict: Controls validation for service_name and protocol
 
     """
 
@@ -1792,13 +1791,12 @@ class ServiceInfo(RecordUpdateListener):
         other_ttl: int = _DNS_OTHER_TTL,
         *,
         addresses: Optional[List[bytes]] = None,
-        parsed_addresses: Optional[List[str]] = None,
-        strict: bool = True
+        parsed_addresses: Optional[List[str]] = None
     ) -> None:
         # Accept both none, or one, but not both.
         if addresses is not None and parsed_addresses is not None:
             raise TypeError("addresses and parsed_addresses cannot be provided together")
-        if not type_.endswith(service_type_name(name, strict=strict, allow_underscores=True)):
+        if not type_.endswith(service_type_name(name, strict=False, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
