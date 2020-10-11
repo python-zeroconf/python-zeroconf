@@ -727,7 +727,7 @@ class Exceptions(unittest.TestCase):
         for name, result in good_names_to_try:
             assert r.service_type_name(name) == result
 
-        assert r.service_type_name('_one_two._tcp.local.', allow_underscores=True) == '_one_two._tcp.local.'
+        assert r.service_type_name('_one_two._tcp.local.', strict=False) == '_one_two._tcp.local.'
 
     def test_invalid_addresses(self):
         type_ = "_test-srvc-type._tcp.local."

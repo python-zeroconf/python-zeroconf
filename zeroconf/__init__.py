@@ -233,7 +233,7 @@ def _encode_address(address: str) -> bytes:
     return socket.inet_pton(address_family, address)
 
 
-def service_type_name(type_: str, *, allow_underscores: bool = False, strict: bool = True) -> str:
+def service_type_name(type_: str, *, strict: bool = True) -> str:
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
 
@@ -322,14 +322,13 @@ def service_type_name(type_: str, *, allow_underscores: bool = False, strict: bo
             )
 
         allowed_characters_re = (
-            _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE if allow_underscores else _HAS_ONLY_A_TO_Z_NUM_HYPHEN
+            _HAS_ONLY_A_TO_Z_NUM_HYPHEN if strict else _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE
         )
 
         if not allowed_characters_re.search(test_service_name):
             raise BadTypeInNameException(
                 "Service name (%s) must contain only these characters: "
-                "A-Z, a-z, 0-9, hyphen ('-')%s"
-                % (test_service_name, ", underscore ('_')" if allow_underscores else "")
+                "A-Z, a-z, 0-9, hyphen ('-')%s" % (test_service_name, "" if strict else ", underscore ('_')")
             )
     else:
         service_name = ''
@@ -1564,7 +1563,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         assert handlers or listener, 'You need to specify at least one handler'
         self.types = set(type_ if isinstance(type_, list) else [type_])
         for check_type_ in self.types:
-            if not check_type_.endswith(service_type_name(check_type_, allow_underscores=True)):
+            if not check_type_.endswith(service_type_name(check_type_, strict=False)):
                 raise BadTypeInNameException
         threading.Thread.__init__(self)
         self.daemon = True
@@ -1796,7 +1795,7 @@ class ServiceInfo(RecordUpdateListener):
         # Accept both none, or one, but not both.
         if addresses is not None and parsed_addresses is not None:
             raise TypeError("addresses and parsed_addresses cannot be provided together")
-        if not type_.endswith(service_type_name(name, strict=False, allow_underscores=True)):
+        if not type_.endswith(service_type_name(name, strict=False)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
