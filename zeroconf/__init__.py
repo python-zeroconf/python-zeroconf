@@ -179,6 +179,10 @@ _EXPIRE_FULL_TIME_PERCENT = 100
 _EXPIRE_STALE_TIME_PERCENT = 50
 _EXPIRE_REFRESH_TIME_PERCENT = 75
 
+_LOCAL_TRAILER = '.local.'
+_TCP_PROTOCOL_LOCAL_TRAILER = '._tcp.local.'
+_NONTCP_PROTOCOL_LOCAL_TRAILER = '._udp.local.'
+
 try:
     _IPPROTO_IPV6 = socket.IPPROTO_IPV6
 except AttributeError:
@@ -229,7 +233,7 @@ def _encode_address(address: str) -> bytes:
     return socket.inet_pton(address_family, address)
 
 
-def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
+def service_type_name(type_: str, *, allow_underscores: bool = False, strict: bool = True) -> str:
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
 
@@ -246,9 +250,11 @@ def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
       This is true because we are implementing mDNS and since the 'm' means
       multi-cast, the 'local.' domain is mandatory.
 
-    2) local is preceded with either '_udp.' or '_tcp.'
+    2) local is preceded with either '_udp.' or '_tcp.' unless
+       strict is False
 
-    3) service name <sn> precedes <_tcp|_udp>
+    3) service name <sn> precedes <_tcp|_udp> unless
+       strict is False
 
       The rules for Service Names [RFC6335] state that they may be no more
       than fifteen characters long (not counting the mandatory underscore),
@@ -269,44 +275,64 @@ def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
     :param type_: Type, SubType or service name to validate
     :return: fully qualified service name (eg: _http._tcp.local.)
     """
-    if not (type_.endswith('._tcp.local.') or type_.endswith('._udp.local.')):
-        raise BadTypeInNameException("Type '%s' must end with '._tcp.local.' or '._udp.local.'" % type_)
 
-    remaining = type_[: -len('._tcp.local.')].split('.')
-    name = remaining.pop()
-    if not name:
-        raise BadTypeInNameException("No Service name found")
-
-    if len(remaining) == 1 and len(remaining[0]) == 0:
-        raise BadTypeInNameException("Type '%s' must not start with '.'" % type_)
-
-    if name[0] != '_':
-        raise BadTypeInNameException("Service name (%s) must start with '_'" % name)
-
-    # remove leading underscore
-    name = name[1:]
-
-    if len(name) > 15:
-        raise BadTypeInNameException("Service name (%s) must be <= 15 bytes" % name)
-
-    if '--' in name:
-        raise BadTypeInNameException("Service name (%s) must not contain '--'" % name)
-
-    if '-' in (name[0], name[-1]):
-        raise BadTypeInNameException("Service name (%s) may not start or end with '-'" % name)
-
-    if not _HAS_A_TO_Z.search(name):
-        raise BadTypeInNameException("Service name (%s) must contain at least one letter (eg: 'A-Z')" % name)
-
-    allowed_characters_re = (
-        _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE if allow_underscores else _HAS_ONLY_A_TO_Z_NUM_HYPHEN
-    )
-
-    if not allowed_characters_re.search(name):
+    if type_.endswith(_TCP_PROTOCOL_LOCAL_TRAILER) or type_.endswith(_NONTCP_PROTOCOL_LOCAL_TRAILER):
+        remaining = type_[: -len(_TCP_PROTOCOL_LOCAL_TRAILER)].split('.')
+        trailer = type_[-len(_TCP_PROTOCOL_LOCAL_TRAILER) :]
+        has_protocol = True
+    elif strict:
         raise BadTypeInNameException(
-            "Service name (%s) must contain only these characters: "
-            "A-Z, a-z, 0-9, hyphen ('-')%s" % (name, ", underscore ('_')" if allow_underscores else "")
+            "Type '%s' must end with '%s' or '%s'"
+            % (type_, _TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)
         )
+    elif type_.endswith(_LOCAL_TRAILER):
+        remaining = type_[: -len(_LOCAL_TRAILER)].split('.')
+        trailer = type_[-len(_LOCAL_TRAILER) + 1 :]
+        has_protocol = False
+    else:
+        raise BadTypeInNameException("Type '%s' must end with '%s'" % (type_, _LOCAL_TRAILER))
+
+    if strict or has_protocol:
+        service_name = remaining.pop()
+        if not service_name:
+            raise BadTypeInNameException("No Service name found")
+
+        if len(remaining) == 1 and len(remaining[0]) == 0:
+            raise BadTypeInNameException("Type '%s' must not start with '.'" % type_)
+
+        if service_name[0] != '_':
+            raise BadTypeInNameException("Service name (%s) must start with '_'" % service_name)
+
+        test_service_name = service_name[1:]
+
+        if len(test_service_name) > 15:
+            raise BadTypeInNameException("Service name (%s) must be <= 15 bytes" % test_service_name)
+
+        if '--' in test_service_name:
+            raise BadTypeInNameException("Service name (%s) must not contain '--'" % test_service_name)
+
+        if '-' in (test_service_name[0], test_service_name[-1]):
+            raise BadTypeInNameException(
+                "Service name (%s) may not start or end with '-'" % test_service_name
+            )
+
+        if not _HAS_A_TO_Z.search(test_service_name):
+            raise BadTypeInNameException(
+                "Service name (%s) must contain at least one letter (eg: 'A-Z')" % test_service_name
+            )
+
+        allowed_characters_re = (
+            _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE if allow_underscores else _HAS_ONLY_A_TO_Z_NUM_HYPHEN
+        )
+
+        if not allowed_characters_re.search(test_service_name):
+            raise BadTypeInNameException(
+                "Service name (%s) must contain only these characters: "
+                "A-Z, a-z, 0-9, hyphen ('-')%s"
+                % (test_service_name, ", underscore ('_')" if allow_underscores else "")
+            )
+    else:
+        service_name = ''
 
     if remaining and remaining[-1] == '_sub':
         remaining.pop()
@@ -326,7 +352,7 @@ def service_type_name(type_: str, *, allow_underscores: bool = False) -> str:
                 "Ascii control character 0x00-0x1F and 0x7F illegal in '%s'" % remaining[0]
             )
 
-    return '_' + name + type_[-len('._tcp.local.') :]
+    return service_name + trailer
 
 
 # Exceptions
@@ -1770,7 +1796,7 @@ class ServiceInfo(RecordUpdateListener):
         # Accept both none, or one, but not both.
         if addresses is not None and parsed_addresses is not None:
             raise TypeError("addresses and parsed_addresses cannot be provided together")
-        if not type_.endswith(service_type_name(name, allow_underscores=True)):
+        if not type_.endswith(service_type_name(name, strict=False, allow_underscores=True)):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
