@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.6
+======
+
+* Loosened service name validation when receiving from the network this lets us handle
+  some real world devices previously causing errors, thanks to J. Nick Koston.
+
 0.28.5
 ======
 
