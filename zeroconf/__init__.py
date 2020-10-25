@@ -2410,6 +2410,7 @@ class Zeroconf(QuietLogger):
         # we add the listener as we could get
         # a message before the lock is created.
         self._handlers_lock = threading.Lock()  # ensure we process a full message in one go
+        self._service_lock = threading.Lock()  # add and remove services thread safe
 
         self.engine = Engine(self)
         self.listener = Listener(self)
@@ -2487,11 +2488,12 @@ class Zeroconf(QuietLogger):
             info.host_ttl = ttl
             info.other_ttl = ttl
         self.check_service(info, allow_name_change, cooperating_responders)
-        self.services[info.name.lower()] = info
-        if info.type in self.servicetypes:
-            self.servicetypes[info.type] += 1
-        else:
-            self.servicetypes[info.type] = 1
+        with self._service_lock:
+            self.services[info.name.lower()] = info
+            if info.type in self.servicetypes:
+                self.servicetypes[info.type] += 1
+            else:
+                self.servicetypes[info.type] = 1
 
         self._broadcast_service(info)
 
@@ -2500,9 +2502,10 @@ class Zeroconf(QuietLogger):
         Zeroconf will then respond to requests for information for that
         service."""
 
-        assert self.services[info.name.lower()] is not None
+        with self._service_lock:
+            assert self.services[info.name.lower()] is not None
 
-        self.services[info.name.lower()] = info
+            self.services[info.name.lower()] = info
 
         self._broadcast_service(info)
 
@@ -2546,14 +2549,12 @@ class Zeroconf(QuietLogger):
 
     def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service."""
-        try:
+        with self._service_lock:
             del self.services[info.name.lower()]
             if self.servicetypes[info.type] > 1:
                 self.servicetypes[info.type] -= 1
             else:
                 del self.servicetypes[info.type]
-        except Exception as e:  # TODO stop catching all Exceptions
-            log.exception('Unknown error, possibly benign: %r', e)
         now = current_time_millis()
         next_time = now
         i = 0
@@ -2600,7 +2601,7 @@ class Zeroconf(QuietLogger):
                     now = current_time_millis()
                     continue
                 out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-                for info in self.services.values():
+                for info in list(self.services.values()):
                     out.add_answer_at_time(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, 0, info.name), 0)
                     out.add_answer_at_time(
                         DNSService(
@@ -2766,69 +2767,77 @@ class Zeroconf(QuietLogger):
                 out.add_question(question)
 
         for question in msg.questions:
-            if question.type == _TYPE_PTR:
-                if question.name == "_services._dns-sd._udp.local.":
-                    for stype in self.servicetypes.keys():
-                        if out is None:
-                            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-                        out.add_answer(
-                            msg,
-                            DNSPointer(
-                                "_services._dns-sd._udp.local.", _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype
-                            ),
-                        )
-                for service in self.services.values():
-                    if question.name == service.type:
-                        if out is None:
-                            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-                        out.add_answer(
-                            msg,
-                            DNSPointer(service.type, _TYPE_PTR, _CLASS_IN, service.other_ttl, service.name),
-                        )
+            try:
+                if question.type == _TYPE_PTR:
+                    if question.name == "_services._dns-sd._udp.local.":
+                        for stype in self.servicetypes.keys():
+                            if out is None:
+                                out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+                            out.add_answer(
+                                msg,
+                                DNSPointer(
+                                    "_services._dns-sd._udp.local.",
+                                    _TYPE_PTR,
+                                    _CLASS_IN,
+                                    _DNS_OTHER_TTL,
+                                    stype,
+                                ),
+                            )
+                    for service in self.services.values():
+                        if question.name == service.type:
+                            if out is None:
+                                out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+                            out.add_answer(
+                                msg,
+                                DNSPointer(
+                                    service.type, _TYPE_PTR, _CLASS_IN, service.other_ttl, service.name
+                                ),
+                            )
 
-                        # Add recommended additional answers according to
-                        # https://tools.ietf.org/html/rfc6763#section-12.1.
-                        out.add_additional_answer(
-                            DNSService(
-                                service.name,
-                                _TYPE_SRV,
-                                _CLASS_IN | _CLASS_UNIQUE,
-                                service.host_ttl,
-                                service.priority,
-                                service.weight,
-                                cast(int, service.port),
-                                service.server,
-                            )
-                        )
-                        out.add_additional_answer(
-                            DNSText(
-                                service.name,
-                                _TYPE_TXT,
-                                _CLASS_IN | _CLASS_UNIQUE,
-                                service.other_ttl,
-                                service.text,
-                            )
-                        )
-                        for address in service.addresses_by_version(IPVersion.All):
-                            type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
+                            # Add recommended additional answers according to
+                            # https://tools.ietf.org/html/rfc6763#section-12.1.
                             out.add_additional_answer(
-                                DNSAddress(
-                                    service.server,
-                                    type_,
+                                DNSService(
+                                    service.name,
+                                    _TYPE_SRV,
                                     _CLASS_IN | _CLASS_UNIQUE,
                                     service.host_ttl,
-                                    address,
+                                    service.priority,
+                                    service.weight,
+                                    cast(int, service.port),
+                                    service.server,
                                 )
                             )
-            else:
-                try:
+                            out.add_additional_answer(
+                                DNSText(
+                                    service.name,
+                                    _TYPE_TXT,
+                                    _CLASS_IN | _CLASS_UNIQUE,
+                                    service.other_ttl,
+                                    service.text,
+                                )
+                            )
+                            for address in service.addresses_by_version(IPVersion.All):
+                                type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
+                                out.add_additional_answer(
+                                    DNSAddress(
+                                        service.server,
+                                        type_,
+                                        _CLASS_IN | _CLASS_UNIQUE,
+                                        service.host_ttl,
+                                        address,
+                                    )
+                                )
+                else:
                     if out is None:
                         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+
+                    name_to_find = question.name.lower()
 
                     # Answer A record queries for any service addresses we know
                     if question.type in (_TYPE_A, _TYPE_ANY):
                         for service in self.services.values():
-                            if service.server == question.name.lower():
+                            if service.server == name_to_find:
                                 for address in service.addresses_by_version(IPVersion.All):
                                     type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
                                     out.add_answer(
@@ -2842,10 +2851,9 @@ class Zeroconf(QuietLogger):
                                         ),
                                     )
 
-                    name_to_find = question.name.lower()
-                    if name_to_find not in self.services:
+                    service = self.services.get(name_to_find)  # type: ignore
+                    if service is None:
                         continue
-                    service = self.services[name_to_find]
 
                     if question.type in (_TYPE_SRV, _TYPE_ANY):
                         out.add_answer(
@@ -2884,8 +2892,12 @@ class Zeroconf(QuietLogger):
                                     address,
                                 )
                             )
-                except Exception:  # TODO stop catching all Exceptions
-                    self.log_exception_warning()
+            except Exception:  # TODO stop catching all Exceptions
+                # RuntimeError is expected because the service
+                # could be added/removed while iterating services
+                # and we cannot lock here because it would be too
+                # expensive.
+                self.log_exception_warning()
 
         if out is not None and out.answers:
             out.id = msg.id
