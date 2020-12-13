@@ -134,6 +134,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.7
+======
+
+* Fixed the IPv6 address rendering in the browser example, thanks to Alexey Vazhnov.
+* Fixed a crash happening when a service is added or removed during handle_response
+  and improved exception handling, thanks to J. Nick Koston.
+
 0.28.6
 ======
 
