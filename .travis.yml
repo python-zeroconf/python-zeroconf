@@ -10,6 +10,13 @@ python:
     - "3.9-dev"
     - "pypy3.5"
     - "pypy3"
+ jobs:
+  exclude:
+   - arch: ppc64le
+     python: pypy3
+   - arch: ppc64le
+     python: pypy3.5
+     
 matrix:
   allow_failures:
     - python: "3.9-dev"
