@@ -1013,10 +1013,13 @@ class DNSOutgoing:
         """Writes a single byte to the packet"""
         self.pack(b'!c', int2byte(value))
 
-    def insert_short(self, index: int, value: int) -> None:
-        """Inserts an unsigned short in a certain position in the packet"""
-        self.data.insert(index, struct.pack(b'!H', value))
-        self.size += 2
+    def insert_short_at_start(self, value: int) -> None:
+        """Inserts an unsigned short at the start of the packet"""
+        self.data.insert(0, struct.pack(b'!H', value))
+
+    def replace_short(self, index: int, value: int) -> None:
+        """Replaces an unsigned short in a certain position in the packet"""
+        self.data[index] = struct.pack(b'!H', value)
 
     def write_short(self, value: int) -> None:
         """Writes an unsigned short to the packet"""
@@ -1123,15 +1126,13 @@ class DNSOutgoing:
             self.write_int(record.get_remaining_ttl(now))
         index = len(self.data)
 
-        # Adjust size for the short we will write before this record
-        self.size += 2
+        self.write_short(0)  # Will get replaced with the actual size
         record.write(self)
-        self.size -= 2
-
-        length = sum((len(d) for d in self.data[index:]))
-        # Here is the short we adjusted for
-        self.insert_short(index, length)
-
+        # Adjust size for the short we will write before this record
+        length = sum((len(d) for d in self.data[index + 1 :]))
+        # Here we replace the 0 length short we wrote
+        # before with the actual length
+        self.replace_short(index, length)
         len_limit = _MAX_MSG_ABSOLUTE if allow_long else _MAX_MSG_TYPICAL
 
         # if we go over, then rollback and quit
@@ -1139,6 +1140,10 @@ class DNSOutgoing:
             while len(self.data) > start_data_length:
                 self.data.pop()
             self.size = start_size
+
+            rollback_names = [name for name, idx in self.names.items() if idx >= start_size]
+            for name in rollback_names:
+                del self.names[name]
             return False
         return True
 
@@ -1207,15 +1212,15 @@ class DNSOutgoing:
                 if self.write_record(additional, 0):
                     additionals_written += 1
 
-            self.insert_short(0, additionals_written)
-            self.insert_short(0, authorities_written)
-            self.insert_short(0, answers_written)
-            self.insert_short(0, questions_written)
-            self.insert_short(0, self.flags)
+            self.insert_short_at_start(additionals_written)
+            self.insert_short_at_start(authorities_written)
+            self.insert_short_at_start(answers_written)
+            self.insert_short_at_start(questions_written)
+            self.insert_short_at_start(self.flags)
             if self.multicast:
-                self.insert_short(0, 0)
+                self.insert_short_at_start(0)
             else:
-                self.insert_short(0, self.id)
+                self.insert_short_at_start(self.id)
             self.packets_data.append(b''.join(self.data))
             self.reset_for_next_packet()
 
