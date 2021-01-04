@@ -134,6 +134,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.28.8
+======
+
+* Fixed the packet generation when multiple packets are necessary, previously invalid
+  packets were generated sometimes. Patch thanks to J. Nick Koston.
+
 0.28.7
 ======
 
