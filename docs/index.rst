@@ -28,4 +28,4 @@ Contents
 
    api
 
-See `the project's README <https://github.com/jstasiak/python-zeroconf/blob/master/README.md>`_ for more information.
+See `the project's README <https://github.com/jstasiak/python-zeroconf/blob/master/README.rst>`_ for more information.
