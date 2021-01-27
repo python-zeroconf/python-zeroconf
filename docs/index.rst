@@ -7,7 +7,7 @@ Welcome to python-zeroconf documentation!
 
 .. image:: https://img.shields.io/pypi/v/zeroconf.svg
     :target: https://pypi.python.org/pypi/zeroconf
-
+   
 .. image:: https://coveralls.io/repos/github/jstasiak/python-zeroconf/badge.svg?branch=master
    :alt: Covergage status
    :target: https://coveralls.io/github/jstasiak/python-zeroconf?branch=master
