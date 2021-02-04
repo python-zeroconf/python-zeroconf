@@ -880,7 +880,7 @@ class DNSIncoming(QuietLogger):
                 break
             t = length & 0xC0
             if t == 0x00:
-                result = ''.join((result, self.read_utf(off, length) + '.'))
+                result += self.read_utf(off, length) + '.'
                 off += length
             elif t == 0xC0:
                 if next_ < 0:
