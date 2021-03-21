@@ -2255,8 +2255,7 @@ def new_socket(
 def add_multicast_member(
     listen_socket: socket.socket,
     interface: Union[str, Tuple[Tuple[str, int, int], int]],
-    apple_p2p: bool = False,
-) -> Optional[socket.socket]:
+) -> None:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, tuple)
     err_einval = {errno.EINVAL}
@@ -2293,6 +2292,12 @@ def add_multicast_member(
         else:
             raise
 
+
+def new_respond_socket(
+    interface: Union[str, Tuple[Tuple[str, int, int], int]],
+    apple_p2p: bool = False,
+) -> Optional[socket.socket]:
+    is_v6 = isinstance(interface, tuple)
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
         apple_p2p=apple_p2p,
@@ -2300,6 +2305,7 @@ def add_multicast_member(
     )
     log.debug('Configuring socket %s with multicast interface %s', respond_socket, interface)
     if is_v6:
+        iface_bin = struct.pack('@I', cast(int, interface[1]))
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
     else:
         respond_socket.setsockopt(
@@ -2321,11 +2327,19 @@ def create_sockets(
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
+    # If we are using InterfaceChoice.Default we can use
+    # a single socket to listen and respond.
+    if not unicast and interfaces is InterfaceChoice.Default:
+        for i in normalized_interfaces:
+            add_multicast_member(cast(socket.socket, listen_socket), i)
+        return listen_socket, [listen_socket]
+
     respond_sockets = []
 
     for i in normalized_interfaces:
         if not unicast:
-            respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
+            add_multicast_member(cast(socket.socket, listen_socket), i)
+            respond_socket = new_respond_socket(i, apple_p2p=apple_p2p)
         else:
             respond_socket = new_socket(
                 port=0,
@@ -2494,6 +2508,7 @@ class Zeroconf(QuietLogger):
             interfaces, unicast, ip_version, apple_p2p=apple_p2p
         )
         log.debug('Listen socket %s, respond sockets %s', self._listen_socket, self._respond_sockets)
+        self.multi_socket = unicast or interfaces is not InterfaceChoice.Default
 
         self.listeners = []  # type: List[RecordUpdateListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
@@ -2513,8 +2528,9 @@ class Zeroconf(QuietLogger):
         self.listener = Listener(self)
         if not unicast:
             self.engine.add_reader(self.listener, cast(socket.socket, self._listen_socket))
-        for s in self._respond_sockets:
-            self.engine.add_reader(self.listener, s)
+        if self.multi_socket:
+            for s in self._respond_sockets:
+                self.engine.add_reader(self.listener, s)
         self.reaper = Reaper(self)
 
         self.debug = None  # type: Optional[DNSOutgoing]
@@ -2978,8 +2994,9 @@ class Zeroconf(QuietLogger):
             if not self.unicast:
                 self.engine.del_reader(cast(socket.socket, self._listen_socket))
                 cast(socket.socket, self._listen_socket).close()
-            for s in self._respond_sockets:
-                self.engine.del_reader(s)
+            if self.multi_socket:
+                for s in self._respond_sockets:
+                    self.engine.del_reader(s)
             self.engine.join()
 
             # shutdown the rest
