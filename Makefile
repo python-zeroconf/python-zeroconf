@@ -6,10 +6,7 @@ PYTHON_VERSION:=$(shell python -c "import sys;sys.stdout.write('%d.%d' % sys.ver
 LINT_TARGETS:=flake8
 
 ifneq ($(findstring PyPy,$(PYTHON_IMPLEMENTATION)),PyPy)
-	LINT_TARGETS:=$(LINT_TARGETS) mypy
-endif
-ifeq ($(or $(findstring 3.5,$(PYTHON_VERSION)),$(findstring PyPy,$(PYTHON_IMPLEMENTATION))),)
-	LINT_TARGETS:=$(LINT_TARGETS) black_check
+	LINT_TARGETS:=$(LINT_TARGETS) mypy black_check
 endif
 
 

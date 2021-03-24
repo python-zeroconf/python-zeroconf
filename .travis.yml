@@ -1,11 +1,9 @@
 language: python
 python:
-    - "3.5"
     - "3.6"
     - "3.7"
     - "3.8"
     - "3.9-dev"
-    - "pypy3.5"
     - "pypy3"
 matrix:
   allow_failures:
@@ -13,9 +11,7 @@ matrix:
 install:
     - pip install --upgrade -r requirements-dev.txt
     # mypy can't be installed on pypy
-    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then pip install mypy ; fi
-    - if [[ "${TRAVIS_PYTHON_VERSION}" != *"3.5"* && "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then
-        pip install black ; fi
+    - if [[ "${TRAVIS_PYTHON_VERSION}" != "pypy"* ]] ; then pip install black mypy ; fi
 script:
     # no IPv6 support in Travis :(
     - SKIP_IPV6=1 make ci
