@@ -1,16 +1,14 @@
 Welcome to python-zeroconf documentation!
 =========================================
 
-.. image:: https://travis-ci.org/jstasiak/python-zeroconf.svg?branch=master
-   :alt: Build status
-   :target: https://travis-ci.org/jstasiak/python-zeroconf
+.. image:: https://github.com/jstasiak/python-zeroconf/workflows/CI/badge.svg
+   :target: https://github.com/jstasiak/python-zeroconf?query=workflow%3ACI+branch%3Amaster
 
 .. image:: https://img.shields.io/pypi/v/zeroconf.svg
     :target: https://pypi.python.org/pypi/zeroconf
-   
-.. image:: https://coveralls.io/repos/github/jstasiak/python-zeroconf/badge.svg?branch=master
-   :alt: Covergage status
-   :target: https://coveralls.io/github/jstasiak/python-zeroconf?branch=master
+
+.. image:: https://codecov.io/gh/jstasiak/python-zeroconf/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/jstasiak/python-zeroconf
 
 GitHub (code repository, issues): https://github.com/jstasiak/python-zeroconf
 
