@@ -2332,7 +2332,7 @@ def create_sockets(
     if not unicast and interfaces is InterfaceChoice.Default:
         for i in normalized_interfaces:
             add_multicast_member(cast(socket.socket, listen_socket), i)
-        return listen_socket, [listen_socket]
+        return listen_socket, [cast(socket.socket, listen_socket)]
 
     respond_sockets = []
 
