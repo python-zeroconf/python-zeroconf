@@ -7,6 +7,7 @@
 import copy
 import logging
 import os
+import platform
 import socket
 import struct
 import threading
@@ -16,6 +17,8 @@ import unittest.mock
 from threading import Event
 from typing import Dict, Optional  # noqa # used in type hints
 from typing import cast
+
+import pytest
 
 import zeroconf as r
 from zeroconf import (
@@ -1126,6 +1129,7 @@ class ServiceTypesQuery(unittest.TestCase):
 
 
 class ListenerTest(unittest.TestCase):
+    @pytest.mark.skipif(platform.python_implementation() == 'PyPy', reason="Flaky on PyPy")
     def test_integration_with_listener_class(self):
 
         service_added = Event()
