@@ -137,6 +137,9 @@ Changelog
 0.29.0 (not released yet)
 =========================
 
+* A single socket is used for listening on responding when `InterfaceChoice.Default` is chosen.
+  Thanks to J. Nick Koston.
+
 Backwards incompatible:
 
 * Dropped Python 3.5 support
