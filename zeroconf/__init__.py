@@ -2976,6 +2976,11 @@ class Zeroconf(QuietLogger):
                         # with IPv6 we don't have a reliable way to determine if an interface actually has
                         # IPV6 support, so we have to try and ignore errors.
                         continue
+                    elif isinstance(exc, OSError) and exc.errno == errno.ENOBUFS:
+                        # On macOS, an interface can be in a weird state, where the interface is
+                        # down, but it has an RFC3927/APIPA address assigned to it.
+                        # In those cases an OSError with errno ENOBUFS (55) is thrown.
+                        continue
                     # on send errors, log the exception and keep going
                     self.log_exception_warning('Error sending through socket %d', s.fileno())
                 else:
