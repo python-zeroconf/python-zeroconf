@@ -5,6 +5,7 @@
 """ Unit tests for zeroconf.py """
 
 import copy
+import errno
 import logging
 import os
 import platform
@@ -15,8 +16,7 @@ import time
 import unittest
 import unittest.mock
 from threading import Event
-from typing import Dict, Optional  # noqa # used in type hints
-from typing import cast
+from typing import Dict, Optional, cast  # noqa # used in type hints
 
 import pytest
 
@@ -2130,3 +2130,18 @@ def test_dns_compression_rollback_for_corruption():
         # ensure there is no corruption with the dns compression
         incoming = r.DNSIncoming(packet)
         assert incoming.valid is True
+
+
+@pytest.mark.parametrize(
+    "errno,expected_result",
+    [(errno.EADDRINUSE, False), (errno.EADDRNOTAVAIL, False), (errno.EINVAL, False), (0, True)],
+)
+def test_add_multicast_member_socket_errors(errno, expected_result):
+    """Test we handle socket errors when adding multicast members."""
+    if errno:
+        setsockopt_mock = unittest.mock.Mock(side_effect=OSError(errno, "Error: {}".format(errno)))
+    else:
+        setsockopt_mock = unittest.mock.Mock()
+    fileno_mock = unittest.mock.PropertyMock(return_value=10)
+    socket_mock = unittest.mock.Mock(setsockopt=setsockopt_mock, fileno=fileno_mock)
+    assert r.add_multicast_member(socket_mock, "0.0.0.0") == expected_result
