@@ -101,7 +101,7 @@ async def test_async_service_registration_without_broadcast() -> None:
             calls.append(("update", type, name))
 
     listener = MyListener()
-    aiozc.add_service_listener(type_, listener)
+    aiozc.zeroconf.add_service_listener(type_, listener)
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
