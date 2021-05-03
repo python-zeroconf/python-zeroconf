@@ -9,21 +9,21 @@ import socket
 
 import pytest
 
-from . import REGISTER_TIME, ServiceInfo, ServiceListener, UNREGISTER_TIME, Zeroconf
-from .aio import AsyncZeroconf
+from . import _REGISTER_TIME, _UNREGISTER_TIME, ServiceInfo, ServiceListener, Zeroconf
+from .asyncio import AsyncZeroconf
 
 
 @pytest.mark.asyncio
 async def test_async_basic_usage() -> None:
     """Test we can create and close the instance."""
-    zc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    await zc.async_close()
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
 async def test_async_service_registration() -> None:
     """Test registering services broadcasts the registration by default."""
-    zc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
@@ -41,7 +41,7 @@ async def test_async_service_registration() -> None:
             calls.append(("update", type, name))
 
     listener = MyListener()
-    zc.add_service_listener(type_, listener)
+    aiozc.zeroconf.add_service_listener(type_, listener)
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -54,8 +54,8 @@ async def test_async_service_registration() -> None:
         "ash-2.local.",
         addresses=[socket.inet_aton("10.0.1.2")],
     )
-    await zc.async_register_service(info)
-    await asyncio.sleep(REGISTER_TIME / 1000 * 3)
+    await aiozc.async_register_service(info)
+    await asyncio.sleep(_REGISTER_TIME / 1000 * 3)
     new_info = ServiceInfo(
         type_,
         registration_name,
@@ -66,12 +66,12 @@ async def test_async_service_registration() -> None:
         "ash-2.local.",
         addresses=[socket.inet_aton("10.0.1.3")],
     )
-    await zc.async_update_service(new_info)
-    await asyncio.sleep(REGISTER_TIME / 1000 * 3)
+    await aiozc.async_update_service(new_info)
+    await asyncio.sleep(_REGISTER_TIME / 1000 * 3)
 
-    await zc.async_unregister_service(new_info)
-    await asyncio.sleep(UNREGISTER_TIME / 1000 * 3)
-    await zc.async_close()
+    await aiozc.async_unregister_service(new_info)
+    await asyncio.sleep(_UNREGISTER_TIME / 1000 * 3)
+    await aiozc.async_close()
 
     assert calls == [
         ('add', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
@@ -83,7 +83,7 @@ async def test_async_service_registration() -> None:
 @pytest.mark.asyncio
 async def test_async_service_registration_without_broadcast() -> None:
     """Test that registration broadcast can be disabled."""
-    zc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
@@ -101,7 +101,7 @@ async def test_async_service_registration_without_broadcast() -> None:
             calls.append(("update", type, name))
 
     listener = MyListener()
-    zc.add_service_listener(type_, listener)
+    aiozc.add_service_listener(type_, listener)
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -114,7 +114,7 @@ async def test_async_service_registration_without_broadcast() -> None:
         "ash-2.local.",
         addresses=[socket.inet_aton("10.0.1.2")],
     )
-    await zc.async_register_service(info, broadcast_service=False)
+    await aiozc.async_register_service(info, broadcast_service=False)
     new_info = ServiceInfo(
         type_,
         registration_name,
@@ -125,9 +125,9 @@ async def test_async_service_registration_without_broadcast() -> None:
         "ash-2.local.",
         addresses=[socket.inet_aton("10.0.1.3")],
     )
-    await zc.async_update_service(new_info, broadcast_service=False)
-    await zc.async_unregister_service(new_info, broadcast_service=False)
-    await asyncio.sleep(UNREGISTER_TIME / 1000 * 3)
-    await zc.async_close()
+    await aiozc.async_update_service(new_info, broadcast_service=False)
+    await aiozc.async_unregister_service(new_info, broadcast_service=False)
+    await asyncio.sleep(_UNREGISTER_TIME / 1000 * 3)
+    await aiozc.async_close()
 
     assert calls == []

@@ -33,7 +33,7 @@ from . import (
 )
 
 
-class AsyncZeroconf(Zeroconf):
+class AsyncZeroconf:
     """Implementation of Zeroconf Multicast DNS Service Discovery
 
     Supports registration, unregistration, queries and browsing.
@@ -64,7 +64,7 @@ class AsyncZeroconf(Zeroconf):
             from it. Otherwise defaults to V4 only for backward compatibility.
         :param apple_p2p: use AWDL interface (only macOS)
         """
-        super().__init__(
+        self.zeroconf = Zeroconf(
             interfaces=interfaces,
             unicast=unicast,
             ip_version=ip_version,
@@ -77,7 +77,7 @@ class AsyncZeroconf(Zeroconf):
         for i in range(3):
             if i != 0:
                 await asyncio.sleep(interval / 1000)
-            await self.loop.run_in_executor(None, self.send_service_broadcast, info, ttl)
+            await self.loop.run_in_executor(None, self.zeroconf.send_service_broadcast, info, ttl)
 
     async def async_register_service(
         self,
@@ -98,7 +98,7 @@ class AsyncZeroconf(Zeroconf):
         The service will be broadcast in a task.
         """
         await self.loop.run_in_executor(
-            None, self.register_service, info, ttl, allow_name_change, cooperating_responders, False
+            None, self.zeroconf.register_service, info, ttl, allow_name_change, cooperating_responders, False
         )
         if broadcast_service:
             asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, ttl))
@@ -109,7 +109,7 @@ class AsyncZeroconf(Zeroconf):
         By default, the service will be announced if broadcast_service is set to True.
         The service will be broadcast in a task.
         """
-        await self.loop.run_in_executor(None, self.unregister_service, info, False)
+        await self.loop.run_in_executor(None, self.zeroconf.unregister_service, info, False)
         if broadcast_service:
             asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
 
@@ -121,11 +121,11 @@ class AsyncZeroconf(Zeroconf):
         By default, the service will be announced if broadcast_service is set to True.
         The service will be broadcast in a task.
         """
-        await self.loop.run_in_executor(None, self.update_service, info, False)
+        await self.loop.run_in_executor(None, self.zeroconf.update_service, info, False)
         if broadcast_service:
             asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        await self.loop.run_in_executor(None, self.close)
+        await self.loop.run_in_executor(None, self.zeroconf.close)
