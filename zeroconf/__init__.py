@@ -23,7 +23,6 @@
 import enum
 import errno
 import ipaddress
-import itertools
 import logging
 import platform
 import re
@@ -1243,23 +1242,29 @@ class DNSCache:
 
     def __init__(self) -> None:
         self.cache = {}  # type: Dict[str, List[DNSRecord]]
+        self.service_cache = {}  # type: Dict[str, List[DNSRecord]]
 
     def add(self, entry: DNSRecord) -> None:
         """Adds an entry"""
         # Insert last in list, get will return newest entry
         # iteration will result in last update winning
         self.cache.setdefault(entry.key, []).append(entry)
+        if isinstance(entry, DNSService):
+            self.service_cache.setdefault(entry.server, []).append(entry)
 
     def remove(self, entry: DNSRecord) -> None:
-        """Removes an entry"""
+        """Removes an entry."""
+        if isinstance(entry, DNSService):
+            DNSCache.remove_key(self.service_cache, entry.server, entry)
+        DNSCache.remove_key(self.cache, entry.key, entry)
+
+    @staticmethod
+    def remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
+        """Forgiving remove of a cache key."""
         try:
-            list_ = self.cache[entry.key]
-            list_.remove(entry)
-            # If we remove the last entry in the list
-            # we remove the key from the dict in order
-            # to avoid leaking memory
-            if not list_:
-                del self.cache[entry.key]
+            cache[key].remove(entry)
+            if not cache[key]:
+                del cache[key]
         except (KeyError, ValueError):
             pass
 
@@ -1281,12 +1286,13 @@ class DNSCache:
         entry = DNSEntry(name, type_, class_)
         return self.get(entry)
 
+    def entries_with_server(self, server: str) -> List[DNSRecord]:
+        """Returns a list of entries whose server matches the name."""
+        return self.service_cache.get(server, [])[:]
+
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        try:
-            return self.cache[name.lower()]
-        except KeyError:
-            return []
+        return self.cache.get(name.lower(), [])[:]
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
@@ -1299,25 +1305,17 @@ class DNSCache:
                 return record
         return None
 
-    def entries(self) -> List[DNSRecord]:
-        """Returns a list of all entries"""
-        if not self.cache:
-            return []
+    def names(self) -> List[str]:
+        """Return a copy of the list of current cache names."""
+        return list(self.cache)
 
-        # avoid size change during iteration by copying the cache
-        return list(itertools.chain.from_iterable(list(self.cache.values())))
-
-    def iterable_entries(self) -> Iterable[DNSRecord]:
-        """Returns an iterable of all entries.
-
-        This function is provided to avoid copying
-        the entries but is not threadsafe as the
-        contents of the cache can change during iteration.
-
-        Callers should trap RuntimeError and fallback
-        to calling entries.
-        """
-        return itertools.chain.from_iterable(self.cache.values())
+    def expire(self, now: float) -> Iterable[DNSRecord]:
+        """Purge expired entries from the cache."""
+        for name in self.names():
+            for record in self.entries_with_name(name):
+                if record.is_expired(now):
+                    self.remove(record)
+                    yield record
 
 
 class Engine(threading.Thread):
@@ -1486,22 +1484,10 @@ class Reaper(threading.Thread):
 
             if self.zc.done:
                 return
-            try:
-                # We try to iterate the cache without copying the whole
-                # cache as this can be quite an expensive operation.
-                self._cleanup_cache(self.zc.cache.iterable_entries())
-            except RuntimeError:
-                # If the cache changes during iteration, we fallback
-                # to making a copy before iteraiton.
-                self._cleanup_cache(self.zc.cache.entries())
 
-    def _cleanup_cache(self, entries: Iterable[DNSRecord]) -> None:
-        """Remove expired entries from the cache."""
-        now = current_time_millis()
-        for record in entries:
-            if record.is_expired(now):
+            now = current_time_millis()
+            for record in self.zc.cache.expire(now):
                 self.zc.update_record(now, record)
-                self.zc.cache.remove(record)
 
 
 class Signal:
@@ -1706,9 +1692,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 return
 
             # Iterate through the DNSCache and callback any services that use this address
-            for service in zc.cache.entries():
-                if not isinstance(service, DNSService) or not service.server == record.name:
-                    continue
+            for service in self.zc.cache.entries_with_server(record.name):
                 for type_ in self.types:
                     if service.name.endswith(type_):
                         enqueue_callback(ServiceStateChange.Updated, type_, service.name)
@@ -2775,10 +2759,7 @@ class Zeroconf(QuietLogger):
                 # we can avoid iterating everything in the cache and
                 # only look though entries for the specific name.
                 # entries_with_name will take care of converting to lowercase
-                #
-                # We make a copy of the list that entries_with_name returns
-                # since we cannot iterate over something we might remove
-                for entry in self.cache.entries_with_name(record.name).copy():
+                for entry in self.cache.entries_with_name(record.name):
 
                     if entry == record:
                         updated = False
