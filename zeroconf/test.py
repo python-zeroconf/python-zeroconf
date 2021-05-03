@@ -529,6 +529,17 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
         rv.close()
 
+    def test_launch_and_close_unicast(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, unicast=True)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, unicast=True)
+        rv.close()
+
+    def test_close_multiple_times(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
+        rv.close()
+        rv.close()
+
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v4_v6(self):
@@ -966,9 +977,11 @@ class TestReaper(unittest.TestCase):
         zeroconf.cache.add(record_with_10s_ttl)
         zeroconf.cache.add(record_with_1s_ttl)
         entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-        time.sleep(1.05)
-        zeroconf.notify_reaper()
-        time.sleep(0.05)
+        zeroconf.engine.cache_cleanup_interval_ms = 10
+        time.sleep(1)
+        with zeroconf.engine.condition:
+            zeroconf.engine._notify()
+        time.sleep(0.1)
         entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         zeroconf.close()
         assert entries != original_entries
