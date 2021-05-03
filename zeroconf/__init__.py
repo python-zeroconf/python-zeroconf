@@ -2565,7 +2565,7 @@ class Zeroconf(QuietLogger):
         (if you want this behavior set `cooperating_responders` to `True`).
 
         By default, the service will be announced if broadcast_service is set to True.
-        This process will wait between broadcast which can will prevent
+        This process will wait between broadcasts which can will prevent
         this function from returning quickly.
         """
         if ttl is not None:
@@ -2584,7 +2584,7 @@ class Zeroconf(QuietLogger):
         service.
 
         By default, the service will be announced if broadcast_service is set to True.
-        This process will wait between broadcast which can will prevent
+        This process will wait between broadcasts which can will prevent
         this function from returning quickly.
         """
         self.registry.update(info)
@@ -2644,7 +2644,7 @@ class Zeroconf(QuietLogger):
         """Unregister a service.
 
         By default, the service will be announced if broadcast_service is set to True.
-        This process will wait between broadcast which can will prevent
+        This process will wait between broadcasts which can will prevent
         this function from returning quickly.
         """
         self.registry.remove(info)
