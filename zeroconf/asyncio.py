@@ -29,7 +29,7 @@ from . import (
     ServiceInfo,
     Zeroconf,
     _REGISTER_TIME,
-    _UNREGISTER_TIME,    
+    _UNREGISTER_TIME,
 )
 
 
