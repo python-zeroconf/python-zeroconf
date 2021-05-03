@@ -23,12 +23,12 @@ import asyncio
 from typing import Optional
 
 from . import (
+    _REGISTER_TIME,
+    _UNREGISTER_TIME,
     IPVersion,
     InterfaceChoice,
     InterfacesType,
-    REGISTER_TIME,
     ServiceInfo,
-    UNREGISTER_TIME,
     Zeroconf,
 )
 
@@ -101,7 +101,7 @@ class AsyncZeroconf(Zeroconf):
             None, self.register_service, info, ttl, allow_name_change, cooperating_responders, False
         )
         if broadcast_service:
-            asyncio.ensure_future(self._async_broadcast_service(info, REGISTER_TIME, ttl))
+            asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, ttl))
 
     async def async_unregister_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
         """Unregister a service.
@@ -111,7 +111,7 @@ class AsyncZeroconf(Zeroconf):
         """
         await self.loop.run_in_executor(None, self.unregister_service, info, False)
         if broadcast_service:
-            asyncio.ensure_future(self._async_broadcast_service(info, UNREGISTER_TIME, 0))
+            asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
 
     async def async_update_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
         """Registers service information to the network with a default TTL.
@@ -123,7 +123,7 @@ class AsyncZeroconf(Zeroconf):
         """
         await self.loop.run_in_executor(None, self.update_service, info, False)
         if broadcast_service:
-            asyncio.ensure_future(self._async_broadcast_service(info, REGISTER_TIME, None))
+            asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from

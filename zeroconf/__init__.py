@@ -73,9 +73,9 @@ if log.level == logging.NOTSET:
 
 # Some timing constants
 
-UNREGISTER_TIME = 125  # ms
+_UNREGISTER_TIME = 125  # ms
 _CHECK_TIME = 175  # ms
-REGISTER_TIME = 225  # ms
+_REGISTER_TIME = 225  # ms
 _LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 1000  # ms
 _BROWSER_BACKOFF_LIMIT = 3600  # s
@@ -2576,7 +2576,7 @@ class Zeroconf(QuietLogger):
         self.check_service(info, allow_name_change, cooperating_responders)
         self.registry.add(info)
         if broadcast_service:
-            self._broadcast_service(info, REGISTER_TIME, None)
+            self._broadcast_service(info, _REGISTER_TIME, None)
 
     def update_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
         """Registers service information to the network with a default TTL.
@@ -2589,7 +2589,7 @@ class Zeroconf(QuietLogger):
         """
         self.registry.update(info)
         if broadcast_service:
-            self._broadcast_service(info, REGISTER_TIME, None)
+            self._broadcast_service(info, _REGISTER_TIME, None)
 
     def _broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
         """Send a broadcasts to announce a service at intervals."""
@@ -2649,7 +2649,7 @@ class Zeroconf(QuietLogger):
         """
         self.registry.remove(info)
         if broadcast_service:
-            self._broadcast_service(info, UNREGISTER_TIME, 0)
+            self._broadcast_service(info, _UNREGISTER_TIME, 0)
 
     def unregister_all_services(self) -> None:
         """Unregister all registered services."""
@@ -2669,7 +2669,7 @@ class Zeroconf(QuietLogger):
                 self._add_broadcast_answer(out, info, 0)
             self.send(out)
             i += 1
-            next_time += UNREGISTER_TIME
+            next_time += _UNREGISTER_TIME
 
     def check_service(
         self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False
