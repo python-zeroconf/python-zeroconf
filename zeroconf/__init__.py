@@ -2239,7 +2239,7 @@ def new_socket(
 def add_multicast_member(
     listen_socket: socket.socket,
     interface: Union[str, Tuple[Tuple[str, int, int], int]],
-) -> None:
+) -> bool:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, tuple)
     err_einval = {errno.EINVAL}
@@ -2263,19 +2263,20 @@ def add_multicast_member(
                 'it is expected to happen on some systems',
                 interface,
             )
-            return None
+            return False
         elif _errno == errno.EADDRNOTAVAIL:
             log.info(
                 'Address not available when adding %s to multicast '
                 'group, it is expected to happen on some systems',
                 interface,
             )
-            return None
+            return False
         elif _errno in err_einval:
             log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
-            return None
+            return False
         else:
             raise
+    return True
 
 
 def new_respond_socket(
@@ -2323,8 +2324,10 @@ def create_sockets(
 
     for i in normalized_interfaces:
         if not unicast:
-            add_multicast_member(cast(socket.socket, listen_socket), i)
-            respond_socket = new_respond_socket(i, apple_p2p=apple_p2p)
+            if add_multicast_member(cast(socket.socket, listen_socket), i):
+                respond_socket = new_respond_socket(i, apple_p2p=apple_p2p)
+            else:
+                respond_socket = None
         else:
             respond_socket = new_socket(
                 port=0,
