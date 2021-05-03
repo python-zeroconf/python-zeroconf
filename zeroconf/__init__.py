@@ -73,9 +73,9 @@ if log.level == logging.NOTSET:
 
 # Some timing constants
 
-_UNREGISTER_TIME = 125  # ms
+UNREGISTER_TIME = 125  # ms
 _CHECK_TIME = 175  # ms
-_REGISTER_TIME = 225  # ms
+REGISTER_TIME = 225  # ms
 _LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 1000  # ms
 _BROWSER_BACKOFF_LIMIT = 3600  # s
@@ -2555,13 +2555,19 @@ class Zeroconf(QuietLogger):
         ttl: Optional[int] = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
+        broadcast_service: bool = True,
     ) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.  The name of the service may be changed if needed to make
         it unique on the network. Additionally multiple cooperating responders
         can register the same service on the network for resilience
-        (if you want this behavior set `cooperating_responders` to `True`)."""
+        (if you want this behavior set `cooperating_responders` to `True`).
+
+        By default, the service will be announced if broadcast_service is set to True.
+        This process will wait between broadcast which can will prevent
+        this function from returning quickly.
+        """
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
             # Setting TTLs via ServiceInfo is preferred
@@ -2569,17 +2575,24 @@ class Zeroconf(QuietLogger):
             info.other_ttl = ttl
         self.check_service(info, allow_name_change, cooperating_responders)
         self.registry.add(info)
-        self._broadcast_service(info, _REGISTER_TIME, None)
+        if broadcast_service:
+            self._broadcast_service(info, REGISTER_TIME, None)
 
-    def update_service(self, info: ServiceInfo) -> None:
+    def update_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
-        service."""
+        service.
 
+        By default, the service will be announced if broadcast_service is set to True.
+        This process will wait between broadcast which can will prevent
+        this function from returning quickly.
+        """
         self.registry.update(info)
-        self._broadcast_service(info, _REGISTER_TIME, None)
+        if broadcast_service:
+            self._broadcast_service(info, REGISTER_TIME, None)
 
     def _broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
+        """Send a broadcasts to announce a service at intervals."""
         now = current_time_millis()
         next_time = now
         i = 0
@@ -2589,11 +2602,15 @@ class Zeroconf(QuietLogger):
                 now = current_time_millis()
                 continue
 
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-            self._add_broadcast_answer(out, info, ttl)
-            self.send(out)
+            self.send_service_broadcast(info, ttl)
             i += 1
             next_time += interval
+
+    def send_service_broadcast(self, info: ServiceInfo, ttl: Optional[int]) -> None:
+        """Send a broadcast to announce a service."""
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+        self._add_broadcast_answer(out, info, ttl)
+        self.send(out)
 
     def _add_broadcast_answer(self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]) -> None:
         """Add answers to broadcast a service."""
@@ -2623,10 +2640,16 @@ class Zeroconf(QuietLogger):
                 DNSAddress(info.server, type_, _CLASS_IN | _CLASS_UNIQUE, host_ttl, address), 0
             )
 
-    def unregister_service(self, info: ServiceInfo) -> None:
-        """Unregister a service."""
+    def unregister_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
+        """Unregister a service.
+
+        By default, the service will be announced if broadcast_service is set to True.
+        This process will wait between broadcast which can will prevent
+        this function from returning quickly.
+        """
         self.registry.remove(info)
-        self._broadcast_service(info, _UNREGISTER_TIME, 0)
+        if broadcast_service:
+            self._broadcast_service(info, UNREGISTER_TIME, 0)
 
     def unregister_all_services(self) -> None:
         """Unregister all registered services."""
@@ -2646,7 +2669,7 @@ class Zeroconf(QuietLogger):
                 self._add_broadcast_answer(out, info, 0)
             self.send(out)
             i += 1
-            next_time += _UNREGISTER_TIME
+            next_time += UNREGISTER_TIME
 
     def check_service(
         self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False
