@@ -9,7 +9,7 @@ import socket
 
 import pytest
 
-from . import _REGISTER_TIME, _UNREGISTER_TIME, ServiceInfo, ServiceListener, Zeroconf
+from . import ServiceInfo, ServiceListener, Zeroconf, _REGISTER_TIME, _UNREGISTER_TIME
 from .asyncio import AsyncZeroconf
 
 

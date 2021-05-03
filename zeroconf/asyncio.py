@@ -23,13 +23,13 @@ import asyncio
 from typing import Optional
 
 from . import (
-    _REGISTER_TIME,
-    _UNREGISTER_TIME,
     IPVersion,
     InterfaceChoice,
     InterfacesType,
     ServiceInfo,
     Zeroconf,
+    _REGISTER_TIME,
+    _UNREGISTER_TIME,    
 )
 
 
