@@ -2969,24 +2969,25 @@ class Zeroconf(QuietLogger):
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        if not self._GLOBAL_DONE:
-            # remove service listeners
-            self.remove_all_service_listeners()
-            self.unregister_all_services()
-            self._GLOBAL_DONE = True
+        if self._GLOBAL_DONE:
+            return
+        # remove service listeners
+        self.remove_all_service_listeners()
+        self.unregister_all_services()
+        self._GLOBAL_DONE = True
 
-            # shutdown recv socket and thread
-            if not self.unicast:
-                self.engine.del_reader(cast(socket.socket, self._listen_socket))
-                cast(socket.socket, self._listen_socket).close()
-            if self.multi_socket:
-                for s in self._respond_sockets:
-                    self.engine.del_reader(s)
-            self.engine.join()
-
-            # shutdown the rest
-            self.notify_all()
-            self.notify_reaper()
-            self.reaper.join()
+        # shutdown recv socket and thread
+        if not self.unicast:
+            self.engine.del_reader(cast(socket.socket, self._listen_socket))
+            cast(socket.socket, self._listen_socket).close()
+        if self.multi_socket:
             for s in self._respond_sockets:
-                s.close()
+                self.engine.del_reader(s)
+        self.engine.join()
+
+        # shutdown the rest
+        self.notify_all()
+        self.notify_reaper()
+        self.reaper.join()
+        for s in self._respond_sockets:
+            s.close()
