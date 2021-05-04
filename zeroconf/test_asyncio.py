@@ -9,7 +9,7 @@ import socket
 
 import pytest
 
-from . import ServiceInfo, ServiceListener, Zeroconf, _REGISTER_TIME, _UNREGISTER_TIME
+from . import NonUniqueNameException, ServiceInfo, ServiceListener, Zeroconf, _REGISTER_TIME, _UNREGISTER_TIME
 from .asyncio import AsyncZeroconf
 
 
@@ -81,27 +81,12 @@ async def test_async_service_registration() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration_without_broadcast() -> None:
-    """Test that registration broadcast can be disabled."""
+async def test_async_service_registration_name_conflict() -> None:
+    """Test registering services throws on name conflict."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
-
-    calls = []
-
-    class MyListener(ServiceListener):
-        def add_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
-            calls.append(("add", type, name))
-
-        def remove_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
-            calls.append(("remove", type, name))
-
-        def update_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
-            calls.append(("update", type, name))
-
-    listener = MyListener()
-    aiozc.zeroconf.add_service_listener(type_, listener)
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -114,20 +99,8 @@ async def test_async_service_registration_without_broadcast() -> None:
         "ash-2.local.",
         addresses=[socket.inet_aton("10.0.1.2")],
     )
-    await aiozc.async_register_service(info, broadcast_service=False)
-    new_info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
-    )
-    await aiozc.async_update_service(new_info, broadcast_service=False)
-    await aiozc.async_unregister_service(new_info, broadcast_service=False)
-    await asyncio.sleep(_UNREGISTER_TIME / 1000 * 3)
-    await aiozc.async_close()
+    await aiozc.async_register_service(info)
+    await asyncio.sleep(_REGISTER_TIME / 1000 * 3)
 
-    assert calls == []
+    with pytest.raises(NonUniqueNameException):
+        await aiozc.async_register_service(info)

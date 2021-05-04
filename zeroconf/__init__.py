@@ -353,6 +353,16 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:
     return service_name + trailer
 
 
+def instance_name_from_service_info(info: "ServiceInfo") -> str:
+    """Calculate the instance name from the ServiceInfo."""
+    # This is kind of funky because of the subtype based tests
+    # need to make subtypes a first class citizen
+    service_name = service_type_name(info.name)
+    if not info.type.endswith(service_name):
+        raise BadTypeInNameException
+    return info.name[: -len(service_name) - 1]
+
+
 # Exceptions
 
 
@@ -2505,8 +2515,6 @@ class Zeroconf(QuietLogger):
             for s in self._respond_sockets:
                 self.engine.add_reader(self.listener, s)
 
-        self.debug = None  # type: Optional[DNSOutgoing]
-
     @property
     def done(self) -> bool:
         return self._GLOBAL_DONE
@@ -2555,7 +2563,6 @@ class Zeroconf(QuietLogger):
         ttl: Optional[int] = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
-        broadcast_service: bool = True,
     ) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
@@ -2575,10 +2582,9 @@ class Zeroconf(QuietLogger):
             info.other_ttl = ttl
         self.check_service(info, allow_name_change, cooperating_responders)
         self.registry.add(info)
-        if broadcast_service:
-            self._broadcast_service(info, _REGISTER_TIME, None)
+        self._broadcast_service(info, _REGISTER_TIME, None)
 
-    def update_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
+    def update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.
@@ -2588,8 +2594,7 @@ class Zeroconf(QuietLogger):
         this function from returning quickly.
         """
         self.registry.update(info)
-        if broadcast_service:
-            self._broadcast_service(info, _REGISTER_TIME, None)
+        self._broadcast_service(info, _REGISTER_TIME, None)
 
     def _broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
         """Send a broadcasts to announce a service at intervals."""
@@ -2610,6 +2615,13 @@ class Zeroconf(QuietLogger):
         """Send a broadcast to announce a service."""
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
         self._add_broadcast_answer(out, info, ttl)
+        self.send(out)
+
+    def send_service_query(self, info: ServiceInfo) -> None:
+        """Send a query to lookup a service."""
+        out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
+        out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
+        out.add_authorative_answer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name))
         self.send(out)
 
     def _add_broadcast_answer(self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]) -> None:
@@ -2640,7 +2652,7 @@ class Zeroconf(QuietLogger):
                 DNSAddress(info.server, type_, _CLASS_IN | _CLASS_UNIQUE, host_ttl, address), 0
             )
 
-    def unregister_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
+    def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service.
 
         By default, the service will be announced if broadcast_service is set to True.
@@ -2648,8 +2660,7 @@ class Zeroconf(QuietLogger):
         this function from returning quickly.
         """
         self.registry.remove(info)
-        if broadcast_service:
-            self._broadcast_service(info, _UNREGISTER_TIME, 0)
+        self._broadcast_service(info, _UNREGISTER_TIME, 0)
 
     def unregister_all_services(self) -> None:
         """Unregister all registered services."""
@@ -2676,43 +2687,31 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
-
-        # This is kind of funky because of the subtype based tests
-        # need to make subtypes a first class citizen
-        service_name = service_type_name(info.name)
-        if not info.type.endswith(service_name):
-            raise BadTypeInNameException
-
-        instance_name = info.name[: -len(service_name) - 1]
+        instance_name = instance_name_from_service_info(info)
+        if cooperating_responders:
+            return
         next_instance_number = 2
-
-        now = current_time_millis()
-        next_time = now
+        next_time = now = current_time_millis()
         i = 0
         while i < 3:
-            if not cooperating_responders:
-                # check for a name conflict
-                while self.cache.current_entry_with_name_and_alias(info.type, info.name):
-                    if not allow_name_change:
-                        raise NonUniqueNameException
+            # check for a name conflict
+            while self.cache.current_entry_with_name_and_alias(info.type, info.name):
+                if not allow_name_change:
+                    raise NonUniqueNameException
 
-                    # change the name and look for a conflict
-                    info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
-                    next_instance_number += 1
-                    service_type_name(info.name)
-                    next_time = now
-                    i = 0
+                # change the name and look for a conflict
+                info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
+                next_instance_number += 1
+                service_type_name(info.name)
+                next_time = now
+                i = 0
 
             if now < next_time:
                 self.wait(next_time - now)
                 now = current_time_millis()
                 continue
 
-            out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
-            self.debug = out
-            out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
-            out.add_authorative_answer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name))
-            self.send(out)
+            self.send_service_query(info)
             i += 1
             next_time += _CHECK_TIME
 

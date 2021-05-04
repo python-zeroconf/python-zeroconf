@@ -492,9 +492,9 @@ class Names(unittest.TestCase):
         self.assertRaises(r.NonUniqueNameException, zc.register_service, info_service)
 
         # verify no name conflict https://tools.ietf.org/html/rfc6762#section-6.6
-        zc.register_service(info_service, cooperating_responders=True, broadcast_service=False)
+        zc.register_service(info_service, cooperating_responders=True)
 
-        zc.register_service(info_service, allow_name_change=True, broadcast_service=False)
+        zc.register_service(info_service, allow_name_change=True)
         assert info_service.name.split('.')[0] == '%s-%d' % (name, number_hosts + 1)
 
     def generate_many_hosts(self, zc, type_, name, number_hosts):
@@ -849,7 +849,7 @@ class TestRegistrar(unittest.TestCase):
 
         # register service with default TTL
         expected_ttl = None
-        zc.register_service(info, broadcast_service=True)
+        zc.register_service(info)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -865,14 +865,14 @@ class TestRegistrar(unittest.TestCase):
 
         # unregister
         expected_ttl = 0
-        zc.unregister_service(info, broadcast_service=True)
+        zc.unregister_service(info)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # register service with custom TTL
         expected_ttl = r._DNS_HOST_TTL * 2
         assert expected_ttl != r._DNS_HOST_TTL
-        zc.register_service(info, ttl=expected_ttl, broadcast_service=True)
+        zc.register_service(info, ttl=expected_ttl)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -888,7 +888,7 @@ class TestRegistrar(unittest.TestCase):
 
         # unregister
         expected_ttl = 0
-        zc.unregister_service(info, broadcast_service=True)
+        zc.unregister_service(info)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -1009,7 +1009,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.register_service(info, broadcast_service=False)
+        zeroconf_registrar.register_service(info)
 
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
@@ -1041,7 +1041,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_pton(socket.AF_INET6, addr)],
         )
-        zeroconf_registrar.register_service(info, broadcast_service=False)
+        zeroconf_registrar.register_service(info)
 
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
@@ -1072,7 +1072,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.register_service(info, broadcast_service=False)
+        zeroconf_registrar.register_service(info)
 
         try:
             service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=0.5)
@@ -1103,7 +1103,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.register_service(info, broadcast_service=False)
+        zeroconf_registrar.register_service(info)
 
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
@@ -1173,7 +1173,7 @@ class ListenerTest(unittest.TestCase):
         info_service = ServiceInfo(
             subtype, registration_name, port=80, properties=desc, server="ash-2.local.", addresses=addresses
         )
-        zeroconf_registrar.register_service(info_service, broadcast_service=True)
+        zeroconf_registrar.register_service(info_service)
 
         try:
             service_added.wait(1)
@@ -1218,7 +1218,7 @@ class ListenerTest(unittest.TestCase):
                 "ash-2.local.",
                 addresses=[socket.inet_aton("10.0.1.2")],
             )
-            zeroconf_registrar.update_service(info_service, broadcast_service=True)
+            zeroconf_registrar.update_service(info_service)
             service_updated.wait(1)
             assert service_updated.is_set()
 
@@ -1226,7 +1226,7 @@ class ListenerTest(unittest.TestCase):
             assert info is not None
             assert info.properties[b'prop_blank'] == properties['prop_blank']
 
-            zeroconf_registrar.unregister_service(info_service, broadcast_service=True)
+            zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
             assert service_removed.is_set()
 
@@ -1820,7 +1820,7 @@ def test_integration():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zeroconf_registrar.register_service(info, broadcast_service=False)
+    zeroconf_registrar.register_service(info)
 
     try:
         service_added.wait(1)
@@ -1953,7 +1953,7 @@ def test_ptr_optimization():
     setattr(zc, "send", send)
 
     # register
-    zc.register_service(info, broadcast_service=False)
+    zc.register_service(info)
     nbr_answers = nbr_additionals = nbr_authorities = 0
 
     # query
@@ -1964,7 +1964,7 @@ def test_ptr_optimization():
     assert has_srv and has_txt and has_a
 
     # unregister
-    zc.unregister_service(info, broadcast_service=False)
+    zc.unregister_service(info)
 
 
 def test_dns_compression_rollback_for_corruption():

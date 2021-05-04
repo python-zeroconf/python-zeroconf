@@ -23,11 +23,16 @@ import asyncio
 from typing import Optional
 
 from . import (
+    service_type_name,
+    instance_name_from_service_info,
+    current_time_millis,
     IPVersion,
     InterfaceChoice,
     InterfacesType,
+    NonUniqueNameException,
     ServiceInfo,
     Zeroconf,
+    _CHECK_TIME,
     _REGISTER_TIME,
     _UNREGISTER_TIME,
 )
@@ -82,10 +87,6 @@ class AsyncZeroconf:
     async def async_register_service(
         self,
         info: ServiceInfo,
-        ttl: Optional[int] = None,
-        allow_name_change: bool = False,
-        cooperating_responders: bool = False,
-        broadcast_service: bool = True,
     ) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
@@ -94,36 +95,41 @@ class AsyncZeroconf:
         can register the same service on the network for resilience
         (if you want this behavior set `cooperating_responders` to `True`).
 
-        By default, the service will be announced if broadcast_service is set to True.
         The service will be broadcast in a task.
         """
-        await self.loop.run_in_executor(
-            None, self.zeroconf.register_service, info, ttl, allow_name_change, cooperating_responders, False
-        )
-        if broadcast_service:
-            asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, ttl))
+        await self.async_check_service(info)
+        await self.loop.run_in_executor(None, self.zeroconf.registry.add, info)
+        asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
-    async def async_unregister_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
+    async def async_check_service(self, info: ServiceInfo) -> None:
+        """Checks the network for a unique service name, modifying the
+        ServiceInfo passed in if it is not unique."""
+        instance_name_from_service_info(info)
+        for i in range(3):
+            # check for a name conflict
+            if self.zeroconf.cache.current_entry_with_name_and_alias(info.type, info.name):
+                raise NonUniqueNameException
+            if i != 0:
+                await asyncio.sleep(_CHECK_TIME / 1000)
+            await self.loop.run_in_executor(None, self.zeroconf.send_service_query, info)
+
+    async def async_unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service.
 
-        By default, the service will be announced if broadcast_service is set to True.
         The service will be broadcast in a task.
         """
-        await self.loop.run_in_executor(None, self.zeroconf.unregister_service, info, False)
-        if broadcast_service:
-            asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
+        await self.loop.run_in_executor(None, self.zeroconf.registry.remove, info)
+        asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
 
-    async def async_update_service(self, info: ServiceInfo, broadcast_service: bool = True) -> None:
+    async def async_update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.
 
-        By default, the service will be announced if broadcast_service is set to True.
         The service will be broadcast in a task.
         """
-        await self.loop.run_in_executor(None, self.zeroconf.update_service, info, False)
-        if broadcast_service:
-            asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+        await self.loop.run_in_executor(None, self.zeroconf.registry.update, info)
+        asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
