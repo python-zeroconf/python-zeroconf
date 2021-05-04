@@ -34,7 +34,7 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import Dict, Iterable, List, Optional, Sequence, Union, cast
+from typing import Dict, Iterable, List, Optional, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
@@ -1337,39 +1337,51 @@ class Engine(threading.Thread):
         self.zc = zc
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
+        self.cache_cleanup_interval_ms = 10000.0
         self.condition = threading.Condition()
         self.socketpair = socket.socketpair()
+        self._last_cache_cleanup = 0.0
         self.start()
         self.name = "zeroconf-Engine-%s" % (getattr(self, 'native_id', self.ident),)
 
     def run(self) -> None:
         while not self.zc.done:
-            with self.condition:
-                rs = list(self.readers.keys())
-                if len(rs) == 0:
-                    # No sockets to manage, but we wait for the timeout
-                    # or addition of a socket
+            rs = list(self.readers.keys())
+            if not rs:
+                # No sockets to manage, but we wait for the timeout
+                # or addition of a socket
+                with self.condition:
                     self.condition.wait(self.timeout)
+                continue
 
-            if len(rs) != 0:
-                try:
-                    rs = rs + [self.socketpair[0]]
-                    rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
-                    if not self.zc.done:
-                        for socket_ in rr:
-                            reader = self.readers.get(socket_)
-                            if reader:
-                                reader.handle_read(socket_)
+            try:
+                rs.append(self.socketpair[0])
+                rr, wr, er = select.select(rs, [], [], self.timeout)
 
-                        if self.socketpair[0] in rr:
-                            # Clear the socket's buffer
-                            self.socketpair[0].recv(128)
+                if self.zc.done:
+                    return
 
-                except (select.error, socket.error) as e:
-                    # If the socket was closed by another thread, during
-                    # shutdown, ignore it and exit
-                    if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
-                        raise
+                for socket_ in rr:
+                    reader = self.readers.get(socket_)
+                    if reader:
+                        reader.handle_read(socket_)
+
+                if self.socketpair[0] in rr:
+                    # Clear the socket's buffer
+                    self.socketpair[0].recv(128)
+
+            except (select.error, socket.error) as e:
+                # If the socket was closed by another thread, during
+                # shutdown, ignore it and exit
+                if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
+                    raise
+
+            now = current_time_millis()
+            if now - self._last_cache_cleanup >= self.cache_cleanup_interval_ms:
+                self._last_cache_cleanup = now
+                for record in self.zc.cache.expire(now):
+                    self.zc.update_record(now, record)
+
         self.socketpair[0].close()
         self.socketpair[1].close()
 
@@ -1462,32 +1474,6 @@ class Listener(QuietLogger):
 
         else:
             self.zc.handle_response(msg)
-
-
-class Reaper(threading.Thread):
-
-    """A Reaper is used by this module to remove cache entries that
-    have expired."""
-
-    def __init__(self, zc: 'Zeroconf') -> None:
-        threading.Thread.__init__(self)
-        self.daemon = True
-        self.zc = zc
-        self.start()
-        self.name = "zeroconf-Reaper_%s" % (getattr(self, 'native_id', self.ident),)
-
-    def run(self) -> None:
-        """Perodic removal of expired entries from the cache."""
-        while True:
-            with self.zc.reaper_condition:
-                self.zc.reaper_condition.wait(10)
-
-            if self.zc.done:
-                return
-
-            now = current_time_millis()
-            for record in self.zc.cache.expire(now):
-                self.zc.update_record(now, record)
 
 
 class Signal:
@@ -2505,7 +2491,6 @@ class Zeroconf(QuietLogger):
         self.cache = DNSCache()
 
         self.condition = threading.Condition()
-        self.reaper_condition = threading.Condition()
 
         # Ensure we create the lock before
         # we add the listener as we could get
@@ -2519,7 +2504,6 @@ class Zeroconf(QuietLogger):
         if self.multi_socket:
             for s in self._respond_sockets:
                 self.engine.add_reader(self.listener, s)
-        self.reaper = Reaper(self)
 
         self.debug = None  # type: Optional[DNSOutgoing]
 
@@ -2537,11 +2521,6 @@ class Zeroconf(QuietLogger):
         """Notifies all waiting threads"""
         with self.condition:
             self.condition.notify_all()
-
-    def notify_reaper(self) -> None:
-        """Notifies reaper"""
-        with self.reaper_condition:
-            self.reaper_condition.notify_all()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
@@ -2987,7 +2966,5 @@ class Zeroconf(QuietLogger):
 
         # shutdown the rest
         self.notify_all()
-        self.notify_reaper()
-        self.reaper.join()
         for s in self._respond_sockets:
             s.close()
