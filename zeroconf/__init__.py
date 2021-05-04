@@ -2583,8 +2583,7 @@ class Zeroconf(QuietLogger):
     def update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
-        service.
-        """
+        service."""
         self.registry.update(info)
         self._broadcast_service(info, _REGISTER_TIME, None)
 
