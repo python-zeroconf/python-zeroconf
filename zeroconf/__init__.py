@@ -2570,10 +2570,6 @@ class Zeroconf(QuietLogger):
         it unique on the network. Additionally multiple cooperating responders
         can register the same service on the network for resilience
         (if you want this behavior set `cooperating_responders` to `True`).
-
-        By default, the service will be announced if broadcast_service is set to True.
-        This process will wait between broadcasts which can will prevent
-        this function from returning quickly.
         """
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
@@ -2588,10 +2584,6 @@ class Zeroconf(QuietLogger):
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.
-
-        By default, the service will be announced if broadcast_service is set to True.
-        This process will wait between broadcasts which can will prevent
-        this function from returning quickly.
         """
         self.registry.update(info)
         self._broadcast_service(info, _REGISTER_TIME, None)
@@ -2653,12 +2645,7 @@ class Zeroconf(QuietLogger):
             )
 
     def unregister_service(self, info: ServiceInfo) -> None:
-        """Unregister a service.
-
-        By default, the service will be announced if broadcast_service is set to True.
-        This process will wait between broadcasts which can will prevent
-        this function from returning quickly.
-        """
+        """Unregister a service."""
         self.registry.remove(info)
         self._broadcast_service(info, _UNREGISTER_TIME, 0)
 

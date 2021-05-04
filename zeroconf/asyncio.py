@@ -85,6 +85,7 @@ class AsyncZeroconf:
     async def async_register_service(
         self,
         info: ServiceInfo,
+        cooperating_responders: bool = False,
     ) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
@@ -95,13 +96,15 @@ class AsyncZeroconf:
 
         The service will be broadcast in a task.
         """
-        await self.async_check_service(info)
+        await self.async_check_service(info, cooperating_responders)
         await self.loop.run_in_executor(None, self.zeroconf.registry.add, info)
         asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
-    async def async_check_service(self, info: ServiceInfo) -> None:
+    async def async_check_service(self, info: ServiceInfo, cooperating_responders: bool = False) -> None:
         """Checks the network for a unique service name."""
         instance_name_from_service_info(info)
+        if cooperating_responders:
+            return
         for i in range(3):
             # check for a name conflict
             if self.zeroconf.cache.current_entry_with_name_and_alias(info.type, info.name):

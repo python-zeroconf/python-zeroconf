@@ -14,6 +14,7 @@ from . import (
     NonUniqueNameException,
     ServiceInfo,
     ServiceListener,
+    ServiceNameAlreadyRegistered,
     Zeroconf,
     _REGISTER_TIME,
     _UNREGISTER_TIME,
@@ -112,6 +113,9 @@ async def test_async_service_registration_name_conflict() -> None:
 
     with pytest.raises(NonUniqueNameException):
         await aiozc.async_register_service(info)
+
+    with pytest.raises(ServiceNameAlreadyRegistered):
+        await aiozc.async_register_service(info, cooperating_responders=True)
 
     await aiozc.async_close()
 
