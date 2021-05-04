@@ -23,9 +23,6 @@ import asyncio
 from typing import Optional
 
 from . import (
-    service_type_name,
-    instance_name_from_service_info,
-    current_time_millis,
     IPVersion,
     InterfaceChoice,
     InterfacesType,
@@ -35,6 +32,7 @@ from . import (
     _CHECK_TIME,
     _REGISTER_TIME,
     _UNREGISTER_TIME,
+    instance_name_from_service_info,
 )
 
 
