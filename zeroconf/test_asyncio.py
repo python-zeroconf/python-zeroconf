@@ -9,7 +9,15 @@ import socket
 
 import pytest
 
-from . import NonUniqueNameException, ServiceInfo, ServiceListener, Zeroconf, _REGISTER_TIME, _UNREGISTER_TIME
+from . import (
+    BadTypeInNameException,
+    NonUniqueNameException,
+    ServiceInfo,
+    ServiceListener,
+    Zeroconf,
+    _REGISTER_TIME,
+    _UNREGISTER_TIME,
+)
 from .asyncio import AsyncZeroconf
 
 
@@ -104,3 +112,30 @@ async def test_async_service_registration_name_conflict() -> None:
 
     with pytest.raises(NonUniqueNameException):
         await aiozc.async_register_service(info)
+
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_service_registration_name_does_not_match_type() -> None:
+    """Test registering services throws when the name does not match the type."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    info.type = "_wrong._tcp.local."
+    with pytest.raises(BadTypeInNameException):
+        await aiozc.async_register_service(info)
+    await aiozc.async_close()
