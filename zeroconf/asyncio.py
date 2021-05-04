@@ -102,8 +102,7 @@ class AsyncZeroconf:
         asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_check_service(self, info: ServiceInfo) -> None:
-        """Checks the network for a unique service name, modifying the
-        ServiceInfo passed in if it is not unique."""
+        """Checks the network for a unique service name."""
         instance_name_from_service_info(info)
         for i in range(3):
             # check for a name conflict
