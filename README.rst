@@ -134,6 +134,23 @@ See examples directory for more.
 Changelog
 =========
 
+0.31.0
+======
+
+* Separated cache loading from I/O in `ServiceInfo` and fixed cache lookup (#356), thanks to J. Nick Koston.
+  The `ServiceInfo` class gained a `load_from_cache()` method to only fetch information from `Zeroconf` cache
+  (if it exists) with no IO performed. Additionally this should reduce IO in cases where cache lookups were
+  previously incorrectly failing.
+
+0.30.0
+======
+
+* Some nice refactoring work including removal of the Reaper thread, thanks to J. Nick Koston.
+* Fixed a Windows-specific `The requested address is not valid in its context` regression,
+  thanks to Timothee 'TTimo' Besset and J. Nick Koston.
+* Provided an `asyncio`-compatible service registration layer (in the `zeroconf.asyncio` module),
+  thanks to J. Nick Koston.
+
 0.29.0
 ======
 
