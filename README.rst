@@ -134,6 +134,15 @@ See examples directory for more.
 Changelog
 =========
 
+0.30.0
+======
+
+* Some nice refactoring work including removal of the Reaper thread, thanks to J. Nick Koston.
+* Fixed a Windows-specific `The requested address is not valid in its context` regression,
+  thanks to Timothee 'TTimo' Besset and J. Nick Koston.
+* Provided an `asyncio`-compatible service registration layer (in the `zeroconf.asyncio` module),
+  thanks to J. Nick Koston.
+
 0.29.0
 ======
 

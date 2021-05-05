@@ -41,7 +41,7 @@ import ifaddr
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.29.0'
+__version__ = '0.30.0'
 __license__ = 'LGPL'
 
 
