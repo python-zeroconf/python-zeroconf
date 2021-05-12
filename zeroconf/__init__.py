@@ -436,9 +436,9 @@ class DNSEntry:
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
     def __eq__(self, other: Any) -> bool:
-        """Equality test on name, type, and class"""
+        """Equality test on key (lowercase name), type, and class"""
         return (
-            self.name == other.name
+            self.key == other.key
             and self.type == other.type
             and self.class_ == other.class_
             and isinstance(other, DNSEntry)
@@ -1788,6 +1788,7 @@ class ServiceInfo(RecordUpdateListener):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
+        self.key = name.lower()
         if addresses is not None:
             self._addresses = addresses
         elif parsed_addresses is not None:
@@ -1807,6 +1808,7 @@ class ServiceInfo(RecordUpdateListener):
             self.server = server
         else:
             self.server = name
+        self.server_key = self.server.lower()
         self._properties = {}  # type: Dict
         self._set_properties(properties)
         self.host_ttl = host_ttl
@@ -1920,34 +1922,28 @@ class ServiceInfo(RecordUpdateListener):
         if record is not None and not record.is_expired(now):
             if record.type in [_TYPE_A, _TYPE_AAAA]:
                 assert isinstance(record, DNSAddress)
-                # if record.name == self.name:
-                if record.name == self.server:
+                if record.key == self.server_key:
                     if record.address not in self._addresses:
                         self._addresses.append(record.address)
             elif record.type == _TYPE_SRV:
                 assert isinstance(record, DNSService)
-                if record.name == self.name:
+                if record.key == self.key:
+                    self.name = record.name
                     self.server = record.server
+                    self.server_key = record.server.lower()
                     self.port = record.port
                     self.weight = record.weight
                     self.priority = record.priority
-                    # self.address = None
                     self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
                     self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
             elif record.type == _TYPE_TXT:
                 assert isinstance(record, DNSText)
-                if record.name == self.name:
+                if record.key == self.key:
                     self._set_text(record.text)
 
-    def request(self, zc: 'Zeroconf', timeout: float) -> bool:
-        """Returns true if the service could be discovered on the
-        network, and updates this object with details discovered.
-        """
+    def load_from_cache(self, zc: 'Zeroconf') -> bool:
+        """Populate the service info from the cache."""
         now = current_time_millis()
-        delay = _LISTENER_TIME
-        next_ = now
-        last = now + timeout
-
         record_types_for_check_cache = [(_TYPE_SRV, _CLASS_IN), (_TYPE_TXT, _CLASS_IN)]
         if self.server is not None:
             record_types_for_check_cache.append((_TYPE_A, _CLASS_IN))
@@ -1959,7 +1955,19 @@ class ServiceInfo(RecordUpdateListener):
 
         if self.server is not None and self.text is not None and self._addresses:
             return True
+        return False
 
+    def request(self, zc: 'Zeroconf', timeout: float) -> bool:
+        """Returns true if the service could be discovered on the
+        network, and updates this object with details discovered.
+        """
+        if self.load_from_cache(zc):
+            return True
+
+        now = current_time_millis()
+        delay = _LISTENER_TIME
+        next_ = now
+        last = now + timeout
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
             while self.server is None or self.text is None or not self._addresses:

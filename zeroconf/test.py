@@ -243,6 +243,7 @@ class PacketGeneration(unittest.TestCase):
 
         # Should not be suppressed, name is different
         tmp = copy.copy(answer1)
+        tmp.key = "testname3.local."
         tmp.name = "testname3.local."
         response.add_answer(query, tmp)
         assert len(response.answers) == 2
@@ -1127,7 +1128,7 @@ class ListenerTest(unittest.TestCase):
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
-        name = "xxxyyyæøå"
+        name = "UPPERxxxyyyæøå"
         registration_name = "%s.%s" % (name, subtype)
 
         class MyListener(r.ServiceListener):
@@ -1187,6 +1188,10 @@ class ListenerTest(unittest.TestCase):
                 for record in zeroconf_browser.cache.entries_with_name(name):
                     zeroconf_browser.cache.remove(record)
 
+            cached_info = ServiceInfo(type_, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties == {}
+
             # get service info without answer cache
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
@@ -1199,9 +1204,34 @@ class ListenerTest(unittest.TestCase):
             assert info.addresses == addresses[:1]  # no V6 by default
             assert info.addresses_by_version(r.IPVersion.All) == addresses
 
+            cached_info = ServiceInfo(type_, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+
+            # get service info with only the cache
+            cached_info = ServiceInfo(subtype, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_float'] == b'1.0'
+
+            # get service info with only the cache with the lowercase name
+            cached_info = ServiceInfo(subtype, registration_name.lower())
+            cached_info.load_from_cache(zeroconf_browser)
+            # Ensure uppercase output is preserved
+            assert cached_info.name == registration_name
+            assert cached_info.key == registration_name.lower()
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_float'] == b'1.0'
+
             info = zeroconf_browser.get_service_info(subtype, registration_name)
             assert info is not None
+            assert info.properties is not None
             assert info.properties[b'prop_none'] is None
+
+            cached_info = ServiceInfo(subtype, registration_name.lower())
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_none'] is None
 
             # test TXT record update
             sublistener = MySubListener()
@@ -1225,6 +1255,11 @@ class ListenerTest(unittest.TestCase):
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
             assert info.properties[b'prop_blank'] == properties['prop_blank']
+
+            cached_info = ServiceInfo(subtype, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_blank'] == properties['prop_blank']
 
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
@@ -1376,6 +1411,105 @@ class TestServiceBrowser(unittest.TestCase):
 
 
 class TestServiceInfo(unittest.TestCase):
+    def test_service_info_rejects_non_matching_updates(self):
+        """Verify records with the wrong name are rejected."""
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        ttl = 120
+        now = r.current_time_millis()
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        # Matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                service_name,
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        info.update_record(
+            zc,
+            now,
+            r.DNSService(
+                service_name,
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                0,
+                0,
+                80,
+                'ASH-2.local.',
+            ),
+        )
+        assert info.server_key == 'ash-2.local.'
+        assert info.server == 'ASH-2.local.'
+        new_address = socket.inet_aton("10.0.1.3")
+        info.update_record(
+            zc,
+            now,
+            r.DNSAddress(
+                'ASH-2.local.',
+                r._TYPE_A,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                new_address,
+            ),
+        )
+        assert new_address in info.addresses
+        # Non-matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                "incorrect.name.",
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        info.update_record(
+            zc,
+            now,
+            r.DNSService(
+                "incorrect.name.",
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                0,
+                0,
+                80,
+                'ASH-2.local.',
+            ),
+        )
+        assert info.server_key == 'ash-2.local.'
+        assert info.server == 'ASH-2.local.'
+        new_address = socket.inet_aton("10.0.1.4")
+        info.update_record(
+            zc,
+            now,
+            r.DNSAddress(
+                "incorrect.name.",
+                r._TYPE_A,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                new_address,
+            ),
+        )
+        assert new_address not in info.addresses
+
     def test_get_info_partial(self):
 
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
