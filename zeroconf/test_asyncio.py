@@ -117,6 +117,19 @@ async def test_async_service_registration_name_conflict() -> None:
     with pytest.raises(ServiceNameAlreadyRegistered):
         await aiozc.async_register_service(info, cooperating_responders=True)
 
+    conflicting_info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-3.local.",
+        addresses=[socket.inet_aton("10.0.1.3")],
+    )
+    with pytest.raises(NonUniqueNameException):
+        await aiozc.async_register_service(conflicting_info)
+
     await aiozc.async_close()
 
 

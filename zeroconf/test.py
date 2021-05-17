@@ -893,6 +893,34 @@ class TestRegistrar(unittest.TestCase):
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
+    def test_name_conflicts(self):
+        # instantiate a zeroconf instance
+        zc = Zeroconf(interfaces=['127.0.0.1'])
+        type_ = "_homeassistant._tcp.local."
+        name = "Home"
+        registration_name = "%s.%s" % (name, type_)
+
+        info = ServiceInfo(
+            type_,
+            name=registration_name,
+            server="random123.local.",
+            addresses=[socket.inet_pton(socket.AF_INET, "1.2.3.4")],
+            port=80,
+            properties={"version": "1.0"},
+        )
+        zc.register_service(info)
+
+        conflicting_info = ServiceInfo(
+            type_,
+            name=registration_name,
+            server="random456.local.",
+            addresses=[socket.inet_pton(socket.AF_INET, "4.5.6.7")],
+            port=80,
+            properties={"version": "1.0"},
+        )
+        with pytest.raises(r.NonUniqueNameException):
+            zc.register_service(conflicting_info)
+
 
 class TestServiceRegistry(unittest.TestCase):
     def test_only_register_once(self):
