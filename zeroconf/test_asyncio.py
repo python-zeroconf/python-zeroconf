@@ -143,3 +143,68 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
     with pytest.raises(BadTypeInNameException):
         await aiozc.async_register_service(info)
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_tasks() -> None:
+    """Test awaiting broadcast tasks"""
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    calls = []
+
+    class MyListener(ServiceListener):
+        def add_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
+            calls.append(("add", type, name))
+
+        def remove_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
+            calls.append(("remove", type, name))
+
+        def update_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
+            calls.append(("update", type, name))
+
+    listener = MyListener()
+    aiozc.zeroconf.add_service_listener(type_, listener)
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    task = await aiozc.async_register_service(info)
+    assert isinstance(task, asyncio.Task)
+    await task
+
+    new_info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.3")],
+    )
+    task = await aiozc.async_update_service(new_info)
+    assert isinstance(task, asyncio.Task)
+    await task
+
+    task = await aiozc.async_unregister_service(new_info)
+    assert isinstance(task, asyncio.Task)
+    await task
+    await aiozc.async_close()
+
+    assert calls == [
+        ('add', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
+        ('update', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
+        ('remove', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
+    ]

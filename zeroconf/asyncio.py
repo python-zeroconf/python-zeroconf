@@ -20,7 +20,7 @@
     USA
 """
 import asyncio
-from typing import Optional
+from typing import Awaitable, Optional
 
 from . import (
     IPVersion,
@@ -86,7 +86,7 @@ class AsyncZeroconf:
         self,
         info: ServiceInfo,
         cooperating_responders: bool = False,
-    ) -> None:
+    ) -> Awaitable:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.  The name of the service may be changed if needed to make
@@ -94,11 +94,12 @@ class AsyncZeroconf:
         can register the same service on the network for resilience
         (if you want this behavior set `cooperating_responders` to `True`).
 
-        The service will be broadcast in a task.
+        The service will be broadcast in a task. This task is returned
+        and therefore can be awaited if necessary.
         """
         await self.async_check_service(info, cooperating_responders)
         await self.loop.run_in_executor(None, self.zeroconf.registry.add, info)
-        asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_check_service(self, info: ServiceInfo, cooperating_responders: bool = False) -> None:
         """Checks the network for a unique service name."""
@@ -113,23 +114,25 @@ class AsyncZeroconf:
                 await asyncio.sleep(_CHECK_TIME / 1000)
             await self.loop.run_in_executor(None, self.zeroconf.send_service_query, info)
 
-    async def async_unregister_service(self, info: ServiceInfo) -> None:
+    async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
         """Unregister a service.
 
-        The service will be broadcast in a task.
+        The service will be broadcast in a task. This task is returned
+        and therefore can be awaited if necessary.
         """
         await self.loop.run_in_executor(None, self.zeroconf.registry.remove, info)
-        asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
+        return asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
 
-    async def async_update_service(self, info: ServiceInfo) -> None:
+    async def async_update_service(self, info: ServiceInfo) -> Awaitable:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service.
 
-        The service will be broadcast in a task.
+        The service will be broadcast in a task. This task is returned
+        and therefore can be awaited if necessary.
         """
         await self.loop.run_in_executor(None, self.zeroconf.registry.update, info)
-        asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
