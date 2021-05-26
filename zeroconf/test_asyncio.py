@@ -33,7 +33,7 @@ async def test_async_basic_usage() -> None:
 async def test_async_service_registration() -> None:
     """Test registering services broadcasts the registration by default."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    type_ = "_test-srvc-type._tcp.local."
+    type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
 
@@ -83,9 +83,9 @@ async def test_async_service_registration() -> None:
     await aiozc.async_close()
 
     assert calls == [
-        ('add', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
-        ('update', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
-        ('remove', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
+        ('add', type_, registration_name),
+        ('update', type_, registration_name),
+        ('remove', type_, registration_name),
     ]
 
 
@@ -93,7 +93,7 @@ async def test_async_service_registration() -> None:
 async def test_async_service_registration_name_conflict() -> None:
     """Test registering services throws on name conflict."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    type_ = "_test-srvc-type._tcp.local."
+    type_ = "_test-srvc2-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
 
@@ -137,7 +137,7 @@ async def test_async_service_registration_name_conflict() -> None:
 async def test_async_service_registration_name_does_not_match_type() -> None:
     """Test registering services throws when the name does not match the type."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    type_ = "_test-srvc-type._tcp.local."
+    type_ = "_test-srvc3-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
 
@@ -217,7 +217,7 @@ async def test_async_tasks() -> None:
     await aiozc.async_close()
 
     assert calls == [
-        ('add', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
-        ('update', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
-        ('remove', '_test-srvc-type._tcp.local.', 'xxxyyy._test-srvc-type._tcp.local.'),
+        ('add', type_, registration_name),
+        ('update', type_, registration_name),
+        ('remove', type_, registration_name),
     ]
