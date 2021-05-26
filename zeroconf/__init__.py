@@ -1014,6 +1014,14 @@ class DNSOutgoing:
         """
         self.additionals.append(record)
 
+    def add_question_if_not_cached(
+        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
+    ) -> None:
+        """Add a question if it is not already cached."""
+        cached_entry = zc.cache.get_by_details(name, type_, class_)
+        if not cached_entry:
+            self.add_question(DNSQuestion(name, type_, class_))
+
     def pack(self, format_: Union[bytes, str], value: Any) -> None:
         self.data.append(struct.pack(format_, value))
         self.size += struct.calcsize(format_)
@@ -1568,7 +1576,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         current_time = current_time_millis()
         self._next_time = {check_type_: current_time for check_type_ in self.types}
         self._delay = {check_type_: delay for check_type_ in self.types}
-        self._handlers_to_call = OrderedDict()  # type: OrderedDict[str, Tuple[str, ServiceStateChange]]
+        self._handlers_to_call = OrderedDict()  # type: OrderedDict[Tuple[str, str], ServiceStateChange]
 
         self._service_state_changed = Signal()
 
@@ -1620,6 +1628,13 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
 
+    def _record_matching_type(self, record: DNSRecord) -> bool:
+        """Check if the record is one of the types we are browsing."""
+        for type_ in self.types:
+            if record.name.endswith(type_):
+                return type_
+        return None
+
     def update_record(self, zc: 'Zeroconf', now: float, record: DNSRecord) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
@@ -1633,24 +1648,22 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             # Code to ensure we only do a single update message
             # Precedence is; Added, Remove, Update
-
+            key = (name, type_)
             if (
                 state_change is ServiceStateChange.Added
                 or (
                     state_change is ServiceStateChange.Removed
-                    and (
-                        self._handlers_to_call.get(name) is ServiceStateChange.Updated
-                        or self._handlers_to_call.get(name) is ServiceStateChange.Added
-                        or self._handlers_to_call.get(name) is None
-                    )
+                    and self._handlers_to_call.get(key) != ServiceStateChange.Added
                 )
-                or (state_change is ServiceStateChange.Updated and name not in self._handlers_to_call)
+                or (state_change is ServiceStateChange.Updated and key not in self._handlers_to_call)
             ):
-                self._handlers_to_call[name] = (type_, state_change)
+                self._handlers_to_call[key] = state_change
 
-        if record.type == _TYPE_PTR and record.name in self.types:
-            assert isinstance(record, DNSPointer)
-            expired = record.is_expired(now)
+        expired = record.is_expired(now)
+
+        if isinstance(record, DNSPointer):
+            if record.name not in self.types:
+                return
             service_key = record.alias.lower()
             try:
                 old_record = self._services[record.name][service_key]
@@ -1669,34 +1682,23 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             expires = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
             if expires < self._next_time[record.name]:
                 self._next_time[record.name] = expires
+            return
 
-        elif record.type == _TYPE_A or record.type == _TYPE_AAAA:
-            assert isinstance(record, DNSAddress)
-            if record.is_expired(now):
-                return
+        if expired:
+            return
 
-            address_changed = False
-            for service in zc.cache.entries_with_name(record.name):
-                if isinstance(service, DNSAddress) and service.address != record.address:
-                    address_changed = True
-                    break
-
-            # Avoid iterating the entire DNSCache if the address has not changed
-            # as this is an expensive operation when there many hosts
-            # generating zeroconf traffic.
-            if not address_changed:
-                return
-
+        if isinstance(record, DNSAddress):
             # Iterate through the DNSCache and callback any services that use this address
             for service in self.zc.cache.entries_with_server(record.name):
-                for type_ in self.types:
-                    if service.name.endswith(type_):
-                        enqueue_callback(ServiceStateChange.Updated, type_, service.name)
+                type_ = self._record_matching_type(service)
+                if type_:
+                    enqueue_callback(ServiceStateChange.Updated, type_, service.name)
+                    break
 
-        elif not record.is_expired(now):
-            for type_ in self.types:
-                if record.name.endswith(type_):
-                    enqueue_callback(ServiceStateChange.Updated, type_, record.name)
+        else:
+            type_ = self._record_matching_type(record)
+            if type_:
+                enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
         self.done = True
@@ -1731,12 +1733,13 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
-                    (name, service_type_state_change) = self._handlers_to_call.popitem(False)
+                    (name_type, state_change) = self._handlers_to_call.popitem(False)
+
                 self._service_state_changed.fire(
                     zeroconf=self.zc,
-                    service_type=service_type_state_change[0],
-                    name=name,
-                    state_change=service_type_state_change[1],
+                    service_type=name_type[1],
+                    name=name_type[0],
+                    state_change=state_change,
                 )
 
 
@@ -1944,18 +1947,26 @@ class ServiceInfo(RecordUpdateListener):
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache."""
         now = current_time_millis()
-        record_types_for_check_cache = [(_TYPE_SRV, _CLASS_IN), (_TYPE_TXT, _CLASS_IN)]
-        if self.server is not None:
-            record_types_for_check_cache.append((_TYPE_A, _CLASS_IN))
-            record_types_for_check_cache.append((_TYPE_AAAA, _CLASS_IN))
+        record_types_for_check_cache = [(_TYPE_TXT, _CLASS_IN)]
+        srv_record_cache = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
+        if srv_record_cache:
+            # If there is a srv record, A and AAAA will already
+            # be called back so we do not want to do it twice
+            self.update_record(zc, now, srv_record_cache)
+        elif self.server is not None:
+            record_types_for_check_cache.extend([(_TYPE_A, _CLASS_IN), (_TYPE_AAAA, _CLASS_IN)])
+
         for record_type in record_types_for_check_cache:
             cached = zc.cache.get_by_details(self.name, *record_type)
             if cached:
                 self.update_record(zc, now, cached)
 
-        if self.server is not None and self.text is not None and self._addresses:
-            return True
-        return False
+        return self._is_complete
+
+    @property
+    def _is_complete(self):
+        """The ServiceInfo has all expected properties."""
+        return self.server is not None and self.text is not None and self._addresses
 
     def request(self, zc: 'Zeroconf', timeout: float) -> bool:
         """Returns true if the service could be discovered on the
@@ -1970,29 +1981,16 @@ class ServiceInfo(RecordUpdateListener):
         last = now + timeout
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
-            while self.server is None or self.text is None or not self._addresses:
+            while not self._is_complete:
                 if last <= now:
                     return False
                 if next_ <= now:
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
-                    cached_entry = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
-                    if not cached_entry:
-                        out.add_question(DNSQuestion(self.name, _TYPE_SRV, _CLASS_IN))
-                        out.add_answer_at_time(cached_entry, now)
-                    cached_entry = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
-                    if not cached_entry:
-                        out.add_question(DNSQuestion(self.name, _TYPE_TXT, _CLASS_IN))
-                        out.add_answer_at_time(cached_entry, now)
-
+                    out.add_question_if_not_cached(zc, now, self.name, _TYPE_SRV, _CLASS_IN)
+                    out.add_question_if_not_cached(zc, now, self.name, _TYPE_TXT, _CLASS_IN)
                     if self.server is not None:
-                        cached_entry = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
-                        if not cached_entry:
-                            out.add_question(DNSQuestion(self.server, _TYPE_A, _CLASS_IN))
-                            out.add_answer_at_time(cached_entry, now)
-                        cached_entry = zc.cache.get_by_details(self.name, _TYPE_AAAA, _CLASS_IN)
-                        if not cached_entry:
-                            out.add_question(DNSQuestion(self.server, _TYPE_AAAA, _CLASS_IN))
-                            out.add_answer_at_time(cached_entry, now)
+                        out.add_question_if_not_cached(zc, now, self.server, _TYPE_A, _CLASS_IN)
+                        out.add_question_if_not_cached(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
                     zc.send(out)
                     next_ = now + delay
                     delay *= 2
@@ -2743,7 +2741,7 @@ class Zeroconf(QuietLogger):
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
-        updates = []  # type: List[Tuple[float, DNSRecord, Optional[DNSRecord]]]
+        updates = []  # type: List[DNSRecord]
         now = current_time_millis()
         for record in msg.answers:
 
@@ -2765,27 +2763,25 @@ class Zeroconf(QuietLogger):
                         self.cache.remove(entry)
 
             expired = record.is_expired(now)
-            maybe_entry = self.cache.get(record)
+            existing_cache_entry = self.cache.get(record)
             if not expired:
-                if maybe_entry is not None:
-                    maybe_entry.reset_ttl(record)
+                if existing_cache_entry is not None:
+                    existing_cache_entry.reset_ttl(record)
                 else:
                     self.cache.add(record)
                 if updated:
-                    updates.append((now, record, None))
-            elif maybe_entry is not None:
-                updates.append((now, record, maybe_entry))
+                    updates.append(record)
+            elif existing_cache_entry is not None:
+                updates.append(record)
+                self.cache.remove(existing_cache_entry)
 
         if not updates:
             return
 
         # Only hold the lock if we have updates
         with self._handlers_lock:
-            for update in updates:
-                now, record, entry_to_remove = update
-                self.update_record(update[0], update[1])
-                if entry_to_remove:
-                    self.cache.remove(entry_to_remove)
+            for record in updates:
+                self.update_record(now, record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
