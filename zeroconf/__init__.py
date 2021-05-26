@@ -1688,6 +1688,15 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             return
 
         if isinstance(record, DNSAddress):
+            # Only trigger an updated event if the address is new
+            current_addresses = set()
+            for service in zc.cache.entries_with_name(record.name):
+                if isinstance(service, DNSAddress):
+                    current_addresses.add(service.address)
+
+            if record.address in current_addresses:
+                return
+
             # Iterate through the DNSCache and callback any services that use this address
             for service in self.zc.cache.entries_with_server(record.name):
                 type_ = self._record_matching_type(service)
@@ -2742,6 +2751,8 @@ class Zeroconf(QuietLogger):
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
         updates = []  # type: List[DNSRecord]
+        cache_adds = []  # type: List[DNSRecord]
+        cache_removes = []  # type: List[DNSRecord]
         now = current_time_millis()
         for record in msg.answers:
 
@@ -2768,12 +2779,12 @@ class Zeroconf(QuietLogger):
                 if existing_cache_entry is not None:
                     existing_cache_entry.reset_ttl(record)
                 else:
-                    self.cache.add(record)
+                    cache_adds.append(record)
                 if updated:
                     updates.append(record)
             elif existing_cache_entry is not None:
                 updates.append(record)
-                self.cache.remove(existing_cache_entry)
+                cache_removes.append(existing_cache_entry)
 
         if not updates:
             return
@@ -2782,6 +2793,11 @@ class Zeroconf(QuietLogger):
         with self._handlers_lock:
             for record in updates:
                 self.update_record(now, record)
+
+        for record in cache_adds:
+            self.cache.add(record)
+        for record in cache_removes:
+            self.cache.remove(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
