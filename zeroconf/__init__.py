@@ -2767,10 +2767,11 @@ class Zeroconf(QuietLogger):
                     if entry == record:
                         updated = False
 
-                    # Check the time first because it is far cheaper
-                    # than the __eq__
-                    #if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
-                    #   self.cache.remove(entry)
+                    # Check the time first because it is far cheaper than the __eq__
+                    time_diff = record.created - entry.created
+                    log.debug("TIMEDIFF: (record:%s) (entry:%s) = %s", record, entry, time_diff)
+                    if time_diff > 1000 and DNSEntry.__eq__(entry, record):
+                        self.cache.remove(entry)
 
             expired = record.is_expired(now)
             existing_cache_entry = self.cache.get(record)
