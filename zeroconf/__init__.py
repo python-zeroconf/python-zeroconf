@@ -968,9 +968,8 @@ class DNSOutgoing:
 
     def add_answer_at_time(self, record: Optional[DNSRecord], now: Union[float, int]) -> None:
         """Adds an answer if it does not expire by a certain time"""
-        if record is not None:
-            if now == 0 or not record.is_expired(now):
-                self.answers.append((record, now))
+        if record is not None and now == 0 or not record.is_expired(now):
+            self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
         """Adds an authoritative answer"""
@@ -1014,13 +1013,13 @@ class DNSOutgoing:
         """
         self.additionals.append(record)
 
-    def add_question_if_not_cached(
-        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
-    ) -> None:
+    def add_question_or_cache(self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int) -> None:
         """Add a question if it is not already cached."""
         cached_entry = zc.cache.get_by_details(name, type_, class_)
         if not cached_entry:
             self.add_question(DNSQuestion(name, type_, class_))
+        elif not cached_entry.is_stale(now):
+            self.add_answer_at_time(cached_entry, now)
 
     def pack(self, format_: Union[bytes, str], value: Any) -> None:
         self.data.append(struct.pack(format_, value))
@@ -1997,11 +1996,11 @@ class ServiceInfo(RecordUpdateListener):
                     return False
                 if next_ <= now:
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
-                    out.add_question_if_not_cached(zc, now, self.name, _TYPE_SRV, _CLASS_IN)
-                    out.add_question_if_not_cached(zc, now, self.name, _TYPE_TXT, _CLASS_IN)
+                    out.add_question_or_cache(zc, now, self.name, _TYPE_SRV, _CLASS_IN)
+                    out.add_question_or_cache(zc, now, self.name, _TYPE_TXT, _CLASS_IN)
                     if self.server is not None:
-                        out.add_question_if_not_cached(zc, now, self.server, _TYPE_A, _CLASS_IN)
-                        out.add_question_if_not_cached(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
+                        out.add_question_or_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
+                        out.add_question_or_cache(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
                     zc.send(out)
                     next_ = now + delay
                     delay *= 2
