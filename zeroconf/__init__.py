@@ -1677,7 +1677,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 self._next_time[record.name] = expires
             return
 
-        if expired:
+        if expired or self.zc.cache.get(record):
             return
 
         if isinstance(record, DNSAddress):
@@ -1700,7 +1700,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
         else:
             type_ = self._record_matching_type(record)
-            if type_ and not self.zc.cache.get(record):
+            if type_:
                 log.debug("record causes update due to type match: %s (entries: %s)", record, zc.cache.entries_with_name(record.name))
                 enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
