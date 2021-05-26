@@ -134,7 +134,7 @@ See examples directory for more.
 Changelog
 =========
 
-0.29.0
+0.31.0
 ======
 
 * A single socket is used for listening on responding when `InterfaceChoice.Default` is chosen.
