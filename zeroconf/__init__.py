@@ -1288,20 +1288,14 @@ class DNSCache:
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
-        try:
-            list_ = self.cache[entry.key]
-            for cached_entry in reversed(list_):
-                if entry.__eq__(cached_entry):
-                    return cached_entry
-            return None
-        except (KeyError, ValueError):
-            return None
+        for cached_entry in reversed(self.cache.get(entry.key, [])):
+            if entry.__eq__(cached_entry):
+                return cached_entry
 
     def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
         """Gets an entry by details.  Will return None if there is
         no matching entry."""
-        entry = DNSEntry(name, type_, class_)
-        return self.get(entry)
+        return self.get(DNSEntry(name, type_, class_))
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
@@ -2754,7 +2748,6 @@ class Zeroconf(QuietLogger):
         updates = []  # type: List[DNSRecord]
         address_adds = []  # type: List[DNSAddress]
         other_adds = []  # type: List[DNSRecord]
-        removes = []  # type: List[DNSRecord]
         now = current_time_millis()
         for record in msg.answers:
 
@@ -2789,7 +2782,7 @@ class Zeroconf(QuietLogger):
                     updates.append(record)
             elif existing_cache_entry is not None:
                 updates.append(record)
-                removes.append(existing_cache_entry)
+                self.cache.remove(record)
 
         if not updates:
             return
@@ -2799,7 +2792,7 @@ class Zeroconf(QuietLogger):
             for record in updates:
                 self.update_record(now, record)
 
-        # The cache changes must be processed AFTER we trigger
+        # The cache adds must be processed AFTER we trigger
         # the updates since we compare existing data
         # with the new data and updating the cache
         # ahead of update_record will cause listeners
@@ -2811,8 +2804,6 @@ class Zeroconf(QuietLogger):
         #
         for record in address_adds + other_adds:
             self.cache.add(record)
-        for record in removes:
-            self.cache.remove(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
