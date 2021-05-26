@@ -1718,23 +1718,12 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             for service in self.zc.cache.entries_with_server(record.name):
                 type_ = self._record_matching_type(service)
                 if type_:
-                    log.debug(
-                        "record causes update due to address change: %s (current_addresses: %s) (entries: %s)",
-                        record,
-                        current_addresses,
-                        zc.cache.entries_with_name(record.name),
-                    )
                     enqueue_callback(ServiceStateChange.Updated, type_, service.name)
                     break
 
         else:
             type_ = self._record_matching_type(record)
             if type_:
-                log.debug(
-                    "record causes update due to type match: %s (entries: %s)",
-                    record,
-                    zc.cache.entries_with_name(record.name),
-                )
                 enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
