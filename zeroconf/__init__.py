@@ -1677,6 +1677,8 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 self._next_time[record.name] = expires
             return
 
+        # If its expired or already exists in the cache
+        # it can't be updated.
         if expired or self.zc.cache.get(record):
             return
 
@@ -1694,7 +1696,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             for service in self.zc.cache.entries_with_server(record.name):
                 type_ = self._record_matching_type(service)
                 if type_:
-                    log.debug("record causes update due to address change: %s", record)
+                    log.debug("record causes update due to address change: %s (entries: %s)", record, zc.cache.entries_with_name(record.name))
                     enqueue_callback(ServiceStateChange.Updated, type_, service.name)
                     break
 
