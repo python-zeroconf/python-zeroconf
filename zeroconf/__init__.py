@@ -1026,7 +1026,10 @@ class DNSOutgoing:
     def add_question_or_all_cache(
         self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
     ) -> None:
-        """Add a question if it is not already cached."""
+        """Add a question if it is not already cached.
+
+        This is currently only used for IPv6 addresses.
+        """
         cached_entries = zc.cache.get_all_by_details(name, type_, class_)
         if not cached_entries:
             self.add_question(DNSQuestion(name, type_, class_))
@@ -1971,13 +1974,11 @@ class ServiceInfo(RecordUpdateListener):
 
     def _update_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Update the address records from the cache."""
-        self.update_records(zc, now, zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN))
-        self.update_records(zc, now, zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
-
-    def update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
-        """Update multiple records."""
-        for record in records:
-            self.update_record(zc, now, record)
+        cached_a_record = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
+        if cached_a_record:
+            self.update_record(zc, now, cached_a_record)
+        for cached_aaaa_record in zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN):
+            self.update_record(zc, now, cached_aaaa_record)
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache."""
@@ -2024,7 +2025,7 @@ class ServiceInfo(RecordUpdateListener):
                     out.add_question_or_one_cache(zc, now, self.name, _TYPE_SRV, _CLASS_IN)
                     out.add_question_or_one_cache(zc, now, self.name, _TYPE_TXT, _CLASS_IN)
                     if self.server is not None:
-                        out.add_question_or_all_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
+                        out.add_question_or_one_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
                         out.add_question_or_all_cache(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
                     zc.send(out)
                     next_ = now + delay
