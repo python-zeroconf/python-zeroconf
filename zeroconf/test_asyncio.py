@@ -163,7 +163,7 @@ async def test_async_tasks() -> None:
     """Test awaiting broadcast tasks"""
 
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    type_ = "_test-srvc-type._tcp.local."
+    type_ = "_test-srvc4-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
 

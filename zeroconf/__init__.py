@@ -2764,14 +2764,15 @@ class Zeroconf(QuietLogger):
         removes = []  # type: List[DNSRecord]
         now = current_time_millis()
         for record in msg.answers:
+            updated = True
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                updated = False
                 # Since the cache format is keyed on the lower case record name
                 # we can avoid iterating everything in the cache and
                 # only look though entries for the specific name.
                 # entries_with_name will take care of converting to lowercase
                 cache_entries = self.cache.entries_with_name(record.name)
                 if cache_entries:
+                    updated = False
                     for entry in cache_entries:
                         # If the entry is in the answers, do not remove it from the cache
                         if entry in msg.answers:
@@ -2780,10 +2781,6 @@ class Zeroconf(QuietLogger):
                         # Check the time first because it is far cheaper than the __eq__
                         if record.created - entry.created > 1000 and DNSEntry.__eq__(entry, record):
                             removes.append(entry)
-                else:
-                    updated = True
-            else:
-                updated = True
 
             expired = record.is_expired(now)
             existing_cache_entry = self.cache.get(record)
