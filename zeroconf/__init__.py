@@ -1015,11 +1015,13 @@ class DNSOutgoing:
 
     def add_question_or_cache(self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int) -> None:
         """Add a question if it is not already cached."""
-        cached_entry = zc.cache.get_by_details(name, type_, class_)
-        if not cached_entry:
+        cached_entries = zc.cache.get_all_by_details(name, type_, class_)
+        if not cached_entries:
             self.add_question(DNSQuestion(name, type_, class_))
-        elif not cached_entry.is_stale(now):
-            self.add_answer_at_time(cached_entry, now)
+        else:
+            for cached_entry in cached_entries:
+                if not cached_entry.is_stale(now):
+                    self.add_answer_at_time(cached_entry, now)
 
     def pack(self, format_: Union[bytes, str], value: Any) -> None:
         self.data.append(struct.pack(format_, value))
@@ -1293,9 +1295,17 @@ class DNSCache:
                 return cached_entry
 
     def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
-        """Gets an entry by details.  Will return None if there is
-        no matching entry."""
+        """Gets the first matching entry by details. Returns None if no entries match."""
         return self.get(DNSEntry(name, type_, class_))
+
+    def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
+        """Gets all matching entries by details."""
+        match_entry = DNSEntry(name, type_, class_)
+        return [
+            cached_entry
+            for cached_entry in self.cache.get(name.lower(), [])
+            if match_entry.__eq__(cached_entry)
+        ]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
@@ -1952,30 +1962,35 @@ class ServiceInfo(RecordUpdateListener):
                     self.port = record.port
                     self.weight = record.weight
                     self.priority = record.priority
-                    self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
-                    self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
+                    self._update_addresses_from_cache(zc, now)
             elif record.type == _TYPE_TXT:
                 assert isinstance(record, DNSText)
                 if record.key == self.key:
                     self._set_text(record.text)
 
+    def _update_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
+        """Update the address records from the cache."""
+        self.update_records(zc, now, zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN))
+        self.update_records(zc, now, zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
+
+    def update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+        """Update multiple records."""
+        for record in records:
+            self.update_record(zc, now, record)
+
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache."""
         now = current_time_millis()
-        record_types_for_check_cache = [(_TYPE_TXT, _CLASS_IN)]
-        srv_record_cache = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
-        if srv_record_cache:
+        cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
+        if cached_srv_record:
             # If there is a srv record, A and AAAA will already
             # be called back so we do not want to do it twice
-            self.update_record(zc, now, srv_record_cache)
+            self.update_record(zc, now, cached_srv_record)
         elif self.server is not None:
-            record_types_for_check_cache.extend([(_TYPE_A, _CLASS_IN), (_TYPE_AAAA, _CLASS_IN)])
-
-        for record_type in record_types_for_check_cache:
-            cached = zc.cache.get_by_details(self.name, *record_type)
-            if cached:
-                self.update_record(zc, now, cached)
-
+            self._update_addresses_from_cache(zc, now)
+        cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
+        if cached_txt_record:
+            self.update_record(zc, now, cached_txt_record)
         return self._is_complete
 
     @property
@@ -2763,24 +2778,25 @@ class Zeroconf(QuietLogger):
         other_adds = []  # type: List[DNSRecord]
         removes = []  # type: List[DNSRecord]
         now = current_time_millis()
+
         for record in msg.answers:
             updated = True
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 # Since the cache format is keyed on the lower case record name
                 # we can avoid iterating everything in the cache and
                 # only look though entries for the specific name.
-                # entries_with_name will take care of converting to lowercase
-                cache_entries = self.cache.entries_with_name(record.name)
-                if cache_entries:
+                cache_entries = self.cache.get_all_by_details(record.name, record.type, record.class_)
+                entries_not_in_answers = [entry for entry in cache_entries if entry not in msg.answers]
+                # rfc6762#section-10.2 para 2
+                # Since unique is set, all old records with that name, rrtype,
+                # and rrclass that were received more than one second ago are declared
+                # invalid, and marked to expire from the cache in one second.
+                if entries_not_in_answers:
+                    for entry in entries_not_in_answers:
+                        if record.created - entry.created > 1000:
+                            self.cache.remove(entry)
+                elif cache_entries:
                     updated = False
-                    for entry in cache_entries:
-                        # If the entry is in the answers, do not remove it from the cache
-                        if entry in msg.answers:
-                            continue
-                        updated = True
-                        # Check the time first because it is far cheaper than the __eq__
-                        if record.created - entry.created > 1000 and DNSEntry.__eq__(entry, record):
-                            removes.append(entry)
 
             expired = record.is_expired(now)
             existing_cache_entry = self.cache.get(record)

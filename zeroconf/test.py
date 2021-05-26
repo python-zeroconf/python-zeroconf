@@ -1330,7 +1330,7 @@ class TestServiceBrowser(unittest.TestCase):
                 nonlocal service_updated_count
                 service_updated_count += 1
                 service_info = zc.get_service_info(type_, name)
-                assert service_info.addresses[0] == socket.inet_aton(service_address)
+                assert socket.inet_aton(service_address) in service_info.addresses
                 assert service_info.text == service_text
                 assert service_info.server == service_server
                 service_updated_event.set()
