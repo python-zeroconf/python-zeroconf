@@ -2765,7 +2765,7 @@ class Zeroconf(QuietLogger):
                 # entries_with_name will take care of converting to lowercase
                 for entry in self.cache.entries_with_name(record.name):
                     
-                    if entry == record:
+                    if entry in msg.answers:
                         updated = False
 
                     #
