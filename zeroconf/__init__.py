@@ -2786,7 +2786,7 @@ class Zeroconf(QuietLogger):
                 updates.append(record)
                 self.cache.remove(record)
 
-        if not updates:
+        if not updates and not address_adds and not other_adds:
             return
 
         # Only hold the lock if we have updates
