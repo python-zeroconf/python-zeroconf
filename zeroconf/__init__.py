@@ -1013,7 +1013,9 @@ class DNSOutgoing:
         """
         self.additionals.append(record)
 
-    def add_question_or_one_cache(self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int) -> None:
+    def add_question_or_one_cache(
+        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
+    ) -> None:
         """Add a question if it is not already cached."""
         cached_entry = zc.cache.get_by_details(name, type_, class_)
         if not cached_entry:
@@ -1021,7 +1023,9 @@ class DNSOutgoing:
         elif not cached_entry.is_stale(now):
             self.add_answer_at_time(cached_entry, now)
 
-    def add_question_or_all_cache(self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int) -> None:
+    def add_question_or_all_cache(
+        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
+    ) -> None:
         """Add a question if it is not already cached."""
         cached_entries = zc.cache.get_all_by_details(name, type_, class_)
         if not cached_entries:
@@ -2020,7 +2024,9 @@ class ServiceInfo(RecordUpdateListener):
         next_ = now
         last = now + timeout
         try:
-            zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
+            # Do not set a question on the listener to preload from cache
+            # since we just checked it above in load_from_cache
+            zc.add_listener(self, None)
             while not self._is_complete:
                 if last <= now:
                     return False
