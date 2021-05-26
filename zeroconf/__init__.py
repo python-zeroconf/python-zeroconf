@@ -2802,7 +2802,7 @@ class Zeroconf(QuietLogger):
                 if entries_not_in_answers:
                     for entry in entries_not_in_answers:
                         if record.created - entry.created > 1000:
-                            self.cache.remove(entry)
+                            removes.append(entry)
                 elif cache_entries:
                     updated = False
 
@@ -2841,10 +2841,10 @@ class Zeroconf(QuietLogger):
         # otherwise a fetch of ServiceInfo may miss an address
         # because it thinks the cache is complete
         #
-        for record in address_adds + other_adds:
-            self.cache.add(record)
         for record in removes:
             self.cache.remove(record)
+        for record in address_adds + other_adds:
+            self.cache.add(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
