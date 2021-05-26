@@ -1975,6 +1975,8 @@ class ServiceInfo(RecordUpdateListener):
     @property
     def _is_complete(self):
         """The ServiceInfo has all expected properties."""
+        # Our cache adder ALWAYS adds all the addreses first to ensure
+        # we do not miss any since the check is for any addresses
         return self.server is not None and self.text is not None and self._addresses
 
     def request(self, zc: 'Zeroconf', timeout: float) -> bool:
@@ -2751,8 +2753,9 @@ class Zeroconf(QuietLogger):
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
         updates = []  # type: List[DNSRecord]
-        cache_adds = []  # type: List[DNSRecord]
-        cache_removes = []  # type: List[DNSRecord]
+        address_adds = []  # type: List[DNSAddress]
+        other_adds = []  # type: List[DNSRecord]
+        removes = []  # type: List[DNSRecord]
         now = current_time_millis()
         for record in msg.answers:
 
@@ -2779,12 +2782,15 @@ class Zeroconf(QuietLogger):
                 if existing_cache_entry is not None:
                     existing_cache_entry.reset_ttl(record)
                 else:
-                    cache_adds.append(record)
+                    if isinstance(record, DNSAddress):
+                        address_adds.append(record)
+                    else:
+                        other_adds.append(record)
                 if updated:
                     updates.append(record)
             elif existing_cache_entry is not None:
                 updates.append(record)
-                cache_removes.append(existing_cache_entry)
+                removes.append(existing_cache_entry)
 
         if not updates:
             return
@@ -2799,9 +2805,14 @@ class Zeroconf(QuietLogger):
         # with the new data and updating the cache
         # ahead of update_record will cause listeners
         # to miss changes
-        for record in cache_adds:
+        #
+        # We must process address adds before non-addresses
+        # otherwise a fetch of ServiceInfo may miss an address
+        # because it thinks the cache is complete
+        #
+        for record in address_adds + other_adds:
             self.cache.add(record)
-        for record in cache_removes:
+        for record in removes:
             self.cache.remove(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
