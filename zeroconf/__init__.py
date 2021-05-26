@@ -2752,6 +2752,7 @@ class Zeroconf(QuietLogger):
         updates = []  # type: List[DNSRecord]
         address_adds = []  # type: List[DNSAddress]
         other_adds = []  # type: List[DNSRecord]
+        removes = []  # type: List[DNSRecord]  
         now = current_time_millis()
         for record in msg.answers:
 
@@ -2763,15 +2764,17 @@ class Zeroconf(QuietLogger):
                 # only look though entries for the specific name.
                 # entries_with_name will take care of converting to lowercase
                 for entry in self.cache.entries_with_name(record.name):
-
+                    
                     if entry == record:
                         updated = False
 
+                    #
+                    # If the record is exactly the same, do not remove it from the cache
+                    #
                     # Check the time first because it is far cheaper than the __eq__
-                    time_diff = record.created - entry.created
-                    log.debug("TIMEDIFF: (record:%s) (entry:%s) = %s", record, entry, time_diff)
-                    if time_diff > 1000 and DNSEntry.__eq__(entry, record):
-                        self.cache.remove(entry)
+                    #
+                    elif record.created - entry.created > 1000 and DNSEntry.__eq__(entry, record):
+                        removes.append(entry)
 
             expired = record.is_expired(now)
             existing_cache_entry = self.cache.get(record)
@@ -2787,15 +2790,16 @@ class Zeroconf(QuietLogger):
                     updates.append(record)
             elif existing_cache_entry is not None:
                 updates.append(record)
-                self.cache.remove(record)
+                removes.append(record)
 
-        if not updates and not address_adds and not other_adds:
+        if not updates and not address_adds and not other_adds and not removes:
             return
 
         # Only hold the lock if we have updates
-        with self._handlers_lock:
-            for record in updates:
-                self.update_record(now, record)
+        if updates:
+            with self._handlers_lock:
+                for record in updates:
+                    self.update_record(now, record)
 
         # The cache adds must be processed AFTER we trigger
         # the updates since we compare existing data
@@ -2809,7 +2813,9 @@ class Zeroconf(QuietLogger):
         #
         for record in address_adds + other_adds:
             self.cache.add(record)
-
+        for record in removes:
+            self.cache.remove(record)
+            
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
