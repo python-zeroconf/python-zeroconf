@@ -1701,7 +1701,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         else:
             type_ = self._record_matching_type(record)
             if type_ and not self.zc.cache.get(record):
-                log.debug("record causes update due type match: %s", record)
+                log.debug("record causes update due to type match: %s (entries: %s)", record, zc.cache.entries_with_name(record.name))
                 enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
