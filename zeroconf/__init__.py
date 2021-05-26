@@ -1696,14 +1696,23 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             for service in self.zc.cache.entries_with_server(record.name):
                 type_ = self._record_matching_type(service)
                 if type_:
-                    log.debug("record causes update due to address change: %s (current_addresses: %s) (entries: %s)", record, current_addresses, zc.cache.entries_with_name(record.name))
+                    log.debug(
+                        "record causes update due to address change: %s (current_addresses: %s) (entries: %s)",
+                        record,
+                        current_addresses,
+                        zc.cache.entries_with_name(record.name),
+                    )
                     enqueue_callback(ServiceStateChange.Updated, type_, service.name)
                     break
 
         else:
             type_ = self._record_matching_type(record)
             if type_:
-                log.debug("record causes update due to type match: %s (entries: %s)", record, zc.cache.entries_with_name(record.name))
+                log.debug(
+                    "record causes update due to type match: %s (entries: %s)",
+                    record,
+                    zc.cache.entries_with_name(record.name),
+                )
                 enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
@@ -2752,7 +2761,7 @@ class Zeroconf(QuietLogger):
         updates = []  # type: List[DNSRecord]
         address_adds = []  # type: List[DNSAddress]
         other_adds = []  # type: List[DNSRecord]
-        removes = []  # type: List[DNSRecord]  
+        removes = []  # type: List[DNSRecord]
         now = current_time_millis()
         for record in msg.answers:
 
@@ -2764,7 +2773,7 @@ class Zeroconf(QuietLogger):
                 # only look though entries for the specific name.
                 # entries_with_name will take care of converting to lowercase
                 for entry in self.cache.entries_with_name(record.name):
-                    
+
                     if entry in msg.answers:
                         updated = False
 
@@ -2815,7 +2824,7 @@ class Zeroconf(QuietLogger):
             self.cache.add(record)
         for record in removes:
             self.cache.remove(record)
-            
+
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
