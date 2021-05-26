@@ -2794,7 +2794,7 @@ class Zeroconf(QuietLogger):
             for record in updates:
                 self.update_record(now, record)
 
-        # The cache must be procssed AFTER we trigger
+        # The cache changes must be processed AFTER we trigger
         # the updates since we compare existing data
         # with the new data and updating the cache
         # ahead of update_record will cause listeners
