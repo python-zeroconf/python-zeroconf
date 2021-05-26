@@ -2779,7 +2779,7 @@ class Zeroconf(QuietLogger):
                             continue
                         updated = True
                         # Check the time first because it is far cheaper than the __eq__
-                        if record.created - entry.created > 1000 and DNSEntry.__eq__(entry, record):
+                        if record.created - entry.created > 2000 and DNSEntry.__eq__(entry, record):
                             removes.append(entry)
 
             expired = record.is_expired(now)
