@@ -1689,8 +1689,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 self._next_time[record.name] = expires
             return
 
-        # If its expired or already exists in the cache
-        # it can't be updated.
+        # If its expired or already exists in the cache it cannot be updated.
         if expired or self.zc.cache.get(record):
             return
 

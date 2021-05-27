@@ -1455,6 +1455,15 @@ class TestServiceBrowser(unittest.TestCase):
             assert service_updated_count == 2
             assert service_removed_count == 0
 
+            # service TXT updated - duplicate update should not trigger another service_updated
+            service_updated_event.clear()
+            service_text = b'path=/~matt2/'
+            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            service_updated_event.wait(wait_time)
+            assert service_added_count == 1
+            assert service_updated_count == 2
+            assert service_removed_count == 0
+
             # service A updated
             service_updated_event.clear()
             service_address = '10.0.1.3'
