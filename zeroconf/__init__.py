@@ -1021,14 +1021,13 @@ class DNSOutgoing:
         cached_entry = zc.cache.get_by_details(name, type_, class_)
         if not cached_entry:
             self.add_question(DNSQuestion(name, type_, class_))
-        elif not cached_entry.is_stale(now):
+        else:
             self.add_answer_at_time(cached_entry, now)
 
     def add_question_or_all_cache(
         self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
     ) -> None:
         """Add a question if it is not already cached.
-
         This is currently only used for IPv6 addresses.
         """
         cached_entries = zc.cache.get_all_by_details(name, type_, class_)
@@ -1036,8 +1035,7 @@ class DNSOutgoing:
             self.add_question(DNSQuestion(name, type_, class_))
             return
         for cached_entry in cached_entries:
-            if not cached_entry.is_stale(now):
-                self.add_answer_at_time(cached_entry, now)
+            self.add_answer_at_time(cached_entry, now)
 
     def pack(self, format_: Union[bytes, str], value: Any) -> None:
         self.data.append(struct.pack(format_, value))
