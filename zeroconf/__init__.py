@@ -1649,7 +1649,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         return self._service_state_changed.registration_interface
 
     def _record_matching_type(self, record: DNSRecord) -> Optional[str]:
-        """Check if the record is one of the types we are browsing."""
+        """Return the type if the record matches one of the types we are browsing."""
         return next((type_ for type_ in self.types if record.name.endswith(type_)), None)
 
     def update_record(self, zc: 'Zeroconf', now: float, record: DNSRecord) -> None:
