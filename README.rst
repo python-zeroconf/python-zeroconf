@@ -137,6 +137,18 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+* Ensure duplicate packets do not trigger duplicate updates (#376)
+
+  If TXT or SRV records update was already processed and then
+  recieved again, it was possible for a second update to be
+  called back in the ServiceBrowser
+
+* Only trigger a ServiceStateChange.Updated event when an ip address is added (#375)
+
+* Fix RFC6762 Section 10.2 paragraph 2 compliance (#374) @bdraco
+
+* Reduce length of ServiceBrowser thread name with many types (#373) @bdraco
+
 * Remove Callable quoting (#371) @bdraco
 
 * Abstract check to see if a record matches a type the ServiceBrowser wants (#369) @bdraco
