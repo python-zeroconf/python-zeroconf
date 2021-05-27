@@ -1918,27 +1918,25 @@ class ServiceInfo(RecordUpdateListener):
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
         """Updates service information from a DNS record"""
-        if record is not None and not record.is_expired(now):
-            if record.type in [_TYPE_A, _TYPE_AAAA]:
-                assert isinstance(record, DNSAddress)
-                if record.key == self.server_key:
-                    if record.address not in self._addresses:
-                        self._addresses.append(record.address)
-            elif record.type == _TYPE_SRV:
-                assert isinstance(record, DNSService)
-                if record.key == self.key:
-                    self.name = record.name
-                    self.server = record.server
-                    self.server_key = record.server.lower()
-                    self.port = record.port
-                    self.weight = record.weight
-                    self.priority = record.priority
-                    self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
-                    self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
-            elif record.type == _TYPE_TXT:
-                assert isinstance(record, DNSText)
-                if record.key == self.key:
-                    self._set_text(record.text)
+        if record is None or record.is_expired(now):
+            return
+        if isinstance(record, DNSAddress):
+            if record.key == self.server_key and record.address not in self._addresses:
+                self._addresses.append(record.address)
+        elif isinstance(record, DNSService):
+            if record.key != self.key:
+                return
+            self.name = record.name
+            self.server = record.server
+            self.server_key = record.server.lower()
+            self.port = record.port
+            self.weight = record.weight
+            self.priority = record.priority
+            self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
+            self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
+        elif isinstance(record, DNSText):
+            if record.key == self.key:
+                self._set_text(record.text)
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache."""
