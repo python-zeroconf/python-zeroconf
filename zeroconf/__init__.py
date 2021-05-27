@@ -2279,7 +2279,7 @@ def add_multicast_member(
             log.info(
                 'Failed to set socket option on %s, this can happen if '
                 'the network adapter is in a disconnected state',
-                interface
+                interface,
             )
             return False
         else:
