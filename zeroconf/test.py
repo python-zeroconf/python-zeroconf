@@ -596,6 +596,28 @@ class Framework(unittest.TestCase):
 
             return r.DNSIncoming(generated.packet())
 
+        def mock_split_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
+            """Mock an incoming message for the case where the packet is split."""
+            ttl = 120
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated.add_answer_at_time(
+                r.DNSAddress(
+                    service_server,
+                    r._TYPE_A,
+                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    ttl,
+                    socket.inet_aton(service_address),
+                ),
+                0,
+            )
+            generated.add_answer_at_time(
+                r.DNSService(
+                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
+                ),
+                0,
+            )
+            return r.DNSIncoming(generated.packet())
+
         service_name = 'name._type._tcp.local.'
         service_type = '_type._tcp.local.'
         service_server = 'ash-2.local.'
@@ -629,6 +651,14 @@ class Framework(unittest.TestCase):
             assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
             time.sleep(1.1)
+
+            # The split message only has a SRV and A record.
+            # This should not evict TXT records from the cache
+            zeroconf.handle_response(mock_split_incoming_msg(r.ServiceStateChange.Updated))
+            time.sleep(1.1)
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is not None
+            assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
             # service removed
             zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
