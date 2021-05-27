@@ -6,10 +6,7 @@ PYTHON_VERSION:=$(shell python -c "import sys;sys.stdout.write('%d.%d' % sys.ver
 LINT_TARGETS:=flake8
 
 ifneq ($(findstring PyPy,$(PYTHON_IMPLEMENTATION)),PyPy)
-	LINT_TARGETS:=$(LINT_TARGETS) mypy
-endif
-ifeq ($(or $(findstring 3.5,$(PYTHON_VERSION)),$(findstring PyPy,$(PYTHON_IMPLEMENTATION))),)
-	LINT_TARGETS:=$(LINT_TARGETS) black_check
+	LINT_TARGETS:=$(LINT_TARGETS) mypy black_check
 endif
 
 
@@ -39,10 +36,10 @@ mypy:
 	mypy examples/*.py zeroconf/*.py
 
 test:
-	pytest -v zeroconf/test.py
+	pytest -v zeroconf/test.py zeroconf/test_asyncio.py
 
 test_coverage:
-	pytest -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing zeroconf/test.py
+	pytest -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing zeroconf/test.py zeroconf/test_asyncio.py
 
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf

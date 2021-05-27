@@ -1,14 +1,14 @@
 python-zeroconf
 ===============
 
-.. image:: https://travis-ci.org/jstasiak/python-zeroconf.svg?branch=master
-    :target: https://travis-ci.org/jstasiak/python-zeroconf
-    
+.. image:: https://github.com/jstasiak/python-zeroconf/workflows/CI/badge.svg
+   :target: https://github.com/jstasiak/python-zeroconf?query=workflow%3ACI+branch%3Amaster
+
 .. image:: https://img.shields.io/pypi/v/zeroconf.svg
     :target: https://pypi.python.org/pypi/zeroconf
 
-.. image:: https://img.shields.io/coveralls/jstasiak/python-zeroconf.svg
-    :target: https://coveralls.io/r/jstasiak/python-zeroconf
+.. image:: https://codecov.io/gh/jstasiak/python-zeroconf/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/jstasiak/python-zeroconf
 
 `Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
     
@@ -44,7 +44,7 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 Python compatibility
 --------------------
 
-* CPython 3.5+
+* CPython 3.6+
 * PyPy3 5.8+
 
 Versioning
@@ -133,6 +133,16 @@ See examples directory for more.
 
 Changelog
 =========
+
+0.29.0
+======
+
+* A single socket is used for listening on responding when `InterfaceChoice.Default` is chosen.
+  Thanks to J. Nick Koston.
+
+Backwards incompatible:
+
+* Dropped Python 3.5 support
 
 0.28.8
 ======

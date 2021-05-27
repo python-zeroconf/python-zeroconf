@@ -23,7 +23,6 @@
 import enum
 import errno
 import ipaddress
-import itertools
 import logging
 import platform
 import re
@@ -35,14 +34,14 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import Dict, Iterable, List, Optional, Sequence, Union, cast
+from typing import Dict, Iterable, List, Optional, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.28.8'
+__version__ = '0.29.0'
 __license__ = 'LGPL'
 
 
@@ -354,6 +353,16 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:
     return service_name + trailer
 
 
+def instance_name_from_service_info(info: "ServiceInfo") -> str:
+    """Calculate the instance name from the ServiceInfo."""
+    # This is kind of funky because of the subtype based tests
+    # need to make subtypes a first class citizen
+    service_name = service_type_name(info.name)
+    if not info.type.endswith(service_name):
+        raise BadTypeInNameException
+    return info.name[: -len(service_name) - 1]
+
+
 # Exceptions
 
 
@@ -427,9 +436,9 @@ class DNSEntry:
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
     def __eq__(self, other: Any) -> bool:
-        """Equality test on name, type, and class"""
+        """Equality test on key (lowercase name), type, and class"""
         return (
-            self.name == other.name
+            self.key == other.key
             and self.type == other.type
             and self.class_ == other.class_
             and isinstance(other, DNSEntry)
@@ -1243,50 +1252,56 @@ class DNSCache:
 
     def __init__(self) -> None:
         self.cache = {}  # type: Dict[str, List[DNSRecord]]
+        self.service_cache = {}  # type: Dict[str, List[DNSRecord]]
 
     def add(self, entry: DNSRecord) -> None:
         """Adds an entry"""
         # Insert last in list, get will return newest entry
         # iteration will result in last update winning
         self.cache.setdefault(entry.key, []).append(entry)
+        if isinstance(entry, DNSService):
+            self.service_cache.setdefault(entry.server, []).append(entry)
 
     def remove(self, entry: DNSRecord) -> None:
-        """Removes an entry"""
+        """Removes an entry."""
+        if isinstance(entry, DNSService):
+            DNSCache.remove_key(self.service_cache, entry.server, entry)
+        DNSCache.remove_key(self.cache, entry.key, entry)
+
+    @staticmethod
+    def remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
+        """Forgiving remove of a cache key."""
         try:
-            list_ = self.cache[entry.key]
-            list_.remove(entry)
-            # If we remove the last entry in the list
-            # we remove the key from the dict in order
-            # to avoid leaking memory
-            if not list_:
-                del self.cache[entry.key]
+            cache[key].remove(entry)
+            if not cache[key]:
+                del cache[key]
         except (KeyError, ValueError):
             pass
 
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
-        try:
-            list_ = self.cache[entry.key]
-            for cached_entry in reversed(list_):
-                if entry.__eq__(cached_entry):
-                    return cached_entry
-            return None
-        except (KeyError, ValueError):
-            return None
+        for cached_entry in reversed(self.entries_with_name(entry.key)):
+            if entry.__eq__(cached_entry):
+                return cached_entry
+        return None
 
     def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
-        """Gets an entry by details.  Will return None if there is
-        no matching entry."""
-        entry = DNSEntry(name, type_, class_)
-        return self.get(entry)
+        """Gets the first matching entry by details. Returns None if no entries match."""
+        return self.get(DNSEntry(name, type_, class_))
+
+    def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
+        """Gets all matching entries by details."""
+        match_entry = DNSEntry(name, type_, class_)
+        return [entry for entry in self.entries_with_name(name) if match_entry.__eq__(entry)]
+
+    def entries_with_server(self, server: str) -> List[DNSRecord]:
+        """Returns a list of entries whose server matches the name."""
+        return self.service_cache.get(server, [])[:]
 
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        try:
-            return self.cache[name.lower()]
-        except KeyError:
-            return []
+        return self.cache.get(name.lower(), [])[:]
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
@@ -1299,25 +1314,17 @@ class DNSCache:
                 return record
         return None
 
-    def entries(self) -> List[DNSRecord]:
-        """Returns a list of all entries"""
-        if not self.cache:
-            return []
+    def names(self) -> List[str]:
+        """Return a copy of the list of current cache names."""
+        return list(self.cache)
 
-        # avoid size change during iteration by copying the cache
-        return list(itertools.chain.from_iterable(list(self.cache.values())))
-
-    def iterable_entries(self) -> Iterable[DNSRecord]:
-        """Returns an iterable of all entries.
-
-        This function is provided to avoid copying
-        the entries but is not threadsafe as the
-        contents of the cache can change during iteration.
-
-        Callers should trap RuntimeError and fallback
-        to calling entries.
-        """
-        return itertools.chain.from_iterable(self.cache.values())
+    def expire(self, now: float) -> Iterable[DNSRecord]:
+        """Purge expired entries from the cache."""
+        for name in self.names():
+            for record in self.entries_with_name(name):
+                if record.is_expired(now):
+                    self.remove(record)
+                    yield record
 
 
 class Engine(threading.Thread):
@@ -1339,39 +1346,51 @@ class Engine(threading.Thread):
         self.zc = zc
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
+        self.cache_cleanup_interval_ms = 10000.0
         self.condition = threading.Condition()
         self.socketpair = socket.socketpair()
+        self._last_cache_cleanup = 0.0
         self.start()
         self.name = "zeroconf-Engine-%s" % (getattr(self, 'native_id', self.ident),)
 
     def run(self) -> None:
         while not self.zc.done:
-            with self.condition:
-                rs = list(self.readers.keys())
-                if len(rs) == 0:
-                    # No sockets to manage, but we wait for the timeout
-                    # or addition of a socket
+            rs = list(self.readers.keys())
+            if not rs:
+                # No sockets to manage, but we wait for the timeout
+                # or addition of a socket
+                with self.condition:
                     self.condition.wait(self.timeout)
+                continue
 
-            if len(rs) != 0:
-                try:
-                    rs = rs + [self.socketpair[0]]
-                    rr, wr, er = select.select(cast(Sequence[Any], rs), [], [], self.timeout)
-                    if not self.zc.done:
-                        for socket_ in rr:
-                            reader = self.readers.get(socket_)
-                            if reader:
-                                reader.handle_read(socket_)
+            try:
+                rs.append(self.socketpair[0])
+                rr, wr, er = select.select(rs, [], [], self.timeout)
 
-                        if self.socketpair[0] in rr:
-                            # Clear the socket's buffer
-                            self.socketpair[0].recv(128)
+                if self.zc.done:
+                    return
 
-                except (select.error, socket.error) as e:
-                    # If the socket was closed by another thread, during
-                    # shutdown, ignore it and exit
-                    if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
-                        raise
+                for socket_ in rr:
+                    reader = self.readers.get(socket_)
+                    if reader:
+                        reader.handle_read(socket_)
+
+                if self.socketpair[0] in rr:
+                    # Clear the socket's buffer
+                    self.socketpair[0].recv(128)
+
+            except (select.error, socket.error) as e:
+                # If the socket was closed by another thread, during
+                # shutdown, ignore it and exit
+                if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
+                    raise
+
+            now = current_time_millis()
+            if now - self._last_cache_cleanup >= self.cache_cleanup_interval_ms:
+                self._last_cache_cleanup = now
+                for record in self.zc.cache.expire(now):
+                    self.zc.update_record(now, record)
+
         self.socketpair[0].close()
         self.socketpair[1].close()
 
@@ -1464,44 +1483,6 @@ class Listener(QuietLogger):
 
         else:
             self.zc.handle_response(msg)
-
-
-class Reaper(threading.Thread):
-
-    """A Reaper is used by this module to remove cache entries that
-    have expired."""
-
-    def __init__(self, zc: 'Zeroconf') -> None:
-        threading.Thread.__init__(self)
-        self.daemon = True
-        self.zc = zc
-        self.start()
-        self.name = "zeroconf-Reaper_%s" % (getattr(self, 'native_id', self.ident),)
-
-    def run(self) -> None:
-        """Perodic removal of expired entries from the cache."""
-        while True:
-            with self.zc.reaper_condition:
-                self.zc.reaper_condition.wait(10)
-
-            if self.zc.done:
-                return
-            try:
-                # We try to iterate the cache without copying the whole
-                # cache as this can be quite an expensive operation.
-                self._cleanup_cache(self.zc.cache.iterable_entries())
-            except RuntimeError:
-                # If the cache changes during iteration, we fallback
-                # to making a copy before iteraiton.
-                self._cleanup_cache(self.zc.cache.entries())
-
-    def _cleanup_cache(self, entries: Iterable[DNSRecord]) -> None:
-        """Remove expired entries from the cache."""
-        now = current_time_millis()
-        for record in entries:
-            if record.is_expired(now):
-                self.zc.update_record(now, record)
-                self.zc.cache.remove(record)
 
 
 class Signal:
@@ -1706,9 +1687,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 return
 
             # Iterate through the DNSCache and callback any services that use this address
-            for service in zc.cache.entries():
-                if not isinstance(service, DNSService) or not service.server == record.name:
-                    continue
+            for service in self.zc.cache.entries_with_server(record.name):
                 for type_ in self.types:
                     if service.name.endswith(type_):
                         enqueue_callback(ServiceStateChange.Updated, type_, service.name)
@@ -1808,6 +1787,7 @@ class ServiceInfo(RecordUpdateListener):
             raise BadTypeInNameException
         self.type = type_
         self.name = name
+        self.key = name.lower()
         if addresses is not None:
             self._addresses = addresses
         elif parsed_addresses is not None:
@@ -1827,6 +1807,7 @@ class ServiceInfo(RecordUpdateListener):
             self.server = server
         else:
             self.server = name
+        self.server_key = self.server.lower()
         self._properties = {}  # type: Dict
         self._set_properties(properties)
         self.host_ttl = host_ttl
@@ -1937,37 +1918,29 @@ class ServiceInfo(RecordUpdateListener):
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
         """Updates service information from a DNS record"""
-        if record is not None and not record.is_expired(now):
-            if record.type in [_TYPE_A, _TYPE_AAAA]:
-                assert isinstance(record, DNSAddress)
-                # if record.name == self.name:
-                if record.name == self.server:
-                    if record.address not in self._addresses:
-                        self._addresses.append(record.address)
-            elif record.type == _TYPE_SRV:
-                assert isinstance(record, DNSService)
-                if record.name == self.name:
-                    self.server = record.server
-                    self.port = record.port
-                    self.weight = record.weight
-                    self.priority = record.priority
-                    # self.address = None
-                    self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
-                    self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
-            elif record.type == _TYPE_TXT:
-                assert isinstance(record, DNSText)
-                if record.name == self.name:
-                    self._set_text(record.text)
+        if record is None or record.is_expired(now):
+            return
+        if isinstance(record, DNSAddress):
+            if record.key == self.server_key and record.address not in self._addresses:
+                self._addresses.append(record.address)
+        elif isinstance(record, DNSService):
+            if record.key != self.key:
+                return
+            self.name = record.name
+            self.server = record.server
+            self.server_key = record.server.lower()
+            self.port = record.port
+            self.weight = record.weight
+            self.priority = record.priority
+            self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
+            self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
+        elif isinstance(record, DNSText):
+            if record.key == self.key:
+                self._set_text(record.text)
 
-    def request(self, zc: 'Zeroconf', timeout: float) -> bool:
-        """Returns true if the service could be discovered on the
-        network, and updates this object with details discovered.
-        """
+    def load_from_cache(self, zc: 'Zeroconf') -> bool:
+        """Populate the service info from the cache."""
         now = current_time_millis()
-        delay = _LISTENER_TIME
-        next_ = now
-        last = now + timeout
-
         record_types_for_check_cache = [(_TYPE_SRV, _CLASS_IN), (_TYPE_TXT, _CLASS_IN)]
         if self.server is not None:
             record_types_for_check_cache.append((_TYPE_A, _CLASS_IN))
@@ -1979,7 +1952,19 @@ class ServiceInfo(RecordUpdateListener):
 
         if self.server is not None and self.text is not None and self._addresses:
             return True
+        return False
 
+    def request(self, zc: 'Zeroconf', timeout: float) -> bool:
+        """Returns true if the service could be discovered on the
+        network, and updates this object with details discovered.
+        """
+        if self.load_from_cache(zc):
+            return True
+
+        now = current_time_millis()
+        delay = _LISTENER_TIME
+        next_ = now
+        last = now + timeout
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
             while self.server is None or self.text is None or not self._addresses:
@@ -2255,13 +2240,13 @@ def new_socket(
 def add_multicast_member(
     listen_socket: socket.socket,
     interface: Union[str, Tuple[Tuple[str, int, int], int]],
-    apple_p2p: bool = False,
-) -> Optional[socket.socket]:
+) -> bool:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, tuple)
     err_einval = {errno.EINVAL}
     if sys.platform == 'win32':
-        err_einval |= {errno.WSAEINVAL}
+        # No WSAEINVAL definition in typeshed
+        err_einval |= {cast(Any, errno).WSAEINVAL}
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
@@ -2279,27 +2264,34 @@ def add_multicast_member(
                 'it is expected to happen on some systems',
                 interface,
             )
-            return None
+            return False
         elif _errno == errno.EADDRNOTAVAIL:
             log.info(
                 'Address not available when adding %s to multicast '
                 'group, it is expected to happen on some systems',
                 interface,
             )
-            return None
+            return False
         elif _errno in err_einval:
             log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
-            return None
+            return False
         elif _errno == errno.WSAENOPROTOOPT:
             log.info(
                 'Failed to set socket option on %s, this can happen if '
                 'the network adapter is in a disconnected state',
                 interface
             )
-            return None
+            return False
         else:
             raise
+    return True
 
+
+def new_respond_socket(
+    interface: Union[str, Tuple[Tuple[str, int, int], int]],
+    apple_p2p: bool = False,
+) -> Optional[socket.socket]:
+    is_v6 = isinstance(interface, tuple)
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
         apple_p2p=apple_p2p,
@@ -2307,6 +2299,7 @@ def add_multicast_member(
     )
     log.debug('Configuring socket %s with multicast interface %s', respond_socket, interface)
     if is_v6:
+        iface_bin = struct.pack('@I', cast(int, interface[1]))
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
     else:
         respond_socket.setsockopt(
@@ -2328,11 +2321,21 @@ def create_sockets(
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
+    # If we are using InterfaceChoice.Default we can use
+    # a single socket to listen and respond.
+    if not unicast and interfaces is InterfaceChoice.Default:
+        for i in normalized_interfaces:
+            add_multicast_member(cast(socket.socket, listen_socket), i)
+        return listen_socket, [cast(socket.socket, listen_socket)]
+
     respond_sockets = []
 
     for i in normalized_interfaces:
         if not unicast:
-            respond_socket = add_multicast_member(cast(socket.socket, listen_socket), i, apple_p2p=apple_p2p)
+            if add_multicast_member(cast(socket.socket, listen_socket), i):
+                respond_socket = new_respond_socket(i, apple_p2p=apple_p2p)
+            else:
+                respond_socket = None
         else:
             respond_socket = new_socket(
                 port=0,
@@ -2501,6 +2504,7 @@ class Zeroconf(QuietLogger):
             interfaces, unicast, ip_version, apple_p2p=apple_p2p
         )
         log.debug('Listen socket %s, respond sockets %s', self._listen_socket, self._respond_sockets)
+        self.multi_socket = unicast or interfaces is not InterfaceChoice.Default
 
         self.listeners = []  # type: List[RecordUpdateListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
@@ -2509,7 +2513,6 @@ class Zeroconf(QuietLogger):
         self.cache = DNSCache()
 
         self.condition = threading.Condition()
-        self.reaper_condition = threading.Condition()
 
         # Ensure we create the lock before
         # we add the listener as we could get
@@ -2520,11 +2523,9 @@ class Zeroconf(QuietLogger):
         self.listener = Listener(self)
         if not unicast:
             self.engine.add_reader(self.listener, cast(socket.socket, self._listen_socket))
-        for s in self._respond_sockets:
-            self.engine.add_reader(self.listener, s)
-        self.reaper = Reaper(self)
-
-        self.debug = None  # type: Optional[DNSOutgoing]
+        if self.multi_socket:
+            for s in self._respond_sockets:
+                self.engine.add_reader(self.listener, s)
 
     @property
     def done(self) -> bool:
@@ -2540,11 +2541,6 @@ class Zeroconf(QuietLogger):
         """Notifies all waiting threads"""
         with self.condition:
             self.condition.notify_all()
-
-    def notify_reaper(self) -> None:
-        """Notifies reaper"""
-        with self.reaper_condition:
-            self.reaper_condition.notify_all()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
@@ -2604,6 +2600,7 @@ class Zeroconf(QuietLogger):
         self._broadcast_service(info, _REGISTER_TIME, None)
 
     def _broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
+        """Send a broadcasts to announce a service at intervals."""
         now = current_time_millis()
         next_time = now
         i = 0
@@ -2613,11 +2610,22 @@ class Zeroconf(QuietLogger):
                 now = current_time_millis()
                 continue
 
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-            self._add_broadcast_answer(out, info, ttl)
-            self.send(out)
+            self.send_service_broadcast(info, ttl)
             i += 1
             next_time += interval
+
+    def send_service_broadcast(self, info: ServiceInfo, ttl: Optional[int]) -> None:
+        """Send a broadcast to announce a service."""
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+        self._add_broadcast_answer(out, info, ttl)
+        self.send(out)
+
+    def send_service_query(self, info: ServiceInfo) -> None:
+        """Send a query to lookup a service."""
+        out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
+        out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
+        out.add_authorative_answer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name))
+        self.send(out)
 
     def _add_broadcast_answer(self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]) -> None:
         """Add answers to broadcast a service."""
@@ -2677,43 +2685,31 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
-
-        # This is kind of funky because of the subtype based tests
-        # need to make subtypes a first class citizen
-        service_name = service_type_name(info.name)
-        if not info.type.endswith(service_name):
-            raise BadTypeInNameException
-
-        instance_name = info.name[: -len(service_name) - 1]
+        instance_name = instance_name_from_service_info(info)
+        if cooperating_responders:
+            return
         next_instance_number = 2
-
-        now = current_time_millis()
-        next_time = now
+        next_time = now = current_time_millis()
         i = 0
         while i < 3:
-            if not cooperating_responders:
-                # check for a name conflict
-                while self.cache.current_entry_with_name_and_alias(info.type, info.name):
-                    if not allow_name_change:
-                        raise NonUniqueNameException
+            # check for a name conflict
+            while self.cache.current_entry_with_name_and_alias(info.type, info.name):
+                if not allow_name_change:
+                    raise NonUniqueNameException
 
-                    # change the name and look for a conflict
-                    info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
-                    next_instance_number += 1
-                    service_type_name(info.name)
-                    next_time = now
-                    i = 0
+                # change the name and look for a conflict
+                info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
+                next_instance_number += 1
+                service_type_name(info.name)
+                next_time = now
+                i = 0
 
             if now < next_time:
                 self.wait(next_time - now)
                 now = current_time_millis()
                 continue
 
-            out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
-            self.debug = out
-            out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
-            out.add_authorative_answer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name))
-            self.send(out)
+            self.send_service_query(info)
             i += 1
             next_time += _CHECK_TIME
 
@@ -2762,10 +2758,7 @@ class Zeroconf(QuietLogger):
                 # we can avoid iterating everything in the cache and
                 # only look though entries for the specific name.
                 # entries_with_name will take care of converting to lowercase
-                #
-                # We make a copy of the list that entries_with_name returns
-                # since we cannot iterate over something we might remove
-                for entry in self.cache.entries_with_name(record.name).copy():
+                for entry in self.cache.entries_with_name(record.name):
 
                     if entry == record:
                         updated = False
@@ -2975,23 +2968,23 @@ class Zeroconf(QuietLogger):
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        if not self._GLOBAL_DONE:
-            # remove service listeners
-            self.remove_all_service_listeners()
-            self.unregister_all_services()
-            self._GLOBAL_DONE = True
+        if self._GLOBAL_DONE:
+            return
+        # remove service listeners
+        self.remove_all_service_listeners()
+        self.unregister_all_services()
+        self._GLOBAL_DONE = True
 
-            # shutdown recv socket and thread
-            if not self.unicast:
-                self.engine.del_reader(cast(socket.socket, self._listen_socket))
-                cast(socket.socket, self._listen_socket).close()
+        # shutdown recv socket and thread
+        if not self.unicast:
+            self.engine.del_reader(cast(socket.socket, self._listen_socket))
+            cast(socket.socket, self._listen_socket).close()
+        if self.multi_socket:
             for s in self._respond_sockets:
                 self.engine.del_reader(s)
-            self.engine.join()
+        self.engine.join()
 
-            # shutdown the rest
-            self.notify_all()
-            self.notify_reaper()
-            self.reaper.join()
-            for s in self._respond_sockets:
-                s.close()
+        # shutdown the rest
+        self.notify_all()
+        for s in self._respond_sockets:
+            s.close()

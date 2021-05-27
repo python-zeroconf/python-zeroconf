@@ -1,11 +1,14 @@
 autopep8
+black;implementation_name=="cpython"
 coveralls
 coverage
 # Version restricted because of https://github.com/PyCQA/pycodestyle/issues/741
 flake8>=3.6.0
 flake8-import-order
 ifaddr
+mypy;implementation_name=="cpython"
 # 0.11.0 breaks things https://github.com/PyCQA/pep8-naming/issues/152
 pep8-naming!=0.6.0,!=0.11.0
 pytest
+pytest-asyncio
 pytest-cov

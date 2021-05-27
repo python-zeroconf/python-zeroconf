@@ -5,8 +5,11 @@
 """ Unit tests for zeroconf.py """
 
 import copy
+import errno
+import itertools
 import logging
 import os
+import platform
 import socket
 import struct
 import threading
@@ -14,8 +17,9 @@ import time
 import unittest
 import unittest.mock
 from threading import Event
-from typing import Dict, Optional  # noqa # used in type hints
-from typing import cast
+from typing import Dict, Optional, cast  # noqa # used in type hints
+
+import pytest
 
 import zeroconf as r
 from zeroconf import (
@@ -239,6 +243,7 @@ class PacketGeneration(unittest.TestCase):
 
         # Should not be suppressed, name is different
         tmp = copy.copy(answer1)
+        tmp.key = "testname3.local."
         tmp.name = "testname3.local."
         response.add_answer(query, tmp)
         assert len(response.answers) == 2
@@ -525,6 +530,17 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
         rv.close()
 
+    def test_launch_and_close_unicast(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, unicast=True)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, unicast=True)
+        rv.close()
+
+    def test_close_multiple_times(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
+        rv.close()
+        rv.close()
+
     @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v4_v6(self):
@@ -594,6 +610,8 @@ class Framework(unittest.TestCase):
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is not None
             assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
+            all_dns_text = zeroconf.cache.get_all_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert [dns_text] == all_dns_text
 
             # https://tools.ietf.org/html/rfc6762#section-10.2
             # Instead of merging this new record additively into the cache in addition
@@ -877,6 +895,34 @@ class TestRegistrar(unittest.TestCase):
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
+    def test_name_conflicts(self):
+        # instantiate a zeroconf instance
+        zc = Zeroconf(interfaces=['127.0.0.1'])
+        type_ = "_homeassistant._tcp.local."
+        name = "Home"
+        registration_name = "%s.%s" % (name, type_)
+
+        info = ServiceInfo(
+            type_,
+            name=registration_name,
+            server="random123.local.",
+            addresses=[socket.inet_pton(socket.AF_INET, "1.2.3.4")],
+            port=80,
+            properties={"version": "1.0"},
+        )
+        zc.register_service(info)
+
+        conflicting_info = ServiceInfo(
+            type_,
+            name=registration_name,
+            server="random456.local.",
+            addresses=[socket.inet_pton(socket.AF_INET, "4.5.6.7")],
+            port=80,
+            properties={"version": "1.0"},
+        )
+        with pytest.raises(r.NonUniqueNameException):
+            zc.register_service(conflicting_info)
+
 
 class TestServiceRegistry(unittest.TestCase):
     def test_only_register_once(self):
@@ -955,45 +1001,20 @@ class TestDNSCache(unittest.TestCase):
 class TestReaper(unittest.TestCase):
     def test_reaper(self):
         zeroconf = Zeroconf(interfaces=['127.0.0.1'])
-        original_entries = zeroconf.cache.entries()
+        cache = zeroconf.cache
+        original_entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         record_with_10s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 10, b'a')
         record_with_1s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
         zeroconf.cache.add(record_with_10s_ttl)
         zeroconf.cache.add(record_with_1s_ttl)
-        entries_with_cache = zeroconf.cache.entries()
-        time.sleep(1.05)
-        zeroconf.notify_reaper()
-        time.sleep(0.05)
-        entries = zeroconf.cache.entries()
-
-        try:
-            iterable_entries = list(zeroconf.cache.iterable_entries())
-        finally:
-            zeroconf.close()
-
-        assert entries != original_entries
-        assert entries_with_cache != original_entries
-        assert record_with_10s_ttl in entries
-        assert record_with_1s_ttl not in entries
-        assert record_with_10s_ttl in iterable_entries
-        assert record_with_1s_ttl not in iterable_entries
-
-    def test_reaper_with_dict_change_during_iteration(self):
-        zeroconf = Zeroconf(interfaces=['127.0.0.1'])
-        original_entries = zeroconf.cache.entries()
-        record_with_10s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 10, b'a')
-        record_with_1s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
-        zeroconf.cache.add(record_with_10s_ttl)
-        zeroconf.cache.add(record_with_1s_ttl)
-        entries_with_cache = zeroconf.cache.entries()
-        with unittest.mock.patch("zeroconf.DNSCache.iterable_entries", side_effect=RuntimeError):
-            time.sleep(1.05)
-            zeroconf.notify_reaper()
-            time.sleep(0.05)
-
-        entries = zeroconf.cache.entries()
+        entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
+        zeroconf.engine.cache_cleanup_interval_ms = 10
+        time.sleep(1)
+        with zeroconf.engine.condition:
+            zeroconf.engine._notify()
+        time.sleep(0.1)
+        entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         zeroconf.close()
-
         assert entries != original_entries
         assert entries_with_cache != original_entries
         assert record_with_10s_ttl in entries
@@ -1126,6 +1147,7 @@ class ServiceTypesQuery(unittest.TestCase):
 
 
 class ListenerTest(unittest.TestCase):
+    @pytest.mark.skipif(platform.python_implementation() == 'PyPy', reason="Flaky on PyPy")
     def test_integration_with_listener_class(self):
 
         service_added = Event()
@@ -1136,7 +1158,7 @@ class ListenerTest(unittest.TestCase):
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
-        name = "xxxyyyæøå"
+        name = "UPPERxxxyyyæøå"
         registration_name = "%s.%s" % (name, subtype)
 
         class MyListener(r.ServiceListener):
@@ -1192,8 +1214,13 @@ class ListenerTest(unittest.TestCase):
             time.sleep(3)
 
             # clear the answer cache to force query
-            for record in zeroconf_browser.cache.entries():
-                zeroconf_browser.cache.remove(record)
+            for name in zeroconf_browser.cache.names():
+                for record in zeroconf_browser.cache.entries_with_name(name):
+                    zeroconf_browser.cache.remove(record)
+
+            cached_info = ServiceInfo(type_, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties == {}
 
             # get service info without answer cache
             info = zeroconf_browser.get_service_info(type_, registration_name)
@@ -1207,9 +1234,34 @@ class ListenerTest(unittest.TestCase):
             assert info.addresses == addresses[:1]  # no V6 by default
             assert info.addresses_by_version(r.IPVersion.All) == addresses
 
+            cached_info = ServiceInfo(type_, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+
+            # get service info with only the cache
+            cached_info = ServiceInfo(subtype, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_float'] == b'1.0'
+
+            # get service info with only the cache with the lowercase name
+            cached_info = ServiceInfo(subtype, registration_name.lower())
+            cached_info.load_from_cache(zeroconf_browser)
+            # Ensure uppercase output is preserved
+            assert cached_info.name == registration_name
+            assert cached_info.key == registration_name.lower()
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_float'] == b'1.0'
+
             info = zeroconf_browser.get_service_info(subtype, registration_name)
             assert info is not None
+            assert info.properties is not None
             assert info.properties[b'prop_none'] is None
+
+            cached_info = ServiceInfo(subtype, registration_name.lower())
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_none'] is None
 
             # test TXT record update
             sublistener = MySubListener()
@@ -1233,6 +1285,11 @@ class ListenerTest(unittest.TestCase):
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
             assert info.properties[b'prop_blank'] == properties['prop_blank']
+
+            cached_info = ServiceInfo(subtype, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_blank'] == properties['prop_blank']
 
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
@@ -1384,6 +1441,105 @@ class TestServiceBrowser(unittest.TestCase):
 
 
 class TestServiceInfo(unittest.TestCase):
+    def test_service_info_rejects_non_matching_updates(self):
+        """Verify records with the wrong name are rejected."""
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        ttl = 120
+        now = r.current_time_millis()
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        # Matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                service_name,
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        info.update_record(
+            zc,
+            now,
+            r.DNSService(
+                service_name,
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                0,
+                0,
+                80,
+                'ASH-2.local.',
+            ),
+        )
+        assert info.server_key == 'ash-2.local.'
+        assert info.server == 'ASH-2.local.'
+        new_address = socket.inet_aton("10.0.1.3")
+        info.update_record(
+            zc,
+            now,
+            r.DNSAddress(
+                'ASH-2.local.',
+                r._TYPE_A,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                new_address,
+            ),
+        )
+        assert new_address in info.addresses
+        # Non-matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                "incorrect.name.",
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        info.update_record(
+            zc,
+            now,
+            r.DNSService(
+                "incorrect.name.",
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                0,
+                0,
+                80,
+                'ASH-2.local.',
+            ),
+        )
+        assert info.server_key == 'ash-2.local.'
+        assert info.server == 'ASH-2.local.'
+        new_address = socket.inet_aton("10.0.1.4")
+        info.update_record(
+            zc,
+            now,
+            r.DNSAddress(
+                "incorrect.name.",
+                r._TYPE_A,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                new_address,
+            ),
+        )
+        assert new_address not in info.addresses
+
     def test_get_info_partial(self):
 
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
@@ -2126,3 +2282,18 @@ def test_dns_compression_rollback_for_corruption():
         # ensure there is no corruption with the dns compression
         incoming = r.DNSIncoming(packet)
         assert incoming.valid is True
+
+
+@pytest.mark.parametrize(
+    "errno,expected_result",
+    [(errno.EADDRINUSE, False), (errno.EADDRNOTAVAIL, False), (errno.EINVAL, False), (0, True)],
+)
+def test_add_multicast_member_socket_errors(errno, expected_result):
+    """Test we handle socket errors when adding multicast members."""
+    if errno:
+        setsockopt_mock = unittest.mock.Mock(side_effect=OSError(errno, "Error: {}".format(errno)))
+    else:
+        setsockopt_mock = unittest.mock.Mock()
+    fileno_mock = unittest.mock.PropertyMock(return_value=10)
+    socket_mock = unittest.mock.Mock(setsockopt=setsockopt_mock, fileno=fileno_mock)
+    assert r.add_multicast_member(socket_mock, "0.0.0.0") == expected_result
