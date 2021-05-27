@@ -9,7 +9,6 @@ import errno
 import itertools
 import logging
 import os
-import platform
 import socket
 import struct
 import threading
