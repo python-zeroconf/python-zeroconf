@@ -1762,9 +1762,6 @@ class ServiceInfo(RecordUpdateListener):
 
     text = b''
 
-    # FIXME(dtantsur): black 19.3b0 produces code that is not valid syntax on
-    # Python 3.5: https://github.com/python/black/issues/759
-    # fmt: off
     def __init__(
         self,
         type_: str,
@@ -1795,11 +1792,12 @@ class ServiceInfo(RecordUpdateListener):
         else:
             self._addresses = []
         # This results in an ugly error when registering, better check now
-        invalid = [a for a in self._addresses
-                   if not isinstance(a, bytes) or len(a) not in (4, 16)]
+        invalid = [a for a in self._addresses if not isinstance(a, bytes) or len(a) not in (4, 16)]
         if invalid:
-            raise TypeError('Addresses must be bytes, got %s. Hint: convert string addresses '
-                            'with socket.inet_pton' % invalid)
+            raise TypeError(
+                'Addresses must be bytes, got %s. Hint: convert string addresses '
+                'with socket.inet_pton' % invalid
+            )
         self.port = port
         self.weight = weight
         self.priority = priority
@@ -1812,7 +1810,6 @@ class ServiceInfo(RecordUpdateListener):
         self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
-    # fmt: on
 
     @property
     def addresses(self) -> List[bytes]:
