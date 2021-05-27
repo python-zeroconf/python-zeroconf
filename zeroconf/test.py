@@ -461,6 +461,7 @@ class Names(unittest.TestCase):
         assert mocked_log_debug.call_count > call_counts[0]
 
         # close our zeroconf which will close the sockets
+        browser.cancel()
         zc.close()
 
         # pop the big chunk off the end of the data and send on a closed socket
@@ -1084,9 +1085,9 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar.register_service(info)
 
         try:
-            service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=1)
             assert type_ in service_types
-            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=1)
             assert type_ in service_types
 
         finally:
@@ -1116,9 +1117,9 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar.register_service(info)
 
         try:
-            service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=1)
             assert type_ in service_types
-            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=1)
             assert type_ in service_types
 
         finally:
@@ -1147,9 +1148,9 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar.register_service(info)
 
         try:
-            service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=1)
             assert type_ in service_types
-            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=1)
             assert type_ in service_types
 
         finally:
@@ -1178,9 +1179,9 @@ class ServiceTypesQuery(unittest.TestCase):
         zeroconf_registrar.register_service(info)
 
         try:
-            service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=1)
             assert discovery_type in service_types
-            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
+            service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=1)
             assert discovery_type in service_types
 
         finally:
