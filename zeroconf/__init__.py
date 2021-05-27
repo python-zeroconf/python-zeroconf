@@ -2761,18 +2761,14 @@ class Zeroconf(QuietLogger):
             updated = True
 
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                # Since the cache format is keyed on the lower case record name
-                # we can avoid iterating everything in the cache and
-                # only look though entries for the specific name.
-                # entries_with_name will take care of converting to lowercase
-                for entry in self.cache.entries_with_name(record.name):
-
+                # rfc6762#section-10.2 para 2
+                # Since unique is set, all old records with that name, rrtype,
+                # and rrclass that were received more than one second ago are declared
+                # invalid, and marked to expire from the cache in one second.
+                for entry in self.cache.get_all_by_details(record.name, record.type, record.class_):
                     if entry == record:
                         updated = False
-
-                    # Check the time first because it is far cheaper
-                    # than the __eq__
-                    if (record.created - entry.created > 1000) and DNSEntry.__eq__(entry, record):
+                    if record.created - entry.created > 1000 and entry not in msg.answers:
                         self.cache.remove(entry)
 
             expired = record.is_expired(now)
