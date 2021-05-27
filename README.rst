@@ -135,6 +135,7 @@ Changelog
 =========
 
 0.32.0 (Unreleased)
+===================
 
 * Remove Callable quoting (#371) @bdraco
 
