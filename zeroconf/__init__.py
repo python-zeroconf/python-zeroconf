@@ -2008,6 +2008,8 @@ class ServiceInfo(RecordUpdateListener):
                     if self.server is not None:
                         out.add_question_or_one_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
                         out.add_question_or_all_cache(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
+                    if not out.questions:
+                        return True
                     zc.send(out)
                     next_ = now + delay
                     delay *= 2
