@@ -1664,9 +1664,11 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             ):
                 self._handlers_to_call[key] = state_change
 
-        if record.type == _TYPE_PTR and record.name in self.types:
-            assert isinstance(record, DNSPointer)
-            expired = record.is_expired(now)
+        expired = record.is_expired(now)
+
+        if isinstance(record, DNSPointer):
+            if record.name not in self.types:
+                return
             service_key = record.alias.lower()
             try:
                 old_record = self._services[record.name][service_key]
@@ -1685,12 +1687,13 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             expires = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
             if expires < self._next_time[record.name]:
                 self._next_time[record.name] = expires
+            return
 
-        elif record.type == _TYPE_A or record.type == _TYPE_AAAA:
-            assert isinstance(record, DNSAddress)
-            if record.is_expired(now):
-                return
+        # If its expired or already exists in the cache it cannot be updated.
+        if expired or self.zc.cache.get(record):
+            return
 
+        if isinstance(record, DNSAddress):
             # Only trigger an updated event if the address is new
             if record.address in set(
                 service.address
@@ -1704,11 +1707,13 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                 type_ = self._record_matching_type(service)
                 if type_:
                     enqueue_callback(ServiceStateChange.Updated, type_, service.name)
+                    break
 
-        elif not record.is_expired(now):
-            type_ = self._record_matching_type(record)
-            if type_:
-                enqueue_callback(ServiceStateChange.Updated, type_, record.name)
+            return
+
+        type_ = self._record_matching_type(record)
+        if type_:
+            enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
         self.done = True
