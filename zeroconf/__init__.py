@@ -1574,7 +1574,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     ) -> None:
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        self.types = set(type_ if isinstance(type_, list) else [type_])
+        self.types = set(type_ if isinstance(type_, list) else [type_])  # type: Set[str]
         for check_type_ in self.types:
             if not check_type_.endswith(service_type_name(check_type_, strict=False)):
                 raise BadTypeInNameException
@@ -1590,7 +1590,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         current_time = current_time_millis()
         self._next_time = {check_type_: current_time for check_type_ in self.types}
         self._delay = {check_type_: delay for check_type_ in self.types}
-        self._handlers_to_call = OrderedDict()  # type: OrderedDict[str, Tuple[str, ServiceStateChange]]
+        self._handlers_to_call = OrderedDict()  # type: OrderedDict[Tuple[str, str], ServiceStateChange]
 
         self._service_state_changed = Signal()
 
@@ -1655,20 +1655,16 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             # Code to ensure we only do a single update message
             # Precedence is; Added, Remove, Update
-
+            key = (name, type_)
             if (
                 state_change is ServiceStateChange.Added
                 or (
                     state_change is ServiceStateChange.Removed
-                    and (
-                        self._handlers_to_call.get(name) is ServiceStateChange.Updated
-                        or self._handlers_to_call.get(name) is ServiceStateChange.Added
-                        or self._handlers_to_call.get(name) is None
-                    )
+                    and self._handlers_to_call.get(key) != ServiceStateChange.Added
                 )
-                or (state_change is ServiceStateChange.Updated and name not in self._handlers_to_call)
+                or (state_change is ServiceStateChange.Updated and key not in self._handlers_to_call)
             ):
-                self._handlers_to_call[name] = (type_, state_change)
+                self._handlers_to_call[key] = state_change
 
         if record.type == _TYPE_PTR and record.name in self.types:
             assert isinstance(record, DNSPointer)
@@ -1753,12 +1749,12 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
-                    (name, service_type_state_change) = self._handlers_to_call.popitem(False)
+                    (name_type, state_change) = self._handlers_to_call.popitem(False)
                 self._service_state_changed.fire(
                     zeroconf=self.zc,
-                    service_type=service_type_state_change[0],
-                    name=name,
-                    state_change=service_type_state_change[1],
+                    service_type=name_type[1],
+                    name=name_type[0],
+                    state_change=state_change,
                 )
 
 
