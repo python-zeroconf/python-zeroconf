@@ -1642,6 +1642,10 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
 
+    def _record_matching_type(self, record: DNSRecord) -> Optional[str]:
+        """Return the type if the record matches one of the types we are browsing."""
+        return next((type_ for type_ in self.types if record.name.endswith(type_)), None)
+
     def update_record(self, zc: 'Zeroconf', now: float, record: DNSRecord) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
@@ -1707,14 +1711,14 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
             # Iterate through the DNSCache and callback any services that use this address
             for service in self.zc.cache.entries_with_server(record.name):
-                for type_ in self.types:
-                    if service.name.endswith(type_):
-                        enqueue_callback(ServiceStateChange.Updated, type_, service.name)
+                type_ = self._record_matching_type(service)
+                if type_:
+                    enqueue_callback(ServiceStateChange.Updated, type_, service.name)
 
         elif not record.is_expired(now):
-            for type_ in self.types:
-                if record.name.endswith(type_):
-                    enqueue_callback(ServiceStateChange.Updated, type_, record.name)
+            type_ = self._record_matching_type(record)
+            if type_:
+                enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
         self.done = True
