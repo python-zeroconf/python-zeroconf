@@ -106,13 +106,17 @@ class AsyncZeroconf:
         instance_name_from_service_info(info)
         if cooperating_responders:
             return
+        self._raise_on_name_conflict(info)
         for i in range(3):
-            # check for a name conflict
-            if self.zeroconf.cache.current_entry_with_name_and_alias(info.type, info.name):
-                raise NonUniqueNameException
             if i != 0:
                 await asyncio.sleep(_CHECK_TIME / 1000)
             await self.loop.run_in_executor(None, self.zeroconf.send_service_query, info)
+            self._raise_on_name_conflict(info)
+
+    def _raise_on_name_conflict(self, info: ServiceInfo) -> None:
+        """Raise NonUniqueNameException if the ServiceInfo has a conflict."""
+        if self.zeroconf.cache.current_entry_with_name_and_alias(info.type, info.name):
+            raise NonUniqueNameException
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
         """Unregister a service.
