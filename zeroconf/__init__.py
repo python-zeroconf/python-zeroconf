@@ -1696,12 +1696,11 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
         if isinstance(record, DNSAddress):
             # Only trigger an updated event if the address is new
-            current_addresses = set()
-            for service in zc.cache.entries_with_name(record.name):
-                if isinstance(service, DNSAddress):
-                    current_addresses.add(service.address)
-
-            if record.address in current_addresses:
+            if record.address in set(
+                service.address
+                for service in zc.cache.entries_with_name(record.name)
+                if isinstance(service, DNSAddress)
+            ):
                 return
 
             # Iterate through the DNSCache and callback any services that use this address
