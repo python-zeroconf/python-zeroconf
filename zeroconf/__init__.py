@@ -968,8 +968,9 @@ class DNSOutgoing:
 
     def add_answer_at_time(self, record: Optional[DNSRecord], now: Union[float, int]) -> None:
         """Adds an answer if it does not expire by a certain time"""
-        if record is not None and now == 0 or not record.is_expired(now):
-            self.answers.append((record, now))
+        if record is not None:
+            if now == 0 or not record.is_expired(now):
+                self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
         """Adds an authoritative answer"""
@@ -1308,6 +1309,7 @@ class DNSCache:
         for cached_entry in reversed(self.cache.get(entry.key, [])):
             if entry.__eq__(cached_entry):
                 return cached_entry
+        return None
 
     def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
         """Gets the first matching entry by details. Returns None if no entries match."""
@@ -1578,7 +1580,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     ) -> None:
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        self.types = set(type_ if isinstance(type_, list) else [type_])
+        self.types = set(type_ if isinstance(type_, list) else [type_])  # type: Set[str]
         for check_type_ in self.types:
             if not check_type_.endswith(service_type_name(check_type_, strict=False)):
                 raise BadTypeInNameException
@@ -1646,7 +1648,7 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
 
-    def _record_matching_type(self, record: DNSRecord) -> bool:
+    def _record_matching_type(self, record: DNSRecord) -> Optional[str]:
         """Check if the record is one of the types we are browsing."""
         for type_ in self.types:
             if record.name.endswith(type_):
@@ -1993,11 +1995,11 @@ class ServiceInfo(RecordUpdateListener):
         return self._is_complete
 
     @property
-    def _is_complete(self):
+    def _is_complete(self) -> bool:
         """The ServiceInfo has all expected properties."""
         # Our cache adder ALWAYS adds all the addreses first to ensure
         # we do not miss any since the check is for any addresses
-        return self.server is not None and self.text is not None and self._addresses
+        return bool(self.server is not None and self.text is not None and self._addresses)
 
     def request(self, zc: 'Zeroconf', timeout: float) -> bool:
         """Returns true if the service could be discovered on the
@@ -2834,7 +2836,9 @@ class Zeroconf(QuietLogger):
             # processsed
             for record in removes:
                 self.cache.remove(record)
-            for record in address_adds + other_adds:
+            for record in address_adds:
+                self.cache.add(record)
+            for record in other_adds:
                 self.cache.add(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
