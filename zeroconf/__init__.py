@@ -1975,7 +1975,7 @@ class ServiceInfo(RecordUpdateListener):
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
             # If there is a srv record, A and AAAA will already
-            # be called back so we do not want to do it twice
+            # be called and we do not want to do it twice
             self.update_record(zc, now, cached_srv_record)
         elif self.server is not None:
             self._update_addresses_from_cache(zc, now)
@@ -1987,9 +1987,7 @@ class ServiceInfo(RecordUpdateListener):
     @property
     def _is_complete(self) -> bool:
         """The ServiceInfo has all expected properties."""
-        # Our cache adder ALWAYS adds all the addreses first to ensure
-        # we do not miss any since the check is for any addresses
-        return bool(self.server is not None and self.text is not None and self._addresses)
+        return not (self.server is None or self.text is None or not self._addresses)
 
     def request(self, zc: 'Zeroconf', timeout: float) -> bool:
         """Returns true if the service could be discovered on the
