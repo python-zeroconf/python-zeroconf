@@ -2819,13 +2819,16 @@ class Zeroconf(QuietLogger):
             # that any ServiceBrowser that is going to call
             # zc.get_service_info will see the cached value
             # but ONLY after all the record updates have been
-            # processsed
-            for record in removes:
-                self.cache.remove(record)
+            # processsed.
             for record in address_adds:
                 self.cache.add(record)
             for record in other_adds:
                 self.cache.add(record)
+            # Removes are processed last since
+            # ServiceInfo could generate an un-needed query
+            # because the data was not yet populated.
+            for record in removes:
+                self.cache.remove(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
