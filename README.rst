@@ -134,7 +134,68 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 (Unreleased)
+
+* Remove Callable quoting (#371) @bdraco
+
+* Abstract check to see if a record matches a type the ServiceBrowser wants (#369) @bdraco
+
+* Reduce complexity of ServiceBrowser enqueue_callback (#368) @bdraco
+
+* Fix empty answers being added in ServiceInfo.request (#367) @bdraco
+
+* Ensure ServiceInfo populates all AAAA records (#366) @bdraco
+
+  Use get_all_by_details to ensure all records are loaded
+  into addresses.
+
+  Only load A/AAAA records from cache once in load_from_cache
+  if there is a SRV record present
+
+  Move duplicate code that checked if the ServiceInfo was complete
+  into its own function
+
+* Remove black python 3.5 exception block (#365) @bdraco
+
+* Small cleanup of ServiceInfo.update_record (#364) @bdraco
+
+* Add new cache function get_all_by_details (#363) @bdraco
+  When working with IPv6, multiple AAAA records can exist
+  for a given host. get_by_details would only return the
+  latest record in the cache.
+
+  Fix a case where the cache list can change during
+  iteration
+
+* Small cleanups to asyncio tests (#362) @bdraco
+
+* Improve test coverage for name conflicts (#357) @bdraco
+
+* Return task objects created by AsyncZeroconf (#360) @nocarryr
+
 0.31.0
+======
+
+* Separated cache loading from I/O in ServiceInfo and fixed cache lookup (#356),
+  thanks to J. Nick Koston.
+  
+  The ServiceInfo class gained a load_from_cache() method to only fetch information
+  from Zeroconf cache (if it exists) with no IO performed. Additionally this should
+  reduce IO in cases where cache lookups were previously incorrectly failing.
+
+0.30.0
+======
+
+* Some nice refactoring work including removal of the Reaper thread,
+  thanks to J. Nick Koston.
+
+* Fixed a Windows-specific The requested address is not valid in its context regression,
+  thanks to Timothee ‘TTimo’ Besset and J. Nick Koston.
+
+* Provided an asyncio-compatible service registration layer (in the zeroconf.asyncio module),
+  thanks to J. Nick Koston.
+
+0.29.0
 ======
 
 * A single socket is used for listening on responding when `InterfaceChoice.Default` is chosen.
