@@ -1733,18 +1733,21 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if self.zc.done or self.done:
                 return
             now = current_time_millis()
+            out = None
             for type_ in self.types:
                 if self._next_time[type_] > now:
                     continue
-                out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=self.multicast)
+                if not out:
+                    out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=self.multicast)
                 out.add_question(DNSQuestion(type_, _TYPE_PTR, _CLASS_IN))
                 for record in self._services[type_].values():
                     if not record.is_stale(now):
                         out.add_answer_at_time(record, now)
-
-                self.zc.send(out, addr=self.addr, port=self.port)
                 self._next_time[type_] = now + self._delay[type_]
                 self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
+
+            if out:
+                self.zc.send(out, addr=self.addr, port=self.port)
 
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
