@@ -137,6 +137,8 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+* Ensure the cache is checked for name conflict after final service query with asyncio (#382) @bdraco
+
 * Complete ServiceInfo request as soon as all questions are answered (#380) @bdraco
 
   Closes a small race condition where there were no questions
