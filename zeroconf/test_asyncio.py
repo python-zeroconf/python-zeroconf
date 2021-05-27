@@ -16,8 +16,6 @@ from . import (
     ServiceListener,
     ServiceNameAlreadyRegistered,
     Zeroconf,
-    _REGISTER_TIME,
-    _UNREGISTER_TIME,
 )
 from .asyncio import AsyncZeroconf
 
