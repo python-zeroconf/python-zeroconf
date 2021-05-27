@@ -1033,10 +1033,10 @@ class DNSOutgoing:
         cached_entries = zc.cache.get_all_by_details(name, type_, class_)
         if not cached_entries:
             self.add_question(DNSQuestion(name, type_, class_))
-        else:
-            for cached_entry in cached_entries:
-                if not cached_entry.is_stale(now):
-                    self.add_answer_at_time(cached_entry, now)
+            return
+        for cached_entry in cached_entries:
+            if not cached_entry.is_stale(now):
+                self.add_answer_at_time(cached_entry, now)
 
     def pack(self, format_: Union[bytes, str], value: Any) -> None:
         self.data.append(struct.pack(format_, value))
@@ -1763,7 +1763,6 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if len(self._handlers_to_call) > 0 and not self.zc.done:
                 with self.zc._handlers_lock:
                     (name_type, state_change) = self._handlers_to_call.popitem(False)
-
                 self._service_state_changed.fire(
                     zeroconf=self.zc,
                     service_type=name_type[1],
@@ -1951,26 +1950,24 @@ class ServiceInfo(RecordUpdateListener):
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
         """Updates service information from a DNS record"""
-        if record is not None and not record.is_expired(now):
-            if record.type in [_TYPE_A, _TYPE_AAAA]:
-                assert isinstance(record, DNSAddress)
-                if record.key == self.server_key:
-                    if record.address not in self._addresses:
-                        self._addresses.append(record.address)
-            elif record.type == _TYPE_SRV:
-                assert isinstance(record, DNSService)
-                if record.key == self.key:
-                    self.name = record.name
-                    self.server = record.server
-                    self.server_key = record.server.lower()
-                    self.port = record.port
-                    self.weight = record.weight
-                    self.priority = record.priority
-                    self._update_addresses_from_cache(zc, now)
-            elif record.type == _TYPE_TXT:
-                assert isinstance(record, DNSText)
-                if record.key == self.key:
-                    self._set_text(record.text)
+        if record is None or record.is_expired(now):
+            return
+        if isinstance(record, DNSAddress):
+            if record.key == self.server_key and record.address not in self._addresses:
+                self._addresses.append(record.address)
+        elif isinstance(record, DNSService):
+            if record.key != self.key:
+                return
+            self.name = record.name
+            self.server = record.server
+            self.server_key = record.server.lower()
+            self.port = record.port
+            self.weight = record.weight
+            self.priority = record.priority
+            self._update_addresses_from_cache(zc, now)
+        elif isinstance(record, DNSText):
+            if record.key == self.key:
+                self._set_text(record.text)
 
     def _update_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Update the address records from the cache."""
@@ -2822,25 +2819,23 @@ class Zeroconf(QuietLogger):
             return
 
         # Only hold the lock if we have updates
-        if updates:
-            with self._handlers_lock:
-                for record in updates:
-                    self.update_record(now, record)
-
-        # The cache adds must be processed AFTER we trigger
-        # the updates since we compare existing data
-        # with the new data and updating the cache
-        # ahead of update_record will cause listeners
-        # to miss changes
-        #
-        # We must process address adds before non-addresses
-        # otherwise a fetch of ServiceInfo may miss an address
-        # because it thinks the cache is complete
-        #
-        for record in removes:
-            self.cache.remove(record)
-        for record in address_adds + other_adds:
-            self.cache.add(record)
+        with self._handlers_lock:
+            for record in updates:
+                self.update_record(now, record)
+            # The cache adds must be processed AFTER we trigger
+            # the updates since we compare existing data
+            # with the new data and updating the cache
+            # ahead of update_record will cause listeners
+            # to miss changes
+            #
+            # We must process address adds before non-addresses
+            # otherwise a fetch of ServiceInfo may miss an address
+            # because it thinks the cache is complete
+            #
+            for record in removes:
+                self.cache.remove(record)
+            for record in address_adds + other_adds:
+                self.cache.add(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
