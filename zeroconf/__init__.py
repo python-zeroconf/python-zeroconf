@@ -1717,10 +1717,11 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
                     enqueue_callback(ServiceStateChange.Updated, type_, service.name)
                     break
 
-        else:
-            type_ = self._record_matching_type(record)
-            if type_:
-                enqueue_callback(ServiceStateChange.Updated, type_, record.name)
+            return
+
+        type_ = self._record_matching_type(record)
+        if type_:
+            enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
         self.done = True
