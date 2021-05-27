@@ -28,6 +28,6 @@ jobs:
     - name: Run tests
       run: make ci
       env:
-        SKIP_IPV6: 1
+        SKIP_IPV6: 0
     - name: Report coverage to Codecov
       uses: codecov/codecov-action@v1
