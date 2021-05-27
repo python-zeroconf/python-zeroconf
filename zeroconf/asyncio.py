@@ -137,6 +137,4 @@ class AsyncZeroconf:
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        import pprint
-        pprint.pprint(self.zeroconf.cache.cache)
         await self.loop.run_in_executor(None, self.zeroconf.close)
