@@ -37,6 +37,15 @@ log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
 
 
+@pytest.fixture(autouse=True)
+def verify_threads_ended():
+    """Verify that the threads are not running after the test."""
+    threads_before = frozenset(threading.enumerate())
+    yield
+    threads = frozenset(threading.enumerate()) - threads_before
+    assert not threads
+
+
 def setup_module():
     global original_logging_level
     original_logging_level = log.level
@@ -924,6 +933,7 @@ class TestRegistrar(unittest.TestCase):
         zc.unregister_service(info)
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
+        zc.close()
 
     def test_name_conflicts(self):
         # instantiate a zeroconf instance
@@ -952,6 +962,7 @@ class TestRegistrar(unittest.TestCase):
         )
         with pytest.raises(r.NonUniqueNameException):
             zc.register_service(conflicting_info)
+        zc.close()
 
 
 class TestServiceRegistry(unittest.TestCase):
@@ -1598,6 +1609,7 @@ class TestServiceInfo(unittest.TestCase):
             ),
         )
         assert new_address not in info.addresses
+        zc.close()
 
     def test_get_info_partial(self):
 
@@ -2188,6 +2200,7 @@ def test_ptr_optimization():
 
     # unregister
     zc.unregister_service(info)
+    zc.close()
 
 
 def test_dns_compression_rollback_for_corruption():
