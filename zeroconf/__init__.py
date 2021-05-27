@@ -1691,16 +1691,13 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if record.is_expired(now):
                 return
 
-            address_changed = False
+            # Only trigger an updated event if the address is new
+            current_addresses = set()
             for service in zc.cache.entries_with_name(record.name):
-                if isinstance(service, DNSAddress) and service.address != record.address:
-                    address_changed = True
-                    break
+                if isinstance(service, DNSAddress):
+                    current_addresses.add(service.address)
 
-            # Avoid iterating the entire DNSCache if the address has not changed
-            # as this is an expensive operation when there many hosts
-            # generating zeroconf traffic.
-            if not address_changed:
+            if record.address in current_addresses:
                 return
 
             # Iterate through the DNSCache and callback any services that use this address
@@ -2754,7 +2751,10 @@ class Zeroconf(QuietLogger):
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
-        updates = []  # type: List[Tuple[float, DNSRecord, Optional[DNSRecord]]]
+        updates = []  # type: List[DNSRecord]
+        address_adds = []  # type: List[DNSAddress]
+        other_adds = []  # type: List[DNSRecord]
+        removes = []  # type: List[DNSRecord]
         now = current_time_millis()
         for record in msg.answers:
 
@@ -2769,7 +2769,7 @@ class Zeroconf(QuietLogger):
                     if entry == record:
                         updated = False
                     if record.created - entry.created > 1000 and entry not in msg.answers:
-                        self.cache.remove(entry)
+                        removes.append(entry)
 
             expired = record.is_expired(now)
             maybe_entry = self.cache.get(record)
@@ -2777,22 +2777,47 @@ class Zeroconf(QuietLogger):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
-                    self.cache.add(record)
+                    if isinstance(record, DNSAddress):
+                        address_adds.append(record)
+                    else:
+                        other_adds.append(record)
                 if updated:
-                    updates.append((now, record, None))
+                    updates.append(record)
             elif maybe_entry is not None:
-                updates.append((now, record, maybe_entry))
+                updates.append(record)
+                removes.append(record)
 
-        if not updates:
+        if not updates and not address_adds and not other_adds and not removes:
             return
 
         # Only hold the lock if we have updates
         with self._handlers_lock:
-            for update in updates:
-                now, record, entry_to_remove = update
-                self.update_record(update[0], update[1])
-                if entry_to_remove:
-                    self.cache.remove(entry_to_remove)
+            for record in updates:
+                self.update_record(now, record)
+            # The cache adds must be processed AFTER we trigger
+            # the updates since we compare existing data
+            # with the new data and updating the cache
+            # ahead of update_record will cause listeners
+            # to miss changes
+            #
+            # We must process address adds before non-addresses
+            # otherwise a fetch of ServiceInfo may miss an address
+            # because it thinks the cache is complete
+            #
+            # The cache is processed under the lock to ensure
+            # that any ServiceBrowser that is going to call
+            # zc.get_service_info will see the cached value
+            # but ONLY after all the record updates have been
+            # processsed.
+            for record in address_adds:
+                self.cache.add(record)
+            for record in other_adds:
+                self.cache.add(record)
+            # Removes are processed last since
+            # ServiceInfo could generate an un-needed query
+            # because the data was not yet populated.
+            for record in removes:
+                self.cache.remove(record)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
