@@ -82,7 +82,8 @@ async def test_async_service_registration() -> None:
     await asyncio.sleep(_UNREGISTER_TIME / 1000 * 3)
 
     import pprint
-    pprint.pprint(aiozc.zeroconf.cache.cache)    
+
+    pprint.pprint(aiozc.zeroconf.cache.cache)
     await aiozc.async_close()
 
     assert calls == [
@@ -131,9 +132,9 @@ async def test_async_service_registration_name_conflict() -> None:
         addresses=[socket.inet_aton("10.0.1.3")],
     )
 
-
     import pprint
-    pprint.pprint(aiozc.zeroconf.cache.cache)     
+
+    pprint.pprint(aiozc.zeroconf.cache.cache)
     with pytest.raises(NonUniqueNameException):
         await aiozc.async_register_service(conflicting_info)
 
@@ -161,9 +162,9 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
     )
     info.type = "_wrong._tcp.local."
 
-
     import pprint
-    pprint.pprint(aiozc.zeroconf.cache.cache)     
+
+    pprint.pprint(aiozc.zeroconf.cache.cache)
     with pytest.raises(BadTypeInNameException):
         await aiozc.async_register_service(info)
     await aiozc.async_close()
@@ -227,7 +228,8 @@ async def test_async_tasks() -> None:
     await task
 
     import pprint
-    pprint.pprint(aiozc.zeroconf.cache.cache)     
+
+    pprint.pprint(aiozc.zeroconf.cache.cache)
     await aiozc.async_close()
 
     assert calls == [
