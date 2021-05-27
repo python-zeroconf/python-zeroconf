@@ -2782,23 +2782,23 @@ class Zeroconf(QuietLogger):
 
         for record in msg.answers:
             updated = True
+
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                cache_entries = self.cache.get_all_by_details(record.name, record.type, record.class_)
                 # rfc6762#section-10.2 para 2
                 # Since unique is set, all old records with that name, rrtype,
                 # and rrclass that were received more than one second ago are declared
                 # invalid, and marked to expire from the cache in one second.
-                for entry in cache_entries:
+                for entry in self.cache.get_all_by_details(record.name, record.type, record.class_):
                     if entry == record:
                         updated = False
                     if record.created - entry.created > 1000 and entry not in msg.answers:
                         removes.append(entry)
 
             expired = record.is_expired(now)
-            existing_cache_entry = self.cache.get(record)
+            maybe_entry = self.cache.get(record)
             if not expired:
-                if existing_cache_entry is not None:
-                    existing_cache_entry.reset_ttl(record)
+                if maybe_entry is not None:
+                    maybe_entry.reset_ttl(record)
                 else:
                     if isinstance(record, DNSAddress):
                         address_adds.append(record)
@@ -2806,7 +2806,7 @@ class Zeroconf(QuietLogger):
                         other_adds.append(record)
                 if updated:
                     updates.append(record)
-            elif existing_cache_entry is not None:
+            elif maybe_entry is not None:
                 updates.append(record)
                 removes.append(record)
 
