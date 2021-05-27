@@ -610,6 +610,8 @@ class Framework(unittest.TestCase):
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is not None
             assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
+            all_dns_text = zeroconf.cache.get_all_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert [dns_text] == all_dns_text
 
             # https://tools.ietf.org/html/rfc6762#section-10.2
             # Instead of merging this new record additively into the cache in addition
