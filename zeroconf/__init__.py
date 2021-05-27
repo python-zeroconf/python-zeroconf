@@ -2832,6 +2832,11 @@ class Zeroconf(QuietLogger):
             # otherwise a fetch of ServiceInfo may miss an address
             # because it thinks the cache is complete
             #
+            # The cache is processed under the lock to ensure
+            # that any ServiceBrowser that is going to call
+            # zc.get_service_info will see the cached value
+            # but ONLY after all the record updates have been
+            # processsed
             for record in removes:
                 self.cache.remove(record)
             for record in address_adds + other_adds:
