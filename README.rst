@@ -135,7 +135,7 @@ Changelog
 =========
 
 0.32.0 (Unreleased)
-======
+===================
 
 * Remove Callable quoting (#371) @bdraco
 
@@ -174,7 +174,6 @@ Changelog
 
 * Return task objects created by AsyncZeroconf (#360) @nocarryr
 
-
 0.31.0
 ======
 
@@ -184,7 +183,6 @@ Changelog
   The ServiceInfo class gained a load_from_cache() method to only fetch information
   from Zeroconf cache (if it exists) with no IO performed. Additionally this should
   reduce IO in cases where cache lookups were previously incorrectly failing.
-
 
 0.30.0
 ======
