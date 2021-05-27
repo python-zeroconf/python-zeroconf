@@ -1306,7 +1306,7 @@ class DNSCache:
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
-        for cached_entry in reversed(self.cache.get(entry.key, [])):
+        for cached_entry in reversed(self.entries_with_name(entry.key)):
             if entry.__eq__(cached_entry):
                 return cached_entry
         return None
@@ -1318,11 +1318,7 @@ class DNSCache:
     def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
         match_entry = DNSEntry(name, type_, class_)
-        return [
-            cached_entry
-            for cached_entry in self.cache.get(name.lower(), [])
-            if match_entry.__eq__(cached_entry)
-        ]
+        return [entry for entry in self.entries_with_name(name) if match_entry.__eq__(entry)]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
