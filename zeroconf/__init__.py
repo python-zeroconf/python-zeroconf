@@ -1014,6 +1014,29 @@ class DNSOutgoing:
         """
         self.additionals.append(record)
 
+    def add_question_or_one_cache(
+        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
+    ) -> None:
+        """Add a question if it is not already cached."""
+        cached_entry = zc.cache.get_by_details(name, type_, class_)
+        if not cached_entry:
+            self.add_question(DNSQuestion(name, type_, class_))
+        else:
+            self.add_answer_at_time(cached_entry, now)
+
+    def add_question_or_all_cache(
+        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
+    ) -> None:
+        """Add a question if it is not already cached.
+        This is currently only used for IPv6 addresses.
+        """
+        cached_entries = zc.cache.get_all_by_details(name, type_, class_)
+        if not cached_entries:
+            self.add_question(DNSQuestion(name, type_, class_))
+            return
+        for cached_entry in cached_entries:
+            self.add_answer_at_time(cached_entry, now)
+
     def pack(self, format_: Union[bytes, str], value: Any) -> None:
         self.data.append(struct.pack(format_, value))
         self.size += struct.calcsize(format_)
@@ -1974,30 +1997,19 @@ class ServiceInfo(RecordUpdateListener):
         next_ = now
         last = now + timeout
         try:
-            zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
+            # Do not set a question on the listener to preload from cache
+            # since we just checked it above in load_from_cache
+            zc.add_listener(self, None)
             while not self._is_complete:
                 if last <= now:
                     return False
                 if next_ <= now:
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
-                    cached_entry = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
-                    if not cached_entry:
-                        out.add_question(DNSQuestion(self.name, _TYPE_SRV, _CLASS_IN))
-                        out.add_answer_at_time(cached_entry, now)
-                    cached_entry = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
-                    if not cached_entry:
-                        out.add_question(DNSQuestion(self.name, _TYPE_TXT, _CLASS_IN))
-                        out.add_answer_at_time(cached_entry, now)
-
+                    out.add_question_or_one_cache(zc, now, self.name, _TYPE_SRV, _CLASS_IN)
+                    out.add_question_or_one_cache(zc, now, self.name, _TYPE_TXT, _CLASS_IN)
                     if self.server is not None:
-                        cached_entry = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
-                        if not cached_entry:
-                            out.add_question(DNSQuestion(self.server, _TYPE_A, _CLASS_IN))
-                            out.add_answer_at_time(cached_entry, now)
-                        cached_entry = zc.cache.get_by_details(self.name, _TYPE_AAAA, _CLASS_IN)
-                        if not cached_entry:
-                            out.add_question(DNSQuestion(self.server, _TYPE_AAAA, _CLASS_IN))
-                            out.add_answer_at_time(cached_entry, now)
+                        out.add_question_or_one_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
+                        out.add_question_or_all_cache(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
                     zc.send(out)
                     next_ = now + delay
                     delay *= 2
