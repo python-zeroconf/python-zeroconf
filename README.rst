@@ -137,13 +137,20 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
-* Ensure duplicate packets do not trigger duplicate updates (#376)
+* Complete ServiceInfo request as soon as all questions are answered (#380) @bdraco
+
+  Closes a small race condition where there were no questions
+  to ask because the cache was populated in between checks
+
+* Coalesce browser questions scheduled at the same time (#379) @bdraco
+
+* Ensure duplicate packets do not trigger duplicate updates (#376) @bdraco
 
   If TXT or SRV records update was already processed and then
   recieved again, it was possible for a second update to be
   called back in the ServiceBrowser
 
-* Only trigger a ServiceStateChange.Updated event when an ip address is added (#375)
+* Only trigger a ServiceStateChange.Updated event when an ip address is added (#375) @bdraco
 
 * Fix RFC6762 Section 10.2 paragraph 2 compliance (#374) @bdraco
 
