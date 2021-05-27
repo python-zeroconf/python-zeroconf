@@ -1627,8 +1627,8 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             self.service_state_changed.register_handler(h)
 
         self.start()
-        self.name = "zeroconf-ServiceBrowser_%s_%s" % (
-            '-'.join(self.types),
+        self.name = "zeroconf-ServiceBrowser-%s-%s" % (
+            '-'.join([type_[:-7] for type_ in self.types]),
             getattr(self, 'native_id', self.ident),
         )
 
