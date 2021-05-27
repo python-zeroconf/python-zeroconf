@@ -2783,9 +2783,6 @@ class Zeroconf(QuietLogger):
         for record in msg.answers:
             updated = True
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                # Since the cache format is keyed on the lower case record name
-                # we can avoid iterating everything in the cache and
-                # only look though entries for the specific name.
                 cache_entries = self.cache.get_all_by_details(record.name, record.type, record.class_)
                 entries_not_in_answers = [entry for entry in cache_entries if entry not in msg.answers]
                 # rfc6762#section-10.2 para 2
