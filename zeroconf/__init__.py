@@ -1929,27 +1929,38 @@ class ServiceInfo(RecordUpdateListener):
             self.port = record.port
             self.weight = record.weight
             self.priority = record.priority
-            self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN))
-            self.update_record(zc, now, zc.cache.get_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
+            self._update_addresses_from_cache(zc, now)
         elif isinstance(record, DNSText):
             if record.key == self.key:
                 self._set_text(record.text)
 
+    def _update_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
+        """Update the address records from the cache."""
+        cached_a_record = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
+        if cached_a_record:
+            self.update_record(zc, now, cached_a_record)
+        for cached_aaaa_record in zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN):
+            self.update_record(zc, now, cached_aaaa_record)
+
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache."""
         now = current_time_millis()
-        record_types_for_check_cache = [(_TYPE_SRV, _CLASS_IN), (_TYPE_TXT, _CLASS_IN)]
-        if self.server is not None:
-            record_types_for_check_cache.append((_TYPE_A, _CLASS_IN))
-            record_types_for_check_cache.append((_TYPE_AAAA, _CLASS_IN))
-        for record_type in record_types_for_check_cache:
-            cached = zc.cache.get_by_details(self.name, *record_type)
-            if cached:
-                self.update_record(zc, now, cached)
+        cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
+        if cached_srv_record:
+            # If there is a srv record, A and AAAA will already
+            # be called and we do not want to do it twice
+            self.update_record(zc, now, cached_srv_record)
+        elif self.server is not None:
+            self._update_addresses_from_cache(zc, now)
+        cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
+        if cached_txt_record:
+            self.update_record(zc, now, cached_txt_record)
+        return self._is_complete
 
-        if self.server is not None and self.text is not None and self._addresses:
-            return True
-        return False
+    @property
+    def _is_complete(self) -> bool:
+        """The ServiceInfo has all expected properties."""
+        return not (self.server is None or self.text is None or not self._addresses)
 
     def request(self, zc: 'Zeroconf', timeout: float) -> bool:
         """Returns true if the service could be discovered on the
@@ -1964,7 +1975,7 @@ class ServiceInfo(RecordUpdateListener):
         last = now + timeout
         try:
             zc.add_listener(self, DNSQuestion(self.name, _TYPE_ANY, _CLASS_IN))
-            while self.server is None or self.text is None or not self._addresses:
+            while not self._is_complete:
                 if last <= now:
                     return False
                 if next_ <= now:
