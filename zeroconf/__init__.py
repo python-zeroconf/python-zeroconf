@@ -1373,7 +1373,6 @@ class Engine(threading.Thread):
         self.condition = threading.Condition()
         self.socketpair = socket.socketpair()
         self._last_cache_cleanup = 0.0
-        self.start()
         self.name = "zeroconf-Engine-%s" % (getattr(self, 'native_id', self.ident),)
 
     def run(self) -> None:
@@ -2539,6 +2538,10 @@ class Zeroconf(QuietLogger):
         if self.multi_socket:
             for s in self._respond_sockets:
                 self.engine.add_reader(self.listener, s)
+        # Start the engine only after all
+        # the readers have been added to avoid
+        # missing any packets that are on the wire
+        self.engine.start()
 
     @property
     def done(self) -> bool:
