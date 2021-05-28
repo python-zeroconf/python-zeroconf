@@ -1898,7 +1898,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                 zeroconf.handle_response(
                     mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120)
                 )
-            service_add_event.wait(wait_time)
+                service_add_event.wait(wait_time)
             assert called_with_refresh_time_check is True
             assert service_added_count == 3
             assert service_removed_count == 0
