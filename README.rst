@@ -137,6 +137,23 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+* Ensure ZeroconfServiceTypes.find always cancels the ServiceBrowser (#389) @bdraco
+
+  There was a short window where the ServiceBrowser thread
+  could be left running after Zeroconf is closed because
+  the .join() was never waited for when a new Zeroconf
+  object was created
+
+* Simplify DNSPointer processing in ServiceBrowser (#386) @bdraco
+
+* Breaking change: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
+
+  When manually creating a zeroconf.Engine object, it is no longer started automatically.
+  It must manually be started by calling .start() on the created object.
+
+  The Engine thread is now started after all the listeners have been added to avoid a
+  race condition where packets could be missed at startup.
+
 * Ensure the cache is checked for name conflict after final service query with asyncio (#382) @bdraco
 
 * Complete ServiceInfo request as soon as all questions are answered (#380) @bdraco
