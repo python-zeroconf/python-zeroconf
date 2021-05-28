@@ -137,6 +137,8 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+* Fix IPv6 setup under MacOS when binding to "" (#392) @bdraco
+
 * Ensure ZeroconfServiceTypes.find always cancels the ServiceBrowser (#389) @bdraco
 
   There was a short window where the ServiceBrowser thread
