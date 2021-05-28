@@ -1266,6 +1266,7 @@ class ListenerTest(unittest.TestCase):
         desc.update(properties)
         addresses = [socket.inet_aton("10.0.1.2")]
         if has_working_ipv6() and not os.environ.get('SKIP_IPV6'):
+            addresses.append(socket.inet_pton(socket.AF_INET6, "6001:db8::1"))
             addresses.append(socket.inet_pton(socket.AF_INET6, "2001:db8::1"))
         info_service = ServiceInfo(
             subtype, registration_name, port=80, properties=desc, server="ash-2.local.", addresses=addresses
@@ -1377,6 +1378,7 @@ class TestServiceBrowser(unittest.TestCase):
         service_text = b'path=/~matt1/'
         service_address = '10.0.1.2'
         service_v6_address = "2001:db8::1"
+        service_v6_second_address = "6001:db8::1"
 
         service_added_count = 0
         service_removed_count = 0
@@ -1404,6 +1406,9 @@ class TestServiceBrowser(unittest.TestCase):
                 if enable_ipv6:
                     assert socket.inet_pton(
                         socket.AF_INET6, service_v6_address
+                    ) in service_info.addresses_by_version(r.IPVersion.V6Only)
+                    assert socket.inet_pton(
+                        socket.AF_INET6, service_v6_second_address
                     ) in service_info.addresses_by_version(r.IPVersion.V6Only)
                 assert service_info.text == service_text
                 assert service_info.server == service_server
@@ -1440,6 +1445,16 @@ class TestServiceBrowser(unittest.TestCase):
                         r._CLASS_IN | r._CLASS_UNIQUE,
                         ttl,
                         socket.inet_pton(socket.AF_INET6, service_v6_address),
+                    ),
+                    0,
+                )
+                generated.add_answer_at_time(
+                    r.DNSAddress(
+                        service_server,
+                        r._TYPE_AAAA,
+                        r._CLASS_IN | r._CLASS_UNIQUE,
+                        ttl,
+                        socket.inet_pton(socket.AF_INET6, service_v6_second_address),
                     ),
                     0,
                 )
