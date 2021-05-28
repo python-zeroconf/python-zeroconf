@@ -16,8 +16,11 @@ import threading
 import time
 import unittest
 import unittest.mock
+from functools import lru_cache
 from threading import Event
 from typing import Dict, Optional, cast  # noqa # used in type hints
+
+import ifaddr
 
 import pytest
 
@@ -55,6 +58,28 @@ def setup_module():
 def teardown_module():
     if original_logging_level != logging.NOTSET:
         log.setLevel(original_logging_level)
+
+
+@lru_cache(maxsize=None)
+def has_working_ipv6():
+    """Return True if if the system can bind an IPv6 address."""
+    if not socket.has_ipv6:
+        return False
+
+    try:
+        sock = socket.socket(socket.AF_INET6)
+        sock.bind(('::1', 0))
+    except Exception:
+        return False
+    finally:
+        if sock:
+            sock.close()
+
+    for iface in ifaddr.get_adapters():
+        for addr in iface.ips:
+            if addr.is_IPv6 and iface.index is not None:
+                return True
+    return False
 
 
 class TestDunder(unittest.TestCase):
@@ -550,7 +575,7 @@ class Framework(unittest.TestCase):
         rv.close()
         rv.close()
 
-    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v4_v6(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
@@ -558,7 +583,7 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
         rv.close()
 
-    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v6_only(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
@@ -1092,7 +1117,7 @@ class ServiceTypesQuery(unittest.TestCase):
         finally:
             zeroconf_registrar.close()
 
-    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_v6_records(self):
 
@@ -1124,7 +1149,7 @@ class ServiceTypesQuery(unittest.TestCase):
         finally:
             zeroconf_registrar.close()
 
-    @unittest.skipIf(not socket.has_ipv6, 'Requires IPv6')
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_ipv6(self):
 
@@ -1240,7 +1265,7 @@ class ListenerTest(unittest.TestCase):
         desc = {'path': '/~paulsm/'}  # type: Dict
         desc.update(properties)
         addresses = [socket.inet_aton("10.0.1.2")]
-        if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
+        if has_working_ipv6() and not os.environ.get('SKIP_IPV6'):
             addresses.append(socket.inet_pton(socket.AF_INET6, "2001:db8::1"))
         info_service = ServiceInfo(
             subtype, registration_name, port=80, properties=desc, server="ash-2.local.", addresses=addresses
@@ -1344,7 +1369,7 @@ class ListenerTest(unittest.TestCase):
 
 class TestServiceBrowser(unittest.TestCase):
     def test_update_record(self):
-        enable_ipv6 = socket.has_ipv6 and not os.environ.get('SKIP_IPV6')
+        enable_ipv6 = has_working_ipv6() and not os.environ.get('SKIP_IPV6')
 
         service_name = 'name._type._tcp.local.'
         service_type = '_type._tcp.local.'
@@ -2110,7 +2135,7 @@ def test_multiple_addresses():
     )
     assert info.addresses == [address, address]
 
-    if socket.has_ipv6 and not os.environ.get('SKIP_IPV6'):
+    if has_working_ipv6() and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
         infos = [
