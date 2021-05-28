@@ -2083,11 +2083,11 @@ class ZeroconfServiceTypes(ServiceListener):
         # wait for responses
         time.sleep(timeout)
 
+        browser.cancel()
+
         # close down anything we opened
         if zc is None:
             local_zc.close()
-        else:
-            browser.cancel()
 
         return tuple(sorted(listener.found_services))
 
