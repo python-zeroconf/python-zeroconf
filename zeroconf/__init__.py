@@ -2235,8 +2235,12 @@ def new_socket(
         if ip_version != IPVersion.V6Only:
             # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
             # IP_MULTICAST_LOOP socket options as an unsigned char.
-            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+            try:
+                s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+                s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+            except socket.error as e:
+                if bind_addr[0] != '' or get_errno(e) != errno.EINVAL:  # Fails to set on MacOS
+                    raise
         if ip_version != IPVersion.V4Only:
             # However, char doesn't work here (at least on Linux)
             s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
