@@ -1669,23 +1669,19 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             if record.name not in self.types:
                 return
             service_key = record.alias.lower()
-            try:
-                old_record = self._services[record.name][service_key]
-            except KeyError:
-                if not expired:
-                    self._services[record.name][service_key] = record
-                    enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
+            services_by_type = self._services[record.name]
+            old_record = services_by_type.get(service_key)
+            if old_record is None:
+                services_by_type[service_key] = record
+                enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
+            elif expired:
+                del services_by_type[service_key]
+                enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
             else:
-                if not expired:
-                    old_record.reset_ttl(record)
-                else:
-                    del self._services[record.name][service_key]
-                    enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
-                    return
-
-            expires = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
-            if expires < self._next_time[record.name]:
-                self._next_time[record.name] = expires
+                old_record.reset_ttl(record)
+                expires = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+                if expires < self._next_time[record.name]:
+                    self._next_time[record.name] = expires
             return
 
         # If its expired or already exists in the cache it cannot be updated.
