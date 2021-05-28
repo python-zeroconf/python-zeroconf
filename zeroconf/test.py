@@ -17,11 +17,11 @@ import time
 import unittest
 import unittest.mock
 from threading import Event
-from typing import Dict, Optional  # noqa # used in type hints
-from typing import cast
+from typing import Dict, Optional, cast  # noqa # used in type hints
 from unittest.mock import patch
 
 import ifaddr
+import pytest
 
 import zeroconf as r
 from zeroconf import (
