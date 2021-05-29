@@ -20,9 +20,12 @@
     USA
 """
 import asyncio
+import queue
+import threading
 from typing import Awaitable, Optional
 
 from . import (
+    DNSOutgoing,
     IPVersion,
     InterfaceChoice,
     InterfacesType,
@@ -30,10 +33,46 @@ from . import (
     ServiceInfo,
     Zeroconf,
     _CHECK_TIME,
+    _MDNS_PORT,
     _REGISTER_TIME,
     _UNREGISTER_TIME,
     instance_name_from_service_info,
 )
+
+
+class _AsyncSender(threading.Thread):
+    """A thread to handle sending DNSOutgoing for asyncio."""
+
+    def __init__(self, zc: 'Zeroconf'):
+        """Create the sender thread."""
+        super().__init__()
+        self.zc = zc
+        self.queue = self._get_queue()
+        self.start()
+        self.name = "AsyncZeroconfSender"
+
+    def _get_queue(self) -> queue.Queue:
+        """Create the best available queue type."""
+        if hasattr(queue, "SimpleQueue"):
+            return queue.SimpleQueue()  # type: ignore
+        return queue.Queue()
+
+    def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
+        """Queue a send to be processed by the thread."""
+        self.queue.put((out, addr, port))
+
+    def close(self) -> None:
+        """Close the instance."""
+        self.queue.put(None)
+        self.join()
+
+    def run(self) -> None:
+        """Runner that processes sends FIFO."""
+        while True:
+            event = self.queue.get()
+            if event is None:
+                return
+            self.zc.send(*event)
 
 
 class AsyncZeroconf:
@@ -73,6 +112,7 @@ class AsyncZeroconf:
             ip_version=ip_version,
             apple_p2p=apple_p2p,
         )
+        self.sender = _AsyncSender(self.zeroconf)
         self.loop = asyncio.get_event_loop()
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
@@ -80,7 +120,7 @@ class AsyncZeroconf:
         for i in range(3):
             if i != 0:
                 await asyncio.sleep(interval / 1000)
-            await self.loop.run_in_executor(None, self.zeroconf.send_service_broadcast, info, ttl)
+            self.sender.send(self.zeroconf.generate_service_broadcast(info, ttl))
 
     async def async_register_service(
         self,
@@ -98,7 +138,7 @@ class AsyncZeroconf:
         and therefore can be awaited if necessary.
         """
         await self.async_check_service(info, cooperating_responders)
-        await self.loop.run_in_executor(None, self.zeroconf.registry.add, info)
+        self.zeroconf.registry.add(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_check_service(self, info: ServiceInfo, cooperating_responders: bool = False) -> None:
@@ -110,7 +150,7 @@ class AsyncZeroconf:
         for i in range(3):
             if i != 0:
                 await asyncio.sleep(_CHECK_TIME / 1000)
-            await self.loop.run_in_executor(None, self.zeroconf.send_service_query, info)
+            self.sender.send(self.zeroconf.generate_service_query(info))
             self._raise_on_name_conflict(info)
 
     def _raise_on_name_conflict(self, info: ServiceInfo) -> None:
@@ -124,7 +164,7 @@ class AsyncZeroconf:
         The service will be broadcast in a task. This task is returned
         and therefore can be awaited if necessary.
         """
-        await self.loop.run_in_executor(None, self.zeroconf.registry.remove, info)
+        self.zeroconf.registry.remove(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
@@ -135,10 +175,15 @@ class AsyncZeroconf:
         The service will be broadcast in a task. This task is returned
         and therefore can be awaited if necessary.
         """
-        await self.loop.run_in_executor(None, self.zeroconf.registry.update, info)
+        self.zeroconf.registry.update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+
+    def _close(self) -> None:
+        """Shutdown zeroconf and the sender."""
+        self.sender.close()
+        self.zeroconf.close()
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        await self.loop.run_in_executor(None, self.zeroconf.close)
+        await self.loop.run_in_executor(None, self._close)
