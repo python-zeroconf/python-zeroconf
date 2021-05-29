@@ -16,6 +16,7 @@ from . import (
     ServiceListener,
     ServiceNameAlreadyRegistered,
     Zeroconf,
+    current_time_millis,
 )
 from .asyncio import AsyncZeroconf
 
@@ -233,3 +234,39 @@ async def test_async_tasks() -> None:
         ('update', type_, registration_name),
         ('remove', type_, registration_name),
     ]
+
+
+@pytest.mark.asyncio
+async def test_async_wait_unblocks_on_update() -> None:
+    """Test async_wait will unblock on update."""
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    type_ = "_test-srvc4-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    task = await aiozc.async_register_service(info)
+
+    # Should unblock due to update from the
+    # registration
+    now = current_time_millis()
+    await aiozc.async_wait(50000)
+    assert current_time_millis() - now < 3000
+    await task
+
+    now = current_time_millis()
+    await aiozc.async_wait(50)
+    assert current_time_millis() - now < 1000
+
+    await aiozc.async_close()
