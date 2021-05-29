@@ -2000,9 +2000,8 @@ class ServiceInfo(RecordUpdateListener):
                     out = DNSOutgoing(_FLAGS_QR_QUERY)
                     out.add_question_or_one_cache(zc, now, self.name, _TYPE_SRV, _CLASS_IN)
                     out.add_question_or_one_cache(zc, now, self.name, _TYPE_TXT, _CLASS_IN)
-                    if self.server is not None:
-                        out.add_question_or_one_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
-                        out.add_question_or_all_cache(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
+                    out.add_question_or_one_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
+                    out.add_question_or_all_cache(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
                     if not out.questions:
                         return True
                     zc.send(out)
