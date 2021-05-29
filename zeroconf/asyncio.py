@@ -90,6 +90,7 @@ class AsyncZeroconf:
         unicast: bool = False,
         ip_version: Optional[IPVersion] = None,
         apple_p2p: bool = False,
+        zc: Optional['Zeroconf'] = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
@@ -106,7 +107,7 @@ class AsyncZeroconf:
             from it. Otherwise defaults to V4 only for backward compatibility.
         :param apple_p2p: use AWDL interface (only macOS)
         """
-        self.zeroconf = Zeroconf(
+        self.zeroconf = zc or Zeroconf(
             interfaces=interfaces,
             unicast=unicast,
             ip_version=ip_version,

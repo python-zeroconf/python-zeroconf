@@ -28,6 +28,15 @@ async def test_async_basic_usage() -> None:
 
 
 @pytest.mark.asyncio
+async def test_async_with_sync_passed_in() -> None:
+    """Test we can create and close the instance when passing in a sync Zeroconf."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(zc=zc)
+    assert aiozc.zeroconf is zc
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
 async def test_async_service_registration() -> None:
     """Test registering services broadcasts the registration by default."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
