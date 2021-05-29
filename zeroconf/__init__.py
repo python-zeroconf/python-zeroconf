@@ -1549,6 +1549,14 @@ class ServiceListener:
         raise NotImplementedError()
 
 
+class NotifyListener:
+    """Receive notifications Zeroconf.notify_all is called."""
+
+    def notify_all(self) -> None:
+        """Called when Zeroconf.notify_all is called."""
+        raise NotImplementedError()
+
+
 class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
     """Used to browse for a service of a specific type.
@@ -2521,6 +2529,7 @@ class Zeroconf(QuietLogger):
         self.multi_socket = unicast or interfaces is not InterfaceChoice.Default
 
         self.listeners = []  # type: List[RecordUpdateListener]
+        self._notify_listeners = []  # type: List[NotifyListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
         self.registry = ServiceRegistry()
 
@@ -2559,6 +2568,8 @@ class Zeroconf(QuietLogger):
         """Notifies all waiting threads"""
         with self.condition:
             self.condition.notify_all()
+            for listener in self._notify_listeners:
+                listener.notify_all()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
@@ -2568,6 +2579,14 @@ class Zeroconf(QuietLogger):
         if info.request(self, timeout):
             return info
         return None
+
+    def add_notify_listener(self, listener: NotifyListener) -> None:
+        """Adds a listener to receive notify_all events."""
+        self._notify_listeners.append(listener)
+
+    def remove_notify_listener(self, listener: NotifyListener) -> None:
+        """Removes a listener from the set that is currently listening."""
+        self._notify_listeners.remove(listener)
 
     def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
