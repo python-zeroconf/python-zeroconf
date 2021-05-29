@@ -20,6 +20,7 @@
     USA
 """
 import asyncio
+import contextlib
 import queue
 import threading
 from typing import Awaitable, Optional
@@ -30,6 +31,7 @@ from . import (
     InterfaceChoice,
     InterfacesType,
     NonUniqueNameException,
+    NotifyListener,
     ServiceInfo,
     Zeroconf,
     _CHECK_TIME,
@@ -75,6 +77,24 @@ class _AsyncSender(threading.Thread):
             self.zc.send(*event)
 
 
+class AsyncNotifyListener(NotifyListener):
+    """A NotifyListener that async code can use to wait for events."""
+
+    def __init__(self) -> None:
+        """Create an event for async listeners to wait for."""
+        self.event = asyncio.Event()
+        self.loop = asyncio.get_event_loop()
+
+    def notify_all(self) -> None:
+        """Schedule an async_notify_all."""
+        self.loop.call_soon_threadsafe(self.async_notify_all)
+
+    def async_notify_all(self) -> None:
+        """Notify all async listeners."""
+        self.event.set()
+        self.event.clear()
+
+
 class AsyncZeroconf:
     """Implementation of Zeroconf Multicast DNS Service Discovery
 
@@ -90,7 +110,7 @@ class AsyncZeroconf:
         unicast: bool = False,
         ip_version: Optional[IPVersion] = None,
         apple_p2p: bool = False,
-        zc: Optional['Zeroconf'] = None,
+        zc: Optional[Zeroconf] = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
@@ -113,8 +133,10 @@ class AsyncZeroconf:
             ip_version=ip_version,
             apple_p2p=apple_p2p,
         )
-        self.sender = _AsyncSender(self.zeroconf)
         self.loop = asyncio.get_event_loop()
+        self.async_notify = AsyncNotifyListener()
+        self.zeroconf.add_notify_listener(self.async_notify)
+        self.sender = _AsyncSender(self.zeroconf)
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
         """Send a broadcasts to announce a service at intervals."""
@@ -182,9 +204,15 @@ class AsyncZeroconf:
     def _close(self) -> None:
         """Shutdown zeroconf and the sender."""
         self.sender.close()
+        self.zeroconf.remove_notify_listener(self.async_notify)
         self.zeroconf.close()
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
         await self.loop.run_in_executor(None, self._close)
+
+    async def async_wait(self, timeout: float) -> None:
+        """Calling task waits for a given number of milliseconds or until notified."""
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(self.async_notify.event.wait(), timeout / 1000)
