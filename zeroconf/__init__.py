@@ -1925,9 +1925,7 @@ class ServiceInfo(RecordUpdateListener):
 
     def get_name(self) -> str:
         """Name accessor"""
-        if self.type is not None and self.name.endswith("." + self.type):
-            return self.name[: len(self.name) - len(self.type) - 1]
-        return self.name
+        return self.name[: len(self.name) - len(self.type) - 1]
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
         """Updates service information from a DNS record"""
