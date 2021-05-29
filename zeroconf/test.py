@@ -1551,6 +1551,18 @@ class TestServiceBrowser(unittest.TestCase):
 
 
 class TestServiceInfo(unittest.TestCase):
+    def test_get_name(self):
+        """Verify the name accessor can strip the type."""
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        assert info.get_name() == "name"
+
     def test_service_info_rejects_non_matching_updates(self):
         """Verify records with the wrong name are rejected."""
 
