@@ -2421,3 +2421,41 @@ def test_add_multicast_member_socket_errors(errno, expected_result):
     fileno_mock = unittest.mock.PropertyMock(return_value=10)
     socket_mock = unittest.mock.Mock(setsockopt=setsockopt_mock, fileno=fileno_mock)
     assert r.add_multicast_member(socket_mock, "0.0.0.0") == expected_result
+
+
+def test_notify_listeners():
+    """Test adding and removing notify listeners."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    notify_called = 0
+
+    class TestNotifyListener(r.NotifyListener):
+        def notify_all(self):
+            nonlocal notify_called
+            notify_called += 1
+
+    with pytest.raises(NotImplementedError):
+        r.NotifyListener().notify_all()
+
+    notify_listener = TestNotifyListener()
+
+    zc.add_notify_listener(notify_listener)
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        """Dummy service callback."""
+
+    # start a browser
+    browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
+    browser.cancel()
+
+    assert notify_called
+    zc.remove_notify_listener(notify_listener)
+
+    notify_called = 0
+    # start a browser
+    browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
+    browser.cancel()
+
+    assert not notify_called
+
+    zc.close()
