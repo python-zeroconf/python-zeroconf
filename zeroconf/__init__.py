@@ -2636,16 +2636,24 @@ class Zeroconf(QuietLogger):
 
     def send_service_broadcast(self, info: ServiceInfo, ttl: Optional[int]) -> None:
         """Send a broadcast to announce a service."""
+        self.send(self.generate_service_broadcast(info, ttl))
+
+    def generate_service_broadcast(self, info: ServiceInfo, ttl: Optional[int]) -> DNSOutgoing:
+        """Generate a broadcast to announce a service."""
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
         self._add_broadcast_answer(out, info, ttl)
-        self.send(out)
+        return out
 
     def send_service_query(self, info: ServiceInfo) -> None:
         """Send a query to lookup a service."""
+        self.send(self.generate_service_query(info))
+
+    def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:
+        """Generate a query to lookup a service."""
         out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
         out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
         out.add_authorative_answer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name))
-        self.send(out)
+        return out
 
     def _add_broadcast_answer(self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]) -> None:
         """Add answers to broadcast a service."""
