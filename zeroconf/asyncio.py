@@ -35,9 +35,11 @@ from . import (
     ServiceInfo,
     Zeroconf,
     _CHECK_TIME,
+    _LISTENER_TIME,
     _MDNS_PORT,
     _REGISTER_TIME,
     _UNREGISTER_TIME,
+    current_time_millis,
     instance_name_from_service_info,
 )
 
@@ -93,6 +95,41 @@ class AsyncNotifyListener(NotifyListener):
         """Notify all async listeners."""
         self.event.set()
         self.event.clear()
+
+
+class AsyncServiceInfo(ServiceInfo):
+    """An async version of ServiceInfo."""
+
+    async def async_request(self, aiozc: 'AsyncZeroconf', timeout: float) -> bool:
+        """Returns true if the service could be discovered on the
+        network, and updates this object with details discovered.
+        """
+        if self.load_from_cache(aiozc.zeroconf):
+            return True
+
+        now = current_time_millis()
+        delay = _LISTENER_TIME
+        next_ = now
+        last = now + timeout
+        try:
+            aiozc.zeroconf.add_listener(self, None)
+            while not self._is_complete:
+                if last <= now:
+                    return False
+                if next_ <= now:
+                    out = self.generate_request_query(aiozc.zeroconf, now)
+                    if not out.questions:
+                        return self.load_from_cache(aiozc.zeroconf)
+                    aiozc.sender.send(out)
+                    next_ = now + delay
+                    delay *= 2
+
+                await aiozc.async_wait((min(next_, last) - now) / 1000)
+                now = current_time_millis()
+        finally:
+            aiozc.zeroconf.remove_listener(self)
+
+        return True
 
 
 class AsyncZeroconf:
@@ -211,6 +248,17 @@ class AsyncZeroconf:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
         await self.loop.run_in_executor(None, self._close)
+
+    async def async_get_service_info(
+        self, type_: str, name: str, timeout: int = 3000
+    ) -> Optional[AsyncServiceInfo]:
+        """Returns network's service information for a particular
+        name and type, or None if no service matches by the timeout,
+        which defaults to 3 seconds."""
+        info = AsyncServiceInfo(type_, name)
+        if await info.async_request(self, timeout):
+            return info
+        return None
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
