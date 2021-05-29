@@ -1723,44 +1723,61 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         self.zc.remove_listener(self)
         self.join()
 
+    def generate_ready_queries(self) -> Optional[DNSOutgoing]:
+        """Generate the service browser query for any type that is due."""
+        out = None
+        now = current_time_millis()
+
+        if min(self._next_time.values()) > now:
+            return out
+
+        for type_, due in self._next_time.items():
+            if due > now:
+                continue
+
+            if out is None:
+                out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=self.multicast)
+            out.add_question(DNSQuestion(type_, _TYPE_PTR, _CLASS_IN))
+
+            for record in self._services[type_].values():
+                if not record.is_stale(now):
+                    out.add_answer_at_time(record, now)
+
+            self._next_time[type_] = now + self._delay[type_]
+            self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
+        return out
+
     def run(self) -> None:
         questions = [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types]
         self.zc.add_listener(self, questions)
 
         while True:
-            now = current_time_millis()
-            # Wait for the type has the smallest next time
-            next_time = min(self._next_time.values())
-            if len(self._handlers_to_call) == 0 and next_time > now:
-                self.zc.wait(next_time - now)
+            if not self._handlers_to_call:
+                # Wait for the type has the smallest next time
+                next_time = min(self._next_time.values())
+                now = current_time_millis()
+                if next_time > now:
+                    self.zc.wait(next_time - now)
+
             if self.zc.done or self.done:
                 return
-            now = current_time_millis()
-            out = None
-            for type_ in self.types:
-                if self._next_time[type_] > now:
-                    continue
-                if not out:
-                    out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=self.multicast)
-                out.add_question(DNSQuestion(type_, _TYPE_PTR, _CLASS_IN))
-                for record in self._services[type_].values():
-                    if not record.is_stale(now):
-                        out.add_answer_at_time(record, now)
-                self._next_time[type_] = now + self._delay[type_]
-                self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
+            out = self.generate_ready_queries()
             if out:
                 self.zc.send(out, addr=self.addr, port=self.port)
 
-            if len(self._handlers_to_call) > 0 and not self.zc.done:
-                with self.zc._handlers_lock:
-                    (name_type, state_change) = self._handlers_to_call.popitem(False)
-                self._service_state_changed.fire(
-                    zeroconf=self.zc,
-                    service_type=name_type[1],
-                    name=name_type[0],
-                    state_change=state_change,
-                )
+            if not self._handlers_to_call:
+                continue
+
+            with self.zc._handlers_lock:
+                (name_type, state_change) = self._handlers_to_call.popitem(False)
+
+            self._service_state_changed.fire(
+                zeroconf=self.zc,
+                service_type=name_type[1],
+                name=name_type[0],
+                state_change=state_change,
+            )
 
 
 class ServiceInfo(RecordUpdateListener):
