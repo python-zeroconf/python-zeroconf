@@ -6,6 +6,7 @@
 
 import asyncio
 import socket
+import unittest.mock
 
 import pytest
 
@@ -16,9 +17,10 @@ from . import (
     ServiceListener,
     ServiceNameAlreadyRegistered,
     Zeroconf,
+    _LISTENER_TIME,
     current_time_millis,
 )
-from .asyncio import AsyncZeroconf
+from .asyncio import AsyncServiceInfo, AsyncZeroconf
 
 
 @pytest.mark.asyncio
@@ -268,5 +270,107 @@ async def test_async_wait_unblocks_on_update() -> None:
     now = current_time_millis()
     await aiozc.async_wait(50)
     assert current_time_millis() - now < 1000
+
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_service_info_async_request() -> None:
+    """Test registering services broadcasts and query with AsyncServceInfo.async_request."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    type_ = "_test1-srvc-type._tcp.local."
+    name = "xxxyyy"
+    name2 = "abc"
+    registration_name = "%s.%s" % (name, type_)
+    registration_name2 = "%s.%s" % (name2, type_)
+
+    # Start a tasks BEFORE the registration that will keep trying
+    # and see the registration a bit later
+    get_service_info_task1 = asyncio.ensure_future(aiozc.async_get_service_info(type_, registration_name))
+    await asyncio.sleep(_LISTENER_TIME / 1000 / 2)
+    get_service_info_task2 = asyncio.ensure_future(aiozc.async_get_service_info(type_, registration_name))
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-1.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    info2 = ServiceInfo(
+        type_,
+        registration_name2,
+        80,
+        0,
+        0,
+        desc,
+        "ash-5.local.",
+        addresses=[socket.inet_aton("10.0.1.5")],
+    )
+    tasks = []
+    tasks.append(await aiozc.async_register_service(info))
+    tasks.append(await aiozc.async_register_service(info2))
+    await asyncio.gather(*tasks)
+
+    aiosinfo = await get_service_info_task1
+    assert aiosinfo is not None
+    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.2")]
+
+    aiosinfo = await get_service_info_task2
+    assert aiosinfo is not None
+    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.2")]
+
+    aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
+    assert aiosinfo is not None
+    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.2")]
+
+    new_info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.3"), socket.inet_pton(socket.AF_INET6, "6001:db8::1")],
+    )
+
+    task = await aiozc.async_update_service(new_info)
+    await task
+
+    aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
+    assert aiosinfo is not None
+    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
+
+    aiosinfos = await asyncio.gather(
+        aiozc.async_get_service_info(type_, registration_name),
+        aiozc.async_get_service_info(type_, registration_name2),
+    )
+    assert aiosinfos[0] is not None
+    assert aiosinfos[0].addresses == [socket.inet_aton("10.0.1.3")]
+    assert aiosinfos[1] is not None
+    assert aiosinfos[1].addresses == [socket.inet_aton("10.0.1.5")]
+
+    aiosinfo = AsyncServiceInfo(type_, registration_name)
+    zc_cache = aiozc.zeroconf.cache
+    for name in zc_cache.names():
+        for record in zc_cache.entries_with_name(name):
+            zc_cache.remove(record)
+    # Generating the race condition is almost impossible
+    # without patching since its a TOCTOU race
+    with unittest.mock.patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
+        await aiosinfo.async_request(aiozc, 3000)
+    assert aiosinfo is not None
+    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
+
+    task = await aiozc.async_unregister_service(new_info)
+    await task
+
+    aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
+    assert aiosinfo is None
 
     await aiozc.async_close()
