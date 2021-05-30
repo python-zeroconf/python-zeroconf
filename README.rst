@@ -137,6 +137,14 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+* Add async_get_service_info to AsyncZeroconf and async_request to AsyncServiceInfo (#408) @bdraco
+
+* Add support for registering notify listeners (#409) @bdraco
+
+* Allow passing in a sync Zeroconf instance to AsyncZeroconf (#406) @bdraco
+
+* Use a dedicated thread for sending outgoing packets with asyncio (#404) @bdraco
+
 * Fix IPv6 setup under MacOS when binding to "" (#392) @bdraco
 
 * Ensure ZeroconfServiceTypes.find always cancels the ServiceBrowser (#389) @bdraco
