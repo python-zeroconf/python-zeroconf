@@ -2552,3 +2552,57 @@ def test_notify_listeners():
     assert not notify_called
 
     zc.close()
+
+
+def test_legacy_record_update_listener():
+    """Test a RecordUpdateListener that does not implement update_records."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    with pytest.raises(RuntimeError):
+        r.RecordUpdateListener().update_record(
+            zc, 0, r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+        )
+
+    updates = []
+
+    class LegacyRecordUpdateListener(r.RecordUpdateListener):
+        """A RecordUpdateListener that does not implement update_records."""
+
+        def update_record(self, zc: 'Zeroconf', now: float, record: r.DNSRecord) -> None:
+            nonlocal updates
+            updates.append(record)
+
+    zc.add_listener(LegacyRecordUpdateListener(), None)
+
+    # dummy service callback
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        pass
+
+    # start a browser
+    type_ = "_homeassistant._tcp.local."
+    name = "MyTestHome"
+    browser = ServiceBrowser(zc, type_, [on_service_state_change])
+
+    info_service = ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {'path': '/~paulsm/'},
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+
+    zc.register_service(info_service)
+
+    zc.wait(1)
+
+    browser.cancel()
+
+    assert len(updates)
+    assert len([isinstance(update, r.DNSPointer) and update.name == type_ for update in updates]) >= 1
+
+    zc.close()
