@@ -1987,9 +1987,7 @@ class ServiceInfo(RecordUpdateListener):
             if record.key == self.key:
                 self._set_text(record.text)
 
-    def dns_addresses(
-        self, override_ttl: Optional[int] = None, version: IPVersion = IPVersion.All
-    ) -> List[DNSAddress]:
+    def dns_addresses(self, override_ttl: Optional[int] = None) -> List[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
         return [
             DNSAddress(
@@ -1999,7 +1997,7 @@ class ServiceInfo(RecordUpdateListener):
                 override_ttl if override_ttl is not None else self.host_ttl,
                 address,
             )
-            for address in self.addresses_by_version(version)
+            for address in self._addresses
         ]
 
     def dns_pointer(self, override_ttl: Optional[int] = None) -> DNSPointer:
@@ -2762,7 +2760,7 @@ class Zeroconf(QuietLogger):
         out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl), 0)
         out.add_answer_at_time(info.dns_service(override_ttl=host_ttl), 0)
         out.add_answer_at_time(info.dns_text(override_ttl=other_ttl), 0)
-        for dns_address in info.dns_addresses(override_ttl=host_ttl, version=IPVersion.All):
+        for dns_address in info.dns_addresses(override_ttl=host_ttl):
             out.add_answer_at_time(dns_address, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
@@ -2961,7 +2959,7 @@ class Zeroconf(QuietLogger):
                     # https://tools.ietf.org/html/rfc6763#section-12.1.
                     out.add_additional_answer(service.dns_service())
                     out.add_additional_answer(service.dns_text())
-                    for dns_address in service.dns_addresses(version=IPVersion.All):
+                    for dns_address in service.dns_addresses():
                         out.add_additional_answer(dns_address)
 
             else:
@@ -2972,7 +2970,7 @@ class Zeroconf(QuietLogger):
                 # Answer A record queries for any service addresses we know
                 if question.type in (_TYPE_A, _TYPE_ANY):
                     for service in self.registry.get_infos_server(name_to_find):
-                        for dns_address in service.dns_addresses(version=IPVersion.All):
+                        for dns_address in service.dns_addresses():
                             out.add_answer(msg, dns_address)
 
                 service = self.registry.get_info_name(name_to_find)  # type: ignore
@@ -2984,7 +2982,7 @@ class Zeroconf(QuietLogger):
                 if question.type in (_TYPE_TXT, _TYPE_ANY):
                     out.add_answer(msg, service.dns_text())
                 if question.type == _TYPE_SRV:
-                    for dns_address in service.dns_addresses(version=IPVersion.All):
+                    for dns_address in service.dns_addresses():
                         out.add_additional_answer(dns_address)
 
         if out is not None and out.answers:
