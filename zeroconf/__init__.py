@@ -1987,6 +1987,54 @@ class ServiceInfo(RecordUpdateListener):
             if record.key == self.key:
                 self._set_text(record.text)
 
+    def dns_addresses(
+        self, override_ttl: Optional[int] = None, version: IPVersion = IPVersion.All
+    ) -> List[DNSAddress]:
+        """Return matching DNSAddress from ServiceInfo."""
+        return [
+            DNSAddress(
+                self.server,
+                _TYPE_AAAA if _is_v6_address(address) else _TYPE_A,
+                _CLASS_IN | _CLASS_UNIQUE,
+                override_ttl if override_ttl is not None else self.host_ttl,
+                address,
+            )
+            for address in self.addresses_by_version(version)
+        ]
+
+    def dns_pointer(self, override_ttl: Optional[int] = None) -> DNSPointer:
+        """Return DNSPointer from ServiceInfo."""
+        return DNSPointer(
+            self.type,
+            _TYPE_PTR,
+            _CLASS_IN,
+            override_ttl if override_ttl is not None else self.other_ttl,
+            self.name,
+        )
+
+    def dns_service(self, override_ttl: Optional[int] = None) -> DNSService:
+        """Return DNSService from ServiceInfo."""
+        return DNSService(
+            self.name,
+            _TYPE_SRV,
+            _CLASS_IN | _CLASS_UNIQUE,
+            override_ttl if override_ttl is not None else self.host_ttl,
+            self.priority,
+            self.weight,
+            cast(int, self.port),
+            self.server,
+        )
+
+    def dns_text(self, override_ttl: Optional[int] = None) -> DNSText:
+        """Return DNSText from ServiceInfo."""
+        return DNSText(
+            self.name,
+            _TYPE_TXT,
+            _CLASS_IN | _CLASS_UNIQUE,
+            override_ttl if override_ttl is not None else self.other_ttl,
+            self.text,
+        )
+
     def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSRecord]:
         """Get the address records from the cache."""
         address_records = []
@@ -2704,36 +2752,18 @@ class Zeroconf(QuietLogger):
         """Generate a query to lookup a service."""
         out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
         out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
-        out.add_authorative_answer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, info.other_ttl, info.name))
+        out.add_authorative_answer(info.dns_pointer())
         return out
 
     def _add_broadcast_answer(self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]) -> None:
         """Add answers to broadcast a service."""
         other_ttl = info.other_ttl if override_ttl is None else override_ttl
         host_ttl = info.host_ttl if override_ttl is None else override_ttl
-        out.add_answer_at_time(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, other_ttl, info.name), 0)
-        out.add_answer_at_time(
-            DNSService(
-                info.name,
-                _TYPE_SRV,
-                _CLASS_IN | _CLASS_UNIQUE,
-                host_ttl,
-                info.priority,
-                info.weight,
-                cast(int, info.port),
-                info.server,
-            ),
-            0,
-        )
-
-        out.add_answer_at_time(
-            DNSText(info.name, _TYPE_TXT, _CLASS_IN | _CLASS_UNIQUE, other_ttl, info.text), 0
-        )
-        for address in info.addresses_by_version(IPVersion.All):
-            type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
-            out.add_answer_at_time(
-                DNSAddress(info.server, type_, _CLASS_IN | _CLASS_UNIQUE, host_ttl, address), 0
-            )
+        out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl), 0)
+        out.add_answer_at_time(info.dns_service(override_ttl=host_ttl), 0)
+        out.add_answer_at_time(info.dns_text(override_ttl=other_ttl), 0)
+        for dns_address in info.dns_addresses(override_ttl=host_ttl, version=IPVersion.All):
+            out.add_answer_at_time(dns_address, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service."""
@@ -2926,108 +2956,36 @@ class Zeroconf(QuietLogger):
                 for service in self.registry.get_infos_type(question.name):
                     if out is None:
                         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-                    out.add_answer(
-                        msg,
-                        DNSPointer(service.type, _TYPE_PTR, _CLASS_IN, service.other_ttl, service.name),
-                    )
-
+                    out.add_answer(msg, service.dns_pointer())
                     # Add recommended additional answers according to
                     # https://tools.ietf.org/html/rfc6763#section-12.1.
-                    out.add_additional_answer(
-                        DNSService(
-                            service.name,
-                            _TYPE_SRV,
-                            _CLASS_IN | _CLASS_UNIQUE,
-                            service.host_ttl,
-                            service.priority,
-                            service.weight,
-                            cast(int, service.port),
-                            service.server,
-                        )
-                    )
-                    out.add_additional_answer(
-                        DNSText(
-                            service.name,
-                            _TYPE_TXT,
-                            _CLASS_IN | _CLASS_UNIQUE,
-                            service.other_ttl,
-                            service.text,
-                        )
-                    )
-                    for address in service.addresses_by_version(IPVersion.All):
-                        type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
-                        out.add_additional_answer(
-                            DNSAddress(
-                                service.server,
-                                type_,
-                                _CLASS_IN | _CLASS_UNIQUE,
-                                service.host_ttl,
-                                address,
-                            )
-                        )
+                    out.add_additional_answer(service.dns_service())
+                    out.add_additional_answer(service.dns_text())
+                    for dns_address in service.dns_addresses(version=IPVersion.All):
+                        out.add_additional_answer(dns_address)
+
             else:
                 if out is None:
                     out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
 
                 name_to_find = question.name.lower()
-
                 # Answer A record queries for any service addresses we know
                 if question.type in (_TYPE_A, _TYPE_ANY):
                     for service in self.registry.get_infos_server(name_to_find):
-                        for address in service.addresses_by_version(IPVersion.All):
-                            type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
-                            out.add_answer(
-                                msg,
-                                DNSAddress(
-                                    question.name,
-                                    type_,
-                                    _CLASS_IN | _CLASS_UNIQUE,
-                                    service.host_ttl,
-                                    address,
-                                ),
-                            )
+                        for dns_address in service.dns_addresses(version=IPVersion.All):
+                            out.add_answer(msg, dns_address)
 
                 service = self.registry.get_info_name(name_to_find)  # type: ignore
                 if service is None:
                     continue
 
                 if question.type in (_TYPE_SRV, _TYPE_ANY):
-                    out.add_answer(
-                        msg,
-                        DNSService(
-                            question.name,
-                            _TYPE_SRV,
-                            _CLASS_IN | _CLASS_UNIQUE,
-                            service.host_ttl,
-                            service.priority,
-                            service.weight,
-                            cast(int, service.port),
-                            service.server,
-                        ),
-                    )
+                    out.add_answer(msg, service.dns_service())
                 if question.type in (_TYPE_TXT, _TYPE_ANY):
-                    out.add_answer(
-                        msg,
-                        DNSText(
-                            question.name,
-                            _TYPE_TXT,
-                            _CLASS_IN | _CLASS_UNIQUE,
-                            service.other_ttl,
-                            service.text,
-                        ),
-                    )
+                    out.add_answer(msg, service.dns_text())
                 if question.type == _TYPE_SRV:
-                    for address in service.addresses_by_version(IPVersion.All):
-                        type_ = _TYPE_AAAA if _is_v6_address(address) else _TYPE_A
-                        out.add_additional_answer(
-                            DNSAddress(
-                                service.server,
-                                type_,
-                                _CLASS_IN | _CLASS_UNIQUE,
-                                service.host_ttl,
-                                address,
-                            )
-                        )
+                    for dns_address in service.dns_addresses(version=IPVersion.All):
+                        out.add_additional_answer(dns_address)
 
         if out is not None and out.answers:
             out.id = msg.id
