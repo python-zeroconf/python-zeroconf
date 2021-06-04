@@ -1953,13 +1953,26 @@ class ServiceInfo(RecordUpdateListener):
         return self.name[: len(self.name) - len(self.type) - 1]
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
-        """Updates service information from a DNS record"""
+        """Updates service information from a DNS record."""
         if record is None or record.is_expired(now):
             return
+
+        self._process_record(record, now)
+
+        # Only update addresses if the DNSService (.server) has changed
+        if not isinstance(record, DNSService):
+            return
+
+        for record in self._get_address_records_from_cache(zc):
+            self._process_record(record, now)
+
+    def _process_record(self, record: DNSRecord, now: float) -> None:
         if isinstance(record, DNSAddress):
             if record.key == self.server_key and record.address not in self._addresses:
                 self._addresses.append(record.address)
-        elif isinstance(record, DNSService):
+            return
+
+        if isinstance(record, DNSService):
             if record.key != self.key:
                 return
             self.name = record.name
@@ -1968,32 +1981,37 @@ class ServiceInfo(RecordUpdateListener):
             self.port = record.port
             self.weight = record.weight
             self.priority = record.priority
-            self._update_addresses_from_cache(zc, now)
-        elif isinstance(record, DNSText):
+            return
+
+        if isinstance(record, DNSText):
             if record.key == self.key:
                 self._set_text(record.text)
 
-    def _update_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
-        """Update the address records from the cache."""
+    def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSRecord]:
+        """Get the address records from the cache."""
+        address_records = []
         cached_a_record = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
         if cached_a_record:
-            self.update_record(zc, now, cached_a_record)
-        for cached_aaaa_record in zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN):
-            self.update_record(zc, now, cached_aaaa_record)
+            address_records.append(cached_a_record)
+        address_records.extend(zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
+        return address_records
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache."""
         now = current_time_millis()
+        record_updates = []
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
             # If there is a srv record, A and AAAA will already
             # be called and we do not want to do it twice
-            self.update_record(zc, now, cached_srv_record)
+            record_updates.append(cached_srv_record)
         else:
-            self._update_addresses_from_cache(zc, now)
+            record_updates.extend(self._get_address_records_from_cache(zc))
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
-            self.update_record(zc, now, cached_txt_record)
+            record_updates.append(cached_txt_record)
+        for record in record_updates:
+            self.update_record(zc, now, record)
         return self._is_complete
 
     @property
