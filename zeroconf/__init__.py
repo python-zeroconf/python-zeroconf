@@ -953,10 +953,6 @@ class DNSOutgoing:
         init = 0
         finished = 1
 
-    @staticmethod
-    def is_type_unique(type_: int) -> bool:
-        return type_ == _TYPE_TXT or type_ == _TYPE_SRV or type_ == _TYPE_A or type_ == _TYPE_AAAA
-
     def add_question(self, record: DNSQuestion) -> None:
         """Adds a question"""
         self.questions.append(record)
