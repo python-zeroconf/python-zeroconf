@@ -1979,8 +1979,8 @@ class ServiceInfo(RecordUpdateListener):
         if not isinstance(record, DNSService):
             return
 
-        for record in self._get_address_records_from_cache(zc):
-            self._process_record(record)
+        for cached_record in self._get_address_records_from_cache(zc):
+            self._process_record(cached_record)
 
     def _process_record(self, record: DNSRecord) -> None:
         if isinstance(record, DNSAddress):
