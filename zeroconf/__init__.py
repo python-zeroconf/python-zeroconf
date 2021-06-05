@@ -2157,13 +2157,18 @@ class ZeroconfServiceTypes(ServiceListener):
     """
 
     def __init__(self) -> None:
+        """Keep track of found services in a set."""
         self.found_services = set()  # type: Set[str]
 
     def add_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
+        """Service added."""
         self.found_services.add(name)
 
+    def update_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
+        """Service updated."""
+
     def remove_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
-        pass
+        """Service removed."""
 
     @classmethod
     def find(
