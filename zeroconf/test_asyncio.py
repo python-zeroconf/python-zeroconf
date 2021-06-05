@@ -380,7 +380,7 @@ async def test_service_info_async_request() -> None:
 async def test_async_service_browser() -> None:
     """Test AsyncServiceBrowser."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    type_ = "_test1-srvc-type._tcp.local."
+    type_ = "_test9-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
 
