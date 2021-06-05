@@ -2766,14 +2766,16 @@ class Zeroconf(QuietLogger):
         """Send a query to lookup a service."""
         self.send(self.generate_service_query(info))
 
-    def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:
+    def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:  # pylint: disable=no-self-use
         """Generate a query to lookup a service."""
         out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
         out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
         out.add_authorative_answer(info.dns_pointer())
         return out
 
-    def _add_broadcast_answer(self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]) -> None:
+    def _add_broadcast_answer(  # pylint: disable=no-self-use
+        self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]
+    ) -> None:
         """Add answers to broadcast a service."""
         other_ttl = info.other_ttl if override_ttl is None else override_ttl
         host_ttl = info.host_ttl if override_ttl is None else override_ttl
