@@ -592,7 +592,7 @@ class DNSAddress(DNSRecord):
                     socket.AF_INET6 if _is_v6_address(self.address) else socket.AF_INET, self.address
                 )
             )
-        except Exception:  # TODO stop catching all Exceptions
+        except Exception:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
             return self.to_string(str(self.address))
 
 
@@ -1446,7 +1446,7 @@ class Listener(QuietLogger):
     def handle_read(self, socket_: socket.socket) -> None:
         try:
             data, (addr, port, *_v6) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             self.log_exception_warning('Error reading from socket %d', socket_.fileno())
             return
 
@@ -2857,7 +2857,7 @@ class Zeroconf(QuietLogger):
         try:
             self.listeners.remove(listener)
             self.notify_all()
-        except Exception as e:  # TODO stop catching all Exceptions
+        except Exception as e:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
             log.exception('Unknown error, possibly benign: %r', e)
 
     def update_record(self, now: float, rec: DNSRecord) -> None:
@@ -3028,7 +3028,7 @@ class Zeroconf(QuietLogger):
                     else:
                         real_addr = addr
                     bytes_sent = s.sendto(packet, 0, (real_addr, port))
-                except Exception as exc:  # TODO stop catching all Exceptions
+                except Exception as exc:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
                     if (
                         isinstance(exc, OSError)
                         and exc.errno == errno.ENETUNREACH
