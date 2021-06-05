@@ -2333,7 +2333,7 @@ def new_socket(
         try:
             s.setsockopt(socket.SOL_SOCKET, reuseport, 1)
         except OSError as err:
-            if not err.errno == errno.ENOPROTOOPT:
+            if err.errno != errno.ENOPROTOOPT:
                 raise
 
     if port == _MDNS_PORT:
