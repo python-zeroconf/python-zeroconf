@@ -1553,13 +1553,8 @@ class NotifyListener:
         raise NotImplementedError()
 
 
-class ServiceBrowser(RecordUpdateListener, threading.Thread):
-
-    """Used to browse for a service of a specific type.
-
-    The listener object will have its add_service() and
-    remove_service() methods called when this browser
-    discovers changes in the services availability."""
+class _ServiceBrowserBase(RecordUpdateListener):
+    """Base class for ServiceBrowser."""
 
     def __init__(
         self,
@@ -1577,7 +1572,6 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
         for check_type_ in self.types:
             if not check_type_.endswith(service_type_name(check_type_, strict=False)):
                 raise BadTypeInNameException
-        threading.Thread.__init__(self)
         self.daemon = True
         self.zc = zc
         self.addr = addr
@@ -1628,12 +1622,6 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
 
         for h in handlers:
             self.service_state_changed.register_handler(h)
-
-        self.start()
-        self.name = "zeroconf-ServiceBrowser-%s-%s" % (
-            '-'.join([type_[:-7] for type_ in self.types]),
-            getattr(self, 'native_id', self.ident),
-        )
 
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
@@ -1715,9 +1703,14 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
     def cancel(self) -> None:
+        """Cancel the browser."""
         self.done = True
         self.zc.remove_listener(self)
-        self.join()
+
+    def run(self) -> None:
+        """Run the browser."""
+        questions = [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types]
+        self.zc.add_listener(self, questions)
 
     def generate_ready_queries(self) -> Optional[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
@@ -1743,10 +1736,40 @@ class ServiceBrowser(RecordUpdateListener, threading.Thread):
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
         return out
 
-    def run(self) -> None:
-        questions = [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types]
-        self.zc.add_listener(self, questions)
 
+class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
+    """Used to browse for a service of a specific type.
+
+    The listener object will have its add_service() and
+    remove_service() methods called when this browser
+    discovers changes in the services availability."""
+
+    def __init__(
+        self,
+        zc: 'Zeroconf',
+        type_: Union[str, list],
+        handlers: Optional[Union[ServiceListener, List[Callable[..., None]]]] = None,
+        listener: Optional[ServiceListener] = None,
+        addr: Optional[str] = None,
+        port: int = _MDNS_PORT,
+        delay: int = _BROWSER_TIME,
+    ) -> None:
+        threading.Thread.__init__(self)
+        super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
+        self.start()
+        self.name = "zeroconf-ServiceBrowser-%s-%s" % (
+            '-'.join([type_[:-7] for type_ in self.types]),
+            getattr(self, 'native_id', self.ident),
+        )
+
+    def cancel(self) -> None:
+        """Cancel the browser."""
+        super().cancel()
+        self.join()
+
+    def run(self) -> None:
+        """Run the browser thread."""
+        super().run()
         while True:
             if not self._handlers_to_call:
                 # Wait for the type has the smallest next time
