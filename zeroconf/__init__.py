@@ -2377,7 +2377,7 @@ def add_multicast_member(
     err_einval = {errno.EINVAL}
     if sys.platform == 'win32':
         # No WSAEINVAL definition in typeshed
-        err_einval |= {cast(Any, errno).WSAEINVAL}
+        err_einval |= {cast(Any, errno).WSAEINVAL}  # pylint: disable=no-member
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
