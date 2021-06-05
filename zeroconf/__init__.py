@@ -2951,6 +2951,8 @@ class Zeroconf(QuietLogger):
                                 stype,
                             ),
                         )
+                    continue
+
                 for service in self.registry.get_infos_type(question.name):
                     if out is None:
                         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
@@ -2962,28 +2964,29 @@ class Zeroconf(QuietLogger):
                     for dns_address in service.dns_addresses():
                         out.add_additional_answer(dns_address)
 
-            else:
-                if out is None:
-                    out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+                continue
 
-                name_to_find = question.name.lower()
-                # Answer A record queries for any service addresses we know
-                if question.type in (_TYPE_A, _TYPE_ANY):
-                    for service in self.registry.get_infos_server(name_to_find):
-                        for dns_address in service.dns_addresses():
-                            out.add_answer(msg, dns_address)
+            if out is None:
+                out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
 
-                service = self.registry.get_info_name(name_to_find)  # type: ignore
-                if service is None:
-                    continue
-
-                if question.type in (_TYPE_SRV, _TYPE_ANY):
-                    out.add_answer(msg, service.dns_service())
-                if question.type in (_TYPE_TXT, _TYPE_ANY):
-                    out.add_answer(msg, service.dns_text())
-                if question.type == _TYPE_SRV:
+            name_to_find = question.name.lower()
+            # Answer A record queries for any service addresses we know
+            if question.type in (_TYPE_A, _TYPE_ANY):
+                for service in self.registry.get_infos_server(name_to_find):
                     for dns_address in service.dns_addresses():
-                        out.add_additional_answer(dns_address)
+                        out.add_answer(msg, dns_address)
+
+            service = self.registry.get_info_name(name_to_find)  # type: ignore
+            if service is None:
+                continue
+
+            if question.type in (_TYPE_SRV, _TYPE_ANY):
+                out.add_answer(msg, service.dns_service())
+            if question.type in (_TYPE_TXT, _TYPE_ANY):
+                out.add_answer(msg, service.dns_text())
+            if question.type == _TYPE_SRV:
+                for dns_address in service.dns_addresses():
+                    out.add_additional_answer(dns_address)
 
         if out is not None and out.answers:
             out.id = msg.id
