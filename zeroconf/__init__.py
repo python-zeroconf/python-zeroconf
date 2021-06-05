@@ -827,7 +827,7 @@ class DNSIncoming(QuietLogger):
             rec = None  # type: Optional[DNSRecord]
             if type_ == _TYPE_A:
                 rec = DNSAddress(domain, type_, class_, ttl, self.read_string(4))
-            elif type_ == _TYPE_CNAME or type_ == _TYPE_PTR:
+            elif type_ in (_TYPE_CNAME, _TYPE_PTR):
                 rec = DNSPointer(domain, type_, class_, ttl, self.read_name())
             elif type_ == _TYPE_TXT:
                 rec = DNSText(domain, type_, class_, ttl, self.read_string(length))
