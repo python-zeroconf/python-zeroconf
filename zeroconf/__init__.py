@@ -1786,7 +1786,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             if not self._handlers_to_call:
                 continue
 
-            with self.zc._handlers_lock:
+            with self.zc._handlers_lock:  # pylint: disable=protected-access
                 (name_type, state_change) = self._handlers_to_call.popitem(False)
 
             self._service_state_changed.fire(
