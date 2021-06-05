@@ -33,6 +33,7 @@ import sys
 import threading
 import time
 import warnings
+from abc import abstractmethod
 from collections import OrderedDict
 from typing import Dict, Iterable, List, Optional, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
@@ -382,10 +383,6 @@ class NamePartTooLongException(Error):
     pass
 
 
-class AbstractMethodException(Error):
-    pass
-
-
 class BadTypeInNameException(Error):
     pass
 
@@ -505,9 +502,9 @@ class DNSRecord(DNSEntry):
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
 
+    @abstractmethod
     def __eq__(self, other: Any) -> bool:
         """Abstract method"""
-        raise AbstractMethodException
 
     def __ne__(self, other: Any) -> bool:
         """Non-equality test"""
@@ -552,9 +549,9 @@ class DNSRecord(DNSEntry):
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
 
+    @abstractmethod
     def write(self, out: 'DNSOutgoing') -> None:
         """Abstract method"""
-        raise AbstractMethodException
 
     def to_string(self, other: Union[bytes, str]) -> str:
         """String representation with additional information"""
