@@ -3037,15 +3037,14 @@ class Zeroconf(QuietLogger):
                     else:
                         real_addr = addr
                     bytes_sent = s.sendto(packet, 0, (real_addr, port))
-                except Exception as exc:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
-                    if (
-                        isinstance(exc, OSError)
-                        and exc.errno == errno.ENETUNREACH
-                        and s.family == socket.AF_INET6
-                    ):
+                except OSError as exc:
+                    if exc.errno == errno.ENETUNREACH and s.family == socket.AF_INET6:
                         # with IPv6 we don't have a reliable way to determine if an interface actually has
                         # IPV6 support, so we have to try and ignore errors.
                         continue
+                    # on send errors, log the exception and keep going
+                    self.log_exception_warning('Error sending through socket %d', s.fileno())
+                except Exception:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
                     # on send errors, log the exception and keep going
                     self.log_exception_warning('Error sending through socket %d', s.fileno())
                 else:
