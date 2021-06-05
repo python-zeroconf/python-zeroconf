@@ -20,7 +20,7 @@ from . import (
     _LISTENER_TIME,
     current_time_millis,
 )
-from .asyncio import AsyncServiceInfo, AsyncZeroconf
+from .asyncio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
 
 
 @pytest.mark.asyncio
@@ -374,3 +374,67 @@ async def test_service_info_async_request() -> None:
     assert aiosinfo is None
 
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_service_browser() -> None:
+    """Test AsyncServiceBrowser."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    type_ = "_test1-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    calls = []
+
+    with pytest.raises(NotImplementedError):
+        AsyncServiceListener().add_service(aiozc, "_type", "name._type")
+
+    with pytest.raises(NotImplementedError):
+        AsyncServiceListener().remove_service(aiozc, "_type", "name._type")
+
+    with pytest.raises(NotImplementedError):
+        AsyncServiceListener().update_service(aiozc, "_type", "name._type")
+
+    class MyListener(AsyncServiceListener):
+        def add_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+            calls.append(("add", type, name))
+
+        def remove_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+            calls.append(("remove", type, name))
+
+        def update_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+            calls.append(("update", type, name))
+
+    listener = MyListener()
+    await aiozc.async_add_service_listener(type_, listener)
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    task = await aiozc.async_register_service(info)
+    await task
+    new_info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.3")],
+    )
+    task = await aiozc.async_update_service(new_info)
+    await task
+    task = await aiozc.async_unregister_service(new_info)
+    await task
+    await aiozc.async_close()
+
+    assert calls[0] == ('add', type_, registration_name)

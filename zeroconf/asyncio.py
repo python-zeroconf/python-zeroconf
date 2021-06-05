@@ -23,7 +23,7 @@ import asyncio
 import contextlib
 import queue
 import threading
-from typing import Awaitable, Optional
+from typing import Awaitable, Callable, Dict, List, Optional, Union
 
 from . import (
     DNSOutgoing,
@@ -34,10 +34,12 @@ from . import (
     NotifyListener,
     ServiceInfo,
     Zeroconf,
+    _BROWSER_TIME,
     _CHECK_TIME,
     _LISTENER_TIME,
     _MDNS_PORT,
     _REGISTER_TIME,
+    _ServiceBrowserBase,
     _UNREGISTER_TIME,
     current_time_millis,
     instance_name_from_service_info,
@@ -97,6 +99,17 @@ class AsyncNotifyListener(NotifyListener):
         self.event.clear()
 
 
+class AsyncServiceListener:
+    def add_service(self, aiozc: 'AsyncZeroconf', type_: str, name: str) -> None:
+        raise NotImplementedError()
+
+    def remove_service(self, aiozc: 'AsyncZeroconf', type_: str, name: str) -> None:
+        raise NotImplementedError()
+
+    def update_service(self, aiozc: 'AsyncZeroconf', type_: str, name: str) -> None:
+        raise NotImplementedError()
+
+
 class AsyncServiceInfo(ServiceInfo):
     """An async version of ServiceInfo."""
 
@@ -130,6 +143,59 @@ class AsyncServiceInfo(ServiceInfo):
             aiozc.zeroconf.remove_listener(self)
 
         return True
+
+
+class AsyncServiceBrowser(_ServiceBrowserBase):
+    """Used to browse for a service of a specific type.
+
+    The listener object will have its add_service() and
+    remove_service() methods called when this browser
+    discovers changes in the services availability."""
+
+    def __init__(
+        self,
+        aiozc: 'AsyncZeroconf',
+        type_: Union[str, list],
+        handlers: Optional[Union[AsyncServiceListener, List[Callable[..., None]]]] = None,
+        listener: Optional[AsyncServiceListener] = None,
+        addr: Optional[str] = None,
+        port: int = _MDNS_PORT,
+        delay: int = _BROWSER_TIME,
+    ) -> None:
+        self.aiozc = aiozc
+        super().__init__(aiozc.zeroconf, type_, handlers, listener, addr, port, delay)  # type: ignore
+        self._browser_task = asyncio.ensure_future(self.async_run())
+
+    def cancel(self) -> None:
+        """Cancel the browser."""
+        super().cancel()
+        self._browser_task.cancel()
+
+    async def async_run(self) -> None:
+        """Run the browser task."""
+        self.run()
+        while True:
+            if not self._handlers_to_call:
+                # Wait for the type has the smallest next time
+                next_time = min(self._next_time.values())
+                now = current_time_millis()
+                if next_time > now:
+                    await self.aiozc.async_wait(next_time - now)
+
+            out = self.generate_ready_queries()
+            if out:
+                self.aiozc.sender.send(out, addr=self.addr, port=self.port)
+
+            if not self._handlers_to_call:
+                continue
+
+            (name_type, state_change) = self._handlers_to_call.popitem(False)
+            self._service_state_changed.fire(
+                zeroconf=self.aiozc,
+                service_type=name_type[1],
+                name=name_type[0],
+                state_change=state_change,
+            )
 
 
 class AsyncZeroconf:
@@ -173,6 +239,7 @@ class AsyncZeroconf:
         self.loop = asyncio.get_event_loop()
         self.async_notify = AsyncNotifyListener()
         self.zeroconf.add_notify_listener(self.async_notify)
+        self.async_browsers: Dict[AsyncServiceListener, AsyncServiceBrowser] = {}
         self.sender = _AsyncSender(self.zeroconf)
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
@@ -247,6 +314,7 @@ class AsyncZeroconf:
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
+        await self.async_remove_all_service_listeners()
         await self.loop.run_in_executor(None, self._close)
 
     async def async_get_service_info(
@@ -264,3 +332,22 @@ class AsyncZeroconf:
         """Calling task waits for a given number of milliseconds or until notified."""
         with contextlib.suppress(asyncio.TimeoutError):
             await asyncio.wait_for(self.async_notify.event.wait(), timeout / 1000)
+
+    async def async_add_service_listener(self, type_: str, listener: AsyncServiceListener) -> None:
+        """Adds a listener for a particular service type.  This object
+        will then have its add_service and remove_service methods called when
+        services of that type become available and unavailable."""
+        await self.async_remove_service_listener(listener)
+        self.async_browsers[listener] = AsyncServiceBrowser(self, type_, listener)
+
+    async def async_remove_service_listener(self, listener: AsyncServiceListener) -> None:
+        """Removes a listener from the set that is currently listening."""
+        if listener in self.async_browsers:
+            self.async_browsers[listener].cancel()
+            del self.async_browsers[listener]
+
+    async def async_remove_all_service_listeners(self) -> None:
+        """Removes a listener from the set that is currently listening."""
+        await asyncio.gather(
+            *[self.async_remove_service_listener(listener) for listener in list(self.async_browsers)]
+        )
