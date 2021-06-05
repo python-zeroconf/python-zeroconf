@@ -2950,21 +2950,19 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        out = None
-
         # Support unicast client responses
         #
         if port != _MDNS_PORT:
             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False)
             for question in msg.questions:
                 out.add_question(question)
+        else:
+            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
 
         for question in msg.questions:
             if question.type == _TYPE_PTR:
                 if question.name == "_services._dns-sd._udp.local.":
                     for stype in self.registry.get_types():
-                        if out is None:
-                            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
                         out.add_answer(
                             msg,
                             DNSPointer(
@@ -2978,8 +2976,6 @@ class Zeroconf(QuietLogger):
                     continue
 
                 for service in self.registry.get_infos_type(question.name):
-                    if out is None:
-                        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
                     out.add_answer(msg, service.dns_pointer())
                     # Add recommended additional answers according to
                     # https://tools.ietf.org/html/rfc6763#section-12.1.
@@ -2989,9 +2985,6 @@ class Zeroconf(QuietLogger):
                         out.add_additional_answer(dns_address)
 
                 continue
-
-            if out is None:
-                out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
 
             name_to_find = question.name.lower()
             # Answer A record queries for any service addresses we know
