@@ -1973,16 +1973,16 @@ class ServiceInfo(RecordUpdateListener):
         if record is None or record.is_expired(now):
             return
 
-        self._process_record(record, now)
+        self._process_record(record)
 
         # Only update addresses if the DNSService (.server) has changed
         if not isinstance(record, DNSService):
             return
 
         for record in self._get_address_records_from_cache(zc):
-            self._process_record(record, now)
+            self._process_record(record)
 
-    def _process_record(self, record: DNSRecord, now: float) -> None:
+    def _process_record(self, record: DNSRecord) -> None:
         if isinstance(record, DNSAddress):
             if record.key == self.server_key and record.address not in self._addresses:
                 self._addresses.append(record.address)
