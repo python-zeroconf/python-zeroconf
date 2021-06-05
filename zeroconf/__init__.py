@@ -2699,7 +2699,7 @@ class Zeroconf(QuietLogger):
 
     def remove_all_service_listeners(self) -> None:
         """Removes a listener from the set that is currently listening."""
-        for listener in [k for k in self.browsers]:
+        for listener in list(self.browsers):
             self.remove_service_listener(listener)
 
     def register_service(
