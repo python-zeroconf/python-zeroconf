@@ -137,6 +137,33 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+* Add zeroconf.asyncio to the docs (#434) @bdraco
+
+* Fix warning when generating sphinx docs (#432) @bdraco
+
+* Implement an AsyncServiceBrowser to compliment the sync ServiceBrowser (#429) @bdraco
+
+* Seperate non-thread specific code from ServiceBrowser into _ServiceBrowserBase (#428) @bdraco
+
+* Remove is_type_unique as it is unused (#426)
+
+* Avoid checking the registry when answering requests for _services._dns-sd._udp.local. (#425) @bdraco
+
+  _services._dns-sd._udp.local. is a special case and should never
+  be in the registry
+
+* Remove unused argument from ServiceInfo.dns_addresses (#423) @bdraco
+
+* Add methods to generate DNSRecords from ServiceInfo (#422) @bdraco
+
+* Seperate logic for consuming records in ServiceInfo (#421) @bdraco
+
+* Seperate query generation for ServiceBrowser (#420) @bdraco
+
+* Add async_request example with browse (#415) @bdraco
+
+* Add async_register_service/async_unregister_service example (#414) @bdraco
+
 * Add async_get_service_info to AsyncZeroconf and async_request to AsyncServiceInfo (#408) @bdraco
 
 * Add support for registering notify listeners (#409) @bdraco
