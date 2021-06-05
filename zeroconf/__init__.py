@@ -1804,19 +1804,19 @@ class ServiceInfo(RecordUpdateListener):
 
     Constructor parameters are as follows:
 
-    * type_: fully qualified service type name
-    * name: fully qualified service name
-    * port: port that the service runs on
-    * weight: weight of the service
-    * priority: priority of the service
-    * properties: dictionary of properties (or a bytes object holding the contents of the `text` field).
+    * `type_`: fully qualified service type name
+    * `name`: fully qualified service name
+    * `port`: port that the service runs on
+    * `weight`: weight of the service
+    * `priority`: priority of the service
+    * `properties`: dictionary of properties (or a bytes object holding the contents of the `text` field).
       converted to str and then encoded to bytes using UTF-8. Keys with `None` values are converted to
       value-less attributes.
-    * server: fully qualified name for service host (defaults to name)
-    * host_ttl: ttl used for A/SRV records
-    * other_ttl: ttl used for PTR/TXT records
-    * addresses and parsed_addresses: List of IP addresses (either as bytes, network byte order, or in parsed
-      form as text; at most one of those parameters can be provided)
+    * `server`: fully qualified name for service host (defaults to name)
+    * `host_ttl`: ttl used for A/SRV records
+    * `other_ttl`: ttl used for PTR/TXT records
+    * `addresses` and `parsed_addresses`: List of IP addresses (either as bytes, network byte order,
+      or in parsed form as text; at most one of those parameters can be provided)
 
     """
 
