@@ -46,6 +46,13 @@ from . import (
 )
 
 
+def _get_best_available_queue() -> queue.Queue:
+    """Create the best available queue type."""
+    if hasattr(queue, "SimpleQueue"):
+        return queue.SimpleQueue()  # type: ignore
+    return queue.Queue()
+
+
 class _AsyncSender(threading.Thread):
     """A thread to handle sending DNSOutgoing for asyncio."""
 
@@ -53,15 +60,9 @@ class _AsyncSender(threading.Thread):
         """Create the sender thread."""
         super().__init__()
         self.zc = zc
-        self.queue = self._get_queue()
+        self.queue = _get_best_available_queue()
         self.start()
         self.name = "AsyncZeroconfSender"
-
-    def _get_queue(self) -> queue.Queue:
-        """Create the best available queue type."""
-        if hasattr(queue, "SimpleQueue"):
-            return queue.SimpleQueue()  # type: ignore
-        return queue.Queue()
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Queue a send to be processed by the thread."""
