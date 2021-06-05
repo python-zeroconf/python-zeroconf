@@ -2295,7 +2295,7 @@ def normalize_interface_choice(
     return result
 
 
-def new_socket(
+def new_socket(  # pylint: disable=too-many-branches
     bind_addr: Union[Tuple[str], Tuple[str, int, int]],
     port: int = _MDNS_PORT,
     ip_version: IPVersion = IPVersion.V4Only,
@@ -2943,9 +2943,9 @@ class Zeroconf(QuietLogger):
             for record in removes:
                 self.cache.remove(record)
 
-    def handle_query(
+    def handle_query(  # pylint: disable=too-many-branches
         self, msg: DNSIncoming, addr: Optional[str], port: int
-    ) -> None:  # pylint: disable=too-many-branches
+    ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
         out = None
