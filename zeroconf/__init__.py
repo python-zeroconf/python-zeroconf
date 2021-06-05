@@ -505,7 +505,7 @@ class DNSRecord(DNSEntry):
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
         """Abstract method"""
         raise AbstractMethodException
 
@@ -552,7 +552,7 @@ class DNSRecord(DNSEntry):
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
 
-    def write(self, out: 'DNSOutgoing') -> None:
+    def write(self, out: 'DNSOutgoing') -> None:  # pylint: disable=no-self-use
         """Abstract method"""
         raise AbstractMethodException
 
