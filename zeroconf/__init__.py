@@ -678,8 +678,7 @@ class DNSText(DNSRecord):
         """String representation"""
         if len(self.text) > 10:
             return self.to_string(self.text[:7]) + "..."
-        else:
-            return self.to_string(self.text)
+        return self.to_string(self.text)
 
 
 class DNSService(DNSRecord):
@@ -1182,14 +1181,13 @@ class DNSOutgoing:
         does not fit in a single packet, but this exists for
         backward compatibility."""
         packets = self.packets()
-        if len(packets) > 0:
-            if len(packets[0]) > _MAX_MSG_ABSOLUTE:
-                QuietLogger.log_warning_once(
-                    "Created over-sized packet (%d bytes) %r", len(packets[0]), packets[0]
-                )
-            return packets[0]
-        else:
+        if len(packets) == 0:
             return b''
+        if len(packets[0]) > _MAX_MSG_ABSOLUTE:
+            QuietLogger.log_warning_once(
+                "Created over-sized packet (%d bytes) %r", len(packets[0]), packets[0]
+            )
+        return packets[0]
 
     def packets(self) -> List[bytes]:
         """Returns a list of bytestrings containing the packets' bytes
@@ -1904,10 +1902,9 @@ class ServiceInfo(RecordUpdateListener):
         """List addresses matching IP version."""
         if version == IPVersion.V4Only:
             return [addr for addr in self._addresses if not _is_v6_address(addr)]
-        elif version == IPVersion.V6Only:
+        if version == IPVersion.V6Only:
             return list(filter(_is_v6_address, self._addresses))
-        else:
-            return self._addresses
+        return self._addresses
 
     def parsed_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
         """List addresses in their parsed string form."""
@@ -2394,18 +2391,17 @@ def add_multicast_member(
                 interface,
             )
             return False
-        elif _errno == errno.EADDRNOTAVAIL:
+        if _errno == errno.EADDRNOTAVAIL:
             log.info(
                 'Address not available when adding %s to multicast '
                 'group, it is expected to happen on some systems',
                 interface,
             )
             return False
-        elif _errno in err_einval:
+        if _errno in err_einval:
             log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
             return False
-        else:
-            raise
+        raise
     return True
 
 
