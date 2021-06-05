@@ -49,7 +49,7 @@ from . import (
 def _get_best_available_queue() -> queue.Queue:
     """Create the best available queue type."""
     if hasattr(queue, "SimpleQueue"):
-        return queue.SimpleQueue()  # type: ignore
+        return queue.SimpleQueue()  # type: ignore  # pylint: disable=all
     return queue.Queue()
 
 
