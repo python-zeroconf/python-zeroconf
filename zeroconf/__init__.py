@@ -232,7 +232,7 @@ def _encode_address(address: str) -> bytes:
     return socket.inet_pton(address_family, address)
 
 
-def service_type_name(type_: str, *, strict: bool = True) -> str:
+def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: disable=too-many-branches
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
 
@@ -2867,7 +2867,7 @@ class Zeroconf(QuietLogger):
             listener.update_record(self, now, rec)
         self.notify_all()
 
-    def handle_response(self, msg: DNSIncoming) -> None:
+    def handle_response(self, msg: DNSIncoming) -> None:  # pylint: disable=too-many-branches
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
         updates = []  # type: List[DNSRecord]
@@ -2938,7 +2938,9 @@ class Zeroconf(QuietLogger):
             for record in removes:
                 self.cache.remove(record)
 
-    def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
+    def handle_query(
+        self, msg: DNSIncoming, addr: Optional[str], port: int
+    ) -> None:  # pylint: disable=too-many-branches
         """Deal with incoming query packets.  Provides a response if
         possible."""
         out = None
