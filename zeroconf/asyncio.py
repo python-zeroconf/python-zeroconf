@@ -139,7 +139,7 @@ class AsyncServiceInfo(ServiceInfo):
                     next_ = now + delay
                     delay *= 2
 
-                await aiozc.async_wait((min(next_, last) - now) / 1000)
+                await aiozc.async_wait(min(next_, last) - now)
                 now = current_time_millis()
         finally:
             aiozc.zeroconf.remove_listener(self)
