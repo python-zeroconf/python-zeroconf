@@ -3078,7 +3078,7 @@ class Zeroconf(QuietLogger):
     def __enter__(self) -> 'Zeroconf':
         return self
 
-    def __exit__(
+    def __exit__(  # pylint: disable=useless-return
         self,
         exc_type: Optional[Type[BaseException]],
         exc_val: Optional[BaseException],
