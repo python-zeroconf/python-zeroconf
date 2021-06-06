@@ -7,7 +7,6 @@ The default is HTTP and HAP; use --find to search for all available services in 
 
 import argparse
 import logging
-import socket
 from time import sleep
 from typing import cast
 
@@ -23,7 +22,7 @@ def on_service_state_change(
         info = zeroconf.get_service_info(service_type, name)
         print("Info from zeroconf.get_service_info: %r" % (info))
         if info:
-            addresses = ["%s:%d" % (socket.inet_ntoa(addr), cast(int, info.port)) for addr in info.addresses]
+            addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
             print("  Addresses: %s" % ", ".join(addresses))
             print("  Weight: %d, priority: %d" % (info.weight, info.priority))
             print("  Server: %s" % (info.server,))

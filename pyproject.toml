@@ -1,4 +1,37 @@
 [tool.black]
 line-length = 110
-target_version = ['py35', 'py36', 'py37']
+target_version = ['py35', 'py36', 'py37', 'py38']
 skip_string_normalization = true
+
+[tool.pylint.BASIC]
+class-const-naming-style = "any"
+good-names = [
+    "e",
+    "er",
+    "h",
+    "i",
+    "id",
+    "ip",
+    "os",
+    "n",
+    "rr",
+    "rs",
+    "s",
+    "t",
+    "wr",
+    "zc",
+    "_GLOBAL_DONE",
+]
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "duplicate-code",
+    "fixme",
+    "format",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-public-methods"
+]

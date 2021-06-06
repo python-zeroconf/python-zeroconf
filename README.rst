@@ -1,14 +1,14 @@
 python-zeroconf
 ===============
 
-.. image:: https://travis-ci.org/jstasiak/python-zeroconf.svg?branch=master
-    :target: https://travis-ci.org/jstasiak/python-zeroconf
-    
+.. image:: https://github.com/jstasiak/python-zeroconf/workflows/CI/badge.svg
+   :target: https://github.com/jstasiak/python-zeroconf?query=workflow%3ACI+branch%3Amaster
+
 .. image:: https://img.shields.io/pypi/v/zeroconf.svg
     :target: https://pypi.python.org/pypi/zeroconf
 
-.. image:: https://img.shields.io/coveralls/jstasiak/python-zeroconf.svg
-    :target: https://coveralls.io/r/jstasiak/python-zeroconf
+.. image:: https://codecov.io/gh/jstasiak/python-zeroconf/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/jstasiak/python-zeroconf
 
 `Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
     
@@ -44,7 +44,7 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 Python compatibility
 --------------------
 
-* CPython 3.5+
+* CPython 3.6+
 * PyPy3 5.8+
 
 Versioning
@@ -133,6 +133,202 @@ See examples directory for more.
 
 Changelog
 =========
+
+0.32.0 (Unreleased)
+===================
+
+* Add zeroconf.asyncio to the docs (#434) @bdraco
+
+* Fix warning when generating sphinx docs (#432) @bdraco
+
+* Implement an AsyncServiceBrowser to compliment the sync ServiceBrowser (#429) @bdraco
+
+* Seperate non-thread specific code from ServiceBrowser into _ServiceBrowserBase (#428) @bdraco
+
+* Remove is_type_unique as it is unused (#426)
+
+* Avoid checking the registry when answering requests for _services._dns-sd._udp.local. (#425) @bdraco
+
+  _services._dns-sd._udp.local. is a special case and should never
+  be in the registry
+
+* Remove unused argument from ServiceInfo.dns_addresses (#423) @bdraco
+
+* Add methods to generate DNSRecords from ServiceInfo (#422) @bdraco
+
+* Seperate logic for consuming records in ServiceInfo (#421) @bdraco
+
+* Seperate query generation for ServiceBrowser (#420) @bdraco
+
+* Add async_request example with browse (#415) @bdraco
+
+* Add async_register_service/async_unregister_service example (#414) @bdraco
+
+* Add async_get_service_info to AsyncZeroconf and async_request to AsyncServiceInfo (#408) @bdraco
+
+* Add support for registering notify listeners (#409) @bdraco
+
+* Allow passing in a sync Zeroconf instance to AsyncZeroconf (#406) @bdraco
+
+* Use a dedicated thread for sending outgoing packets with asyncio (#404) @bdraco
+
+* Fix IPv6 setup under MacOS when binding to "" (#392) @bdraco
+
+* Ensure ZeroconfServiceTypes.find always cancels the ServiceBrowser (#389) @bdraco
+
+  There was a short window where the ServiceBrowser thread
+  could be left running after Zeroconf is closed because
+  the .join() was never waited for when a new Zeroconf
+  object was created
+
+* Simplify DNSPointer processing in ServiceBrowser (#386) @bdraco
+
+* Breaking change: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
+
+  When manually creating a zeroconf.Engine object, it is no longer started automatically.
+  It must manually be started by calling .start() on the created object.
+
+  The Engine thread is now started after all the listeners have been added to avoid a
+  race condition where packets could be missed at startup.
+
+* Ensure the cache is checked for name conflict after final service query with asyncio (#382) @bdraco
+
+* Complete ServiceInfo request as soon as all questions are answered (#380) @bdraco
+
+  Closes a small race condition where there were no questions
+  to ask because the cache was populated in between checks
+
+* Coalesce browser questions scheduled at the same time (#379) @bdraco
+
+* Ensure duplicate packets do not trigger duplicate updates (#376) @bdraco
+
+  If TXT or SRV records update was already processed and then
+  recieved again, it was possible for a second update to be
+  called back in the ServiceBrowser
+
+* Only trigger a ServiceStateChange.Updated event when an ip address is added (#375) @bdraco
+
+* Fix RFC6762 Section 10.2 paragraph 2 compliance (#374) @bdraco
+
+* Reduce length of ServiceBrowser thread name with many types (#373) @bdraco
+
+* Remove Callable quoting (#371) @bdraco
+
+* Abstract check to see if a record matches a type the ServiceBrowser wants (#369) @bdraco
+
+* Reduce complexity of ServiceBrowser enqueue_callback (#368) @bdraco
+
+* Fix empty answers being added in ServiceInfo.request (#367) @bdraco
+
+* Ensure ServiceInfo populates all AAAA records (#366) @bdraco
+
+  Use get_all_by_details to ensure all records are loaded
+  into addresses.
+
+  Only load A/AAAA records from cache once in load_from_cache
+  if there is a SRV record present
+
+  Move duplicate code that checked if the ServiceInfo was complete
+  into its own function
+
+* Remove black python 3.5 exception block (#365) @bdraco
+
+* Small cleanup of ServiceInfo.update_record (#364) @bdraco
+
+* Add new cache function get_all_by_details (#363) @bdraco
+  When working with IPv6, multiple AAAA records can exist
+  for a given host. get_by_details would only return the
+  latest record in the cache.
+
+  Fix a case where the cache list can change during
+  iteration
+
+* Small cleanups to asyncio tests (#362) @bdraco
+
+* Improve test coverage for name conflicts (#357) @bdraco
+
+* Return task objects created by AsyncZeroconf (#360) @nocarryr
+
+0.31.0
+======
+
+* Separated cache loading from I/O in ServiceInfo and fixed cache lookup (#356),
+  thanks to J. Nick Koston.
+  
+  The ServiceInfo class gained a load_from_cache() method to only fetch information
+  from Zeroconf cache (if it exists) with no IO performed. Additionally this should
+  reduce IO in cases where cache lookups were previously incorrectly failing.
+
+0.30.0
+======
+
+* Some nice refactoring work including removal of the Reaper thread,
+  thanks to J. Nick Koston.
+
+* Fixed a Windows-specific The requested address is not valid in its context regression,
+  thanks to Timothee ‘TTimo’ Besset and J. Nick Koston.
+
+* Provided an asyncio-compatible service registration layer (in the zeroconf.asyncio module),
+  thanks to J. Nick Koston.
+
+0.29.0
+======
+
+* A single socket is used for listening on responding when `InterfaceChoice.Default` is chosen.
+  Thanks to J. Nick Koston.
+
+Backwards incompatible:
+
+* Dropped Python 3.5 support
+
+0.28.8
+======
+
+* Fixed the packet generation when multiple packets are necessary, previously invalid
+  packets were generated sometimes. Patch thanks to J. Nick Koston.
+
+0.28.7
+======
+
+* Fixed the IPv6 address rendering in the browser example, thanks to Alexey Vazhnov.
+* Fixed a crash happening when a service is added or removed during handle_response
+  and improved exception handling, thanks to J. Nick Koston.
+
+0.28.6
+======
+
+* Loosened service name validation when receiving from the network this lets us handle
+  some real world devices previously causing errors, thanks to J. Nick Koston.
+
+0.28.5
+======
+
+* Enabled ignoring duplicated messages which decreases CPU usage, thanks to J. Nick Koston.
+* Fixed spurious AttributeError: module 'unittest' has no attribute 'mock' in tests.
+
+0.28.4
+======
+
+* Improved cache reaper performance significantly, thanks to J. Nick Koston.
+* Added ServiceListener to __all__ as it's part of the public API, thanks to Justin Nesselrotte.
+
+0.28.3
+======
+
+* Reduced a time an internal lock is held which should eliminate deadlocks in high-traffic networks,
+  thanks to J. Nick Koston.
+
+0.28.2
+======
+
+* Stopped asking questions we already have answers for in cache, thanks to Paul Daumlechner.
+* Removed initial delay before querying for service info, thanks to Erik Montnemery.
+
+0.28.1
+======
+
+* Fixed a resource leak connected to using ServiceBrowser with multiple types, thanks to
+  J. Nick Koston.
 
 0.28.0
 ======
