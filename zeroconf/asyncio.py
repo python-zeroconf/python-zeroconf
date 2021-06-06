@@ -23,7 +23,8 @@ import asyncio
 import contextlib
 import queue
 import threading
-from typing import Awaitable, Callable, Dict, List, Optional, Union
+from types import TracebackType  # noqa # used in type hints
+from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 
 from . import (
     DNSOutgoing,
@@ -352,3 +353,15 @@ class AsyncZeroconf:
         await asyncio.gather(
             *[self.async_remove_service_listener(listener) for listener in list(self.async_browsers)]
         )
+
+    async def __aenter__(self) -> 'AsyncZeroconf':
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Optional[bool]:
+        await self.async_close()
+        return None

@@ -35,7 +35,8 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import Dict, Iterable, List, Optional, Union, cast
+from types import TracebackType  # noqa # used in type hints
+from typing import Dict, Iterable, List, Optional, Type, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
@@ -3064,8 +3065,19 @@ class Zeroconf(QuietLogger):
             for s in self._respond_sockets:
                 self.engine.del_reader(s)
         self.engine.join()
-
         # shutdown the rest
         self.notify_all()
         for s in self._respond_sockets:
             s.close()
+
+    def __enter__(self) -> 'Zeroconf':
+        return self
+
+    def __exit__(  # pylint: disable=useless-return
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Optional[bool]:
+        self.close()
+        return None
