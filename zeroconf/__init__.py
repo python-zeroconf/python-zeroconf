@@ -183,6 +183,9 @@ _LOCAL_TRAILER = '.local.'
 _TCP_PROTOCOL_LOCAL_TRAILER = '._tcp.local.'
 _NONTCP_PROTOCOL_LOCAL_TRAILER = '._udp.local.'
 
+# https://datatracker.ietf.org/doc/html/rfc6763#section-9
+_SERVICE_TYPE_ENUMERATION_NAME = "_services._dns-sd._udp.local."
+
 try:
     _IPPROTO_IPV6 = socket.IPPROTO_IPV6
 except AttributeError:
@@ -2191,7 +2194,7 @@ class ZeroconfServiceTypes(ServiceListener):
         """
         local_zc = zc or Zeroconf(interfaces=interfaces, ip_version=ip_version)
         listener = cls()
-        browser = ServiceBrowser(local_zc, '_services._dns-sd._udp.local.', listener=listener)
+        browser = ServiceBrowser(local_zc, _SERVICE_TYPE_ENUMERATION_NAME, listener=listener)
 
         # wait for responses
         time.sleep(timeout)
@@ -2960,12 +2963,12 @@ class Zeroconf(QuietLogger):
 
         for question in msg.questions:
             if question.type == _TYPE_PTR:
-                if question.name == "_services._dns-sd._udp.local.":
+                if question.name == _SERVICE_TYPE_ENUMERATION_NAME:
                     for stype in self.registry.get_types():
                         out.add_answer(
                             msg,
                             DNSPointer(
-                                "_services._dns-sd._udp.local.",
+                                _SERVICE_TYPE_ENUMERATION_NAME,
                                 _TYPE_PTR,
                                 _CLASS_IN,
                                 _DNS_OTHER_TTL,
