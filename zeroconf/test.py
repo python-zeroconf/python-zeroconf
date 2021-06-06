@@ -1625,6 +1625,8 @@ class TestServiceInfo(unittest.TestCase):
         info = ServiceInfo(
             service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
         )
+        # Verify backwards compatiblity with calling with None
+        info.update_record(zc, now, None)
         # Matching updates
         info.update_record(
             zc,
