@@ -227,6 +227,11 @@ def current_time_millis() -> float:
     return time.time() * 1000
 
 
+def millis_to_seconds(millis: float) -> float:
+    """Convert milliseconds to seconds."""
+    return millis / 1000.0
+
+
 def _is_v6_address(addr: bytes) -> bool:
     return len(addr) == 16
 
@@ -539,7 +544,7 @@ class DNSRecord(DNSEntry):
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: float) -> Union[int, float]:
         """Returns the remaining TTL in seconds."""
-        return max(0, (self._expiration_time - now) / 1000.0)
+        return max(0, millis_to_seconds(self._expiration_time - now))
 
     def is_expired(self, now: float) -> bool:
         """Returns true if this record has expired."""
@@ -2690,7 +2695,7 @@ class Zeroconf(QuietLogger):
         """Calling thread waits for a given number of milliseconds or
         until notified."""
         with self.condition:
-            self.condition.wait(timeout / 1000.0)
+            self.condition.wait(millis_to_seconds(timeout))
 
     def notify_all(self) -> None:
         """Notifies all waiting threads"""
