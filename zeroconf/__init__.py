@@ -1785,17 +1785,33 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         super().cancel()
         self.join()
 
+    def _wait_for_next_event(self) -> None:
+        """Wait for the next handler or time to send queries."""
+        # If there are handlers to call
+        # we want to process them right away
+        if self._handlers_to_call:
+            return
+
+        # Wait for the type has the smallest next time
+        next_time = min(self._next_time.values())
+        now = current_time_millis()
+
+        if next_time <= now:
+            return
+
+        with self.zc.condition:
+            # We must check again while holding the condition
+            # in case the other thread has added to _handlers_to_call
+            # between when we checked above when we were not
+            # holding the condition
+            if not self._handlers_to_call:
+                self.zc.condition.wait(millis_to_seconds(next_time - now))
+
     def run(self) -> None:
         """Run the browser thread."""
         super().run()
         while True:
-            if not self._handlers_to_call:
-                # Wait for the type has the smallest next time
-                next_time = min(self._next_time.values())
-                now = current_time_millis()
-                if next_time > now:
-                    self.zc.wait(next_time - now)
-
+            self._wait_for_next_event()
             if self.zc.done or self.done:
                 return
 
