@@ -35,8 +35,7 @@ import time
 import warnings
 from collections import OrderedDict
 from types import TracebackType  # noqa # used in type hints
-from typing import Dict, List, Optional, Sequence, Type, Union, cast
-from typing import Dict, Iterable, List, Optional, Union, cast
+from typing import Dict, Iterable, List, Literal, Optional, Type, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
@@ -3084,6 +3083,6 @@ class Zeroconf(QuietLogger):
         exc_type: Optional[Type[BaseException]],
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
-    ) -> 'Literal[False]':  # type: ignore # noqa
+    ) -> Literal[False]:
         self.close()
         return False
