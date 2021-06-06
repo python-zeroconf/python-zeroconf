@@ -1980,9 +1980,6 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             zeroconf.handle_response(
                 mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120)
             )
-            zeroconf.handle_response(
-                mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120)
-            )
 
             called_with_refresh_time_check = False
 
@@ -1995,6 +1992,12 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
 
             # Set an expire time that will force a refresh
             with unittest.mock.patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
+                zeroconf.handle_response(
+                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120)
+                )
+                # Add the last record after updating the first one
+                # to ensure the service_add_event only gets set
+                # after the update
                 zeroconf.handle_response(
                     mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120)
                 )
