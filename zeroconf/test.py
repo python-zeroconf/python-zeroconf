@@ -1004,6 +1004,37 @@ class TestRegistrar(unittest.TestCase):
             zc.register_service(conflicting_info)
         zc.close()
 
+    def test_register_and_lookup_type_by_uppercase_name(self):
+        # instantiate a zeroconf instance
+        zc = Zeroconf(interfaces=['127.0.0.1'])
+        type_ = "_mylowertype._tcp.local."
+        name = "Home"
+        registration_name = "%s.%s" % (name, type_)
+
+        info = ServiceInfo(
+            type_,
+            name=registration_name,
+            server="random123.local.",
+            addresses=[socket.inet_pton(socket.AF_INET, "1.2.3.4")],
+            port=80,
+            properties={"version": "1.0"},
+        )
+        zc.register_service(info)
+        _clear_cache(zc)
+        info = ServiceInfo(type_, registration_name)
+        info.load_from_cache(zc)
+        assert info.addresses == []
+
+        out = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        out.add_question(r.DNSQuestion(type_.upper(), r._TYPE_PTR, r._CLASS_IN))
+        zc.send(out)
+        time.sleep(0.5)
+        info = ServiceInfo(type_, registration_name)
+        info.load_from_cache(zc)
+        assert info.addresses == [socket.inet_pton(socket.AF_INET, "1.2.3.4")]
+        assert info.properties == {b"version": b"1.0"}
+        zc.close()
+
 
 class TestServiceRegistry(unittest.TestCase):
     def test_only_register_once(self):
