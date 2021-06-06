@@ -6,7 +6,7 @@ PYTHON_VERSION:=$(shell python -c "import sys;sys.stdout.write('%d.%d' % sys.ver
 LINT_TARGETS:=flake8
 
 ifneq ($(findstring PyPy,$(PYTHON_IMPLEMENTATION)),PyPy)
-	LINT_TARGETS:=$(LINT_TARGETS) mypy black_check
+	LINT_TARGETS:=$(LINT_TARGETS) mypy black_check pylint
 endif
 
 
@@ -27,6 +27,9 @@ lint: $(LINT_TARGETS)
 
 flake8:
 	flake8 --max-line-length=$(MAX_LINE_LENGTH) setup.py examples zeroconf
+
+pylint:
+	pylint zeroconf/__init__.py zeroconf/asyncio.py
 
 .PHONY: black_check
 black_check:

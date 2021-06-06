@@ -25,11 +25,13 @@ good-names = [
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
+    "duplicate-code",
     "fixme",
     "format",
     "missing-class-docstring",
     "missing-function-docstring",
     "too-few-public-methods",
     "too-many-arguments",
-    "too-many-instance-attributes"
+    "too-many-instance-attributes",
+    "too-many-public-methods"
 ]
