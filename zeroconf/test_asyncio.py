@@ -438,3 +438,27 @@ async def test_async_service_browser() -> None:
     await aiozc.async_close()
 
     assert calls[0] == ('add', type_, registration_name)
+
+
+@pytest.mark.asyncio
+async def test_async_context_manager() -> None:
+    """Test using an async context manager."""
+    type_ = "_test10-sr-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    async with AsyncZeroconf(interfaces=['127.0.0.1']) as aiozc:
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        task = await aiozc.async_register_service(info)
+        await task
+        aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
+        assert aiosinfo is not None

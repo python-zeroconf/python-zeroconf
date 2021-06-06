@@ -3083,6 +3083,6 @@ class Zeroconf(QuietLogger):
         exc_type: Optional[Type[BaseException]],
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
-    ) -> bool:
+    ) -> Optional[bool]:
         self.close()
-        return False
+        return None
