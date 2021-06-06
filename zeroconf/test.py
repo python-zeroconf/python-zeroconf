@@ -82,6 +82,12 @@ def has_working_ipv6():
     return False
 
 
+def _clear_cache(zc):
+    for name in zc.cache.names():
+        for record in zc.cache.entries_with_name(name):
+            zc.cache.remove(record)
+
+
 class TestDunder(unittest.TestCase):
     def test_dns_text_repr(self):
         # There was an issue on Python 3 that prevented DNSText's repr
@@ -1120,6 +1126,7 @@ class ServiceTypesQuery(unittest.TestCase):
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
             assert type_ in service_types
+            _clear_cache(zeroconf_registrar)
             service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
             assert type_ in service_types
 
@@ -1152,6 +1159,7 @@ class ServiceTypesQuery(unittest.TestCase):
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
             assert type_ in service_types
+            _clear_cache(zeroconf_registrar)
             service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
             assert type_ in service_types
 
@@ -1183,6 +1191,7 @@ class ServiceTypesQuery(unittest.TestCase):
         try:
             service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=0.5)
             assert type_ in service_types
+            _clear_cache(zeroconf_registrar)
             service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
             assert type_ in service_types
 
@@ -1214,6 +1223,7 @@ class ServiceTypesQuery(unittest.TestCase):
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
             assert discovery_type in service_types
+            _clear_cache(zeroconf_registrar)
             service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
             assert discovery_type in service_types
 
@@ -1290,9 +1300,7 @@ class ListenerTest(unittest.TestCase):
             time.sleep(3)
 
             # clear the answer cache to force query
-            for name in zeroconf_browser.cache.names():
-                for record in zeroconf_browser.cache.entries_with_name(name):
-                    zeroconf_browser.cache.remove(record)
+            _clear_cache(zeroconf_browser)
 
             cached_info = ServiceInfo(type_, registration_name)
             cached_info.load_from_cache(zeroconf_browser)
