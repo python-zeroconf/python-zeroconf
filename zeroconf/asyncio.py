@@ -44,6 +44,7 @@ from . import (
     _UNREGISTER_TIME,
     current_time_millis,
     instance_name_from_service_info,
+    millis_to_seconds,
 )
 
 
@@ -248,7 +249,7 @@ class AsyncZeroconf:
         """Send a broadcasts to announce a service at intervals."""
         for i in range(3):
             if i != 0:
-                await asyncio.sleep(interval / 1000)
+                await asyncio.sleep(millis_to_seconds(interval))
             self.sender.send(self.zeroconf.generate_service_broadcast(info, ttl))
 
     async def async_register_service(
@@ -278,7 +279,7 @@ class AsyncZeroconf:
         self._raise_on_name_conflict(info)
         for i in range(3):
             if i != 0:
-                await asyncio.sleep(_CHECK_TIME / 1000)
+                await asyncio.sleep(millis_to_seconds(_CHECK_TIME))
             self.sender.send(self.zeroconf.generate_service_query(info))
             self._raise_on_name_conflict(info)
 
@@ -333,7 +334,7 @@ class AsyncZeroconf:
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         with contextlib.suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(self.async_notify.event.wait(), timeout / 1000)
+            await asyncio.wait_for(self.async_notify.event.wait(), millis_to_seconds(timeout))
 
     async def async_add_service_listener(self, type_: str, listener: AsyncServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
