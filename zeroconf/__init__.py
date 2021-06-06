@@ -23,6 +23,7 @@
 import enum
 import errno
 import ipaddress
+import itertools
 import logging
 import platform
 import re
@@ -2935,9 +2936,7 @@ class Zeroconf(QuietLogger):
             # zc.get_service_info will see the cached value
             # but ONLY after all the record updates have been
             # processsed.
-            for record in address_adds:
-                self.cache.add(record)
-            for record in other_adds:
+            for record in itertools.chain(address_adds, other_adds):
                 self.cache.add(record)
             # Removes are processed last since
             # ServiceInfo could generate an un-needed query
