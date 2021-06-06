@@ -1984,20 +1984,33 @@ class ServiceInfo(RecordUpdateListener):
         return self.name[: len(self.name) - len(self.type) - 1]
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
-        """Updates service information from a DNS record."""
-        if record is None or record.is_expired(now):
-            return
+        """Updates service information from a DNS record.
 
-        self._process_record(record)
+        This method is deprecated and will be removed in a future version.
+        update_records should be implemented instead.
+        """
+        if record is not None:
+            self.update_records(zc, now, [record])
+
+    def update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+        """Updates service information from a DNS record."""
+        update_addresses = False
+        for record in records:
+            if isinstance(record, DNSService):
+                update_addresses = True
+            self._process_record(record, now)
 
         # Only update addresses if the DNSService (.server) has changed
-        if not isinstance(record, DNSService):
+        if not update_addresses:
             return
 
-        for cached_record in self._get_address_records_from_cache(zc):
-            self._process_record(cached_record)
+        for record in self._get_address_records_from_cache(zc):
+            self._process_record(record, now)
 
-    def _process_record(self, record: DNSRecord) -> None:
+    def _process_record(self, record: DNSRecord, now: float) -> None:
+        if record.is_expired(now):
+            return
+
         if isinstance(record, DNSAddress):
             if record.key == self.server_key and record.address not in self._addresses:
                 self._addresses.append(record.address)
@@ -2087,8 +2100,7 @@ class ServiceInfo(RecordUpdateListener):
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
             record_updates.append(cached_txt_record)
-        for record in record_updates:
-            self.update_record(zc, now, record)
+        self.update_records(zc, now, record_updates)
         return self._is_complete
 
     @property
