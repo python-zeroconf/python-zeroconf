@@ -597,7 +597,7 @@ class DNSAddress(DNSRecord):
                     socket.AF_INET6 if _is_v6_address(self.address) else socket.AF_INET, self.address
                 )
             )
-        except Exception:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
+        except (ValueError, OSError):
             return self.to_string(str(self.address))
 
 
