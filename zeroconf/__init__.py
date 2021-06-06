@@ -280,7 +280,7 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
     :return: fully qualified service name (eg: _http._tcp.local.)
     """
 
-    if type_.endswith(_TCP_PROTOCOL_LOCAL_TRAILER) or type_.endswith(_NONTCP_PROTOCOL_LOCAL_TRAILER):
+    if type_.endswith((_TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)):
         remaining = type_[: -len(_TCP_PROTOCOL_LOCAL_TRAILER)].split('.')
         trailer = type_[-len(_TCP_PROTOCOL_LOCAL_TRAILER) :]
         has_protocol = True
