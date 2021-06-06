@@ -1711,6 +1711,46 @@ class TestServiceInfo(unittest.TestCase):
         assert new_address not in info.addresses
         zc.close()
 
+    def test_service_info_rejects_expired_records(self):
+        """Verify records that are expired are rejected."""
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        ttl = 120
+        now = r.current_time_millis()
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        # Matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                service_name,
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        # Expired record
+        expired_record = r.DNSText(
+            service_name,
+            r._TYPE_TXT,
+            r._CLASS_IN | r._CLASS_UNIQUE,
+            ttl,
+            b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
+        )
+        expired_record.created = 1000
+        expired_record._expiration_time = 1000
+        info.update_record(zc, now, expired_record)
+        assert info.properties[b"ci"] == b"2"
+        zc.close()
+
     def test_get_info_partial(self):
 
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
