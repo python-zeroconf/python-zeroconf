@@ -209,12 +209,15 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         """Run the browser task."""
         self.run()
         while True:
-            if not self._handlers_to_call:
-                # Wait for the type has the smallest next time
-                next_time = min(self._next_time.values())
-                now = current_time_millis()
-                if next_time > now:
-                    await self.aiozc.async_wait(next_time - now)
+            timeout = self._seconds_to_wait()
+            if timeout:
+                async with self.aiozc.condition:
+                    # We must check again while holding the condition
+                    # in case the other thread has added to _handlers_to_call
+                    # between when we checked above when we were not
+                    # holding the condition
+                    if not self._handlers_to_call:
+                        await wait_condition_or_timeout(self.aiozc.condition, timeout)
 
             out = self.generate_ready_queries()
             if out:
