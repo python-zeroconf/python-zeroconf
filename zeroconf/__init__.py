@@ -1284,11 +1284,21 @@ class DNSCache:
         if isinstance(entry, DNSService):
             self.service_cache.setdefault(entry.server, []).append(entry)
 
+    def add_records(self, entries: Iterable[DNSRecord]) -> None:
+        """Add multiple records."""
+        for entry in entries:
+            self.add(entry)
+
     def remove(self, entry: DNSRecord) -> None:
         """Removes an entry."""
         if isinstance(entry, DNSService):
             DNSCache.remove_key(self.service_cache, entry.server, entry)
         DNSCache.remove_key(self.cache, entry.key, entry)
+
+    def remove_records(self, entries: Iterable[DNSRecord]) -> None:
+        """Remove multiple records."""
+        for entry in entries:
+            self.remove(entry)
 
     @staticmethod
     def remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
@@ -2940,13 +2950,11 @@ class Zeroconf(QuietLogger):
             # zc.get_service_info will see the cached value
             # but ONLY after all the record updates have been
             # processsed.
-            for record in itertools.chain(address_adds, other_adds):
-                self.cache.add(record)
+            self.cache.add_records(itertools.chain(address_adds, other_adds))
             # Removes are processed last since
             # ServiceInfo could generate an un-needed query
             # because the data was not yet populated.
-            for record in removes:
-                self.cache.remove(record)
+            self.cache.remove_records(removes)
 
     def _answer_service_type_enumeration_query(self, msg: DNSIncoming, out: DNSOutgoing) -> None:
         """Provide an answer to a service type enumeration query.
