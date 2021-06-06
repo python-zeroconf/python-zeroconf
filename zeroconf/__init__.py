@@ -2967,7 +2967,7 @@ class Zeroconf(QuietLogger):
 
     def _answer_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
         """Answer a PTR query."""
-        for service in self.registry.get_infos_type(question.name):
+        for service in self.registry.get_infos_type(question.name.lower()):
             out.add_answer(msg, service.dns_pointer())
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
@@ -3014,7 +3014,7 @@ class Zeroconf(QuietLogger):
 
         for question in msg.questions:
             if question.type == _TYPE_PTR:
-                if question.name == _SERVICE_TYPE_ENUMERATION_NAME:
+                if question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
                     self._answer_service_type_enumeration_query(msg, out)
                 else:
                     self._answer_ptr_query(msg, out, question)
