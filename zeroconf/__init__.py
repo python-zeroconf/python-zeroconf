@@ -713,18 +713,34 @@ class DNSService(DNSRecord):
         return self.to_string("%s:%s" % (self.server, self.port))
 
 
-class DNSIncoming(QuietLogger):
+class DNSMessage:
+    """A base class for DNS messages."""
+
+    def __init__(self, flags: int) -> None:
+        """Construct a DNS message."""
+        self.flags = flags
+
+    def is_query(self) -> bool:
+        """Returns true if this is a query."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
+
+    def is_response(self) -> bool:
+        """Returns true if this is a response."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
+
+
+class DNSIncoming(DNSMessage, QuietLogger):
 
     """Object representation of an incoming DNS packet"""
 
     def __init__(self, data: bytes) -> None:
         """Constructor from string holding bytes of packet"""
+        super().__init__(0)
         self.offset = 0
         self.data = data
         self.questions = []  # type: List[DNSQuestion]
         self.answers = []  # type: List[DNSRecord]
         self.id = 0
-        self.flags = 0  # type: int
         self.num_questions = 0
         self.num_answers = 0
         self.num_authorities = 0
@@ -846,14 +862,6 @@ class DNSIncoming(QuietLogger):
             if rec is not None:
                 self.answers.append(rec)
 
-    def is_query(self) -> bool:
-        """Returns true if this is a query"""
-        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
-
-    def is_response(self) -> bool:
-        """Returns true if this is a response"""
-        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
-
     def read_utf(self, offset: int, length: int) -> str:
         """Reads a UTF-8 string of a given length from the packet"""
         return str(self.data[offset : offset + length], 'utf-8', 'replace')
@@ -892,15 +900,15 @@ class DNSIncoming(QuietLogger):
         return result
 
 
-class DNSOutgoing:
+class DNSOutgoing(DNSMessage):
 
     """Object representation of an outgoing packet"""
 
     def __init__(self, flags: int, multicast: bool = True) -> None:
+        super().__init__(flags)
         self.finished = False
         self.id = 0
         self.multicast = multicast
-        self.flags = flags
         self.packets_data = []  # type: List[bytes]
 
         # these 3 are per-packet -- see also reset_for_next_packet()
