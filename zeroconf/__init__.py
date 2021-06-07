@@ -1224,6 +1224,17 @@ class DNSOutgoing(DNSMessage):
             additionals_written += 1
         return additionals_written
 
+    def _has_more_to_add(
+        self, questions_offset: int, answer_offset: int, authority_offset: int, additional_offset: int
+    ) -> bool:
+        """Check if all questions, answers, authority, and additionals have been written to the packet."""
+        return (
+            questions_offset < len(self.questions)
+            or answer_offset < len(self.answers)
+            or authority_offset < len(self.authorities)
+            or additional_offset < len(self.additionals)
+        )
+
     def packets(self) -> List[bytes]:
         """Returns a list of bytestrings containing the packets' bytes
 
@@ -1241,16 +1252,11 @@ class DNSOutgoing(DNSMessage):
         answer_offset = 0
         authority_offset = 0
         additional_offset = 0
-
         # we have to at least write out the question
         first_time = True
 
-        while (
-            first_time
-            or questions_offset < len(self.questions)
-            or answer_offset < len(self.answers)
-            or authority_offset < len(self.authorities)
-            or additional_offset < len(self.additionals)
+        while first_time or self._has_more_to_add(
+            questions_offset, answer_offset, authority_offset, additional_offset
         ):
             first_time = False
             log.debug(
@@ -1277,13 +1283,6 @@ class DNSOutgoing(DNSMessage):
             self.insert_short_at_start(authorities_written)
             self.insert_short_at_start(answers_written)
             self.insert_short_at_start(questions_written)
-            self.insert_short_at_start(self.flags)
-            if self.multicast:
-                self.insert_short_at_start(0)
-            else:
-                self.insert_short_at_start(self.id)
-            self.packets_data.append(b''.join(self.data))
-            self.reset_for_next_packet()
 
             questions_offset += questions_written
             answer_offset += answers_written
@@ -1296,6 +1295,24 @@ class DNSOutgoing(DNSMessage):
                 authority_offset,
                 additional_offset,
             )
+
+            if self.is_query() and self._has_more_to_add(
+                questions_offset, answer_offset, authority_offset, additional_offset
+            ):
+                # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
+                log.debug("Setting TC flag")
+                self.insert_short_at_start(self.flags | _FLAGS_TC)
+            else:
+                self.insert_short_at_start(self.flags)
+
+            if self.multicast:
+                self.insert_short_at_start(0)
+            else:
+                self.insert_short_at_start(self.id)
+
+            self.packets_data.append(b''.join(self.data))
+            self.reset_for_next_packet()
+
             if (questions_written + answers_written + authorities_written + additionals_written) == 0 and (
                 len(self.questions) + len(self.answers) + len(self.authorities) + len(self.additionals)
             ) > 0:
