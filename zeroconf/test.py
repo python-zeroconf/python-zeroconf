@@ -936,6 +936,7 @@ class TestRegistrar(unittest.TestCase):
 
         # query
         query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
+        assert query.is_query() is True
         query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
@@ -1463,6 +1464,7 @@ class TestServiceBrowser(unittest.TestCase):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
 
             generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            assert generated.is_response() is True
 
             if service_state_change == r.ServiceStateChange.Removed:
                 ttl = 0
