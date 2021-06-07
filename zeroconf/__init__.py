@@ -1620,7 +1620,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for check_type_ in self.types:
             if not check_type_.endswith(service_type_name(check_type_, strict=False)):
                 raise BadTypeInNameException
-        self.daemon = True
         self.zc = zc
         self.addr = addr
         self.port = port
@@ -1841,6 +1840,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     ) -> None:
         threading.Thread.__init__(self)
         super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
+        self.daemon = True
         self.start()
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
             '-'.join([type_[:-7] for type_ in self.types]),
