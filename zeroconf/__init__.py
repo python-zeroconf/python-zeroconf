@@ -1754,6 +1754,22 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
         return out
 
+    def _seconds_to_wait(self) -> Optional[float]:
+        """Returns the number of seconds to wait for the next event."""
+        # If there are handlers to call
+        # we want to process them right away
+        if self._handlers_to_call:
+            return None
+
+        # Wait for the type has the smallest next time
+        next_time = min(self._next_time.values())
+        now = current_time_millis()
+
+        if next_time <= now:
+            return None
+
+        return millis_to_seconds(next_time - now)
+
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     """Used to browse for a service of a specific type.
@@ -1785,33 +1801,20 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         super().cancel()
         self.join()
 
-    def _wait_for_next_event(self) -> None:
-        """Wait for the next handler or time to send queries."""
-        # If there are handlers to call
-        # we want to process them right away
-        if self._handlers_to_call:
-            return
-
-        # Wait for the type has the smallest next time
-        next_time = min(self._next_time.values())
-        now = current_time_millis()
-
-        if next_time <= now:
-            return
-
-        with self.zc.condition:
-            # We must check again while holding the condition
-            # in case the other thread has added to _handlers_to_call
-            # between when we checked above when we were not
-            # holding the condition
-            if not self._handlers_to_call:
-                self.zc.condition.wait(millis_to_seconds(next_time - now))
-
     def run(self) -> None:
         """Run the browser thread."""
         super().run()
         while True:
-            self._wait_for_next_event()
+            timeout = self._seconds_to_wait()
+            if timeout:
+                with self.zc.condition:
+                    # We must check again while holding the condition
+                    # in case the other thread has added to _handlers_to_call
+                    # between when we checked above when we were not
+                    # holding the condition
+                    if not self._handlers_to_call:
+                        self.zc.condition.wait(timeout)
+
             if self.zc.done or self.done:
                 return
 
