@@ -20,7 +20,7 @@ env:
 	cp requirements-dev.txt ./env/requirements.built
 
 .PHONY: ci
-ci: test_coverage lint
+ci: lint test_coverage
 
 .PHONY: lint
 lint: $(LINT_TARGETS)
