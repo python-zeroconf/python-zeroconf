@@ -137,6 +137,152 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+* Breaking change: Update internal version check to match docs (3.6+) (#491) @bdraco
+
+  Python version eariler then 3.6 were likely broken with zeroconf
+  already, however the version is now explictly checked.
+
+* Breaking change: RecordUpdateListener now uses update_records instead of update_record (#419) @bdraco
+
+  This allows the listener to receive all the records that have
+  been updated in a single transaction such as a packet or
+  cache expiry.
+
+  update_record has been deprecated in favor of update_records
+  A compatibility shim exists to ensure classes that use
+  RecordUpdateListener as a base class continue to have
+  update_record called, however they should be updated
+  as soon as possible.
+
+  A new method update_records_complete is now called on each
+  listener when all listeners have completed processing updates
+  and the cache has been updated. This allows ServiceBrowsers
+  to delay calling handlers until they are sure the cache
+  has been updated as its a common pattern to call for
+  ServiceInfo when a ServiceBrowser handler fires.
+
+* Breaking change: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
+
+  When manually creating a zeroconf.Engine object, it is no longer started automatically.
+  It must manually be started by calling .start() on the created object.
+
+  The Engine thread is now started after all the listeners have been added to avoid a
+  race condition where packets could be missed at startup.
+
+* Set the TC bit for query packets where the known answers span multiple packets (#494) @bdraco
+
+* Ensure packets are properly seperated when exceeding maximum size (#498) @bdraco
+
+  Ensure that questions that exceed the max packet size are
+  moved to the next packet. This fixes DNSQuestions being
+  sent in multiple packets in violation of:
+  datatracker.ietf.org/doc/html/rfc6762#section-7.2
+
+  Ensure only one resource record is sent when a record
+  exceeds _MAX_MSG_TYPICAL
+  datatracker.ietf.org/doc/html/rfc6762#section-17
+
+* Make a base class for DNSIncoming and DNSOutgoing (#497) @bdraco
+
+* Remove unused __ne__ code from Python 2 era (#492) @bdraco
+
+* Lint before testing in the CI (#488) @bdraco
+
+* Add AsyncServiceBrowser example (#487) @bdraco
+
+* Move threading daemon property into ServiceBrowser class (#486) @bdraco
+
+* Enable test_integration_with_listener_class test on PyPy (#485) @bdraco
+
+* AsyncServiceBrowser must recheck for handlers to call when holding condition (#483)
+
+  There was a short race condition window where the AsyncServiceBrowser
+  could add to _handlers_to_call in the Engine thread, have the
+  condition notify_all called, but since the AsyncServiceBrowser was
+  not yet holding the condition it would not know to stop waiting
+  and process the handlers to call.
+
+* Relocate ServiceBrowser wait time calculation to seperate function (#484) @bdraco
+
+  Eliminate the need to duplicate code between the ServiceBrowser
+  and AsyncServiceBrowser to calculate the wait time.
+
+* Switch from using an asyncio.Event to asyncio.Condition for waiting (#482) @bdraco
+
+* ServiceBrowser must recheck for handlers to call when holding condition (#477) @bdraco
+
+  There was a short race condition window where the ServiceBrowser
+  could add to _handlers_to_call in the Engine thread, have the
+  condition notify_all called, but since the ServiceBrowser was
+  not yet holding the condition it would not know to stop waiting
+  and process the handlers to call.
+
+* Provide a helper function to convert milliseconds to seconds (#481) @bdraco
+
+* Fix AsyncServiceInfo.async_request not waiting long enough (#480) @bdraco
+
+* Add support for updating multiple records at once to ServiceInfo (#474) @bdraco
+
+* Narrow exception catch in DNSAddress.__repr__ to only expected exceptions (#473) @bdraco
+
+* Add test coverage to ensure ServiceInfo rejects expired records (#468) @bdraco
+
+* Reduce branching in service_type_name (#472) @bdraco
+
+* Fix flakey test_update_record (#470) @bdraco
+
+* Reduce branching in Zeroconf.handle_response (#467) @bdraco
+
+* Ensure PTR questions asked in uppercase are answered (#465) @bdraco
+
+* Clear cache between ServiceTypesQuery tests (#466) @bdraco
+
+* Break apart Zeroconf.handle_query to reduce branching (#462) @bdraco
+
+* Support for context managers in Zeroconf and AsyncZeroconf (#284) @shenek
+
+* Use constant for service type enumeration (#461) @bdraco
+
+* Reduce branching in Zeroconf.handle_response (#459) @bdraco
+
+* Reduce branching in Zeroconf.handle_query (#460) @bdraco
+
+* Enable pylint (#438) @bdraco
+
+* Trap OSError directly in Zeroconf.send instead of checking isinstance (#453) @bdraco
+
+* Disable protected-access on the ServiceBrowser usage of _handlers_lock (#452) @bdraco
+
+* Mark functions with too many branches in need of refactoring (#455) @bdraco
+
+* Disable pylint no-self-use check on abstract methods (#451) @bdraco
+
+* Use unique name in test_async_service_browser test (#450) @bdraco
+
+* Disable no-member check for WSAEINVAL false positive (#454) @bdraco
+
+* Mark methods used by asyncio without self use (#447) @bdraco
+
+* Extract _get_queue from zeroconf.asyncio._AsyncSender (#444) @bdraco
+
+* Fix redefining argument with the local name 'record' in ServiceInfo.update_record (#448) @bdraco
+
+* Remove unneeded-not in new_socket (#445) @bdraco
+
+* Disable broad except checks in places we still catch broad exceptions (#443) @bdraco
+
+* Merge _TYPE_CNAME and _TYPE_PTR comparison in DNSIncoming.read_others (#442) @bdraco
+
+* Convert unnecessary use of a comprehension to a list (#441) @bdraco
+
+* Remove unused now argument from ServiceInfo._process_record (#440) @bdraco
+
+* Disable pylint too-many-branches for functions that need refactoring (#439) @bdraco
+
+* Cleanup unused variables (#437) @bdraco
+
+* Cleanup unnecessary else after returns (#436) @bdraco
+
 * Add zeroconf.asyncio to the docs (#434) @bdraco
 
 * Fix warning when generating sphinx docs (#432) @bdraco
@@ -182,14 +328,6 @@ Changelog
   object was created
 
 * Simplify DNSPointer processing in ServiceBrowser (#386) @bdraco
-
-* Breaking change: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
-
-  When manually creating a zeroconf.Engine object, it is no longer started automatically.
-  It must manually be started by calling .start() on the created object.
-
-  The Engine thread is now started after all the listeners have been added to avoid a
-  race condition where packets could be missed at startup.
 
 * Ensure the cache is checked for name conflict after final service query with asyncio (#382) @bdraco
 
