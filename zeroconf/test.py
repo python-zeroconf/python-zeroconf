@@ -9,7 +9,6 @@ import errno
 import itertools
 import logging
 import os
-import platform
 import socket
 import struct
 import threading
@@ -1263,7 +1262,6 @@ class ServiceTypesQuery(unittest.TestCase):
 
 
 class ListenerTest(unittest.TestCase):
-    @pytest.mark.skipif(platform.python_implementation() == 'PyPy', reason="Flaky on PyPy")
     def test_integration_with_listener_class(self):
 
         service_added = Event()
