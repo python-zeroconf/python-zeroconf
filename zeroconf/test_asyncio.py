@@ -435,9 +435,14 @@ async def test_async_service_browser() -> None:
     await task
     task = await aiozc.async_unregister_service(new_info)
     await task
+    await aiozc.async_wait(1)
     await aiozc.async_close()
 
-    assert calls[0] == ('add', type_, registration_name)
+    assert calls == [
+        ('add', type_, registration_name),
+        ('update', type_, registration_name),
+        ('remove', type_, registration_name),
+    ]
 
 
 @pytest.mark.asyncio
