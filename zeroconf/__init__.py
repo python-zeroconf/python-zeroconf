@@ -915,6 +915,7 @@ class DNSOutgoing(DNSMessage):
         self.names = {}  # type: Dict[str, int]
         self.data = []  # type: List[bytes]
         self.size = 12
+        self.allow_long = True
 
         self.state = self.State.init
 
@@ -927,6 +928,7 @@ class DNSOutgoing(DNSMessage):
         self.names = {}
         self.data = []
         self.size = 12
+        self.allow_long = True
 
     def __repr__(self) -> str:
         return '<DNSOutgoing:{%s}>' % ', '.join(
@@ -1118,13 +1120,15 @@ class DNSOutgoing(DNSMessage):
             # this is the end of a name
             self.write_byte(0)
 
-    def write_question(self, question: DNSQuestion) -> None:
+    def write_question(self, question: DNSQuestion) -> bool:
         """Writes a question to the packet"""
+        start_data_length, start_size = len(self.data), self.size
         self.write_name(question.name)
         self.write_short(question.type)
         self.write_short(question.class_)
+        return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-    def write_record(self, record: DNSRecord, now: float, allow_long: bool = False) -> bool:
+    def write_record(self, record: DNSRecord, now: float) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
         the packet.  Returns True on success, or False if we did not (either
         because the packet was already finished or because the record does
@@ -1152,19 +1156,26 @@ class DNSOutgoing(DNSMessage):
         # Here we replace the 0 length short we wrote
         # before with the actual length
         self.replace_short(index, length)
-        len_limit = _MAX_MSG_ABSOLUTE if allow_long else _MAX_MSG_TYPICAL
+        return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-        # if we go over, then rollback and quit
-        if self.size > len_limit:
-            while len(self.data) > start_data_length:
-                self.data.pop()
-            self.size = start_size
+    def _check_data_limit_or_rollback(self, start_data_length: int, start_size: int) -> bool:
+        """Check data limit, if we go over, then rollback and return False."""
+        len_limit = _MAX_MSG_ABSOLUTE if self.allow_long else _MAX_MSG_TYPICAL
+        self.allow_long = False
 
-            rollback_names = [name for name, idx in self.names.items() if idx >= start_size]
-            for name in rollback_names:
-                del self.names[name]
-            return False
-        return True
+        if self.size <= len_limit:
+            return True
+
+        log.debug("Reached data limit (size=%d) > (limit=%d) - rolling back", self.size, len_limit)
+
+        while len(self.data) > start_data_length:
+            self.data.pop()
+        self.size = start_size
+
+        rollback_names = [name for name, idx in self.names.items() if idx >= start_size]
+        for name in rollback_names:
+            del self.names[name]
+        return False
 
     def packet(self) -> bytes:
         """Returns a bytestring containing the first packet's bytes.
@@ -1181,6 +1192,38 @@ class DNSOutgoing(DNSMessage):
             )
         return packets[0]
 
+    def _write_questions_from_offset(self, questions_offset: int) -> int:
+        questions_written = 0
+        for question in self.questions[questions_offset:]:
+            if not self.write_question(question):
+                break
+            questions_written += 1
+        return questions_written
+
+    def _write_answers_from_offset(self, answer_offset: int) -> int:
+        answers_written = 0
+        for answer, time_ in self.answers[answer_offset:]:
+            if not self.write_record(answer, time_):
+                break
+            answers_written += 1
+        return answers_written
+
+    def _write_authorities_from_offset(self, authority_offset: int) -> int:
+        authorities_written = 0
+        for authority in self.authorities[authority_offset:]:
+            if not self.write_record(authority, 0):
+                break
+            authorities_written += 1
+        return authorities_written
+
+    def _write_additionals_from_offset(self, additional_offset: int) -> int:
+        additionals_written = 0
+        for additional in self.additionals[additional_offset:]:
+            if not self.write_record(additional, 0):
+                break
+            additionals_written += 1
+        return additionals_written
+
     def packets(self) -> List[bytes]:
         """Returns a list of bytestrings containing the packets' bytes
 
@@ -1194,6 +1237,7 @@ class DNSOutgoing(DNSMessage):
         if self.state == self.State.finished:
             return self.packets_data
 
+        questions_offset = 0
         answer_offset = 0
         authority_offset = 0
         additional_offset = 0
@@ -1203,32 +1247,31 @@ class DNSOutgoing(DNSMessage):
 
         while (
             first_time
+            or questions_offset < len(self.questions)
             or answer_offset < len(self.answers)
             or authority_offset < len(self.authorities)
             or additional_offset < len(self.additionals)
         ):
             first_time = False
-            log.debug("offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
-            log.debug("lengths = %d, %d, %d", len(self.answers), len(self.authorities), len(self.additionals))
+            log.debug(
+                "offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
+                questions_offset,
+                answer_offset,
+                authority_offset,
+                additional_offset,
+            )
+            log.debug(
+                "lengths = questions=%d, answers=%d, authorities=%d, additionals=%d",
+                len(self.questions),
+                len(self.answers),
+                len(self.authorities),
+                len(self.additionals),
+            )
 
-            additionals_written = 0
-            authorities_written = 0
-            answers_written = 0
-            questions_written = 0
-            for question in self.questions:
-                self.write_question(question)
-                questions_written += 1
-            allow_long = True  # at most one answer is allowed to be a long packet
-            for answer, time_ in self.answers[answer_offset:]:
-                if self.write_record(answer, time_, allow_long):
-                    answers_written += 1
-                allow_long = False
-            for authority in self.authorities[authority_offset:]:
-                if self.write_record(authority, 0):
-                    authorities_written += 1
-            for additional in self.additionals[additional_offset:]:
-                if self.write_record(additional, 0):
-                    additionals_written += 1
+            questions_written = self._write_questions_from_offset(questions_offset)
+            answers_written = self._write_answers_from_offset(answer_offset)
+            authorities_written = self._write_authorities_from_offset(authority_offset)
+            additionals_written = self._write_additionals_from_offset(additional_offset)
 
             self.insert_short_at_start(additionals_written)
             self.insert_short_at_start(authorities_written)
@@ -1242,12 +1285,19 @@ class DNSOutgoing(DNSMessage):
             self.packets_data.append(b''.join(self.data))
             self.reset_for_next_packet()
 
+            questions_offset += questions_written
             answer_offset += answers_written
             authority_offset += authorities_written
             additional_offset += additionals_written
-            log.debug("now offsets = %d, %d, %d", answer_offset, authority_offset, additional_offset)
-            if (answers_written + authorities_written + additionals_written) == 0 and (
-                len(self.answers) + len(self.authorities) + len(self.additionals)
+            log.debug(
+                "now offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
+                questions_offset,
+                answer_offset,
+                authority_offset,
+                additional_offset,
+            )
+            if (questions_written + answers_written + authorities_written + additionals_written) == 0 and (
+                len(self.questions) + len(self.answers) + len(self.authorities) + len(self.additionals)
             ) > 0:
                 log.warning("packets() made no progress adding records; returning")
                 break

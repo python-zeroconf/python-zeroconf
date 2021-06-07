@@ -313,6 +313,118 @@ class PacketGeneration(unittest.TestCase):
         generated.add_additional_answer(DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
         self.assertRaises(r.NamePartTooLongException, generated.packet)
 
+    def test_many_questions(self):
+        """Test many questions get seperated into multiple packets."""
+        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        questions = []
+        for i in range(100):
+            question = r.DNSQuestion(f"testname{i}.local.", r._TYPE_SRV, r._CLASS_IN)
+            generated.add_question(question)
+            questions.append(question)
+        assert len(generated.questions) == 100
+
+        packets = generated.packets()
+        assert len(packets) == 2
+        assert len(packets[0]) < r._MAX_MSG_TYPICAL
+        assert len(packets[1]) < r._MAX_MSG_TYPICAL
+
+        parsed1 = r.DNSIncoming(packets[0])
+        assert len(parsed1.questions) == 85
+        parsed2 = r.DNSIncoming(packets[1])
+        assert len(parsed2.questions) == 15
+
+    def test_only_one_answer_can_by_large(self):
+        """Test that only the first answer in each packet can be large.
+
+        https://datatracker.ietf.org/doc/html/rfc6762#section-17
+        """
+        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        query = r.DNSIncoming(r.DNSOutgoing(r._FLAGS_QR_QUERY).packet())
+        for i in range(3):
+            generated.add_answer(
+                query,
+                r.DNSText(
+                    "zoom._hap._tcp.local.",
+                    r._TYPE_TXT,
+                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    1200,
+                    b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==' * 100,
+                ),
+            )
+        generated.add_answer(
+            query,
+            r.DNSService(
+                "testname1.local.",
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                r._DNS_HOST_TTL,
+                0,
+                0,
+                80,
+                "foo.local.",
+            ),
+        )
+        assert len(generated.answers) == 4
+
+        packets = generated.packets()
+        assert len(packets) == 4
+        assert len(packets[0]) <= r._MAX_MSG_ABSOLUTE
+        assert len(packets[0]) > r._MAX_MSG_TYPICAL
+
+        assert len(packets[1]) <= r._MAX_MSG_ABSOLUTE
+        assert len(packets[1]) > r._MAX_MSG_TYPICAL
+
+        assert len(packets[2]) <= r._MAX_MSG_ABSOLUTE
+        assert len(packets[2]) > r._MAX_MSG_TYPICAL
+
+        assert len(packets[3]) <= r._MAX_MSG_TYPICAL
+
+        for packet in packets:
+            parsed = r.DNSIncoming(packet)
+            assert len(parsed.answers) == 1
+
+    def test_questions_do_not_end_up_every_packet(self):
+        """Test that questions are not sent again when multiple packets are needed.
+
+        https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
+        Sometimes a Multicast DNS querier will already have too many answers
+        to fit in the Known-Answer Section of its query packets....  It MUST
+        immediately follow the packet with another query packet containing no
+        questions and as many more Known-Answer records as will fit.
+        """
+
+        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        for i in range(35):
+            question = r.DNSQuestion(f"testname{i}.local.", r._TYPE_SRV, r._CLASS_IN)
+            generated.add_question(question)
+            answer = r.DNSService(
+                f"testname{i}.local.",
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                r._DNS_HOST_TTL,
+                0,
+                0,
+                80,
+                f"foo{i}.local.",
+            )
+            generated.add_answer_at_time(answer, 0)
+
+        assert len(generated.questions) == 35
+        assert len(generated.answers) == 35
+
+        packets = generated.packets()
+        assert len(packets) == 2
+        assert len(packets[0]) <= r._MAX_MSG_TYPICAL
+        assert len(packets[1]) <= r._MAX_MSG_TYPICAL
+
+        parsed1 = r.DNSIncoming(packets[0])
+        assert len(parsed1.questions) == 35
+        assert len(parsed1.answers) == 33
+
+        parsed2 = r.DNSIncoming(packets[1])
+        assert len(parsed2.questions) == 0
+        assert len(parsed2.answers) == 2
+
 
 class PacketForm(unittest.TestCase):
     def test_transaction_id(self):
