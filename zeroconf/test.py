@@ -2613,6 +2613,73 @@ def test_dns_compression_rollback_for_corruption():
         assert incoming.valid is True
 
 
+def test_tc_bit_in_query_packet():
+    """Verify the TC bit is set when known answers exceed the packet size."""
+    out = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
+    type_ = "_hap._tcp.local."
+    out.add_question(r.DNSQuestion(type_, r._TYPE_PTR, r._CLASS_IN))
+
+    for i in range(30):
+        out.add_answer_at_time(
+            DNSText(
+                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                r._DNS_OTHER_TTL,
+                b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+            0,
+        )
+
+    packets = out.packets()
+    assert len(packets) == 3
+
+    first_packet = r.DNSIncoming(packets[0])
+    assert first_packet.flags & r._FLAGS_TC == r._FLAGS_TC
+    assert first_packet.valid is True
+
+    second_packet = r.DNSIncoming(packets[1])
+    assert second_packet.flags & r._FLAGS_TC == r._FLAGS_TC
+    assert second_packet.valid is True
+
+    third_packet = r.DNSIncoming(packets[2])
+    assert third_packet.flags & r._FLAGS_TC == 0
+    assert third_packet.valid is True
+
+
+def test_tc_bit_not_set_in_answer_packet():
+    """Verify the TC bit is not set when there are no questions and answers exceed the packet size."""
+    out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
+    for i in range(30):
+        out.add_answer_at_time(
+            DNSText(
+                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                r._DNS_OTHER_TTL,
+                b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+            0,
+        )
+
+    packets = out.packets()
+    assert len(packets) == 3
+
+    first_packet = r.DNSIncoming(packets[0])
+    assert first_packet.flags & r._FLAGS_TC == 0
+    assert first_packet.valid is True
+
+    second_packet = r.DNSIncoming(packets[1])
+    assert second_packet.flags & r._FLAGS_TC == 0
+    assert second_packet.valid is True
+
+    third_packet = r.DNSIncoming(packets[2])
+    assert third_packet.flags & r._FLAGS_TC == 0
+    assert third_packet.valid is True
+
+
 @pytest.mark.parametrize(
     "errno,expected_result",
     [(errno.EADDRINUSE, False), (errno.EADDRNOTAVAIL, False), (errno.EINVAL, False), (0, True)],
