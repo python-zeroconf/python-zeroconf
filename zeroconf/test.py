@@ -1009,9 +1009,6 @@ class TestRegistrar(unittest.TestCase):
             addresses=[socket.inet_aton("10.0.1.2")],
         )
 
-        # we are going to monkey patch the zeroconf send to check packet sizes
-        old_send = zc.send
-
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         def get_ttl(record_type):
@@ -1022,7 +1019,7 @@ class TestRegistrar(unittest.TestCase):
             else:
                 return r._DNS_OTHER_TTL
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def _process_outgoing_packet(out):
             """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
 
@@ -1035,14 +1032,14 @@ class TestRegistrar(unittest.TestCase):
             for answer in out.authorities:
                 nbr_authorities += 1
                 assert answer.ttl == get_ttl(answer.type)
-            old_send(out, addr=addr, port=port)
-
-        # monkey patch the zeroconf send
-        setattr(zc, "send", send)
 
         # register service with default TTL
         expected_ttl = None
-        zc.register_service(info)
+        for _ in range(3):
+            _process_outgoing_packet(zc.generate_service_query(info))
+        zc.registry.add(info)
+        for _ in range(3):
+            _process_outgoing_packet(zc.generate_service_broadcast(info, None))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -1053,36 +1050,46 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
-        zc.handle_query(r.DNSIncoming(query.packet()), r._MDNS_ADDR, r._MDNS_PORT)
+        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packet()), False))
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
         expected_ttl = 0
-        zc.unregister_service(info)
+        zc.registry.remove(info)
+        for _ in range(3):
+            _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
+        expected_ttl = None
+        for _ in range(3):
+            _process_outgoing_packet(zc.generate_service_query(info))
+        zc.registry.add(info)
         # register service with custom TTL
         expected_ttl = r._DNS_HOST_TTL * 2
         assert expected_ttl != r._DNS_HOST_TTL
-        zc.register_service(info, ttl=expected_ttl)
+        for _ in range(3):
+            _process_outgoing_packet(zc.generate_service_broadcast(info, expected_ttl))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
+        expected_ttl = None
         query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
         query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
-        zc.handle_query(r.DNSIncoming(query.packet()), r._MDNS_ADDR, r._MDNS_PORT)
+        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packet()), False))
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
         expected_ttl = 0
-        zc.unregister_service(info)
+        zc.registry.remove(info)
+        for _ in range(3):
+            _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
         zc.close()
