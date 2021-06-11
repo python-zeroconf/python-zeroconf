@@ -9,7 +9,7 @@ import time
 from typing import List
 
 from zeroconf import IPVersion
-from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
+from zeroconf.aio import AsyncServiceInfo, AsyncZeroconf
 
 
 async def register_services(infos: List[AsyncServiceInfo]) -> None:
