@@ -29,7 +29,7 @@ flake8:
 	flake8 --max-line-length=$(MAX_LINE_LENGTH) setup.py examples zeroconf
 
 pylint:
-	pylint zeroconf/__init__.py zeroconf/asyncio.py
+	pylint zeroconf/__init__.py zeroconf/aio.py zeroconf/asyncio.py
 
 .PHONY: black_check
 black_check:
@@ -39,10 +39,10 @@ mypy:
 	mypy examples/*.py zeroconf/*.py
 
 test:
-	pytest -v zeroconf/test.py zeroconf/test_asyncio.py
+	pytest -v zeroconf/test.py zeroconf/test_aio.py zeroconf/test_asyncio.py
 
 test_coverage:
-	pytest -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing zeroconf/test.py zeroconf/test_asyncio.py
+	pytest -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing zeroconf/test.py zeroconf/test_aio.py zeroconf/test_asyncio.py
 
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf
