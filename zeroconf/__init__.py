@@ -2717,6 +2717,91 @@ class ServiceRegistry:
         del self.services[lower_name]
 
 
+class QueryHandler:
+    """Query the ServiceRegistry."""
+
+    def __init__(self, registry: ServiceRegistry):
+        """Init the query handler."""
+        self.registry = registry
+
+    def _answer_service_type_enumeration_query(self, msg: DNSIncoming, out: DNSOutgoing) -> None:
+        """Provide an answer to a service type enumeration query.
+
+        https://datatracker.ietf.org/doc/html/rfc6763#section-9
+        """
+        for stype in self.registry.get_types():
+            out.add_answer(
+                msg,
+                DNSPointer(
+                    _SERVICE_TYPE_ENUMERATION_NAME,
+                    _TYPE_PTR,
+                    _CLASS_IN,
+                    _DNS_OTHER_TTL,
+                    stype,
+                ),
+            )
+
+    def _answer_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
+        """Answer a PTR query."""
+        for service in self.registry.get_infos_type(question.name.lower()):
+            out.add_answer(msg, service.dns_pointer())
+            # Add recommended additional answers according to
+            # https://tools.ietf.org/html/rfc6763#section-12.1.
+            out.add_additional_answer(service.dns_service())
+            out.add_additional_answer(service.dns_text())
+            for dns_address in service.dns_addresses():
+                out.add_additional_answer(dns_address)
+
+    def _answer_non_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
+        """Answer a query any query other then PTR.
+
+        Add answer(s) for A, AAAA, SRV, or TXT queries.
+        """
+        name_to_find = question.name.lower()
+        # Answer A record queries for any service addresses we know
+        if question.type in (_TYPE_A, _TYPE_ANY):
+            for service in self.registry.get_infos_server(name_to_find):
+                for dns_address in service.dns_addresses():
+                    out.add_answer(msg, dns_address)
+
+        service = self.registry.get_info_name(name_to_find)  # type: ignore
+        if service is None:
+            return
+
+        if question.type in (_TYPE_SRV, _TYPE_ANY):
+            out.add_answer(msg, service.dns_service())
+        if question.type in (_TYPE_TXT, _TYPE_ANY):
+            out.add_answer(msg, service.dns_text())
+        if question.type == _TYPE_SRV:
+            for dns_address in service.dns_addresses():
+                out.add_additional_answer(dns_address)
+
+    def response(self, msg: DNSIncoming, unicast: bool) -> Optional[DNSOutgoing]:
+        """Deal with incoming query packets. Provides a response if possible."""
+        if unicast:
+            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False)
+            for question in msg.questions:
+                out.add_question(question)
+        else:
+            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+
+        for question in msg.questions:
+            if question.type == _TYPE_PTR:
+                if question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
+                    self._answer_service_type_enumeration_query(msg, out)
+                else:
+                    self._answer_ptr_query(msg, out, question)
+                continue
+
+            self._answer_non_ptr_query(msg, out, question)
+
+        if out is not None and out.answers:
+            out.id = msg.id
+            return out
+
+        return None
+
+
 class Zeroconf(QuietLogger):
 
     """Implementation of Zeroconf Multicast DNS Service Discovery
@@ -2777,6 +2862,7 @@ class Zeroconf(QuietLogger):
         self._notify_listeners = []  # type: List[NotifyListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
         self.registry = ServiceRegistry()
+        self.query_handler = QueryHandler(self.registry)
 
         self.cache = DNSCache()
 
@@ -3091,82 +3177,11 @@ class Zeroconf(QuietLogger):
             # because the data was not yet populated.
             self.cache.remove_records(removes)
 
-    def _answer_service_type_enumeration_query(self, msg: DNSIncoming, out: DNSOutgoing) -> None:
-        """Provide an answer to a service type enumeration query.
-
-        https://datatracker.ietf.org/doc/html/rfc6763#section-9
-        """
-        for stype in self.registry.get_types():
-            out.add_answer(
-                msg,
-                DNSPointer(
-                    _SERVICE_TYPE_ENUMERATION_NAME,
-                    _TYPE_PTR,
-                    _CLASS_IN,
-                    _DNS_OTHER_TTL,
-                    stype,
-                ),
-            )
-
-    def _answer_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
-        """Answer a PTR query."""
-        for service in self.registry.get_infos_type(question.name.lower()):
-            out.add_answer(msg, service.dns_pointer())
-            # Add recommended additional answers according to
-            # https://tools.ietf.org/html/rfc6763#section-12.1.
-            out.add_additional_answer(service.dns_service())
-            out.add_additional_answer(service.dns_text())
-            for dns_address in service.dns_addresses():
-                out.add_additional_answer(dns_address)
-
-    def _answer_non_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
-        """Answer a query any query other then PTR.
-
-        Add answer(s) for A, AAAA, SRV, or TXT queries.
-        """
-        name_to_find = question.name.lower()
-        # Answer A record queries for any service addresses we know
-        if question.type in (_TYPE_A, _TYPE_ANY):
-            for service in self.registry.get_infos_server(name_to_find):
-                for dns_address in service.dns_addresses():
-                    out.add_answer(msg, dns_address)
-
-        service = self.registry.get_info_name(name_to_find)  # type: ignore
-        if service is None:
-            return
-
-        if question.type in (_TYPE_SRV, _TYPE_ANY):
-            out.add_answer(msg, service.dns_service())
-        if question.type in (_TYPE_TXT, _TYPE_ANY):
-            out.add_answer(msg, service.dns_text())
-        if question.type == _TYPE_SRV:
-            for dns_address in service.dns_addresses():
-                out.add_additional_answer(dns_address)
-
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        # Support unicast client responses
-        #
-        if port != _MDNS_PORT:
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False)
-            for question in msg.questions:
-                out.add_question(question)
-        else:
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-
-        for question in msg.questions:
-            if question.type == _TYPE_PTR:
-                if question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
-                    self._answer_service_type_enumeration_query(msg, out)
-                else:
-                    self._answer_ptr_query(msg, out, question)
-                continue
-
-            self._answer_non_ptr_query(msg, out, question)
-
-        if out is not None and out.answers:
-            out.id = msg.id
+        out = self.query_handler.response(msg, port != _MDNS_PORT)
+        if out:
             self.send(out, addr, port)
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
