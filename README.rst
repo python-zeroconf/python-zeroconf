@@ -134,8 +134,28 @@ See examples directory for more.
 Changelog
 =========
 
+0.33.0 (Unreleased)
+===================
+
+* Breaking change: zeroconf.asyncio has been removed in favor of zeroconf.aio - TBD
+
+  The asyncio name could shadow system asyncio in some cases. If
+  zeroconf is in sys.path, this would result in loading zeroconf.asyncio
+  when system asyncio was intended.
+
 0.32.0 (Unreleased)
 ===================
+
+* Breaking change: zeroconf.asyncio has been renamed zeroconf.aio (#503) @bdraco
+
+  The asyncio name could shadow system asyncio in some cases. If
+  zeroconf is in sys.path, this would result in loading zeroconf.asyncio
+  when system asyncio was intended.
+
+  An `zeroconf.asyncio` shim module has been added that imports `zeroconf.aio`
+  that was available in 0.31 to provide backwards compatibility in 0.32.0
+  This module will be removed in 0.33.0 to fix the underlying problem
+  detailed in #502
 
 * Breaking change: Update internal version check to match docs (3.6+) (#491) @bdraco
 
