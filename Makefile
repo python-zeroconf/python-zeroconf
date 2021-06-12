@@ -29,14 +29,16 @@ flake8:
 	flake8 --max-line-length=$(MAX_LINE_LENGTH) setup.py examples zeroconf
 
 pylint:
-	pylint zeroconf/__init__.py zeroconf/aio.py zeroconf/asyncio.py
+	pylint zeroconf
 
 .PHONY: black_check
 black_check:
 	black --check setup.py examples zeroconf
 
 mypy:
-	mypy examples/*.py zeroconf/*.py
+# --no-warn-redundant-casts --no-warn-unused-ignores is needed since we support multiple python versions
+# We should be able to drop this once python 3.6 goes away
+	mypy --no-warn-redundant-casts --no-warn-unused-ignores examples/*.py zeroconf
 
 test:
 	pytest -v tests
