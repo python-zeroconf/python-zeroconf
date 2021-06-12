@@ -91,6 +91,16 @@ from .const import (  # noqa # import needed for backwards compat
     _TYPE_TXT,
     _UNREGISTER_TIME,
 )
+from .exceptions import (
+    AbstractMethodException,
+    BadTypeInNameException,
+    Error,
+    IncomingDecodeError,
+    NamePartTooLongException,
+    NonUniqueNameException,
+    ServiceNameAlreadyRegistered,
+)
+
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
@@ -304,37 +314,6 @@ def instance_name_from_service_info(info: "ServiceInfo") -> str:
     if not info.type.endswith(service_name):
         raise BadTypeInNameException
     return info.name[: -len(service_name) - 1]
-
-
-# Exceptions
-
-
-class Error(Exception):
-    pass
-
-
-class IncomingDecodeError(Error):
-    pass
-
-
-class NonUniqueNameException(Error):
-    pass
-
-
-class NamePartTooLongException(Error):
-    pass
-
-
-class AbstractMethodException(Error):
-    pass
-
-
-class BadTypeInNameException(Error):
-    pass
-
-
-class ServiceNameAlreadyRegistered(Error):
-    pass
 
 
 # implementation classes
