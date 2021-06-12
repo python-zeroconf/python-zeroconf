@@ -26,7 +26,6 @@ import ipaddress
 import itertools
 import logging
 import platform
-import re
 import select
 import socket
 import struct
@@ -40,6 +39,58 @@ from typing import Dict, Iterable, List, Optional, Type, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
+
+from .const import (  # noqa # import needed for backwards compat
+    _BROWSER_BACKOFF_LIMIT,
+    _BROWSER_TIME,
+    _CACHE_CLEANUP_INTERVAL,
+    _CHECK_TIME,
+    _CLASSES,
+    _CLASS_IN,
+    _CLASS_NONE,
+    _CLASS_MASK,
+    _CLASS_UNIQUE,
+    _DNS_HOST_TTL,
+    _DNS_OTHER_TTL,
+    _DNS_PORT,
+    _EXPIRE_FULL_TIME_PERCENT,
+    _EXPIRE_REFRESH_TIME_PERCENT,
+    _EXPIRE_STALE_TIME_PERCENT,
+    _FLAGS_AA,
+    _FLAGS_QR_MASK,
+    _FLAGS_QR_QUERY,
+    _FLAGS_QR_RESPONSE,
+    _FLAGS_TC,
+    _HAS_ASCII_CONTROL_CHARS,
+    _HAS_A_TO_Z,
+    _HAS_ONLY_A_TO_Z_NUM_HYPHEN,
+    _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE,
+    _IPPROTO_IPV6,
+    _LISTENER_TIME,
+    _LOCAL_TRAILER,
+    _MAX_MSG_ABSOLUTE,
+    _MAX_MSG_TYPICAL,
+    _MDNS_ADDR,
+    _MDNS_ADDR6,
+    _MDNS_ADDR6_BYTES,
+    _MDNS_ADDR_BYTES,
+    _MDNS_PORT,
+    _NONTCP_PROTOCOL_LOCAL_TRAILER,
+    _REGISTER_TIME,
+    _SERVICE_TYPE_ENUMERATION_NAME,
+    _TCP_PROTOCOL_LOCAL_TRAILER,
+    _TYPES,
+    _TYPE_A,
+    _TYPE_AAAA,
+    _TYPE_ANY,
+    _TYPE_CNAME,
+    _TYPE_HINFO,
+    _TYPE_PTR,
+    _TYPE_SOA,
+    _TYPE_SRV,
+    _TYPE_TXT,
+    _UNREGISTER_TIME,
+)
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
@@ -74,126 +125,6 @@ log.addHandler(logging.NullHandler())
 if log.level == logging.NOTSET:
     log.setLevel(logging.WARN)
 
-# Some timing constants
-
-_UNREGISTER_TIME = 125  # ms
-_CHECK_TIME = 175  # ms
-_REGISTER_TIME = 225  # ms
-_LISTENER_TIME = 200  # ms
-_BROWSER_TIME = 1000  # ms
-_BROWSER_BACKOFF_LIMIT = 3600  # s
-_CACHE_CLEANUP_INTERVAL = 10000  # ms
-
-# Some DNS constants
-
-_MDNS_ADDR = '224.0.0.251'
-_MDNS_ADDR_BYTES = socket.inet_aton(_MDNS_ADDR)
-_MDNS_ADDR6 = 'ff02::fb'
-_MDNS_ADDR6_BYTES = socket.inet_pton(socket.AF_INET6, _MDNS_ADDR6)
-_MDNS_PORT = 5353
-_DNS_PORT = 53
-_DNS_HOST_TTL = 120  # two minute for host records (A, SRV etc) as-per RFC6762
-_DNS_OTHER_TTL = 4500  # 75 minutes for non-host records (PTR, TXT etc) as-per RFC6762
-
-_MAX_MSG_TYPICAL = 1460  # unused
-_MAX_MSG_ABSOLUTE = 8966
-
-_FLAGS_QR_MASK = 0x8000  # query response mask
-_FLAGS_QR_QUERY = 0x0000  # query
-_FLAGS_QR_RESPONSE = 0x8000  # response
-
-_FLAGS_AA = 0x0400  # Authoritative answer
-_FLAGS_TC = 0x0200  # Truncated
-_FLAGS_RD = 0x0100  # Recursion desired
-_FLAGS_RA = 0x8000  # Recursion available
-
-_FLAGS_Z = 0x0040  # Zero
-_FLAGS_AD = 0x0020  # Authentic data
-_FLAGS_CD = 0x0010  # Checking disabled
-
-_CLASS_IN = 1
-_CLASS_CS = 2
-_CLASS_CH = 3
-_CLASS_HS = 4
-_CLASS_NONE = 254
-_CLASS_ANY = 255
-_CLASS_MASK = 0x7FFF
-_CLASS_UNIQUE = 0x8000
-
-_TYPE_A = 1
-_TYPE_NS = 2
-_TYPE_MD = 3
-_TYPE_MF = 4
-_TYPE_CNAME = 5
-_TYPE_SOA = 6
-_TYPE_MB = 7
-_TYPE_MG = 8
-_TYPE_MR = 9
-_TYPE_NULL = 10
-_TYPE_WKS = 11
-_TYPE_PTR = 12
-_TYPE_HINFO = 13
-_TYPE_MINFO = 14
-_TYPE_MX = 15
-_TYPE_TXT = 16
-_TYPE_AAAA = 28
-_TYPE_SRV = 33
-_TYPE_ANY = 255
-
-# Mapping constants to names
-
-_CLASSES = {
-    _CLASS_IN: "in",
-    _CLASS_CS: "cs",
-    _CLASS_CH: "ch",
-    _CLASS_HS: "hs",
-    _CLASS_NONE: "none",
-    _CLASS_ANY: "any",
-}
-
-_TYPES = {
-    _TYPE_A: "a",
-    _TYPE_NS: "ns",
-    _TYPE_MD: "md",
-    _TYPE_MF: "mf",
-    _TYPE_CNAME: "cname",
-    _TYPE_SOA: "soa",
-    _TYPE_MB: "mb",
-    _TYPE_MG: "mg",
-    _TYPE_MR: "mr",
-    _TYPE_NULL: "null",
-    _TYPE_WKS: "wks",
-    _TYPE_PTR: "ptr",
-    _TYPE_HINFO: "hinfo",
-    _TYPE_MINFO: "minfo",
-    _TYPE_MX: "mx",
-    _TYPE_TXT: "txt",
-    _TYPE_AAAA: "quada",
-    _TYPE_SRV: "srv",
-    _TYPE_ANY: "any",
-}
-
-_HAS_A_TO_Z = re.compile(r'[A-Za-z]')
-_HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
-_HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE = re.compile(r'^[A-Za-z0-9\-\_]+$')
-_HAS_ASCII_CONTROL_CHARS = re.compile(r'[\x00-\x1f\x7f]')
-
-_EXPIRE_FULL_TIME_PERCENT = 100
-_EXPIRE_STALE_TIME_PERCENT = 50
-_EXPIRE_REFRESH_TIME_PERCENT = 75
-
-_LOCAL_TRAILER = '.local.'
-_TCP_PROTOCOL_LOCAL_TRAILER = '._tcp.local.'
-_NONTCP_PROTOCOL_LOCAL_TRAILER = '._udp.local.'
-
-# https://datatracker.ietf.org/doc/html/rfc6763#section-9
-_SERVICE_TYPE_ENUMERATION_NAME = "_services._dns-sd._udp.local."
-
-try:
-    _IPPROTO_IPV6 = socket.IPPROTO_IPV6
-except AttributeError:
-    # Sigh: https://bugs.python.org/issue29515
-    _IPPROTO_IPV6 = 41
 
 int2byte = struct.Struct(">B").pack
 
