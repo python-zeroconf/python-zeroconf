@@ -10,7 +10,7 @@ import unittest.mock
 
 import pytest
 
-from . import (
+from zeroconf import (
     BadTypeInNameException,
     NonUniqueNameException,
     ServiceInfo,
@@ -20,7 +20,7 @@ from . import (
     _LISTENER_TIME,
     current_time_millis,
 )
-from .aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
+from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
 
 
 @pytest.mark.asyncio

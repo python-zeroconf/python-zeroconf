@@ -7,7 +7,7 @@
 
 import pytest
 
-from .asyncio import AsyncZeroconf
+from zeroconf.asyncio import AsyncZeroconf
 
 
 @pytest.mark.asyncio
