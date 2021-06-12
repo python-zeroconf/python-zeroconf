@@ -100,6 +100,7 @@ from .exceptions import (
     ServiceNameAlreadyRegistered,
 )
 from .logger import QuietLogger, log
+from .utils.time import current_time_millis, millis_to_seconds
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
@@ -156,16 +157,6 @@ class IPVersion(enum.Enum):
 
 
 # utility functions
-
-
-def current_time_millis() -> float:
-    """Current system time in milliseconds"""
-    return time.time() * 1000
-
-
-def millis_to_seconds(millis: float) -> float:
-    """Convert milliseconds to seconds."""
-    return millis / 1000.0
 
 
 def _is_v6_address(addr: bytes) -> bool:

@@ -42,11 +42,10 @@ from . import (
     _REGISTER_TIME,
     _ServiceBrowserBase,
     _UNREGISTER_TIME,
-    current_time_millis,
     instance_name_from_service_info,
-    millis_to_seconds,
 )
 from .utils.aio import wait_condition_or_timeout
+from .utils.time import current_time_millis, millis_to_seconds
 
 
 def _get_best_available_queue() -> queue.Queue:
