@@ -2156,7 +2156,6 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                 zeroconf,
                 mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120),
             )
-
             called_with_refresh_time_check = False
 
             def _mock_get_expiration_time(self, percent):
@@ -2172,6 +2171,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                     zeroconf,
                     mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
                 )
+                zeroconf.wait(100)
                 # Add the last record after updating the first one
                 # to ensure the service_add_event only gets set
                 # after the update
