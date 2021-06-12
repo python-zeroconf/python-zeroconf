@@ -111,6 +111,7 @@ from .utils.net import (  # noqa # import needed for backwards compat
     _encode_address,
     get_all_addresses,
 )
+from .utils.struct import int2byte
 from .utils.time import current_time_millis, millis_to_seconds
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
@@ -140,8 +141,6 @@ If you need support for Python 3.5 please use version 0.28.0
     '''
     )
 
-
-int2byte = struct.Struct(">B").pack
 
 # utility functions
 
