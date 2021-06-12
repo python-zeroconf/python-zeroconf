@@ -35,9 +35,8 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from contextlib import contextmanager
 from types import TracebackType  # noqa # used in type hints
-from typing import Dict, Generator, Iterable, List, Optional, Type, Union, cast
+from typing import Dict, Iterable, List, Optional, Type, Union, cast
 from typing import Any, Callable, Set, Tuple  # noqa # used in type hints
 
 import ifaddr
@@ -1464,8 +1463,8 @@ class Engine(threading.Thread):
             now = current_time_millis()
             if now - self._last_cache_cleanup >= self.cache_cleanup_interval_ms:
                 self._last_cache_cleanup = now
-                with self.zc.update_records(now, list(self.zc.cache.expire(now))):
-                    pass
+                self.zc.record_manager.updates(now, list(self.zc.cache.expire(now)))
+                self.zc.record_manager.updates_complete()
 
         self.socketpair[0].close()
         self.socketpair[1].close()
@@ -2793,6 +2792,99 @@ class QueryHandler:
         return None
 
 
+class RecordManager:
+    """Process records into the cache and notify listeners."""
+
+    def __init__(self, zeroconf: 'Zeroconf'):
+        """Init the record manager."""
+        self.zc = zeroconf
+        self.cache = zeroconf.cache
+
+    def updates(self, now: float, rec: List[DNSRecord]) -> None:
+        """Used to notify listeners of new information that has updated
+        a record.
+
+        This method must be called before the cache is updated.
+        """
+        for listener in self.zc.listeners:
+            listener.update_records(self.zc, now, rec)
+
+    def updates_complete(self) -> None:
+        """Used to notify listeners of new information that has updated
+        a record.
+
+        This method must be called after the cache is updated.
+        """
+        for listener in self.zc.listeners:
+            listener.update_records_complete()
+        self.zc.notify_all()
+
+    def updates_from_response(self, msg: DNSIncoming) -> None:
+        """Deal with incoming response packets.  All answers
+        are held in the cache, and listeners are notified."""
+        updates: List[DNSRecord] = []
+        address_adds: List[DNSAddress] = []
+        other_adds: List[DNSRecord] = []
+        removes: List[DNSRecord] = []
+        now = current_time_millis()
+        for record in msg.answers:
+
+            updated = True
+
+            if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
+                # rfc6762#section-10.2 para 2
+                # Since unique is set, all old records with that name, rrtype,
+                # and rrclass that were received more than one second ago are declared
+                # invalid, and marked to expire from the cache in one second.
+                for entry in self.cache.get_all_by_details(record.name, record.type, record.class_):
+                    if entry == record:
+                        updated = False
+                    if record.created - entry.created > 1000 and entry not in msg.answers:
+                        removes.append(entry)
+
+            expired = record.is_expired(now)
+            maybe_entry = self.cache.get(record)
+            if not expired:
+                if maybe_entry is not None:
+                    maybe_entry.reset_ttl(record)
+                else:
+                    if isinstance(record, DNSAddress):
+                        address_adds.append(record)
+                    else:
+                        other_adds.append(record)
+                if updated:
+                    updates.append(record)
+            elif maybe_entry is not None:
+                updates.append(record)
+                removes.append(record)
+
+        if not updates and not address_adds and not other_adds and not removes:
+            return
+
+        self.updates(now, updates)
+        # The cache adds must be processed AFTER we trigger
+        # the updates since we compare existing data
+        # with the new data and updating the cache
+        # ahead of update_record will cause listeners
+        # to miss changes
+        #
+        # We must process address adds before non-addresses
+        # otherwise a fetch of ServiceInfo may miss an address
+        # because it thinks the cache is complete
+        #
+        # The cache is processed under the context manager to ensure
+        # that any ServiceBrowser that is going to call
+        # zc.get_service_info will see the cached value
+        # but ONLY after all the record updates have been
+        # processsed.
+        self.cache.add_records(itertools.chain(address_adds, other_adds))
+        # Removes are processed last since
+        # ServiceInfo could generate an un-needed query
+        # because the data was not yet populated.
+        self.cache.remove_records(removes)
+        self.updates_complete()
+
+
 class Zeroconf(QuietLogger):
 
     """Implementation of Zeroconf Multicast DNS Service Discovery
@@ -2854,8 +2946,8 @@ class Zeroconf(QuietLogger):
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
         self.registry = ServiceRegistry()
         self.query_handler = QueryHandler(self.registry)
-
         self.cache = DNSCache()
+        self.record_manager = RecordManager(self)
 
         self.condition = threading.Condition()
 
@@ -3088,85 +3180,10 @@ class Zeroconf(QuietLogger):
         except Exception as e:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
             log.exception('Unknown error, possibly benign: %r', e)
 
-    @contextmanager
-    def update_records(self, now: float, rec: List[DNSRecord]) -> Generator:
-        """Used to notify listeners of new information that has updated
-        a record.
-
-        This method must be called before the cache is updated.
-        """
-        try:
-            for listener in self.listeners:
-                listener.update_records(self, now, rec)
-            yield
-        finally:
-            for listener in self.listeners:
-                listener.update_records_complete()
-            self.notify_all()
-
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
-        updates = []  # type: List[DNSRecord]
-        address_adds = []  # type: List[DNSAddress]
-        other_adds = []  # type: List[DNSRecord]
-        removes = []  # type: List[DNSRecord]
-        now = current_time_millis()
-        for record in msg.answers:
-
-            updated = True
-
-            if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                # rfc6762#section-10.2 para 2
-                # Since unique is set, all old records with that name, rrtype,
-                # and rrclass that were received more than one second ago are declared
-                # invalid, and marked to expire from the cache in one second.
-                for entry in self.cache.get_all_by_details(record.name, record.type, record.class_):
-                    if entry == record:
-                        updated = False
-                    if record.created - entry.created > 1000 and entry not in msg.answers:
-                        removes.append(entry)
-
-            expired = record.is_expired(now)
-            maybe_entry = self.cache.get(record)
-            if not expired:
-                if maybe_entry is not None:
-                    maybe_entry.reset_ttl(record)
-                else:
-                    if isinstance(record, DNSAddress):
-                        address_adds.append(record)
-                    else:
-                        other_adds.append(record)
-                if updated:
-                    updates.append(record)
-            elif maybe_entry is not None:
-                updates.append(record)
-                removes.append(record)
-
-        if not updates and not address_adds and not other_adds and not removes:
-            return
-
-        with self.update_records(now, updates):
-            # The cache adds must be processed AFTER we trigger
-            # the updates since we compare existing data
-            # with the new data and updating the cache
-            # ahead of update_record will cause listeners
-            # to miss changes
-            #
-            # We must process address adds before non-addresses
-            # otherwise a fetch of ServiceInfo may miss an address
-            # because it thinks the cache is complete
-            #
-            # The cache is processed under the context manager to ensure
-            # that any ServiceBrowser that is going to call
-            # zc.get_service_info will see the cached value
-            # but ONLY after all the record updates have been
-            # processsed.
-            self.cache.add_records(itertools.chain(address_adds, other_adds))
-            # Removes are processed last since
-            # ServiceInfo could generate an un-needed query
-            # because the data was not yet populated.
-            self.cache.remove_records(removes)
+        self.record_manager.updates_from_response(msg)
 
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
