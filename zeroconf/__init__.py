@@ -880,22 +880,22 @@ class DNSOutgoing(DNSMessage):
         self.additionals.append(record)
 
     def add_question_or_one_cache(
-        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
+        self, cache: "DNSCache", now: float, name: str, type_: int, class_: int
     ) -> None:
         """Add a question if it is not already cached."""
-        cached_entry = zc.cache.get_by_details(name, type_, class_)
+        cached_entry = cache.get_by_details(name, type_, class_)
         if not cached_entry:
             self.add_question(DNSQuestion(name, type_, class_))
         else:
             self.add_answer_at_time(cached_entry, now)
 
     def add_question_or_all_cache(
-        self, zc: "Zeroconf", now: float, name: str, type_: int, class_: int
+        self, cache: "DNSCache", now: float, name: str, type_: int, class_: int
     ) -> None:
         """Add a question if it is not already cached.
         This is currently only used for IPv6 addresses.
         """
-        cached_entries = zc.cache.get_all_by_details(name, type_, class_)
+        cached_entries = cache.get_all_by_details(name, type_, class_)
         if not cached_entries:
             self.add_question(DNSQuestion(name, type_, class_))
             return
@@ -2131,10 +2131,10 @@ class ServiceInfo(RecordUpdateListener):
     def generate_request_query(self, zc: 'Zeroconf', now: float) -> DNSOutgoing:
         """Generate the request query."""
         out = DNSOutgoing(_FLAGS_QR_QUERY)
-        out.add_question_or_one_cache(zc, now, self.name, _TYPE_SRV, _CLASS_IN)
-        out.add_question_or_one_cache(zc, now, self.name, _TYPE_TXT, _CLASS_IN)
-        out.add_question_or_one_cache(zc, now, self.server, _TYPE_A, _CLASS_IN)
-        out.add_question_or_all_cache(zc, now, self.server, _TYPE_AAAA, _CLASS_IN)
+        out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_SRV, _CLASS_IN)
+        out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_TXT, _CLASS_IN)
+        out.add_question_or_one_cache(zc.cache, now, self.server, _TYPE_A, _CLASS_IN)
+        out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_AAAA, _CLASS_IN)
         return out
 
     def __eq__(self, other: object) -> bool:
