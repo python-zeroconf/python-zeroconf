@@ -189,6 +189,12 @@ Changelog
   The Engine thread is now started after all the listeners have been added to avoid a
   race condition where packets could be missed at startup.
 
+* Break out record updating into RecordManager (#512) @bdraco
+
+* Remove uneeded wait in the Engine thread (#511) @bdraco
+
+* Extract code for handling queries into QueryHandler (#507) @bdraco
+
 * Set the TC bit for query packets where the known answers span multiple packets (#494) @bdraco
 
 * Ensure packets are properly seperated when exceeding maximum size (#498) @bdraco
