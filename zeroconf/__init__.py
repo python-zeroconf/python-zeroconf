@@ -2799,6 +2799,7 @@ class RecordManager:
         """Init the record manager."""
         self.zc = zeroconf
         self.cache = zeroconf.cache
+        self.listeners: List[RecordUpdateListener] = []
 
     def updates(self, now: float, rec: List[DNSRecord]) -> None:
         """Used to notify listeners of new information that has updated
@@ -2806,7 +2807,7 @@ class RecordManager:
 
         This method must be called before the cache is updated.
         """
-        for listener in self.zc.listeners:
+        for listener in self.listeners:
             listener.update_records(self.zc, now, rec)
 
     def updates_complete(self) -> None:
@@ -2815,7 +2816,7 @@ class RecordManager:
 
         This method must be called after the cache is updated.
         """
-        for listener in self.zc.listeners:
+        for listener in self.listeners:
             listener.update_records_complete()
         self.zc.notify_all()
 
@@ -2884,6 +2885,35 @@ class RecordManager:
         self.cache.remove_records(removes)
         self.updates_complete()
 
+    def add_listener(
+        self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
+    ) -> None:
+        """Adds a listener for a given question.  The listener will have
+        its update_record method called when information is available to
+        answer the question(s)."""
+        now = current_time_millis()
+        self.listeners.append(listener)
+        records = []
+        if question is not None:
+            questions = [question] if isinstance(question, DNSQuestion) else question
+            for single_question in questions:
+                for record in self.cache.entries_with_name(single_question.name):
+                    if single_question.answered_by(record) and not record.is_expired(now):
+                        records.append(record)
+
+        if records:
+            listener.update_records(self.zc, now, records)
+            listener.update_records_complete()
+        self.zc.notify_all()
+
+    def remove_listener(self, listener: RecordUpdateListener) -> None:
+        """Removes a listener."""
+        try:
+            self.listeners.remove(listener)
+            self.zc.notify_all()
+        except Exception as e:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
+            log.exception('Unknown error, possibly benign: %r', e)
+
 
 class Zeroconf(QuietLogger):
 
@@ -2941,7 +2971,6 @@ class Zeroconf(QuietLogger):
         log.debug('Listen socket %s, respond sockets %s', self._listen_socket, self._respond_sockets)
         self.multi_socket = unicast or interfaces is not InterfaceChoice.Default
 
-        self.listeners = []  # type: List[RecordUpdateListener]
         self._notify_listeners = []  # type: List[NotifyListener]
         self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
         self.registry = ServiceRegistry()
@@ -2966,6 +2995,10 @@ class Zeroconf(QuietLogger):
     @property
     def done(self) -> bool:
         return self._GLOBAL_DONE
+
+    @property
+    def listeners(self) -> List[RecordUpdateListener]:
+        return self.record_manager.listeners
 
     def wait(self, timeout: float) -> None:
         """Calling thread waits for a given number of milliseconds or
@@ -3157,28 +3190,11 @@ class Zeroconf(QuietLogger):
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
         answer the question(s)."""
-        now = current_time_millis()
-        self.listeners.append(listener)
-        records = []
-        if question is not None:
-            questions = [question] if isinstance(question, DNSQuestion) else question
-            for single_question in questions:
-                for record in self.cache.entries_with_name(single_question.name):
-                    if single_question.answered_by(record) and not record.is_expired(now):
-                        records.append(record)
-
-        if records:
-            listener.update_records(self, now, records)
-            listener.update_records_complete()
-        self.notify_all()
+        self.record_manager.add_listener(listener, question)
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
         """Removes a listener."""
-        try:
-            self.listeners.remove(listener)
-            self.notify_all()
-        except Exception as e:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
-            log.exception('Unknown error, possibly benign: %r', e)
+        self.record_manager.remove_listener(listener)
 
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
