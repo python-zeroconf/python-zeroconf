@@ -2912,8 +2912,8 @@ class RecordManager:
         try:
             self.listeners.remove(listener)
             self.zc.notify_all()
-        except Exception as e:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
-            log.exception('Unknown error, possibly benign: %r', e)
+        except ValueError as e:
+            log.exception('Failed to remove listener: %r', e)
 
 
 class Zeroconf(QuietLogger):

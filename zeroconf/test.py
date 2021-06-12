@@ -2747,7 +2747,9 @@ def test_legacy_record_update_listener():
             nonlocal updates
             updates.append(record)
 
-    zc.add_listener(LegacyRecordUpdateListener(), None)
+    listener = LegacyRecordUpdateListener()
+
+    zc.add_listener(listener, None)
 
     # dummy service callback
     def on_service_state_change(zeroconf, service_type, state_change, name):
@@ -2777,5 +2779,9 @@ def test_legacy_record_update_listener():
 
     assert len(updates)
     assert len([isinstance(update, r.DNSPointer) and update.name == type_ for update in updates]) >= 1
+
+    zc.remove_listener(listener)
+    # Removing a second time should not throw
+    zc.remove_listener(listener)
 
     zc.close()
