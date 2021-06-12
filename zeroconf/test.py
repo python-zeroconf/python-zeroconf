@@ -602,7 +602,7 @@ class Names(unittest.TestCase):
         # force receive on oversized packet
         s.sendto(packet, 0, (r._MDNS_ADDR, r._MDNS_PORT))
         s.sendto(packet, 0, (r._MDNS_ADDR, r._MDNS_PORT))
-        time.sleep(2.0)
+        time.sleep(0.5)
         zeroconf.log.debug(
             'warn %d debug %d was %s', mocked_log_warn.call_count, mocked_log_debug.call_count, call_counts
         )
@@ -656,28 +656,22 @@ class Names(unittest.TestCase):
         assert info_service.name.split('.')[0] == '%s-%d' % (name, number_hosts + 1)
 
     def generate_many_hosts(self, zc, type_, name, number_hosts):
-        records_per_server = 2
         block_size = 25
         number_hosts = int(((number_hosts - 1) / block_size + 1)) * block_size
+        out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
         for i in range(1, number_hosts + 1):
             next_name = name if i == 1 else '%s-%d' % (name, i)
-            self.generate_host(zc, next_name, type_)
-            if i % block_size == 0:
-                sleep_count = 0
-                while sleep_count < 40 and i * records_per_server > len(zc.cache.entries_with_name(type_)):
-                    sleep_count += 1
-                    time.sleep(0.05)
+            self.generate_host(out, next_name, type_)
+        zc.send(out)
 
     @staticmethod
-    def generate_host(zc, host_name, type_):
+    def generate_host(out, host_name, type_):
         name = '.'.join((host_name, type_))
-        out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
         out.add_answer_at_time(r.DNSPointer(type_, r._TYPE_PTR, r._CLASS_IN, r._DNS_OTHER_TTL, name), 0)
         out.add_answer_at_time(
             r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, name),
             0,
         )
-        zc.send(out)
 
 
 class Framework(unittest.TestCase):
