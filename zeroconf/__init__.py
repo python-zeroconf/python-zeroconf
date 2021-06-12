@@ -1440,17 +1440,8 @@ class Engine(threading.Thread):
 
     def run(self) -> None:
         while not self.zc.done:
-            rs = list(self.readers.keys())
-            if not rs:
-                # No sockets to manage, but we wait for the timeout
-                # or addition of a socket
-                with self.condition:
-                    self.condition.wait(self.timeout)
-                continue
-
             try:
-                rs.append(self.socketpair[0])
-                rr, _wr, _er = select.select(rs, [], [], self.timeout)
+                rr, _wr, _er = select.select([*self.readers.keys(), self.socketpair[0]], [], [], self.timeout)
 
                 if self.zc.done:
                     return
