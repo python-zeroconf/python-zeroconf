@@ -2795,7 +2795,7 @@ class QueryHandler:
 class RecordManager:
     """Process records into the cache and notify listeners."""
 
-    def __init__(self, zeroconf: 'Zeroconf'):
+    def __init__(self, zeroconf: 'Zeroconf') -> None:
         """Init the record manager."""
         self.zc = zeroconf
         self.cache = zeroconf.cache
@@ -2891,19 +2891,20 @@ class RecordManager:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
         answer the question(s)."""
-        now = current_time_millis()
         self.listeners.append(listener)
-        records = []
+
         if question is not None:
+            now = current_time_millis()
+            records = []
             questions = [question] if isinstance(question, DNSQuestion) else question
             for single_question in questions:
                 for record in self.cache.entries_with_name(single_question.name):
                     if single_question.answered_by(record) and not record.is_expired(now):
                         records.append(record)
+            if records:
+                listener.update_records(self.zc, now, records)
+                listener.update_records_complete()
 
-        if records:
-            listener.update_records(self.zc, now, records)
-            listener.update_records_complete()
         self.zc.notify_all()
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
