@@ -2805,3 +2805,11 @@ def test_legacy_record_update_listener():
     zc.remove_listener(listener)
 
     zc.close()
+
+
+def test_autodetect_ip_version():
+    """Tests for auto detecting IPVersion based on interface ips."""
+    assert r.autodetect_ip_version(["1.3.4.5"]) is r.IPVersion.V4Only
+    assert r.autodetect_ip_version([]) is r.IPVersion.V4Only
+    assert r.autodetect_ip_version(["::1", "1.2.3.4"]) is r.IPVersion.All
+    assert r.autodetect_ip_version(["::1"]) is r.IPVersion.V6Only

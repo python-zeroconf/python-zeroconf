@@ -2617,6 +2617,22 @@ def can_send_to(sock: socket.socket, address: str) -> bool:
     return cast(bool, addr.version == 6 if sock.family == socket.AF_INET6 else addr.version == 4)
 
 
+def autodetect_ip_version(interfaces: InterfacesType) -> IPVersion:
+    """Auto detect the IP version when it is not provided."""
+    if isinstance(interfaces, list):
+        has_v6 = any(
+            isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
+            for i in interfaces
+        )
+        has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
+        if has_v4 and has_v6:
+            return IPVersion.All
+        if has_v6:
+            return IPVersion.V6Only
+
+    return IPVersion.V4Only
+
+
 class ServiceRegistry:
     """A registry to keep track of services.
 
@@ -2945,19 +2961,8 @@ class Zeroconf(QuietLogger):
             from it. Otherwise defaults to V4 only for backward compatibility.
         :param apple_p2p: use AWDL interface (only macOS)
         """
-        if ip_version is None and isinstance(interfaces, list):
-            has_v6 = any(
-                isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
-                for i in interfaces
-            )
-            has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
-            if has_v4 and has_v6:
-                ip_version = IPVersion.All
-            elif has_v6:
-                ip_version = IPVersion.V6Only
-
         if ip_version is None:
-            ip_version = IPVersion.V4Only
+            ip_version = autodetect_ip_version(interfaces)
 
         # hook for threads
         self._GLOBAL_DONE = False
