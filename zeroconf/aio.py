@@ -28,22 +28,16 @@ from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 
 from . import (
     DNSOutgoing,
-    IPVersion,
-    NonUniqueNameException,
     NotifyListener,
     ServiceInfo,
     Zeroconf,
-    _BROWSER_TIME,
-    _CHECK_TIME,
-    _LISTENER_TIME,
-    _MDNS_PORT,
-    _REGISTER_TIME,
     _ServiceBrowserBase,
-    _UNREGISTER_TIME,
     instance_name_from_service_info,
 )
+from .const import _BROWSER_TIME, _CHECK_TIME, _LISTENER_TIME, _MDNS_PORT, _REGISTER_TIME, _UNREGISTER_TIME
+from .exceptions import NonUniqueNameException
 from .utils.aio import wait_condition_or_timeout
-from .utils.net import InterfaceChoice, InterfacesType
+from .utils.net import IPVersion, InterfaceChoice, InterfacesType
 from .utils.time import current_time_millis, millis_to_seconds
 
 
