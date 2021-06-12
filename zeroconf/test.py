@@ -26,6 +26,7 @@ import pytest
 import zeroconf as r
 from zeroconf import (
     DNSHinfo,
+    DNSIncoming,
     DNSText,
     ServiceBrowser,
     ServiceInfo,
@@ -57,6 +58,11 @@ def setup_module():
 def teardown_module():
     if original_logging_level != logging.NOTSET:
         log.setLevel(original_logging_level)
+
+
+def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:
+    """Inject a DNSIncoming response."""
+    zc.handle_response(msg)
 
 
 @lru_cache(maxsize=None)
@@ -788,7 +794,7 @@ class Framework(unittest.TestCase):
 
         try:
             # service added
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Added))
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is not None
             assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
@@ -805,7 +811,7 @@ class Framework(unittest.TestCase):
 
             # service updated. currently only text record can be updated
             service_text = b'path=/~humingchun/'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is not None
             assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
@@ -814,14 +820,14 @@ class Framework(unittest.TestCase):
 
             # The split message only has a SRV and A record.
             # This should not evict TXT records from the cache
-            zeroconf.handle_response(mock_split_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_split_incoming_msg(r.ServiceStateChange.Updated))
             time.sleep(1.1)
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is not None
             assert cast(DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
             # service removed
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
             dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
             assert dns_text is None
 
@@ -1471,6 +1477,9 @@ class ListenerTest(unittest.TestCase):
             cached_info.load_from_cache(zeroconf_browser)
             assert cached_info.properties is not None
 
+            # Populate the cache
+            zeroconf_browser.get_service_info(subtype, registration_name)
+
             # get service info with only the cache
             cached_info = ServiceInfo(subtype, registration_name)
             cached_info.load_from_cache(zeroconf_browser)
@@ -1649,7 +1658,7 @@ class TestServiceBrowser(unittest.TestCase):
             wait_time = 3
 
             # service added
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Added))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Added))
             service_add_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 0
@@ -1658,7 +1667,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service SRV updated
             service_updated_event.clear()
             service_server = 'ash-2.local.'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 1
@@ -1667,7 +1676,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service TXT updated
             service_updated_event.clear()
             service_text = b'path=/~matt2/'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 2
@@ -1676,7 +1685,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service TXT updated - duplicate update should not trigger another service_updated
             service_updated_event.clear()
             service_text = b'path=/~matt2/'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 2
@@ -1685,7 +1694,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service A updated
             service_updated_event.clear()
             service_address = '10.0.1.3'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 3
@@ -1696,14 +1705,14 @@ class TestServiceBrowser(unittest.TestCase):
             service_server = 'ash-3.local.'
             service_text = b'path=/~matt3/'
             service_address = '10.0.1.3'
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 4
             assert service_removed_count == 0
 
             # service removed
-            zeroconf.handle_response(mock_incoming_msg(r.ServiceStateChange.Removed))
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
             service_removed_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 4
@@ -1933,10 +1942,11 @@ class TestServiceInfo(unittest.TestCase):
             # Expext query for SRV, A, AAAA
             last_sent = None
             send_event.clear()
-            zc.handle_response(
+            _inject_response(
+                zc,
                 mock_incoming_msg(
                     [r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text)]
-                )
+                ),
             )
             send_event.wait(wait_time)
             assert last_sent is not None
@@ -1949,7 +1959,8 @@ class TestServiceInfo(unittest.TestCase):
             # Expext query for A, AAAA
             last_sent = None
             send_event.clear()
-            zc.handle_response(
+            _inject_response(
+                zc,
                 mock_incoming_msg(
                     [
                         r.DNSService(
@@ -1963,7 +1974,7 @@ class TestServiceInfo(unittest.TestCase):
                             service_server,
                         )
                     ]
-                )
+                ),
             )
             send_event.wait(wait_time)
             assert last_sent is not None
@@ -1976,7 +1987,8 @@ class TestServiceInfo(unittest.TestCase):
             # Expext no further queries
             last_sent = None
             send_event.clear()
-            zc.handle_response(
+            _inject_response(
+                zc,
                 mock_incoming_msg(
                     [
                         r.DNSAddress(
@@ -1987,7 +1999,7 @@ class TestServiceInfo(unittest.TestCase):
                             socket.inet_pton(socket.AF_INET, service_address),
                         )
                     ]
-                )
+                ),
             )
             send_event.wait(wait_time)
             assert last_sent is None
@@ -2059,7 +2071,8 @@ class TestServiceInfo(unittest.TestCase):
             # Expext no further queries
             last_sent = None
             send_event.clear()
-            zc.handle_response(
+            _inject_response(
+                zc,
                 mock_incoming_msg(
                     [
                         r.DNSText(
@@ -2083,7 +2096,7 @@ class TestServiceInfo(unittest.TestCase):
                             socket.inet_pton(socket.AF_INET, service_address),
                         ),
                     ]
-                )
+                ),
             )
             send_event.wait(wait_time)
             assert last_sent is None
@@ -2135,11 +2148,13 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             wait_time = 3
 
             # all three services added
-            zeroconf.handle_response(
-                mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120)
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
             )
-            zeroconf.handle_response(
-                mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120)
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120),
             )
 
             called_with_refresh_time_check = False
@@ -2153,14 +2168,16 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
 
             # Set an expire time that will force a refresh
             with unittest.mock.patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
-                zeroconf.handle_response(
-                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120)
+                _inject_response(
+                    zeroconf,
+                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
                 )
                 # Add the last record after updating the first one
                 # to ensure the service_add_event only gets set
                 # after the update
-                zeroconf.handle_response(
-                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120)
+                _inject_response(
+                    zeroconf,
+                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120),
                 )
                 service_add_event.wait(wait_time)
             assert called_with_refresh_time_check is True
@@ -2168,14 +2185,17 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             assert service_removed_count == 0
 
             # all three services removed
-            zeroconf.handle_response(
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[0], service_names[0], 0)
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[0], service_names[0], 0),
             )
-            zeroconf.handle_response(
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[1], service_names[1], 0)
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[1], service_names[1], 0),
             )
-            zeroconf.handle_response(
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[2], service_names[2], 0)
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[2], service_names[2], 0),
             )
             service_removed_event.wait(wait_time)
             assert service_added_count == 3
