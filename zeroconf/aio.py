@@ -29,8 +29,6 @@ from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 from . import (
     DNSOutgoing,
     IPVersion,
-    InterfaceChoice,
-    InterfacesType,
     NonUniqueNameException,
     NotifyListener,
     ServiceInfo,
@@ -45,6 +43,7 @@ from . import (
     instance_name_from_service_info,
 )
 from .utils.aio import wait_condition_or_timeout
+from .utils.net import InterfaceChoice, InterfacesType
 from .utils.time import current_time_millis, millis_to_seconds
 
 
