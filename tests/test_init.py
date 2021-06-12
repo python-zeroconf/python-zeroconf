@@ -1235,29 +1235,6 @@ class TestDNSCache(unittest.TestCase):
         assert 'a' not in cache.cache
 
 
-class TestReaper(unittest.TestCase):
-    @unittest.mock.patch.object(r, "_CACHE_CLEANUP_INTERVAL", 10)
-    def test_reaper(self):
-        zeroconf = Zeroconf(interfaces=['127.0.0.1'])
-        cache = zeroconf.cache
-        original_entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-        record_with_10s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 10, b'a')
-        record_with_1s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
-        zeroconf.cache.add(record_with_10s_ttl)
-        zeroconf.cache.add(record_with_1s_ttl)
-        entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-        time.sleep(1)
-        with zeroconf.engine.condition:
-            zeroconf.engine._notify()
-        time.sleep(0.1)
-        entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-        zeroconf.close()
-        assert entries != original_entries
-        assert entries_with_cache != original_entries
-        assert record_with_10s_ttl in entries
-        assert record_with_1s_ttl not in entries
-
-
 class ServiceTypesQuery(unittest.TestCase):
     def test_integration_with_listener(self):
 
