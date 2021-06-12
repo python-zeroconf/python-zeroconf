@@ -82,6 +82,7 @@ _REGISTER_TIME = 225  # ms
 _LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 1000  # ms
 _BROWSER_BACKOFF_LIMIT = 3600  # s
+_CACHE_CLEANUP_INTERVAL = 10000  # ms
 
 # Some DNS constants
 
@@ -1431,7 +1432,6 @@ class Engine(threading.Thread):
         self.zc = zc
         self.readers = {}  # type: Dict[socket.socket, Listener]
         self.timeout = 5
-        self.cache_cleanup_interval_ms = 10000.0
         self.condition = threading.Condition()
         self.socketpair = socket.socketpair()
         self._last_cache_cleanup = 0.0
@@ -1461,7 +1461,7 @@ class Engine(threading.Thread):
                     raise
 
             now = current_time_millis()
-            if now - self._last_cache_cleanup >= self.cache_cleanup_interval_ms:
+            if now - self._last_cache_cleanup >= _CACHE_CLEANUP_INTERVAL:
                 self._last_cache_cleanup = now
                 self.zc.record_manager.updates(now, list(self.zc.cache.expire(now)))
                 self.zc.record_manager.updates_complete()

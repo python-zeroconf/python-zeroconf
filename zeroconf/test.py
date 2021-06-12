@@ -1236,6 +1236,7 @@ class TestDNSCache(unittest.TestCase):
 
 
 class TestReaper(unittest.TestCase):
+    @unittest.mock.patch.object(r, "_CACHE_CLEANUP_INTERVAL", 10)
     def test_reaper(self):
         zeroconf = Zeroconf(interfaces=['127.0.0.1'])
         cache = zeroconf.cache
@@ -1245,7 +1246,6 @@ class TestReaper(unittest.TestCase):
         zeroconf.cache.add(record_with_10s_ttl)
         zeroconf.cache.add(record_with_1s_ttl)
         entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-        zeroconf.engine.cache_cleanup_interval_ms = 10
         time.sleep(1)
         with zeroconf.engine.condition:
             zeroconf.engine._notify()
