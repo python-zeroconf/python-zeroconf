@@ -20,13 +20,14 @@
     USA
 """
 
+import asyncio
 import errno
+import itertools
 import platform
-import select
 import socket
 import threading
 from types import TracebackType  # noqa # used in type hints
-from typing import Dict, List, Optional, Type, Union, cast
+from typing import Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
 from ._dns import DNSIncoming, DNSOutgoing, DNSQuestion
@@ -41,6 +42,7 @@ from ._services import (
     instance_name_from_service_info,
 )
 from ._services.registry import ServiceRegistry
+from ._utils.aio import get_running_loop
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,
@@ -77,83 +79,84 @@ class NotifyListener:
         raise NotImplementedError()
 
 
-class Engine(threading.Thread):
+class AsyncEngine:
+    """An engine wraps sockets in the event loop."""
 
-    """An engine wraps read access to sockets, allowing objects that
-    need to receive data from sockets to be called back when the
-    sockets are ready.
+    def __init__(
+        self,
+        zeroconf: 'Zeroconf',
+        listen_socket: Optional[socket.socket],
+        respond_sockets: List[socket.socket],
+    ) -> None:
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
+        self.zc = zeroconf
+        self.readers: List[asyncio.DatagramTransport] = []
+        self.senders: List[asyncio.DatagramTransport] = []
+        self._listen_socket = listen_socket
+        self._respond_sockets = respond_sockets
+        self._cache_cleanup_task: Optional[asyncio.Task] = None
+        self._running_event: Optional[asyncio.Event] = None
 
-    A reader needs a handle_read() method, which is called when the socket
-    it is interested in is ready for reading.
+    def setup(self, loop: asyncio.AbstractEventLoop, loop_thread_ready: Optional[threading.Event]) -> None:
+        """Set up the instance."""
+        self.loop = loop
+        self._running_event = asyncio.Event()
+        self.loop.create_task(self._async_setup(loop_thread_ready))
 
-    Writers are not implemented here, because we only send short
-    packets.
-    """
+    async def _async_setup(self, loop_thread_ready: Optional[threading.Event]) -> None:
+        """Set up the instance."""
+        assert self.loop is not None
+        await self._async_create_endpoints()
+        self._cache_cleanup_task = self.loop.create_task(self._async_cache_cleanup())
+        assert self._running_event is not None
+        self._running_event.set()
+        if loop_thread_ready:
+            loop_thread_ready.set()
 
-    def __init__(self, zc: 'Zeroconf') -> None:
-        threading.Thread.__init__(self)
-        self.daemon = True
-        self.zc = zc
-        self.readers = {}  # type: Dict[socket.socket, Listener]
-        self.timeout = 5
-        self.condition = threading.Condition()
-        self.socketpair = socket.socketpair()
-        self._last_cache_cleanup = 0.0
-        self.name = "zeroconf-Engine-%s" % (getattr(self, 'native_id', self.ident),)
+    async def async_wait_for_start(self) -> None:
+        """Wait for start up."""
+        assert self._running_event is not None
+        await self._running_event.wait()
 
-    def run(self) -> None:
+    async def _async_create_endpoints(self) -> None:
+        """Create endpoints to send and receive."""
+        assert self.loop is not None
+        loop = self.loop
+        reader_sockets = []
+        sender_sockets = []
+        if self._listen_socket:
+            reader_sockets.append(self._listen_socket)
+        for s in self._respond_sockets:
+            if s not in reader_sockets:
+                reader_sockets.append(s)
+            sender_sockets.append(s)
+
+        for s in reader_sockets:
+            transport, _ = await loop.create_datagram_endpoint(lambda: AsyncListener(self.zc), sock=s)
+            self.readers.append(cast(asyncio.DatagramTransport, transport))
+            if s in sender_sockets:
+                self.senders.append(cast(asyncio.DatagramTransport, transport))
+
+    async def _async_cache_cleanup(self) -> None:
+        """Periodic cache cleanup."""
         while not self.zc.done:
-            try:
-                rr, _wr, _er = select.select([*self.readers.keys(), self.socketpair[0]], [], [], self.timeout)
-
-                if self.zc.done:
-                    return
-
-                for socket_ in rr:
-                    reader = self.readers.get(socket_)
-                    if reader:
-                        reader.handle_read(socket_)
-
-                if self.socketpair[0] in rr:
-                    # Clear the socket's buffer
-                    self.socketpair[0].recv(128)
-
-            except (select.error, socket.error) as e:
-                # If the socket was closed by another thread, during
-                # shutdown, ignore it and exit
-                if e.args[0] not in (errno.EBADF, errno.ENOTCONN) or not self.zc.done:
-                    raise
-
             now = current_time_millis()
-            if now - self._last_cache_cleanup >= _CACHE_CLEANUP_INTERVAL:
-                self._last_cache_cleanup = now
-                self.zc.record_manager.updates(now, list(self.zc.cache.expire(now)))
-                self.zc.record_manager.updates_complete()
+            self.zc.record_manager.updates(now, list(self.zc.cache.expire(now)))
+            self.zc.record_manager.updates_complete()
+            await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
 
-        self.socketpair[0].close()
-        self.socketpair[1].close()
-
-    def _notify(self) -> None:
-        self.condition.notify()
-        try:
-            self.socketpair[1].send(b'x')
-        except socket.error:
-            # The socketpair may already be closed during shutdown, ignore it
-            if not self.zc.done:
-                raise
-
-    def add_reader(self, reader: 'Listener', socket_: socket.socket) -> None:
-        with self.condition:
-            self.readers[socket_] = reader
-            self._notify()
-
-    def del_reader(self, socket_: socket.socket) -> None:
-        with self.condition:
-            del self.readers[socket_]
-            self._notify()
+    def close(self) -> None:
+        """Close the engine."""
+        if self._cache_cleanup_task:
+            self._cache_cleanup_task.cancel()
+            self._cache_cleanup_task = None
+        for transport in itertools.chain(self.senders, self.readers):
+            transport.close()
+        for s in self._respond_sockets:
+            s.close()
 
 
-class Listener(QuietLogger):
+class AsyncListener(asyncio.Protocol, QuietLogger):
 
     """A Listener is used by this module to listen on the multicast
     group to which DNS messages are sent, allowing the implementation
@@ -165,12 +168,18 @@ class Listener(QuietLogger):
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
         self.data = None  # type: Optional[bytes]
+        self.transport: Optional[asyncio.DatagramTransport] = None
+        super().__init__()
 
-    def handle_read(self, socket_: socket.socket) -> None:
-        try:
-            data, (addr, port, *_v6) = socket_.recvfrom(_MAX_MSG_ABSOLUTE)
-        except Exception:  # pylint: disable=broad-except
-            self.log_exception_warning('Error reading from socket %d', socket_.fileno())
+    def datagram_received(
+        self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
+    ) -> None:
+        assert self.transport is not None
+        if len(addrs) == 2:
+            addr, port = addrs  # type: ignore
+        elif len(addrs) == 4:
+            addr, port, _flow, _scope = addrs  # type: ignore
+        else:
             return
 
         if self.data == data:
@@ -178,7 +187,7 @@ class Listener(QuietLogger):
                 'Ignoring duplicate message received from %r:%r (socket %d) (%d bytes) as [%r]',
                 addr,
                 port,
-                socket_.fileno(),
+                self.transport.get_extra_info('socket').fileno(),
                 len(data),
                 data,
             )
@@ -191,7 +200,7 @@ class Listener(QuietLogger):
                 'Received from %r:%r (socket %d): %r (%d bytes) as [%r]',
                 addr,
                 port,
-                socket_.fileno(),
+                self.transport.get_extra_info('socket').fileno(),
                 msg,
                 len(data),
                 data,
@@ -201,7 +210,7 @@ class Listener(QuietLogger):
                 'Received from %r:%r (socket %d): (%d bytes) [%r]',
                 addr,
                 port,
-                socket_.fileno(),
+                self.transport.get_extra_info('socket').fileno(),
                 len(data),
                 data,
             )
@@ -222,6 +231,12 @@ class Listener(QuietLogger):
 
         else:
             self.zc.handle_response(msg)
+
+    def error_received(self, exc: Exception) -> None:
+        """Likely socket closed or IPv6."""
+
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        self.transport = cast(asyncio.DatagramTransport, transport)
 
 
 class Zeroconf(QuietLogger):
@@ -258,16 +273,14 @@ class Zeroconf(QuietLogger):
 
         # hook for threads
         self._GLOBAL_DONE = False
-        self.unicast = unicast
 
         if apple_p2p and not platform.system() == 'Darwin':
             raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
 
-        self._listen_socket, self._respond_sockets = create_sockets(
-            interfaces, unicast, ip_version, apple_p2p=apple_p2p
-        )
-        log.debug('Listen socket %s, respond sockets %s', self._listen_socket, self._respond_sockets)
-        self.multi_socket = unicast or interfaces is not InterfaceChoice.Default
+        listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
+        log.debug('Listen socket %s, respond sockets %s', listen_socket, respond_sockets)
+
+        self.engine = AsyncEngine(self, listen_socket, respond_sockets)
 
         self._notify_listeners: List[NotifyListener] = []
         self.browsers: Dict[ServiceListener, ServiceBrowser] = {}
@@ -277,18 +290,36 @@ class Zeroconf(QuietLogger):
         self.record_manager = RecordManager(self)
 
         self.condition = threading.Condition()
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop_thread: Optional[threading.Thread] = None
 
-        self.engine = Engine(self)
-        self.listener = Listener(self)
-        if not unicast:
-            self.engine.add_reader(self.listener, cast(socket.socket, self._listen_socket))
-        if self.multi_socket:
-            for s in self._respond_sockets:
-                self.engine.add_reader(self.listener, s)
-        # Start the engine only after all
-        # the readers have been added to avoid
-        # missing any packets that are on the wire
-        self.engine.start()
+        self.start()
+
+    def start(self) -> None:
+        """Start Zeroconf."""
+        self.loop = get_running_loop()
+        if self.loop:
+            self.engine.setup(self.loop, None)
+            return
+        self._start_thread()
+
+    def _start_thread(self) -> None:
+        """Start a thread with a running event loop."""
+        loop_thread_ready = threading.Event()
+
+        def _run_loop() -> None:
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+            self.engine.setup(self.loop, loop_thread_ready)
+            self.loop.run_forever()
+
+        self._loop_thread = threading.Thread(target=_run_loop, daemon=True)
+        self._loop_thread.start()
+        loop_thread_ready.wait()
+
+    async def async_wait_for_start(self) -> None:
+        """Wait for start up."""
+        await self.engine.async_wait_for_start()
 
     @property
     def done(self) -> bool:
@@ -504,9 +535,14 @@ class Zeroconf(QuietLogger):
         possible."""
         out = self.query_handler.response(msg, port != _MDNS_PORT)
         if out:
-            self.send(out, addr, port)
+            self.async_send(out, addr, port)
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
+        """Sends an outgoing packet threadsafe."""
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.async_send, out, addr, port)
+
+    def async_send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""
         packets = out.packets()
         packet_num = 0
@@ -516,9 +552,10 @@ class Zeroconf(QuietLogger):
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
             log.debug('Sending (%d bytes #%d) %r as %r...', len(packet), packet_num, out, packet)
-            for s in self._respond_sockets:
+            for transport in self.engine.senders:
                 if self._GLOBAL_DONE:
                     return
+                s = transport.get_extra_info('socket')
                 try:
                     if addr is None:
                         real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
@@ -526,7 +563,7 @@ class Zeroconf(QuietLogger):
                         continue
                     else:
                         real_addr = addr
-                    bytes_sent = s.sendto(packet, 0, (real_addr, port))
+                    transport.sendto(packet, (real_addr, port or _MDNS_PORT))
                 except OSError as exc:
                     if exc.errno == errno.ENETUNREACH and s.family == socket.AF_INET6:
                         # with IPv6 we don't have a reliable way to determine if an interface actually has
@@ -537,9 +574,6 @@ class Zeroconf(QuietLogger):
                 except Exception:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
                     # on send errors, log the exception and keep going
                     self.log_exception_warning('Error sending through socket %d', s.fileno())
-                else:
-                    if bytes_sent != len(packet):
-                        self.log_warning_once('!!! sent %d of %d bytes to %r' % (bytes_sent, len(packet), s))
 
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
@@ -550,19 +584,13 @@ class Zeroconf(QuietLogger):
         self.remove_all_service_listeners()
         self.unregister_all_services()
         self._GLOBAL_DONE = True
-
-        # shutdown recv socket and thread
-        if not self.unicast:
-            self.engine.del_reader(cast(socket.socket, self._listen_socket))
-            cast(socket.socket, self._listen_socket).close()
-        if self.multi_socket:
-            for s in self._respond_sockets:
-                self.engine.del_reader(s)
-        self.engine.join()
+        self.engine.close()
         # shutdown the rest
         self.notify_all()
-        for s in self._respond_sockets:
-            s.close()
+        if self._loop_thread:
+            assert self.loop is not None
+            self.loop.call_soon_threadsafe(self.loop.stop)
+            self._loop_thread.join()
 
     def __enter__(self) -> 'Zeroconf':
         return self

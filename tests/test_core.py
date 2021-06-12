@@ -46,8 +46,7 @@ class TestReaper(unittest.TestCase):
         zeroconf.cache.add(record_with_1s_ttl)
         entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         time.sleep(1)
-        with zeroconf.engine.condition:
-            zeroconf.engine._notify()
+        zeroconf.notify_all()
         time.sleep(0.1)
         entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         zeroconf.close()

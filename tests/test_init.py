@@ -148,15 +148,11 @@ class Names(unittest.TestCase):
         zc.send(out)
         assert mocked_log_warn.call_count == call_counts[0]
 
-        # force a receive of a packet
-        packet = out.packets()[0]
-        s = zc._respond_sockets[0]
-
         # mock the zeroconf logger and check for the correct logging backoff
         call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
         # force receive on oversized packet
-        s.sendto(packet, 0, (const._MDNS_ADDR, const._MDNS_PORT))
-        s.sendto(packet, 0, (const._MDNS_ADDR, const._MDNS_PORT))
+        zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
+        zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
         time.sleep(2.0)
         zeroconf.log.debug(
             'warn %d debug %d was %s', mocked_log_warn.call_count, mocked_log_debug.call_count, call_counts
@@ -165,28 +161,6 @@ class Names(unittest.TestCase):
 
         # close our zeroconf which will close the sockets
         zc.close()
-
-        # pop the big chunk off the end of the data and send on a closed socket
-        out.data.pop()
-        zc._GLOBAL_DONE = False
-
-        # mock the zeroconf logger and check for the correct logging backoff
-        call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
-        # send on a closed socket (force a socket error)
-        zc.send(out)
-        zeroconf.log.debug(
-            'warn %d debug %d was %s', mocked_log_warn.call_count, mocked_log_debug.call_count, call_counts
-        )
-        assert mocked_log_warn.call_count > call_counts[0]
-        assert mocked_log_debug.call_count > call_counts[0]
-        zc.send(out)
-        zeroconf.log.debug(
-            'warn %d debug %d was %s', mocked_log_warn.call_count, mocked_log_debug.call_count, call_counts
-        )
-        assert mocked_log_debug.call_count > call_counts[0] + 2
-
-        mocked_log_warn.stop()
-        mocked_log_debug.stop()
 
     def verify_name_change(self, zc, type_, name, number_hosts):
         desc = {'path': '/~paulsm/'}
