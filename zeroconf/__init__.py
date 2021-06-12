@@ -24,7 +24,6 @@ import enum
 import errno
 import ipaddress
 import itertools
-import logging
 import platform
 import select
 import socket
@@ -100,7 +99,7 @@ from .exceptions import (
     NonUniqueNameException,
     ServiceNameAlreadyRegistered,
 )
-
+from .logger import QuietLogger, log
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
@@ -128,12 +127,6 @@ If you need support for Python 2 or Python 3.3-3.4 please use version 19.1
 If you need support for Python 3.5 please use version 0.28.0
     '''
     )
-
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
-
-if log.level == logging.NOTSET:
-    log.setLevel(logging.WARN)
 
 
 int2byte = struct.Struct(">B").pack
@@ -317,33 +310,6 @@ def instance_name_from_service_info(info: "ServiceInfo") -> str:
 
 
 # implementation classes
-
-
-class QuietLogger:
-    _seen_logs = {}  # type: Dict[str, Union[int, tuple]]
-
-    @classmethod
-    def log_exception_warning(cls, *logger_data: Any) -> None:
-        exc_info = sys.exc_info()
-        exc_str = str(exc_info[1])
-        if exc_str not in cls._seen_logs:
-            # log at warning level the first time this is seen
-            cls._seen_logs[exc_str] = exc_info
-            logger = log.warning
-        else:
-            logger = log.debug
-        logger(*(logger_data or ['Exception occurred']), exc_info=True)
-
-    @classmethod
-    def log_warning_once(cls, *args: Any) -> None:
-        msg_str = args[0]
-        if msg_str not in cls._seen_logs:
-            cls._seen_logs[msg_str] = 0
-            logger = log.warning
-        else:
-            logger = log.debug
-        cls._seen_logs[msg_str] = cast(int, cls._seen_logs[msg_str]) + 1
-        logger(*args)
 
 
 class DNSEntry:
