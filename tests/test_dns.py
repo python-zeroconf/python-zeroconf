@@ -141,20 +141,20 @@ class TestDunder(unittest.TestCase):
 class PacketGeneration(unittest.TestCase):
     def test_parse_own_packet_simple(self):
         generated = r.DNSOutgoing(0)
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_parse_own_packet_simple_unicast(self):
         generated = r.DNSOutgoing(0, False)
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_parse_own_packet_flags(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_parse_own_packet_question(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         generated.add_question(r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN))
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_parse_own_packet_response(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -171,7 +171,7 @@ class PacketGeneration(unittest.TestCase):
             ),
             0,
         )
-        parsed = r.DNSIncoming(generated.packet())
+        parsed = r.DNSIncoming(generated.packets()[0])
         assert len(generated.answers) == 1
         assert len(generated.answers) == len(parsed.answers)
 
@@ -179,7 +179,7 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
-        parsed = r.DNSIncoming(generated.packet())
+        parsed = r.DNSIncoming(generated.packets()[0])
         assert len(generated.questions) == 1
         assert len(generated.questions) == len(parsed.questions)
         assert question == parsed.questions[0]
@@ -220,7 +220,7 @@ class PacketGeneration(unittest.TestCase):
         )
         query_generated.add_answer_at_time(answer1, 0)
         query_generated.add_answer_at_time(staleanswer2, 0)
-        query = r.DNSIncoming(query_generated.packet())
+        query = r.DNSIncoming(query_generated.packets()[0])
 
         # Should be suppressed
         response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -255,14 +255,14 @@ class PacketGeneration(unittest.TestCase):
     def test_dns_hinfo(self):
         generated = r.DNSOutgoing(0)
         generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'os'))
-        parsed = r.DNSIncoming(generated.packet())
+        parsed = r.DNSIncoming(generated.packets()[0])
         answer = cast(r.DNSHinfo, parsed.answers[0])
         assert answer.cpu == u'cpu'
         assert answer.os == u'os'
 
         generated = r.DNSOutgoing(0)
         generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
-        self.assertRaises(r.NamePartTooLongException, generated.packet)
+        self.assertRaises(r.NamePartTooLongException, generated.packets)
 
     def test_many_questions(self):
         """Test many questions get seperated into multiple packets."""
@@ -290,7 +290,7 @@ class PacketGeneration(unittest.TestCase):
         https://datatracker.ietf.org/doc/html/rfc6762#section-17
         """
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        query = r.DNSIncoming(r.DNSOutgoing(const._FLAGS_QR_QUERY).packet())
+        query = r.DNSIncoming(r.DNSOutgoing(const._FLAGS_QR_QUERY).packets()[0])
         for i in range(3):
             generated.add_answer(
                 query,
@@ -381,25 +381,25 @@ class PacketForm(unittest.TestCase):
     def test_transaction_id(self):
         """ID must be zero in a DNS-SD packet"""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        bytes = generated.packet()
+        bytes = generated.packets()[0]
         id = bytes[0] << 8 | bytes[1]
         assert id == 0
 
     def test_query_header_bits(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        bytes = generated.packet()
+        bytes = generated.packets()[0]
         flags = bytes[2] << 8 | bytes[3]
         assert flags == 0x0
 
     def test_response_header_bits(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        bytes = generated.packet()
+        bytes = generated.packets()[0]
         flags = bytes[2] << 8 | bytes[3]
         assert flags == 0x8000
 
     def test_numbers(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        bytes = generated.packet()
+        bytes = generated.packets()[0]
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
         assert num_questions == 0
         assert num_answers == 0
@@ -411,7 +411,7 @@ class PacketForm(unittest.TestCase):
         question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
         for i in range(10):
             generated.add_question(question)
-        bytes = generated.packet()
+        bytes = generated.packets()[0]
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
         assert num_questions == 10
         assert num_answers == 0
@@ -422,7 +422,7 @@ class PacketForm(unittest.TestCase):
 class TestDnsIncoming(unittest.TestCase):
     def test_incoming_exception_handling(self):
         generated = r.DNSOutgoing(0)
-        packet = generated.packet()
+        packet = generated.packets()[0]
         packet = packet[:8] + b'deadbeef' + packet[8:]
         parsed = r.DNSIncoming(packet)
         parsed = r.DNSIncoming(packet)
@@ -432,7 +432,7 @@ class TestDnsIncoming(unittest.TestCase):
         generated = r.DNSOutgoing(0)
         answer = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         generated.add_additional_answer(answer)
-        packet = generated.packet()
+        packet = generated.packets()[0]
         parsed = r.DNSIncoming(packet)
         assert len(parsed.answers) == 0
         assert parsed.is_query() != parsed.is_response()
@@ -443,7 +443,7 @@ class TestDnsIncoming(unittest.TestCase):
         generated = r.DNSOutgoing(0)
         answer = r.DNSAddress('domain', const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 1, packed)
         generated.add_additional_answer(answer)
-        packet = generated.packet()
+        packet = generated.packets()[0]
         parsed = r.DNSIncoming(packet)
         record = parsed.answers[0]
         assert isinstance(record, r.DNSAddress)

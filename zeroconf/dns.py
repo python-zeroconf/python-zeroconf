@@ -799,21 +799,6 @@ class DNSOutgoing(DNSMessage):
             del self.names[name]
         return False
 
-    def packet(self) -> bytes:
-        """Returns a bytestring containing the first packet's bytes.
-
-        Generally, you want to use packets() in case the response
-        does not fit in a single packet, but this exists for
-        backward compatibility."""
-        packets = self.packets()
-        if len(packets) == 0:
-            return b''
-        if len(packets[0]) > _MAX_MSG_ABSOLUTE:
-            QuietLogger.log_warning_once(
-                "Created over-sized packet (%d bytes) %r", len(packets[0]), packets[0]
-            )
-        return packets[0]
-
     def _write_questions_from_offset(self, questions_offset: int) -> int:
         questions_written = 0
         for question in self.questions[questions_offset:]:
