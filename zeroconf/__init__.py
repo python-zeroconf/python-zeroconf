@@ -58,8 +58,8 @@ from .services import (  # noqa # import needed for backwards compat
 )
 from .services.registry import ServiceRegistry  # noqa # import needed for backwards compat
 from .services.types import ZeroconfServiceTypes  # noqa # import needed for backwards compat
-from .utils.name import service_type_name  # noqa # import needed for backwards compat
-from .utils.net import (  # noqa # import needed for backwards compat
+from ._utils.name import service_type_name  # noqa # import needed for backwards compat
+from ._utils.net import (  # noqa # import needed for backwards compat
     add_multicast_member,
     can_send_to,
     autodetect_ip_version,
@@ -70,8 +70,8 @@ from .utils.net import (  # noqa # import needed for backwards compat
     IPVersion,
     get_all_addresses,
 )
-from .utils.struct import int2byte  # noqa # import needed for backwards compat
-from .utils.time import current_time_millis, millis_to_seconds  # noqa # import needed for backwards compat
+from ._utils.struct import int2byte  # noqa # import needed for backwards compat
+from ._utils.time import current_time_millis, millis_to_seconds  # noqa # import needed for backwards compat
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'

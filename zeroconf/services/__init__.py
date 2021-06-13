@@ -29,6 +29,14 @@ from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tupl
 
 from .._dns import DNSAddress, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
+from .._utils.name import service_type_name
+from .._utils.net import (
+    IPVersion,
+    _encode_address,
+    _is_v6_address,
+)
+from .._utils.struct import int2byte
+from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
@@ -48,14 +56,7 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-from ..utils.name import service_type_name
-from ..utils.net import (
-    IPVersion,
-    _encode_address,
-    _is_v6_address,
-)
-from ..utils.struct import int2byte
-from ..utils.time import current_time_millis, millis_to_seconds
+
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525

@@ -16,7 +16,7 @@ from zeroconf import Zeroconf
 from zeroconf.const import _LISTENER_TIME
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
 from zeroconf.services import ServiceInfo, ServiceListener
-from zeroconf.utils.time import current_time_millis
+from zeroconf._utils.time import current_time_millis
 
 
 @pytest.fixture(autouse=True)

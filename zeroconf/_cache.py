@@ -23,8 +23,8 @@
 from typing import Dict, Iterable, List, Optional, cast
 
 from ._dns import DNSEntry, DNSPointer, DNSRecord, DNSService
+from ._utils.time import current_time_millis
 from .const import _TYPE_PTR
-from .utils.time import current_time_millis
 
 
 class DNSCache:

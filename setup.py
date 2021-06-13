@@ -23,7 +23,7 @@ setup(
     author='Paul Scott-Murphy, William McBrine, Jakub Stasiak',
     url='https://github.com/jstasiak/python-zeroconf',
     package_data={"zeroconf": ["py.typed"]},
-    packages=["zeroconf", "zeroconf.services", "zeroconf.utils"],
+    packages=["zeroconf", "zeroconf.services", "zeroconf._utils"],
     platforms=['unix', 'linux', 'osx'],
     license='LGPL',
     zip_safe=False,
