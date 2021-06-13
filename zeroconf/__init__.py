@@ -76,7 +76,7 @@ from .const import (  # noqa # import needed for backwards compat
     _TYPE_TXT,
     _UNREGISTER_TIME,
 )
-from .core import NotifyListener, ServiceRegistry, Zeroconf  # noqa # import needed for backwards compat
+from .core import NotifyListener, Zeroconf  # noqa # import needed for backwards compat
 from .dns import (  # noqa # import needed for backwards compat
     DNSAddress,
     DNSCache,
@@ -110,6 +110,7 @@ from .services import (  # noqa # import needed for backwards compat
     ServiceInfo,
     ServiceStateChange,
 )
+from .services.registry import ServiceRegistry  # noqa # import needed for backwards compat
 from .utils.name import service_type_name  # noqa # import needed for backwards compat
 from .utils.net import (  # noqa # import needed for backwards compat
     add_multicast_member,
