@@ -23,8 +23,8 @@
 import time
 from typing import Optional, Set, Tuple, Union
 
+from .._core import Zeroconf
 from ..const import _SERVICE_TYPE_ENUMERATION_NAME
-from ..core import Zeroconf
 from ..services import ServiceBrowser, ServiceListener
 from ..utils.net import IPVersion, InterfaceChoice, InterfacesType
 

@@ -17,7 +17,7 @@ import pytest
 import zeroconf as r
 from zeroconf import const
 import zeroconf.services as s
-from zeroconf.core import Zeroconf
+from zeroconf import Zeroconf
 from zeroconf.services import (
     ServiceBrowser,
     ServiceInfo,
