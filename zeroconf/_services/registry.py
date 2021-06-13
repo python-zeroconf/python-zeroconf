@@ -70,7 +70,7 @@ class ServiceRegistry:
 
     def get_info_name(self, name: str) -> Optional[ServiceInfo]:
         """Return all ServiceInfo for the name."""
-        return self._services.get(name)
+        return self._services.get(name.lower())
 
     def get_types(self) -> List[str]:
         """Return all types."""
@@ -88,7 +88,7 @@ class ServiceRegistry:
         """Return all ServiceInfo matching the index."""
         service_infos = []
 
-        for name in getattr(self, attr).get(key, [])[:]:
+        for name in getattr(self, attr).get(key.lower(), [])[:]:
             info = self._services.get(name)
             # Since we do not get under a lock since it would be
             # a performance issue, its possible
@@ -106,13 +106,13 @@ class ServiceRegistry:
             raise ServiceNameAlreadyRegistered
 
         self._services[lower_name] = info
-        self.types.setdefault(info.type, []).append(lower_name)
-        self.servers.setdefault(info.server, []).append(lower_name)
+        self.types.setdefault(info.type.lower(), []).append(lower_name)
+        self.servers.setdefault(info.server.lower(), []).append(lower_name)
 
     def _remove(self, info: ServiceInfo) -> None:
         """Remove a service under the lock."""
         lower_name = info.name.lower()
         old_service_info = self._services[lower_name]
-        self.types[old_service_info.type].remove(lower_name)
-        self.servers[old_service_info.server].remove(lower_name)
+        self.types[old_service_info.type.lower()].remove(lower_name)
+        self.servers[old_service_info.server.lower()].remove(lower_name)
         del self._services[lower_name]
