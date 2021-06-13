@@ -116,6 +116,7 @@ class QueryHandler:
             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
 
         for question in msg.questions:
+            log.debug("Answer question: %s", question)
             if question.type == _TYPE_PTR:
                 if question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
                     self._answer_service_type_enumeration_query(msg, out)
@@ -125,6 +126,7 @@ class QueryHandler:
 
             self._answer_non_ptr_query(msg, out, question)
 
+        log.debug("Finished answering: %s", out.answers)
         if out is not None and out.answers:
             out.id = msg.id
             return out
