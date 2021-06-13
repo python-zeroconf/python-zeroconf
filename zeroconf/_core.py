@@ -224,7 +224,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
         if port != _MDNS_PORT:
             # If it's not a multicast query, reply via unicast as well
-            self.zc.handle_query(msg, addr, port)
+            self.zc.handle_query(msg, addr, _MDNS_PORT)
         # Always multicast responses
         self.zc.handle_query(msg, None, _MDNS_PORT)
 
