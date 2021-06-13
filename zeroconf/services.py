@@ -20,6 +20,7 @@
     USA
 """
 
+import enum
 import socket
 import threading
 import warnings
@@ -50,7 +51,6 @@ from .exceptions import BadTypeInNameException
 from .utils.name import service_type_name
 from .utils.net import (
     IPVersion,
-    ServiceStateChange,
     _encode_address,
     _is_v6_address,
 )
@@ -63,6 +63,13 @@ if TYPE_CHECKING:
         ServiceListener,
         Zeroconf,
     )
+
+
+@enum.unique
+class ServiceStateChange(enum.Enum):
+    Added = 1
+    Removed = 2
+    Updated = 3
 
 
 def instance_name_from_service_info(info: "ServiceInfo") -> str:
