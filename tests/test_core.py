@@ -20,15 +20,6 @@ log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
 
 
-@pytest.fixture(autouse=True)
-def verify_threads_ended():
-    """Verify that the threads are not running after the test."""
-    threads_before = frozenset(threading.enumerate())
-    yield
-    threads = frozenset(threading.enumerate()) - threads_before
-    assert not threads
-
-
 def setup_module():
     global original_logging_level
     original_logging_level = log.level
