@@ -229,7 +229,7 @@ class TestServiceInfo(unittest.TestCase):
             for record in records:
                 generated.add_answer_at_time(record, 0)
 
-            return r.DNSIncoming(generated.packet())
+            return r.DNSIncoming(generated.packets()[0])
 
         def get_service_info_helper(zc, type, name):
             nonlocal service_info
@@ -366,7 +366,7 @@ class TestServiceInfo(unittest.TestCase):
             for record in records:
                 generated.add_answer_at_time(record, 0)
 
-            return r.DNSIncoming(generated.packet())
+            return r.DNSIncoming(generated.packets()[0])
 
         def get_service_info_helper(zc, type, name):
             nonlocal service_info
@@ -466,7 +466,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             generated.add_answer_at_time(
                 r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name), 0
             )
-            return r.DNSIncoming(generated.packet())
+            return r.DNSIncoming(generated.packets()[0])
 
         zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
         service_browser = r.ServiceBrowser(zeroconf, service_types, listener=MyServiceListener())
@@ -638,7 +638,7 @@ def test_integration():
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
-        pout = r.DNSIncoming(out.packet())
+        pout = r.DNSIncoming(out.packets()[0])
         nonlocal nbr_answers
         for answer in pout.answers:
             nbr_answers += 1

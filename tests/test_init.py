@@ -43,28 +43,28 @@ class Names(unittest.TestCase):
             "this.is.a.very.long.name.with.lots.of.parts.in.it.local.", const._TYPE_SRV, const._CLASS_IN
         )
         generated.add_question(question)
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_exceedingly_long_name(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         name = "%slocal." % ("part." * 1000)
         question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_extra_exceedingly_long_name(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         name = "%slocal." % ("part." * 4000)
         question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_exceedingly_long_name_part(self):
         name = "%s.local." % ("a" * 1000)
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
-        self.assertRaises(r.NamePartTooLongException, generated.packet)
+        self.assertRaises(r.NamePartTooLongException, generated.packets)
 
     def test_same_name(self):
         name = "paired.local."
@@ -72,7 +72,7 @@ class Names(unittest.TestCase):
         question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         generated.add_question(question)
-        r.DNSIncoming(generated.packet())
+        r.DNSIncoming(generated.packets()[0])
 
     def test_lots_of_names(self):
 
@@ -156,7 +156,7 @@ class Names(unittest.TestCase):
         assert mocked_log_warn.call_count == call_counts[0]
 
         # force a receive of a packet
-        packet = out.packet()
+        packet = out.packets()[0]
         s = zc._respond_sockets[0]
 
         # mock the zeroconf logger and check for the correct logging backoff
@@ -317,7 +317,7 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packet()), False))
+        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packets()[0]), False))
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -348,7 +348,7 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packet()), False))
+        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packets()[0]), False))
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -860,7 +860,7 @@ class TestServiceBrowser(unittest.TestCase):
                 r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name), 0
             )
 
-            return r.DNSIncoming(generated.packet())
+            return r.DNSIncoming(generated.packets()[0])
 
         zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
         service_browser = r.ServiceBrowser(zeroconf, service_type, listener=MyServiceListener())
@@ -1021,7 +1021,7 @@ def test_ptr_optimization():
     # query
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
-    out = zc.query_handler.response(r.DNSIncoming(query.packet()), False)
+    out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), False)
     assert out is not None
     nbr_answers += len(out.answers)
     nbr_authorities += len(out.authorities)

@@ -116,7 +116,7 @@ class Framework(unittest.TestCase):
                     ),
                     0,
                 )
-                return r.DNSIncoming(generated.packet())
+                return r.DNSIncoming(generated.packets()[0])
 
             if service_state_change == r.ServiceStateChange.Removed:
                 ttl = 0
@@ -154,7 +154,7 @@ class Framework(unittest.TestCase):
                 0,
             )
 
-            return r.DNSIncoming(generated.packet())
+            return r.DNSIncoming(generated.packets()[0])
 
         def mock_split_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
             """Mock an incoming message for the case where the packet is split."""
@@ -183,7 +183,7 @@ class Framework(unittest.TestCase):
                 ),
                 0,
             )
-            return r.DNSIncoming(generated.packet())
+            return r.DNSIncoming(generated.packets()[0])
 
         service_name = 'name._type._tcp.local.'
         service_type = '_type._tcp.local.'
