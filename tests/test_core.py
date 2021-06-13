@@ -6,15 +6,17 @@
 
 import itertools
 import logging
-import threading
+import os
+import socket
 import time
 import unittest
 import unittest.mock
+from typing import cast
 
-
-import pytest
 import zeroconf as r
 from zeroconf import core
+
+from . import has_working_ipv6, _inject_response
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -52,3 +54,158 @@ class TestReaper(unittest.TestCase):
         assert entries_with_cache != original_entries
         assert record_with_10s_ttl in entries
         assert record_with_1s_ttl not in entries
+
+
+class Framework(unittest.TestCase):
+    def test_launch_and_close(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
+        rv.close()
+
+    def test_launch_and_close_context_manager(self):
+        with r.Zeroconf(interfaces=r.InterfaceChoice.All) as rv:
+            assert rv.done is False
+        assert rv.done is True
+
+        with r.Zeroconf(interfaces=r.InterfaceChoice.Default) as rv:
+            assert rv.done is False
+        assert rv.done is True
+
+    def test_launch_and_close_unicast(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, unicast=True)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, unicast=True)
+        rv.close()
+
+    def test_close_multiple_times(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
+        rv.close()
+        rv.close()
+
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
+    def test_launch_and_close_v4_v6(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
+        rv.close()
+
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
+    def test_launch_and_close_v6_only(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
+        rv.close()
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
+        rv.close()
+
+    def test_handle_response(self):
+        def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
+            ttl = 120
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+
+            if service_state_change == r.ServiceStateChange.Updated:
+                generated.add_answer_at_time(
+                    r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
+                )
+                return r.DNSIncoming(generated.packet())
+
+            if service_state_change == r.ServiceStateChange.Removed:
+                ttl = 0
+
+            generated.add_answer_at_time(
+                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
+            )
+            generated.add_answer_at_time(
+                r.DNSService(
+                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
+                ),
+                0,
+            )
+            generated.add_answer_at_time(
+                r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
+            )
+            generated.add_answer_at_time(
+                r.DNSAddress(
+                    service_server,
+                    r._TYPE_A,
+                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    ttl,
+                    socket.inet_aton(service_address),
+                ),
+                0,
+            )
+
+            return r.DNSIncoming(generated.packet())
+
+        def mock_split_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
+            """Mock an incoming message for the case where the packet is split."""
+            ttl = 120
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated.add_answer_at_time(
+                r.DNSAddress(
+                    service_server,
+                    r._TYPE_A,
+                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    ttl,
+                    socket.inet_aton(service_address),
+                ),
+                0,
+            )
+            generated.add_answer_at_time(
+                r.DNSService(
+                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
+                ),
+                0,
+            )
+            return r.DNSIncoming(generated.packet())
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-2.local.'
+        service_text = b'path=/~paulsm/'
+        service_address = '10.0.1.2'
+
+        zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        try:
+            # service added
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Added))
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is not None
+            assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
+            all_dns_text = zeroconf.cache.get_all_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert [dns_text] == all_dns_text
+
+            # https://tools.ietf.org/html/rfc6762#section-10.2
+            # Instead of merging this new record additively into the cache in addition
+            # to any previous records with the same name, rrtype, and rrclass,
+            # all old records with that name, rrtype, and rrclass that were received
+            # more than one second ago are declared invalid,
+            # and marked to expire from the cache in one second.
+            time.sleep(1.1)
+
+            # service updated. currently only text record can be updated
+            service_text = b'path=/~humingchun/'
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is not None
+            assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
+
+            time.sleep(1.1)
+
+            # The split message only has a SRV and A record.
+            # This should not evict TXT records from the cache
+            _inject_response(zeroconf, mock_split_incoming_msg(r.ServiceStateChange.Updated))
+            time.sleep(1.1)
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is not None
+            assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
+
+            # service removed
+            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
+            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            assert dns_text is None
+
+        finally:
+            zeroconf.close()
