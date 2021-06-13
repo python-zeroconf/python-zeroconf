@@ -19,3 +19,11 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
     USA
 """
+
+from zeroconf.core import Zeroconf
+from zeroconf.dns import DNSIncoming
+
+
+def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:
+    """Inject a DNSIncoming response."""
+    zc.handle_response(msg)

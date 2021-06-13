@@ -6,6 +6,7 @@
 
 import asyncio
 import socket
+import threading
 import unittest.mock
 
 import pytest
@@ -21,6 +22,23 @@ from zeroconf import (
     current_time_millis,
 )
 from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
+
+
+@pytest.fixture(autouse=True)
+def verify_threads_ended():
+    """Verify that the threads are not running after the test."""
+    threads_before = frozenset(threading.enumerate())
+    yield
+    threads_after = frozenset(threading.enumerate())
+    non_executor_threads = frozenset(
+        [
+            thread
+            for thread in threads_after
+            if "asyncio" not in thread.name and "ThreadPoolExecutor" not in thread.name
+        ]
+    )
+    threads = non_executor_threads - threads_before
+    assert not threads
 
 
 @pytest.mark.asyncio

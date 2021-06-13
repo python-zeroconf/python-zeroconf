@@ -8,30 +8,25 @@ import logging
 import socket
 import threading
 import time
+import unittest
 from threading import Event
 
 import pytest
 
 import zeroconf as r
 import zeroconf.services as s
-from zeroconf import (
+from zeroconf.core import Zeroconf
+from zeroconf.services import (
     ServiceBrowser,
     ServiceInfo,
     ServiceStateChange,
-    Zeroconf,
 )
+
+from . import _inject_response
+
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
-
-
-@pytest.fixture(autouse=True)
-def verify_threads_ended():
-    """Verify that the threads are not running after the test."""
-    threads_before = frozenset(threading.enumerate())
-    yield
-    threads = frozenset(threading.enumerate()) - threads_before
-    assert not threads
 
 
 def setup_module():
@@ -43,6 +38,490 @@ def setup_module():
 def teardown_module():
     if original_logging_level != logging.NOTSET:
         log.setLevel(original_logging_level)
+
+
+class TestServiceInfo(unittest.TestCase):
+    def test_get_name(self):
+        """Verify the name accessor can strip the type."""
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        assert info.get_name() == "name"
+
+    def test_service_info_rejects_non_matching_updates(self):
+        """Verify records with the wrong name are rejected."""
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        ttl = 120
+        now = r.current_time_millis()
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        # Verify backwards compatiblity with calling with None
+        info.update_record(zc, now, None)
+        # Matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                service_name,
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        info.update_record(
+            zc,
+            now,
+            r.DNSService(
+                service_name,
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                0,
+                0,
+                80,
+                'ASH-2.local.',
+            ),
+        )
+        assert info.server_key == 'ash-2.local.'
+        assert info.server == 'ASH-2.local.'
+        new_address = socket.inet_aton("10.0.1.3")
+        info.update_record(
+            zc,
+            now,
+            r.DNSAddress(
+                'ASH-2.local.',
+                r._TYPE_A,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                new_address,
+            ),
+        )
+        assert new_address in info.addresses
+        # Non-matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                "incorrect.name.",
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        info.update_record(
+            zc,
+            now,
+            r.DNSService(
+                "incorrect.name.",
+                r._TYPE_SRV,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                0,
+                0,
+                80,
+                'ASH-2.local.',
+            ),
+        )
+        assert info.server_key == 'ash-2.local.'
+        assert info.server == 'ASH-2.local.'
+        new_address = socket.inet_aton("10.0.1.4")
+        info.update_record(
+            zc,
+            now,
+            r.DNSAddress(
+                "incorrect.name.",
+                r._TYPE_A,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                new_address,
+            ),
+        )
+        assert new_address not in info.addresses
+        zc.close()
+
+    def test_service_info_rejects_expired_records(self):
+        """Verify records that are expired are rejected."""
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        ttl = 120
+        now = r.current_time_millis()
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        # Matching updates
+        info.update_record(
+            zc,
+            now,
+            r.DNSText(
+                service_name,
+                r._TYPE_TXT,
+                r._CLASS_IN | r._CLASS_UNIQUE,
+                ttl,
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+        )
+        assert info.properties[b"ci"] == b"2"
+        # Expired record
+        expired_record = r.DNSText(
+            service_name,
+            r._TYPE_TXT,
+            r._CLASS_IN | r._CLASS_UNIQUE,
+            ttl,
+            b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
+        )
+        expired_record.created = 1000
+        expired_record._expiration_time = 1000
+        info.update_record(zc, now, expired_record)
+        assert info.properties[b"ci"] == b"2"
+        zc.close()
+
+    def test_get_info_partial(self):
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_text = b'path=/~matt1/'
+        service_address = '10.0.1.2'
+
+        service_info = None
+        send_event = Event()
+        service_info_event = Event()
+
+        last_sent = None  # type: Optional[r.DNSOutgoing]
+
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+            """Sends an outgoing packet."""
+            nonlocal last_sent
+
+            last_sent = out
+            send_event.set()
+
+        # monkey patch the zeroconf send
+        setattr(zc, "send", send)
+
+        def mock_incoming_msg(records) -> r.DNSIncoming:
+
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+
+            for record in records:
+                generated.add_answer_at_time(record, 0)
+
+            return r.DNSIncoming(generated.packet())
+
+        def get_service_info_helper(zc, type, name):
+            nonlocal service_info
+            service_info = zc.get_service_info(type, name)
+            service_info_event.set()
+
+        try:
+            ttl = 120
+            helper_thread = threading.Thread(
+                target=get_service_info_helper, args=(zc, service_type, service_name)
+            )
+            helper_thread.start()
+            wait_time = 1
+
+            # Expext query for SRV, TXT, A, AAAA
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 4
+            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert service_info is None
+
+            # Expext query for SRV, A, AAAA
+            last_sent = None
+            send_event.clear()
+            _inject_response(
+                zc,
+                mock_incoming_msg(
+                    [r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text)]
+                ),
+            )
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 3
+            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert service_info is None
+
+            # Expext query for A, AAAA
+            last_sent = None
+            send_event.clear()
+            _inject_response(
+                zc,
+                mock_incoming_msg(
+                    [
+                        r.DNSService(
+                            service_name,
+                            r._TYPE_SRV,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            0,
+                            0,
+                            80,
+                            service_server,
+                        )
+                    ]
+                ),
+            )
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 2
+            assert r.DNSQuestion(service_server, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_server, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            last_sent = None
+            assert service_info is None
+
+            # Expext no further queries
+            last_sent = None
+            send_event.clear()
+            _inject_response(
+                zc,
+                mock_incoming_msg(
+                    [
+                        r.DNSAddress(
+                            service_server,
+                            r._TYPE_A,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            socket.inet_pton(socket.AF_INET, service_address),
+                        )
+                    ]
+                ),
+            )
+            send_event.wait(wait_time)
+            assert last_sent is None
+            assert service_info is not None
+
+        finally:
+            helper_thread.join()
+            zc.remove_all_service_listeners()
+            zc.close()
+
+    def test_get_info_single(self):
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_text = b'path=/~matt1/'
+        service_address = '10.0.1.2'
+
+        service_info = None
+        send_event = Event()
+        service_info_event = Event()
+
+        last_sent = None  # type: Optional[r.DNSOutgoing]
+
+        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+            """Sends an outgoing packet."""
+            nonlocal last_sent
+
+            last_sent = out
+            send_event.set()
+
+        # monkey patch the zeroconf send
+        setattr(zc, "send", send)
+
+        def mock_incoming_msg(records) -> r.DNSIncoming:
+
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+
+            for record in records:
+                generated.add_answer_at_time(record, 0)
+
+            return r.DNSIncoming(generated.packet())
+
+        def get_service_info_helper(zc, type, name):
+            nonlocal service_info
+            service_info = zc.get_service_info(type, name)
+            service_info_event.set()
+
+        try:
+            ttl = 120
+            helper_thread = threading.Thread(
+                target=get_service_info_helper, args=(zc, service_type, service_name)
+            )
+            helper_thread.start()
+            wait_time = 1
+
+            # Expext query for SRV, TXT, A, AAAA
+            send_event.wait(wait_time)
+            assert last_sent is not None
+            assert len(last_sent.questions) == 4
+            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert service_info is None
+
+            # Expext no further queries
+            last_sent = None
+            send_event.clear()
+            _inject_response(
+                zc,
+                mock_incoming_msg(
+                    [
+                        r.DNSText(
+                            service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text
+                        ),
+                        r.DNSService(
+                            service_name,
+                            r._TYPE_SRV,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            0,
+                            0,
+                            80,
+                            service_server,
+                        ),
+                        r.DNSAddress(
+                            service_server,
+                            r._TYPE_A,
+                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            ttl,
+                            socket.inet_pton(socket.AF_INET, service_address),
+                        ),
+                    ]
+                ),
+            )
+            send_event.wait(wait_time)
+            assert last_sent is None
+            assert service_info is not None
+
+        finally:
+            helper_thread.join()
+            zc.remove_all_service_listeners()
+            zc.close()
+
+
+class TestServiceBrowserMultipleTypes(unittest.TestCase):
+    def test_update_record(self):
+
+        service_names = ['name2._type2._tcp.local.', 'name._type._tcp.local.', 'name._type._udp.local']
+        service_types = ['_type2._tcp.local.', '_type._tcp.local.', '_type._udp.local.']
+
+        service_added_count = 0
+        service_removed_count = 0
+        service_add_event = Event()
+        service_removed_event = Event()
+
+        class MyServiceListener(r.ServiceListener):
+            def add_service(self, zc, type_, name) -> None:
+                nonlocal service_added_count
+                service_added_count += 1
+                if service_added_count == 3:
+                    service_add_event.set()
+
+            def remove_service(self, zc, type_, name) -> None:
+                nonlocal service_removed_count
+                service_removed_count += 1
+                if service_removed_count == 3:
+                    service_removed_event.set()
+
+        def mock_incoming_msg(
+            service_state_change: r.ServiceStateChange, service_type: str, service_name: str, ttl: int
+        ) -> r.DNSIncoming:
+            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated.add_answer_at_time(
+                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
+            )
+            return r.DNSIncoming(generated.packet())
+
+        zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+        service_browser = r.ServiceBrowser(zeroconf, service_types, listener=MyServiceListener())
+
+        try:
+            wait_time = 3
+
+            # all three services added
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
+            )
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120),
+            )
+            zeroconf.wait(100)
+
+            called_with_refresh_time_check = False
+
+            def _mock_get_expiration_time(self, percent):
+                nonlocal called_with_refresh_time_check
+                if percent == r._EXPIRE_REFRESH_TIME_PERCENT:
+                    called_with_refresh_time_check = True
+                    return 0
+                return self.created + (percent * self.ttl * 10)
+
+            # Set an expire time that will force a refresh
+            with unittest.mock.patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
+                _inject_response(
+                    zeroconf,
+                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
+                )
+                # Add the last record after updating the first one
+                # to ensure the service_add_event only gets set
+                # after the update
+                _inject_response(
+                    zeroconf,
+                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120),
+                )
+                service_add_event.wait(wait_time)
+            assert called_with_refresh_time_check is True
+            assert service_added_count == 3
+            assert service_removed_count == 0
+
+            # all three services removed
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[0], service_names[0], 0),
+            )
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[1], service_names[1], 0),
+            )
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[2], service_names[2], 0),
+            )
+            service_removed_event.wait(wait_time)
+            assert service_added_count == 3
+            assert service_removed_count == 3
+
+        finally:
+            assert len(zeroconf.listeners) == 1
+            service_browser.cancel()
+            assert len(zeroconf.listeners) == 0
+            zeroconf.remove_all_service_listeners()
+            zeroconf.close()
 
 
 def test_backoff():
