@@ -7,6 +7,7 @@
 import os
 import unittest
 import socket
+import sys
 
 import zeroconf as r
 from zeroconf import Zeroconf, ServiceInfo, ZeroconfServiceTypes
@@ -78,7 +79,7 @@ class ServiceTypesQuery(unittest.TestCase):
         finally:
             zeroconf_registrar.close()
 
-    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(not has_working_ipv6() or sys.platform == 'win32', 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_ipv6(self):
 
