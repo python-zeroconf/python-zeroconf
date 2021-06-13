@@ -27,6 +27,7 @@ import warnings
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
+from .._dns import DNSAddress, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
@@ -46,7 +47,6 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-from ..dns import DNSAddress, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from ..exceptions import BadTypeInNameException
 from ..utils.name import service_type_name
 from ..utils.net import (
