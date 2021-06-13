@@ -25,7 +25,7 @@ from typing import Dict, List, Optional
 
 
 from .._exceptions import ServiceNameAlreadyRegistered
-from ..services import ServiceInfo
+from .._services import ServiceInfo
 
 
 class ServiceRegistry:
@@ -40,7 +40,7 @@ class ServiceRegistry:
         self,
     ) -> None:
         """Create the ServiceRegistry class."""
-        self.services = {}  # type: Dict[str, ServiceInfo]
+        self._services = {}  # type: Dict[str, ServiceInfo]
         self.types = {}  # type: Dict[str, List]
         self.servers = {}  # type: Dict[str, List]
         self._lock = threading.Lock()  # add and remove services thread safe
@@ -66,11 +66,11 @@ class ServiceRegistry:
 
     def get_service_infos(self) -> List[ServiceInfo]:
         """Return all ServiceInfo."""
-        return list(self.services.values())
+        return list(self._services.values())
 
     def get_info_name(self, name: str) -> Optional[ServiceInfo]:
         """Return all ServiceInfo for the name."""
-        return self.services.get(name)
+        return self._services.get(name)
 
     def get_types(self) -> List[str]:
         """Return all types."""
@@ -89,7 +89,7 @@ class ServiceRegistry:
         service_infos = []
 
         for name in getattr(self, attr).get(key, [])[:]:
-            info = self.services.get(name)
+            info = self._services.get(name)
             # Since we do not get under a lock since it would be
             # a performance issue, its possible
             # the service can be unregistered during the get
@@ -102,17 +102,17 @@ class ServiceRegistry:
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
         lower_name = info.name.lower()
-        if lower_name in self.services:
+        if lower_name in self._services:
             raise ServiceNameAlreadyRegistered
 
-        self.services[lower_name] = info
+        self._services[lower_name] = info
         self.types.setdefault(info.type, []).append(lower_name)
         self.servers.setdefault(info.server, []).append(lower_name)
 
     def _remove(self, info: ServiceInfo) -> None:
         """Remove a service under the lock."""
         lower_name = info.name.lower()
-        old_service_info = self.services[lower_name]
+        old_service_info = self._services[lower_name]
         self.types[old_service_info.type].remove(lower_name)
         self.servers[old_service_info.server].remove(lower_name)
-        del self.services[lower_name]
+        del self._services[lower_name]

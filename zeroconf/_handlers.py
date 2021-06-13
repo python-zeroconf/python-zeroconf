@@ -25,6 +25,8 @@ from typing import List, Optional, TYPE_CHECKING, Union
 
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from ._logger import log
+from ._services import RecordUpdateListener
+from ._services.registry import ServiceRegistry
 from ._utils.time import current_time_millis
 from .const import (
     _CLASS_IN,
@@ -38,10 +40,6 @@ from .const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-from .services import (
-    RecordUpdateListener,
-)
-from .services.registry import ServiceRegistry
 
 
 if TYPE_CHECKING:

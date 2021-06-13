@@ -33,6 +33,14 @@ from ._dns import DNSIncoming, DNSOutgoing, DNSQuestion
 from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
 from ._logger import QuietLogger, log
+from ._services import (
+    RecordUpdateListener,
+    ServiceBrowser,
+    ServiceInfo,
+    ServiceListener,
+    instance_name_from_service_info,
+)
+from ._services.registry import ServiceRegistry
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,
@@ -59,14 +67,6 @@ from .const import (
     _TYPE_PTR,
     _UNREGISTER_TIME,
 )
-from .services import (
-    RecordUpdateListener,
-    ServiceBrowser,
-    ServiceInfo,
-    ServiceListener,
-    instance_name_from_service_info,
-)
-from .services.registry import ServiceRegistry
 
 
 class NotifyListener:
