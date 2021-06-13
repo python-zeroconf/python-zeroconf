@@ -14,7 +14,7 @@ import unittest.mock
 from typing import Dict, cast  # noqa # used in type hints
 
 import zeroconf as r
-from zeroconf import const
+from zeroconf import const, current_time_millis
 from zeroconf import (
     DNSHinfo,
     DNSText,
@@ -173,6 +173,48 @@ class PacketGeneration(unittest.TestCase):
         )
         parsed = r.DNSIncoming(generated.packets()[0])
         assert len(generated.answers) == 1
+        assert len(generated.answers) == len(parsed.answers)
+
+    def test_adding_empty_answer(self):
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(
+            None,
+            0,
+        )
+        generated.add_answer_at_time(
+            r.DNSService(
+                "æøå.local.",
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
+                0,
+                0,
+                80,
+                "foo.local.",
+            ),
+            0,
+        )
+        parsed = r.DNSIncoming(generated.packets()[0])
+        assert len(generated.answers) == 1
+        assert len(generated.answers) == len(parsed.answers)
+
+    def test_adding_expired_answer(self):
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(
+            r.DNSService(
+                "æøå.local.",
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
+                0,
+                0,
+                80,
+                "foo.local.",
+            ),
+            current_time_millis() + 1000000,
+        )
+        parsed = r.DNSIncoming(generated.packets()[0])
+        assert len(generated.answers) == 0
         assert len(generated.answers) == len(parsed.answers)
 
     def test_match_question(self):
