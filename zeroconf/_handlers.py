@@ -73,7 +73,7 @@ class QueryHandler:
 
     def _answer_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
         """Answer a PTR query."""
-        for service in self.registry.get_infos_type(question.name.lower()):
+        for service in self.registry.get_infos_type(question.name):
             out.add_answer(msg, service.dns_pointer())
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
@@ -87,14 +87,13 @@ class QueryHandler:
 
         Add answer(s) for A, AAAA, SRV, or TXT queries.
         """
-        name_to_find = question.name.lower()
         # Answer A record queries for any service addresses we know
         if question.type in (_TYPE_A, _TYPE_ANY):
-            for service in self.registry.get_infos_server(name_to_find):
+            for service in self.registry.get_infos_server(question.name):
                 for dns_address in service.dns_addresses():
                     out.add_answer(msg, dns_address)
 
-        service = self.registry.get_info_name(name_to_find)  # type: ignore
+        service = self.registry.get_info_name(question.name)  # type: ignore
         if service is None:
             return
 
