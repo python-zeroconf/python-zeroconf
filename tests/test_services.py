@@ -989,9 +989,14 @@ def test_backoff():
         next_query_interval = 0.0
         expected_query_time = 0.0
         while True:
-            zeroconf_browser.notify_all()
             sleep_count += 1
-            got_query.wait(0.1)
+            for _ in range(2):
+                # If the browser thread is starting up
+                # its possible we notify before the initial sleep
+                # which means the test will fail so we need to d
+                # this twice to eliminate the race condition
+                zeroconf_browser.notify_all()
+                got_query.wait(0.05)
             if time_offset == expected_query_time:
                 assert got_query.is_set()
                 got_query.clear()
