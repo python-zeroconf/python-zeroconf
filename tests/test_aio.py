@@ -11,17 +11,12 @@ import unittest.mock
 
 import pytest
 
-from zeroconf import (
-    BadTypeInNameException,
-    NonUniqueNameException,
-    ServiceInfo,
-    ServiceListener,
-    ServiceNameAlreadyRegistered,
-    Zeroconf,
-    _LISTENER_TIME,
-    current_time_millis,
-)
 from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
+from zeroconf.core import Zeroconf
+from zeroconf.const import _LISTENER_TIME
+from zeroconf.exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
+from zeroconf.services import ServiceInfo, ServiceListener
+from zeroconf.utils.time import current_time_millis
 
 
 @pytest.fixture(autouse=True)

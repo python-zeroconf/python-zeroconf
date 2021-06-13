@@ -17,12 +17,7 @@ from typing import Dict, Optional  # noqa # used in type hints
 import pytest
 
 import zeroconf as r
-from zeroconf import (
-    ServiceBrowser,
-    ServiceInfo,
-    Zeroconf,
-    ZeroconfServiceTypes,
-)
+from zeroconf import ServiceBrowser, ServiceInfo, Zeroconf, ZeroconfServiceTypes, const
 
 from . import has_working_ipv6, _clear_cache, _inject_response
 
@@ -43,38 +38,38 @@ def teardown_module():
 
 class Names(unittest.TestCase):
     def test_long_name(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion(
-            "this.is.a.very.long.name.with.lots.of.parts.in.it.local.", r._TYPE_SRV, r._CLASS_IN
+            "this.is.a.very.long.name.with.lots.of.parts.in.it.local.", const._TYPE_SRV, const._CLASS_IN
         )
         generated.add_question(question)
         r.DNSIncoming(generated.packet())
 
     def test_exceedingly_long_name(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         name = "%slocal." % ("part." * 1000)
-        question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
+        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         r.DNSIncoming(generated.packet())
 
     def test_extra_exceedingly_long_name(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         name = "%slocal." % ("part." * 4000)
-        question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
+        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         r.DNSIncoming(generated.packet())
 
     def test_exceedingly_long_name_part(self):
         name = "%s.local." % ("a" * 1000)
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         self.assertRaises(r.NamePartTooLongException, generated.packet)
 
     def test_same_name(self):
         name = "paired.local."
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion(name, r._TYPE_SRV, r._CLASS_IN)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         generated.add_question(question)
         r.DNSIncoming(generated.packet())
@@ -99,7 +94,7 @@ class Names(unittest.TestCase):
         longest_packet_len = 0
         longest_packet = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
             """Sends an outgoing packet."""
             for packet in out.packets():
                 nonlocal longest_packet_len, longest_packet
@@ -123,7 +118,7 @@ class Names(unittest.TestCase):
         # we will never get to this large of a packet given the application-layer
         # splitting of packets, but we still want to track the longest_packet_len
         # for the debug message below
-        while sleep_count < 100 and longest_packet_len < r._MAX_MSG_ABSOLUTE - 100:
+        while sleep_count < 100 and longest_packet_len < const._MAX_MSG_ABSOLUTE - 100:
             sleep_count += 1
             time.sleep(0.1)
 
@@ -135,8 +130,8 @@ class Names(unittest.TestCase):
         zeroconf.log.debug('sleep_count %d, sized %d', sleep_count, longest_packet_len)
 
         # now the browser has sent at least one request, verify the size
-        assert longest_packet_len <= r._MAX_MSG_TYPICAL
-        assert longest_packet_len >= r._MAX_MSG_TYPICAL - 100
+        assert longest_packet_len <= const._MAX_MSG_TYPICAL
+        assert longest_packet_len >= const._MAX_MSG_TYPICAL - 100
 
         # mock zeroconf's logger warning() and debug()
         from unittest.mock import patch
@@ -167,8 +162,8 @@ class Names(unittest.TestCase):
         # mock the zeroconf logger and check for the correct logging backoff
         call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
         # force receive on oversized packet
-        s.sendto(packet, 0, (r._MDNS_ADDR, r._MDNS_PORT))
-        s.sendto(packet, 0, (r._MDNS_ADDR, r._MDNS_PORT))
+        s.sendto(packet, 0, (const._MDNS_ADDR, const._MDNS_PORT))
+        s.sendto(packet, 0, (const._MDNS_ADDR, const._MDNS_PORT))
         time.sleep(2.0)
         zeroconf.log.debug(
             'warn %d debug %d was %s', mocked_log_warn.call_count, mocked_log_debug.call_count, call_counts
@@ -238,10 +233,21 @@ class Names(unittest.TestCase):
     @staticmethod
     def generate_host(zc, host_name, type_):
         name = '.'.join((host_name, type_))
-        out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
-        out.add_answer_at_time(r.DNSPointer(type_, r._TYPE_PTR, r._CLASS_IN, r._DNS_OTHER_TTL, name), 0)
+        out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
         out.add_answer_at_time(
-            r.DNSService(type_, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, r._DNS_HOST_TTL, 0, 0, 80, name),
+            r.DNSPointer(type_, const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, name), 0
+        )
+        out.add_answer_at_time(
+            r.DNSService(
+                type_,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
+                0,
+                0,
+                80,
+                name,
+            ),
             0,
         )
         zc.send(out)
@@ -275,10 +281,10 @@ class TestRegistrar(unittest.TestCase):
         def get_ttl(record_type):
             if expected_ttl is not None:
                 return expected_ttl
-            elif record_type in [r._TYPE_A, r._TYPE_SRV]:
-                return r._DNS_HOST_TTL
+            elif record_type in [const._TYPE_A, const._TYPE_SRV]:
+                return const._DNS_HOST_TTL
             else:
-                return r._DNS_OTHER_TTL
+                return const._DNS_OTHER_TTL
 
         def _process_outgoing_packet(out):
             """Sends an outgoing packet."""
@@ -305,12 +311,12 @@ class TestRegistrar(unittest.TestCase):
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
-        query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
+        query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
         assert query.is_query() is True
-        query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
         _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packet()), False))
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
@@ -328,8 +334,8 @@ class TestRegistrar(unittest.TestCase):
             _process_outgoing_packet(zc.generate_service_query(info))
         zc.registry.add(info)
         # register service with custom TTL
-        expected_ttl = r._DNS_HOST_TTL * 2
-        assert expected_ttl != r._DNS_HOST_TTL
+        expected_ttl = const._DNS_HOST_TTL * 2
+        assert expected_ttl != const._DNS_HOST_TTL
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, expected_ttl))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
@@ -337,11 +343,11 @@ class TestRegistrar(unittest.TestCase):
 
         # query
         expected_ttl = None
-        query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
-        query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.name, r._TYPE_SRV, r._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.name, r._TYPE_TXT, r._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.server, r._TYPE_A, r._CLASS_IN))
+        query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+        query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
         _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packet()), False))
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
@@ -405,8 +411,8 @@ class TestRegistrar(unittest.TestCase):
         info.load_from_cache(zc)
         assert info.addresses == []
 
-        out = r.DNSOutgoing(r._FLAGS_QR_QUERY)
-        out.add_question(r.DNSQuestion(type_.upper(), r._TYPE_PTR, r._CLASS_IN))
+        out = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+        out.add_question(r.DNSQuestion(type_.upper(), const._TYPE_PTR, const._CLASS_IN))
         zc.send(out)
         time.sleep(0.5)
         info = ServiceInfo(type_, registration_name)
@@ -786,7 +792,7 @@ class TestServiceBrowser(unittest.TestCase):
 
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
 
-            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             assert generated.is_response() is True
 
             if service_state_change == r.ServiceStateChange.Removed:
@@ -795,12 +801,22 @@ class TestServiceBrowser(unittest.TestCase):
                 ttl = 120
 
             generated.add_answer_at_time(
-                r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
+                r.DNSText(
+                    service_name, const._TYPE_TXT, const._CLASS_IN | const._CLASS_UNIQUE, ttl, service_text
+                ),
+                0,
             )
 
             generated.add_answer_at_time(
                 r.DNSService(
-                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
+                    service_name,
+                    const._TYPE_SRV,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    ttl,
+                    0,
+                    0,
+                    80,
+                    service_server,
                 ),
                 0,
             )
@@ -812,8 +828,8 @@ class TestServiceBrowser(unittest.TestCase):
                 generated.add_answer_at_time(
                     r.DNSAddress(
                         service_server,
-                        r._TYPE_AAAA,
-                        r._CLASS_IN | r._CLASS_UNIQUE,
+                        const._TYPE_AAAA,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
                         ttl,
                         socket.inet_pton(socket.AF_INET6, service_v6_address),
                     ),
@@ -822,8 +838,8 @@ class TestServiceBrowser(unittest.TestCase):
                 generated.add_answer_at_time(
                     r.DNSAddress(
                         service_server,
-                        r._TYPE_AAAA,
-                        r._CLASS_IN | r._CLASS_UNIQUE,
+                        const._TYPE_AAAA,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
                         ttl,
                         socket.inet_pton(socket.AF_INET6, service_v6_second_address),
                     ),
@@ -832,8 +848,8 @@ class TestServiceBrowser(unittest.TestCase):
             generated.add_answer_at_time(
                 r.DNSAddress(
                     service_server,
-                    r._TYPE_A,
-                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    const._TYPE_A,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
                     ttl,
                     socket.inet_aton(service_address),
                 ),
@@ -841,7 +857,7 @@ class TestServiceBrowser(unittest.TestCase):
             )
 
             generated.add_answer_at_time(
-                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
+                r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name), 0
             )
 
             return r.DNSIncoming(generated.packet())
@@ -1003,19 +1019,19 @@ def test_ptr_optimization():
     nbr_answers = nbr_additionals = nbr_authorities = 0
 
     # query
-    query = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
-    query.add_question(r.DNSQuestion(info.type, r._TYPE_PTR, r._CLASS_IN))
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     out = zc.query_handler.response(r.DNSIncoming(query.packet()), False)
     assert out is not None
     nbr_answers += len(out.answers)
     nbr_authorities += len(out.authorities)
     for answer in out.additionals:
         nbr_additionals += 1
-        if answer.type == r._TYPE_SRV:
+        if answer.type == const._TYPE_SRV:
             has_srv = True
-        elif answer.type == r._TYPE_TXT:
+        elif answer.type == const._TYPE_TXT:
             has_txt = True
-        elif answer.type == r._TYPE_A:
+        elif answer.type == const._TYPE_A:
             has_a = True
     assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
     assert has_srv and has_txt and has_a

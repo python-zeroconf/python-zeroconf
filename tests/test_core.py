@@ -15,6 +15,7 @@ from typing import cast
 
 import zeroconf as r
 from zeroconf import core
+from zeroconf import const
 
 from . import has_working_ipv6, _inject_response
 
@@ -39,8 +40,8 @@ class TestReaper(unittest.TestCase):
         zeroconf = core.Zeroconf(interfaces=['127.0.0.1'])
         cache = zeroconf.cache
         original_entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-        record_with_10s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 10, b'a')
-        record_with_1s_ttl = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
+        record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         zeroconf.cache.add(record_with_10s_ttl)
         zeroconf.cache.add(record_with_1s_ttl)
         entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
@@ -102,11 +103,18 @@ class Framework(unittest.TestCase):
     def test_handle_response(self):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
             ttl = 120
-            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
             if service_state_change == r.ServiceStateChange.Updated:
                 generated.add_answer_at_time(
-                    r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        service_text,
+                    ),
+                    0,
                 )
                 return r.DNSIncoming(generated.packet())
 
@@ -114,22 +122,32 @@ class Framework(unittest.TestCase):
                 ttl = 0
 
             generated.add_answer_at_time(
-                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
+                r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name), 0
             )
             generated.add_answer_at_time(
                 r.DNSService(
-                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
+                    service_name,
+                    const._TYPE_SRV,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    ttl,
+                    0,
+                    0,
+                    80,
+                    service_server,
                 ),
                 0,
             )
             generated.add_answer_at_time(
-                r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text), 0
+                r.DNSText(
+                    service_name, const._TYPE_TXT, const._CLASS_IN | const._CLASS_UNIQUE, ttl, service_text
+                ),
+                0,
             )
             generated.add_answer_at_time(
                 r.DNSAddress(
                     service_server,
-                    r._TYPE_A,
-                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    const._TYPE_A,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
                     ttl,
                     socket.inet_aton(service_address),
                 ),
@@ -141,12 +159,12 @@ class Framework(unittest.TestCase):
         def mock_split_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
             """Mock an incoming message for the case where the packet is split."""
             ttl = 120
-            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             generated.add_answer_at_time(
                 r.DNSAddress(
                     service_server,
-                    r._TYPE_A,
-                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    const._TYPE_A,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
                     ttl,
                     socket.inet_aton(service_address),
                 ),
@@ -154,7 +172,14 @@ class Framework(unittest.TestCase):
             )
             generated.add_answer_at_time(
                 r.DNSService(
-                    service_name, r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE, ttl, 0, 0, 80, service_server
+                    service_name,
+                    const._TYPE_SRV,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    ttl,
+                    0,
+                    0,
+                    80,
+                    service_server,
                 ),
                 0,
             )
@@ -171,10 +196,10 @@ class Framework(unittest.TestCase):
         try:
             # service added
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Added))
-            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
             assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
-            all_dns_text = zeroconf.cache.get_all_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            all_dns_text = zeroconf.cache.get_all_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert [dns_text] == all_dns_text
 
             # https://tools.ietf.org/html/rfc6762#section-10.2
@@ -188,7 +213,7 @@ class Framework(unittest.TestCase):
             # service updated. currently only text record can be updated
             service_text = b'path=/~humingchun/'
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
-            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
             assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
@@ -198,13 +223,13 @@ class Framework(unittest.TestCase):
             # This should not evict TXT records from the cache
             _inject_response(zeroconf, mock_split_incoming_msg(r.ServiceStateChange.Updated))
             time.sleep(1.1)
-            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
             assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
             # service removed
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
-            dns_text = zeroconf.cache.get_by_details(service_name, r._TYPE_TXT, r._CLASS_IN)
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is None
 
         finally:

@@ -14,6 +14,7 @@ from threading import Event
 import pytest
 
 import zeroconf as r
+from zeroconf import const
 import zeroconf.services as s
 from zeroconf.core import Zeroconf
 from zeroconf.services import (
@@ -75,8 +76,8 @@ class TestServiceInfo(unittest.TestCase):
             now,
             r.DNSText(
                 service_name,
-                r._TYPE_TXT,
-                r._CLASS_IN | r._CLASS_UNIQUE,
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
                 ttl,
                 b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
             ),
@@ -87,8 +88,8 @@ class TestServiceInfo(unittest.TestCase):
             now,
             r.DNSService(
                 service_name,
-                r._TYPE_SRV,
-                r._CLASS_IN | r._CLASS_UNIQUE,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
                 ttl,
                 0,
                 0,
@@ -104,8 +105,8 @@ class TestServiceInfo(unittest.TestCase):
             now,
             r.DNSAddress(
                 'ASH-2.local.',
-                r._TYPE_A,
-                r._CLASS_IN | r._CLASS_UNIQUE,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
                 ttl,
                 new_address,
             ),
@@ -117,8 +118,8 @@ class TestServiceInfo(unittest.TestCase):
             now,
             r.DNSText(
                 "incorrect.name.",
-                r._TYPE_TXT,
-                r._CLASS_IN | r._CLASS_UNIQUE,
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
                 ttl,
                 b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
             ),
@@ -129,8 +130,8 @@ class TestServiceInfo(unittest.TestCase):
             now,
             r.DNSService(
                 "incorrect.name.",
-                r._TYPE_SRV,
-                r._CLASS_IN | r._CLASS_UNIQUE,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
                 ttl,
                 0,
                 0,
@@ -146,8 +147,8 @@ class TestServiceInfo(unittest.TestCase):
             now,
             r.DNSAddress(
                 "incorrect.name.",
-                r._TYPE_A,
-                r._CLASS_IN | r._CLASS_UNIQUE,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
                 ttl,
                 new_address,
             ),
@@ -174,8 +175,8 @@ class TestServiceInfo(unittest.TestCase):
             now,
             r.DNSText(
                 service_name,
-                r._TYPE_TXT,
-                r._CLASS_IN | r._CLASS_UNIQUE,
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
                 ttl,
                 b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
             ),
@@ -184,8 +185,8 @@ class TestServiceInfo(unittest.TestCase):
         # Expired record
         expired_record = r.DNSText(
             service_name,
-            r._TYPE_TXT,
-            r._CLASS_IN | r._CLASS_UNIQUE,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
             ttl,
             b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
         )
@@ -211,7 +212,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
@@ -223,7 +224,7 @@ class TestServiceInfo(unittest.TestCase):
 
         def mock_incoming_msg(records) -> r.DNSIncoming:
 
-            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
             for record in records:
                 generated.add_answer_at_time(record, 0)
@@ -247,10 +248,10 @@ class TestServiceInfo(unittest.TestCase):
             send_event.wait(wait_time)
             assert last_sent is not None
             assert len(last_sent.questions) == 4
-            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
             assert service_info is None
 
             # Expext query for SRV, A, AAAA
@@ -259,15 +260,23 @@ class TestServiceInfo(unittest.TestCase):
             _inject_response(
                 zc,
                 mock_incoming_msg(
-                    [r.DNSText(service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text)]
+                    [
+                        r.DNSText(
+                            service_name,
+                            const._TYPE_TXT,
+                            const._CLASS_IN | const._CLASS_UNIQUE,
+                            ttl,
+                            service_text,
+                        )
+                    ]
                 ),
             )
             send_event.wait(wait_time)
             assert last_sent is not None
             assert len(last_sent.questions) == 3
-            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
             assert service_info is None
 
             # Expext query for A, AAAA
@@ -279,8 +288,8 @@ class TestServiceInfo(unittest.TestCase):
                     [
                         r.DNSService(
                             service_name,
-                            r._TYPE_SRV,
-                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            const._TYPE_SRV,
+                            const._CLASS_IN | const._CLASS_UNIQUE,
                             ttl,
                             0,
                             0,
@@ -293,8 +302,8 @@ class TestServiceInfo(unittest.TestCase):
             send_event.wait(wait_time)
             assert last_sent is not None
             assert len(last_sent.questions) == 2
-            assert r.DNSQuestion(service_server, r._TYPE_A, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_server, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_server, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_server, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
             last_sent = None
             assert service_info is None
 
@@ -307,8 +316,8 @@ class TestServiceInfo(unittest.TestCase):
                     [
                         r.DNSAddress(
                             service_server,
-                            r._TYPE_A,
-                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            const._TYPE_A,
+                            const._CLASS_IN | const._CLASS_UNIQUE,
                             ttl,
                             socket.inet_pton(socket.AF_INET, service_address),
                         )
@@ -340,7 +349,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
@@ -352,7 +361,7 @@ class TestServiceInfo(unittest.TestCase):
 
         def mock_incoming_msg(records) -> r.DNSIncoming:
 
-            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
             for record in records:
                 generated.add_answer_at_time(record, 0)
@@ -376,10 +385,10 @@ class TestServiceInfo(unittest.TestCase):
             send_event.wait(wait_time)
             assert last_sent is not None
             assert len(last_sent.questions) == 4
-            assert r.DNSQuestion(service_name, r._TYPE_SRV, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_TXT, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_A, r._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, r._TYPE_AAAA, r._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+            assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
             assert service_info is None
 
             # Expext no further queries
@@ -390,12 +399,16 @@ class TestServiceInfo(unittest.TestCase):
                 mock_incoming_msg(
                     [
                         r.DNSText(
-                            service_name, r._TYPE_TXT, r._CLASS_IN | r._CLASS_UNIQUE, ttl, service_text
+                            service_name,
+                            const._TYPE_TXT,
+                            const._CLASS_IN | const._CLASS_UNIQUE,
+                            ttl,
+                            service_text,
                         ),
                         r.DNSService(
                             service_name,
-                            r._TYPE_SRV,
-                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            const._TYPE_SRV,
+                            const._CLASS_IN | const._CLASS_UNIQUE,
                             ttl,
                             0,
                             0,
@@ -404,8 +417,8 @@ class TestServiceInfo(unittest.TestCase):
                         ),
                         r.DNSAddress(
                             service_server,
-                            r._TYPE_A,
-                            r._CLASS_IN | r._CLASS_UNIQUE,
+                            const._TYPE_A,
+                            const._CLASS_IN | const._CLASS_UNIQUE,
                             ttl,
                             socket.inet_pton(socket.AF_INET, service_address),
                         ),
@@ -449,9 +462,9 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
         def mock_incoming_msg(
             service_state_change: r.ServiceStateChange, service_type: str, service_name: str, ttl: int
         ) -> r.DNSIncoming:
-            generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             generated.add_answer_at_time(
-                r.DNSPointer(service_type, r._TYPE_PTR, r._CLASS_IN, ttl, service_name), 0
+                r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name), 0
             )
             return r.DNSIncoming(generated.packet())
 
@@ -476,7 +489,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
 
             def _mock_get_expiration_time(self, percent):
                 nonlocal called_with_refresh_time_check
-                if percent == r._EXPIRE_REFRESH_TIME_PERCENT:
+                if percent == const._EXPIRE_REFRESH_TIME_PERCENT:
                     called_with_refresh_time_check = True
                     return 0
                 return self.created + (percent * self.ttl * 10)
@@ -541,7 +554,7 @@ def test_backoff():
         """Current system time in milliseconds"""
         return start_time + time_offset * 1000
 
-    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
         got_query.set()
         old_send(out, addr=addr, port=port)
@@ -619,11 +632,11 @@ def test_integration():
         """Current system time in milliseconds"""
         return time.time() * 1000 + time_offset * 1000
 
-    expected_ttl = r._DNS_HOST_TTL
+    expected_ttl = const._DNS_HOST_TTL
 
     nbr_answers = 0
 
-    def send(out, addr=r._MDNS_ADDR, port=r._MDNS_PORT):
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packet())
         nonlocal nbr_answers
@@ -693,7 +706,7 @@ def test_legacy_record_update_listener():
 
     with pytest.raises(RuntimeError):
         r.RecordUpdateListener().update_record(
-            zc, 0, r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+            zc, 0, r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
         )
 
     updates = []
