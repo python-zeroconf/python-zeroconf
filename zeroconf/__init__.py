@@ -46,7 +46,7 @@ from ._exceptions import (  # noqa # import needed for backwards compat
     NonUniqueNameException,
     ServiceNameAlreadyRegistered,
 )
-from .services import (  # noqa # import needed for backwards compat
+from ._services import (  # noqa # import needed for backwards compat
     instance_name_from_service_info,
     Signal,
     SignalRegistrationInterface,
@@ -56,8 +56,8 @@ from .services import (  # noqa # import needed for backwards compat
     ServiceListener,
     ServiceStateChange,
 )
-from .services.registry import ServiceRegistry  # noqa # import needed for backwards compat
-from .services.types import ZeroconfServiceTypes  # noqa # import needed for backwards compat
+from ._services.registry import ServiceRegistry  # noqa # import needed for backwards compat
+from ._services.types import ZeroconfServiceTypes  # noqa # import needed for backwards compat
 from ._utils.name import service_type_name  # noqa # import needed for backwards compat
 from ._utils.net import (  # noqa # import needed for backwards compat
     add_multicast_member,

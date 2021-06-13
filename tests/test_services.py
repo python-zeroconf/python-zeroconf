@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-""" Unit tests for zeroconf.services. """
+""" Unit tests for zeroconf._services. """
 
 import logging
 import socket
@@ -16,9 +16,9 @@ import pytest
 
 import zeroconf as r
 from zeroconf import const
-import zeroconf.services as s
+import zeroconf._services as s
 from zeroconf import Zeroconf
-from zeroconf.services import (
+from zeroconf._services import (
     ServiceBrowser,
     ServiceInfo,
     ServiceStateChange,

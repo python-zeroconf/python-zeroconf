@@ -15,7 +15,7 @@ from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
 from zeroconf import Zeroconf
 from zeroconf.const import _LISTENER_TIME
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
-from zeroconf.services import ServiceInfo, ServiceListener
+from zeroconf._services import ServiceInfo, ServiceListener
 from zeroconf._utils.time import current_time_millis
 
 
