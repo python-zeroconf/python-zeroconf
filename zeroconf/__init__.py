@@ -37,7 +37,7 @@ from ._dns import (  # noqa # import needed for backwards compat
     DNSText,
 )
 from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
-from .exceptions import (  # noqa # import needed for backwards compat
+from ._exceptions import (  # noqa # import needed for backwards compat
     AbstractMethodException,
     BadTypeInNameException,
     Error,

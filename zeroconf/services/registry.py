@@ -24,7 +24,7 @@ import threading
 from typing import Dict, List, Optional
 
 
-from ..exceptions import ServiceNameAlreadyRegistered
+from .._exceptions import ServiceNameAlreadyRegistered
 from ..services import ServiceInfo
 
 

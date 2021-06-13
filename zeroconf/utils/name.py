@@ -20,6 +20,7 @@
     USA
 """
 
+from .._exceptions import BadTypeInNameException
 from ..const import (
     _HAS_ASCII_CONTROL_CHARS,
     _HAS_A_TO_Z,
@@ -29,7 +30,6 @@ from ..const import (
     _NONTCP_PROTOCOL_LOCAL_TRAILER,
     _TCP_PROTOCOL_LOCAL_TRAILER,
 )
-from ..exceptions import BadTypeInNameException
 
 
 def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: disable=too-many-branches

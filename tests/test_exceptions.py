@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-""" Unit tests for zeroconf.exceptions """
+""" Unit tests for zeroconf._exceptions """
 
 import logging
 import unittest
