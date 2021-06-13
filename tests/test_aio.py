@@ -12,7 +12,7 @@ import unittest.mock
 import pytest
 
 from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
-from zeroconf.core import Zeroconf
+from zeroconf import Zeroconf
 from zeroconf.const import _LISTENER_TIME
 from zeroconf.exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
 from zeroconf.services import ServiceInfo, ServiceListener

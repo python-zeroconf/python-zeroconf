@@ -27,8 +27,7 @@ from functools import lru_cache
 import ifaddr
 
 
-from zeroconf.core import Zeroconf
-from zeroconf._dns import DNSIncoming
+from zeroconf import DNSIncoming, Zeroconf
 
 
 def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:

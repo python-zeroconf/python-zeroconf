@@ -46,7 +46,7 @@ from .utils.time import current_time_millis
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
-    from .core import Zeroconf  # pylint: disable=cyclic-import
+    from ._core import Zeroconf  # pylint: disable=cyclic-import
 
 
 class QueryHandler:

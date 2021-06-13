@@ -14,7 +14,7 @@ import unittest.mock
 from typing import cast
 
 import zeroconf as r
-from zeroconf import core
+from zeroconf import _core
 from zeroconf import const
 
 from . import has_working_ipv6, _inject_response
@@ -35,9 +35,9 @@ def teardown_module():
 
 
 class TestReaper(unittest.TestCase):
-    @unittest.mock.patch.object(core, "_CACHE_CLEANUP_INTERVAL", 10)
+    @unittest.mock.patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10)
     def test_reaper(self):
-        zeroconf = core.Zeroconf(interfaces=['127.0.0.1'])
+        zeroconf = _core.Zeroconf(interfaces=['127.0.0.1'])
         cache = zeroconf.cache
         original_entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
