@@ -91,17 +91,14 @@ class DNSEntry:
 
     def entry_to_string(self, hdr: str, other: Optional[Union[bytes, str]]) -> str:
         """String representation with additional information"""
-        result = "%s[%s,%s" % (hdr, self.get_type(self.type), self.get_class_(self.class_))
-        if self.unique:
-            result += "-unique,"
-        else:
-            result += ","
-        result += self.name
-        if other is not None:
-            result += "]=%s" % cast(Any, other)
-        else:
-            result += "]"
-        return result
+        return "%s[%s,%s%s,%s]%s" % (
+            hdr,
+            self.get_type(self.type),
+            self.get_class_(self.class_),
+            "-unique" if self.unique else "",
+            self.name,
+            "=%s" % cast(Any, other) if other is not None else "",
+        )
 
 
 class DNSQuestion(DNSEntry):
@@ -119,9 +116,23 @@ class DNSQuestion(DNSEntry):
             and self.name == rec.name
         )
 
+    @property
+    def unicast(self) -> bool:
+        """Returns true if the QU (not QM) is set.
+
+        unique shares the same mask as the one
+        used for unicast.
+        """
+        return self.unique
+
     def __repr__(self) -> str:
         """String representation"""
-        return DNSEntry.entry_to_string(self, "question", None)
+        return "%s[question,%s,%s,%s]" % (
+            self.get_type(self.type),
+            "QU" if self.unicast else "QM",
+            self.get_class_(self.class_),
+            self.name,
+        )
 
 
 class DNSRecord(DNSEntry):
