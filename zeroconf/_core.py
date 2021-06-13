@@ -218,19 +218,15 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         if not msg.valid:
             pass
 
-        elif msg.is_query():
-            # Always multicast responses
-            if port == _MDNS_PORT:
-                self.zc.handle_query(msg, None, _MDNS_PORT)
-
-            # If it's not a multicast query, reply via unicast
-            # and multicast
-            elif port == _DNS_PORT:
-                self.zc.handle_query(msg, addr, port)
-                self.zc.handle_query(msg, None, _MDNS_PORT)
-
-        else:
+        elif not msg.is_query():
             self.zc.handle_response(msg)
+            return
+
+        if port != _MDNS_PORT:
+            # If it's not a multicast query, reply via unicast as well
+            self.zc.handle_query(msg, addr, port)
+        # Always multicast responses
+        self.zc.handle_query(msg, None, _MDNS_PORT)
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
