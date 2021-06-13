@@ -30,8 +30,8 @@ from typing import Any, List, Optional, Tuple, Union, cast
 
 import ifaddr
 
+from .._logger import log
 from ..const import _IPPROTO_IPV6, _MDNS_ADDR6_BYTES, _MDNS_ADDR_BYTES, _MDNS_PORT
-from ..logger import log
 
 
 @enum.unique

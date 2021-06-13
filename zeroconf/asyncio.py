@@ -20,8 +20,8 @@
     USA
 """
 
+from ._logger import log
 from .aio import AsyncZeroconf  # pylint: disable=unused-import  # noqa
-from .logger import log
 
 # The asyncio module would shadow system asyncio in some import cases
 # to resolve this, the module has been renamed zeroconf.aio
