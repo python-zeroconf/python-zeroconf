@@ -29,11 +29,11 @@ from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 from ._core import NotifyListener, Zeroconf
 from ._dns import DNSOutgoing
 from ._exceptions import NonUniqueNameException
+from ._utils.aio import wait_condition_or_timeout
+from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
+from ._utils.time import current_time_millis, millis_to_seconds
 from .const import _BROWSER_TIME, _CHECK_TIME, _LISTENER_TIME, _MDNS_PORT, _REGISTER_TIME, _UNREGISTER_TIME
 from .services import ServiceInfo, _ServiceBrowserBase, instance_name_from_service_info
-from .utils.aio import wait_condition_or_timeout
-from .utils.net import IPVersion, InterfaceChoice, InterfacesType
-from .utils.time import current_time_millis, millis_to_seconds
 
 
 def _get_best_available_queue() -> queue.Queue:

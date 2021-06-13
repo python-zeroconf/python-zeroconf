@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-"""Unit tests for zeroconf.utils.aio."""
+"""Unit tests for zeroconf._utils.aio."""
 
 import asyncio
 
 import pytest
 
-from zeroconf.utils import aio as aioutils
+from zeroconf._utils import aio as aioutils
 
 
 @pytest.mark.asyncio

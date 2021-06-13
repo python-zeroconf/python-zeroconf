@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
-"""Unit tests for zeroconf.utils.net."""
+"""Unit tests for zeroconf._utils.net."""
 from unittest.mock import Mock, patch
 
 import ifaddr
 import pytest
 
-from zeroconf.utils import net as netutils
+from zeroconf._utils import net as netutils
 
 
 def _generate_mock_adapters():
@@ -50,9 +50,9 @@ def test_interface_index_to_ip6_address():
 def test_ip6_addresses_to_indexes():
     """Test we can extract from mocked adapters."""
     interfaces = [1]
-    with patch("zeroconf.utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
+    with patch("zeroconf._utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
         assert netutils.ip6_addresses_to_indexes(interfaces) == [(('2001:db8::', 1, 1), 1)]
 
     interfaces = ['2001:db8::']
-    with patch("zeroconf.utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
+    with patch("zeroconf._utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
         assert netutils.ip6_addresses_to_indexes(interfaces) == [(('2001:db8::', 1, 1), 1)]

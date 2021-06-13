@@ -33,6 +33,16 @@ from ._dns import DNSIncoming, DNSOutgoing, DNSQuestion
 from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
 from ._logger import QuietLogger, log
+from ._utils.name import service_type_name
+from ._utils.net import (
+    IPVersion,
+    InterfaceChoice,
+    InterfacesType,
+    autodetect_ip_version,
+    can_send_to,
+    create_sockets,
+)
+from ._utils.time import current_time_millis, millis_to_seconds
 from .const import (
     _CACHE_CLEANUP_INTERVAL,
     _CHECK_TIME,
@@ -57,16 +67,6 @@ from .services import (
     instance_name_from_service_info,
 )
 from .services.registry import ServiceRegistry
-from .utils.name import service_type_name
-from .utils.net import (
-    IPVersion,
-    InterfaceChoice,
-    InterfacesType,
-    autodetect_ip_version,
-    can_send_to,
-    create_sockets,
-)
-from .utils.time import current_time_millis, millis_to_seconds
 
 
 class NotifyListener:
