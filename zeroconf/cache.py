@@ -22,8 +22,8 @@
 
 from typing import Dict, Iterable, List, Optional, cast
 
+from ._dns import DNSEntry, DNSPointer, DNSRecord, DNSService
 from .const import _TYPE_PTR
-from .dns import DNSEntry, DNSPointer, DNSRecord, DNSService
 from .utils.time import current_time_millis
 
 

@@ -28,7 +28,7 @@ import ifaddr
 
 
 from zeroconf.core import Zeroconf
-from zeroconf.dns import DNSIncoming
+from zeroconf._dns import DNSIncoming
 
 
 def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:

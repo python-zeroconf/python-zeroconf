@@ -23,6 +23,7 @@
 import itertools
 from typing import List, Optional, TYPE_CHECKING, Union
 
+from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from .const import (
     _CLASS_IN,
     _DNS_OTHER_TTL,
@@ -35,7 +36,6 @@ from .const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-from .dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from .logger import log
 from .services import (
     RecordUpdateListener,
