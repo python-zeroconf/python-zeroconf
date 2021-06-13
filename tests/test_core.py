@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 
-""" Unit tests for zeroconf.core """
+""" Unit tests for zeroconf._core """
 
 import itertools
 import logging
 import os
+import pytest
 import socket
 import time
 import unittest
@@ -14,8 +15,7 @@ import unittest.mock
 from typing import cast
 
 import zeroconf as r
-from zeroconf import _core
-from zeroconf import const
+from zeroconf import _core, const, ServiceBrowser, Zeroconf
 
 from . import has_working_ipv6, _inject_response
 
@@ -234,3 +234,41 @@ class Framework(unittest.TestCase):
 
         finally:
             zeroconf.close()
+
+
+def test_notify_listeners():
+    """Test adding and removing notify listeners."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    notify_called = 0
+
+    class TestNotifyListener(r.NotifyListener):
+        def notify_all(self):
+            nonlocal notify_called
+            notify_called += 1
+
+    with pytest.raises(NotImplementedError):
+        r.NotifyListener().notify_all()
+
+    notify_listener = TestNotifyListener()
+
+    zc.add_notify_listener(notify_listener)
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        """Dummy service callback."""
+
+    # start a browser
+    browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
+    browser.cancel()
+
+    assert notify_called
+    zc.remove_notify_listener(notify_listener)
+
+    notify_called = 0
+    # start a browser
+    browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
+    browser.cancel()
+
+    assert not notify_called
+
+    zc.close()
