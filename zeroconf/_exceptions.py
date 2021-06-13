@@ -20,8 +20,6 @@
     USA
 """
 
-# Exceptions
-
 
 class Error(Exception):
     pass

@@ -14,7 +14,7 @@ import pytest
 from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
 from zeroconf import Zeroconf
 from zeroconf.const import _LISTENER_TIME
-from zeroconf.exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
+from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
 from zeroconf.services import ServiceInfo, ServiceListener
 from zeroconf.utils.time import current_time_millis
 
