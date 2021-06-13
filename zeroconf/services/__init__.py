@@ -27,7 +27,7 @@ import warnings
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
-from .const import (
+from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
     _CLASS_IN,
@@ -46,20 +46,20 @@ from .const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-from .dns import DNSAddress, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
-from .exceptions import BadTypeInNameException
-from .utils.name import service_type_name
-from .utils.net import (
+from ..dns import DNSAddress, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
+from ..exceptions import BadTypeInNameException
+from ..utils.name import service_type_name
+from ..utils.net import (
     IPVersion,
     _encode_address,
     _is_v6_address,
 )
-from .utils.struct import int2byte
-from .utils.time import current_time_millis, millis_to_seconds
+from ..utils.struct import int2byte
+from ..utils.time import current_time_millis, millis_to_seconds
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
-    from . import (  # pylint: disable=cyclic-import
+    from .. import (  # pylint: disable=cyclic-import
         ServiceListener,
         Zeroconf,
     )
