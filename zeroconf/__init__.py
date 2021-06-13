@@ -22,10 +22,10 @@
 
 import sys
 
+from .cache import DNSCache  # noqa # import needed for backwards compat
 from .core import NotifyListener, Zeroconf  # noqa # import needed for backwards compat
 from .dns import (  # noqa # import needed for backwards compat
     DNSAddress,
-    DNSCache,
     DNSEntry,
     DNSHinfo,
     DNSIncoming,
