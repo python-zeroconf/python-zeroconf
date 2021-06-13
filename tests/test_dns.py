@@ -14,7 +14,7 @@ import unittest.mock
 from typing import Dict, cast  # noqa # used in type hints
 
 import zeroconf as r
-from zeroconf import const, current_time_millis
+from zeroconf import DNSIncoming, const, current_time_millis
 from zeroconf import (
     DNSHinfo,
     DNSText,
@@ -747,3 +747,23 @@ def test_tc_bit_not_set_in_answer_packet():
     third_packet = r.DNSIncoming(packets[2])
     assert third_packet.flags & const._FLAGS_TC == 0
     assert third_packet.valid is True
+
+
+# 4003	15.973052	192.168.107.68	224.0.0.251	MDNS	76	Standard query 0xffc4 PTR _raop._tcp.local, "QM" question
+def test_qm_packet_parser():
+    """Test we can parse a query packet with the QM bit."""
+    qm_packet = (
+        b'\xff\xc4\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05_raop\x04_tcp\x05local\x00\x00\x0c\x00\x01'
+    )
+    parsed = DNSIncoming(qm_packet)
+    assert parsed.questions[0].unicast is False
+    assert ",QM," in str(parsed.questions[0])
+
+
+# 389951	1450.577370	192.168.107.111	224.0.0.251	MDNS	115	Standard query 0x0000 PTR _companion-link._tcp.local, "QU" question OPT
+def test_qu_packet_parser():
+    """Test we can parse a query packet with the QU bit."""
+    qu_packet = b'\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x0f_companion-link\x04_tcp\x05local\x00\x00\x0c\x80\x01\x00\x00)\x05\xa0\x00\x00\x11\x94\x00\x12\x00\x04\x00\x0e\x00dz{\x8a6\x9czF\x84,\xcaQ\xff'
+    parsed = DNSIncoming(qu_packet)
+    assert parsed.questions[0].unicast is True
+    assert ",QU," in str(parsed.questions[0])
