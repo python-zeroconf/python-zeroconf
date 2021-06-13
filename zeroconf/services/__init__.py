@@ -59,10 +59,7 @@ from ..utils.time import current_time_millis, millis_to_seconds
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
-    from .. import (  # pylint: disable=cyclic-import
-        ServiceListener,
-        Zeroconf,
-    )
+    from .. import Zeroconf  # pylint: disable=cyclic-import
 
 
 @enum.unique
@@ -80,6 +77,17 @@ def instance_name_from_service_info(info: "ServiceInfo") -> str:
     if not info.type.endswith(service_name):
         raise BadTypeInNameException
     return info.name[: -len(service_name) - 1]
+
+
+class ServiceListener:
+    def add_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
+        raise NotImplementedError()
+
+    def remove_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
+        raise NotImplementedError()
+
+    def update_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
+        raise NotImplementedError()
 
 
 class Signal:

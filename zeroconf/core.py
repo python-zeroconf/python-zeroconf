@@ -27,7 +27,7 @@ import select
 import socket
 import threading
 from types import TracebackType  # noqa # used in type hints
-from typing import Dict, List, Optional, TYPE_CHECKING, Type, Union, cast
+from typing import Dict, List, Optional, Type, Union, cast
 
 from .const import (
     _CACHE_CLEANUP_INTERVAL,
@@ -54,7 +54,13 @@ from .const import (
 from .dns import DNSAddress, DNSCache, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from .exceptions import NonUniqueNameException
 from .logger import QuietLogger, log
-from .services import RecordUpdateListener, ServiceBrowser, ServiceInfo, instance_name_from_service_info
+from .services import (
+    RecordUpdateListener,
+    ServiceBrowser,
+    ServiceInfo,
+    ServiceListener,
+    instance_name_from_service_info,
+)
 from .services.registry import ServiceRegistry
 from .utils.name import service_type_name
 from .utils.net import (
@@ -66,10 +72,6 @@ from .utils.net import (
     create_sockets,
 )
 from .utils.time import current_time_millis, millis_to_seconds
-
-if TYPE_CHECKING:
-    # https://github.com/PyCQA/pylint/issues/3525
-    from . import ServiceListener  # pylint: disable=cyclic-import
 
 
 class NotifyListener:
@@ -481,8 +483,8 @@ class Zeroconf(QuietLogger):
         log.debug('Listen socket %s, respond sockets %s', self._listen_socket, self._respond_sockets)
         self.multi_socket = unicast or interfaces is not InterfaceChoice.Default
 
-        self._notify_listeners = []  # type: List[NotifyListener]
-        self.browsers = {}  # type: Dict[ServiceListener, ServiceBrowser]
+        self._notify_listeners: List[NotifyListener] = []
+        self.browsers: Dict[ServiceListener, ServiceBrowser] = {}
         self.registry = ServiceRegistry()
         self.query_handler = QueryHandler(self.registry)
         self.cache = DNSCache()
@@ -540,14 +542,14 @@ class Zeroconf(QuietLogger):
         """Removes a listener from the set that is currently listening."""
         self._notify_listeners.remove(listener)
 
-    def add_service_listener(self, type_: str, listener: 'ServiceListener') -> None:
+    def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
         will then have its add_service and remove_service methods called when
         services of that type become available and unavailable."""
         self.remove_service_listener(listener)
         self.browsers[listener] = ServiceBrowser(self, type_, listener)
 
-    def remove_service_listener(self, listener: 'ServiceListener') -> None:
+    def remove_service_listener(self, listener: ServiceListener) -> None:
         """Removes a listener from the set that is currently listening."""
         if listener in self.browsers:
             self.browsers[listener].cancel()
