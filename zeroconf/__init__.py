@@ -108,6 +108,7 @@ from .services import (  # noqa # import needed for backwards compat
     _ServiceBrowserBase,
     ServiceBrowser,
     ServiceInfo,
+    ServiceStateChange,
 )
 from .utils.name import service_type_name  # noqa # import needed for backwards compat
 from .utils.net import (  # noqa # import needed for backwards compat
@@ -118,7 +119,6 @@ from .utils.net import (  # noqa # import needed for backwards compat
     get_all_addresses_v6,
     InterfaceChoice,
     InterfacesType,
-    ServiceStateChange,
     IPVersion,
     _is_v6_address,
     _encode_address,
