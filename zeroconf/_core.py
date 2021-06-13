@@ -30,6 +30,7 @@ from typing import Dict, List, Optional, Type, Union, cast
 
 from ._dns import DNSIncoming, DNSOutgoing, DNSQuestion
 from ._handlers import QueryHandler, RecordManager
+from ._logger import QuietLogger, log
 from .cache import DNSCache
 from .const import (
     _CACHE_CLEANUP_INTERVAL,
@@ -48,7 +49,6 @@ from .const import (
     _UNREGISTER_TIME,
 )
 from .exceptions import NonUniqueNameException
-from .logger import QuietLogger, log
 from .services import (
     RecordUpdateListener,
     ServiceBrowser,

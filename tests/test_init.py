@@ -136,8 +136,8 @@ class Names(unittest.TestCase):
         # mock zeroconf's logger warning() and debug()
         from unittest.mock import patch
 
-        patch_warn = patch('zeroconf.log.warning')
-        patch_debug = patch('zeroconf.log.debug')
+        patch_warn = patch('zeroconf._logger.log.warning')
+        patch_debug = patch('zeroconf._logger.log.debug')
         mocked_log_warn = patch_warn.start()
         mocked_log_debug = patch_debug.start()
 

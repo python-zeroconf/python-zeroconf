@@ -36,6 +36,7 @@ from ._dns import (  # noqa # import needed for backwards compat
     DNSService,
     DNSText,
 )
+from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
 from .exceptions import (  # noqa # import needed for backwards compat
     AbstractMethodException,
     BadTypeInNameException,
@@ -45,7 +46,6 @@ from .exceptions import (  # noqa # import needed for backwards compat
     NonUniqueNameException,
     ServiceNameAlreadyRegistered,
 )
-from .logger import QuietLogger, log  # noqa # import needed for backwards compat
 from .services import (  # noqa # import needed for backwards compat
     instance_name_from_service_info,
     Signal,

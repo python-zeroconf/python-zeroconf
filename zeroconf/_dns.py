@@ -25,6 +25,7 @@ import socket
 import struct
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, cast
 
+from ._logger import QuietLogger, log
 from .const import (
     _CLASSES,
     _CLASS_MASK,
@@ -48,7 +49,6 @@ from .const import (
     _TYPE_TXT,
 )
 from .exceptions import AbstractMethodException, IncomingDecodeError, NamePartTooLongException
-from .logger import QuietLogger, log
 from .utils.net import _is_v6_address
 from .utils.struct import int2byte
 from .utils.time import current_time_millis, millis_to_seconds
