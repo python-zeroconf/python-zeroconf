@@ -14,6 +14,7 @@ import unittest.mock
 from typing import Dict, cast  # noqa # used in type hints
 
 import zeroconf as r
+from zeroconf import const
 from zeroconf import (
     DNSHinfo,
     DNSText,
@@ -46,46 +47,48 @@ class TestDunder(unittest.TestCase):
         repr(text)
 
     def test_dns_hinfo_repr_eq(self):
-        hinfo = DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'os')
+        hinfo = DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'os')
         assert hinfo == hinfo
         repr(hinfo)
 
     def test_dns_pointer_repr(self):
-        pointer = r.DNSPointer('irrelevant', r._TYPE_PTR, r._CLASS_IN, r._DNS_OTHER_TTL, '123')
+        pointer = r.DNSPointer('irrelevant', const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, '123')
         repr(pointer)
 
     def test_dns_address_repr(self):
-        address = r.DNSAddress('irrelevant', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
+        address = r.DNSAddress('irrelevant', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         assert repr(address).endswith("b'a'")
 
         address_ipv4 = r.DNSAddress(
-            'irrelevant', r._TYPE_SOA, r._CLASS_IN, 1, socket.inet_pton(socket.AF_INET, '127.0.0.1')
+            'irrelevant', const._TYPE_SOA, const._CLASS_IN, 1, socket.inet_pton(socket.AF_INET, '127.0.0.1')
         )
         assert repr(address_ipv4).endswith('127.0.0.1')
 
         address_ipv6 = r.DNSAddress(
-            'irrelevant', r._TYPE_SOA, r._CLASS_IN, 1, socket.inet_pton(socket.AF_INET6, '::1')
+            'irrelevant', const._TYPE_SOA, const._CLASS_IN, 1, socket.inet_pton(socket.AF_INET6, '::1')
         )
         assert repr(address_ipv6).endswith('::1')
 
     def test_dns_question_repr(self):
-        question = r.DNSQuestion('irrelevant', r._TYPE_SRV, r._CLASS_IN | r._CLASS_UNIQUE)
+        question = r.DNSQuestion('irrelevant', const._TYPE_SRV, const._CLASS_IN | const._CLASS_UNIQUE)
         repr(question)
         assert not question != question
 
     def test_dns_service_repr(self):
-        service = r.DNSService('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL, 0, 0, 80, 'a')
+        service = r.DNSService(
+            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, 'a'
+        )
         repr(service)
 
     def test_dns_record_abc(self):
-        record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
         self.assertRaises(r.AbstractMethodException, record.__eq__, record)
         self.assertRaises(r.AbstractMethodException, record.write, None)
 
     def test_dns_record_reset_ttl(self):
-        record = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
         time.sleep(1)
-        record2 = r.DNSRecord('irrelevant', r._TYPE_SRV, r._CLASS_IN, r._DNS_HOST_TTL)
+        record2 = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
         now = r.current_time_millis()
 
         assert record.created != record2.created
@@ -131,7 +134,7 @@ class TestDunder(unittest.TestCase):
         repr(info)
 
     def test_dns_outgoing_repr(self):
-        dns_outgoing = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        dns_outgoing = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         repr(dns_outgoing)
 
 
@@ -145,22 +148,22 @@ class PacketGeneration(unittest.TestCase):
         r.DNSIncoming(generated.packet())
 
     def test_parse_own_packet_flags(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         r.DNSIncoming(generated.packet())
 
     def test_parse_own_packet_question(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
-        generated.add_question(r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN))
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+        generated.add_question(r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN))
         r.DNSIncoming(generated.packet())
 
     def test_parse_own_packet_response(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(
             r.DNSService(
                 "æøå.local.",
-                r._TYPE_SRV,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_HOST_TTL,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
                 0,
                 0,
                 80,
@@ -173,8 +176,8 @@ class PacketGeneration(unittest.TestCase):
         assert len(generated.answers) == len(parsed.answers)
 
     def test_match_question(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
-        question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+        question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         parsed = r.DNSIncoming(generated.packet())
         assert len(generated.questions) == 1
@@ -182,14 +185,14 @@ class PacketGeneration(unittest.TestCase):
         assert question == parsed.questions[0]
 
     def test_suppress_answer(self):
-        query_generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
-        question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
+        query_generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+        question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
         query_generated.add_question(question)
         answer1 = r.DNSService(
             "testname1.local.",
-            r._TYPE_SRV,
-            r._CLASS_IN | r._CLASS_UNIQUE,
-            r._DNS_HOST_TTL,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_HOST_TTL,
             0,
             0,
             80,
@@ -197,9 +200,9 @@ class PacketGeneration(unittest.TestCase):
         )
         staleanswer2 = r.DNSService(
             "testname2.local.",
-            r._TYPE_SRV,
-            r._CLASS_IN | r._CLASS_UNIQUE,
-            r._DNS_HOST_TTL / 2,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_HOST_TTL / 2,
             0,
             0,
             80,
@@ -207,9 +210,9 @@ class PacketGeneration(unittest.TestCase):
         )
         answer2 = r.DNSService(
             "testname2.local.",
-            r._TYPE_SRV,
-            r._CLASS_IN | r._CLASS_UNIQUE,
-            r._DNS_HOST_TTL,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_HOST_TTL,
             0,
             0,
             80,
@@ -220,7 +223,7 @@ class PacketGeneration(unittest.TestCase):
         query = r.DNSIncoming(query_generated.packet())
 
         # Should be suppressed
-        response = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         response.add_answer(query, answer1)
         assert len(response.answers) == 0
 
@@ -237,13 +240,13 @@ class PacketGeneration(unittest.TestCase):
 
         # Should not be suppressed, type is different
         tmp = copy.copy(answer1)
-        tmp.type = r._TYPE_A
+        tmp.type = const._TYPE_A
         response.add_answer(query, tmp)
         assert len(response.answers) == 3
 
         # Should not be suppressed, class is different
         tmp = copy.copy(answer1)
-        tmp.class_ = r._CLASS_NONE
+        tmp.class_ = const._CLASS_NONE
         response.add_answer(query, tmp)
         assert len(response.answers) == 4
 
@@ -251,30 +254,30 @@ class PacketGeneration(unittest.TestCase):
 
     def test_dns_hinfo(self):
         generated = r.DNSOutgoing(0)
-        generated.add_additional_answer(DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'os'))
+        generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'os'))
         parsed = r.DNSIncoming(generated.packet())
         answer = cast(r.DNSHinfo, parsed.answers[0])
         assert answer.cpu == u'cpu'
         assert answer.os == u'os'
 
         generated = r.DNSOutgoing(0)
-        generated.add_additional_answer(DNSHinfo('irrelevant', r._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
+        generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
         self.assertRaises(r.NamePartTooLongException, generated.packet)
 
     def test_many_questions(self):
         """Test many questions get seperated into multiple packets."""
-        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for i in range(100):
-            question = r.DNSQuestion(f"testname{i}.local.", r._TYPE_SRV, r._CLASS_IN)
+            question = r.DNSQuestion(f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN)
             generated.add_question(question)
             questions.append(question)
         assert len(generated.questions) == 100
 
         packets = generated.packets()
         assert len(packets) == 2
-        assert len(packets[0]) < r._MAX_MSG_TYPICAL
-        assert len(packets[1]) < r._MAX_MSG_TYPICAL
+        assert len(packets[0]) < const._MAX_MSG_TYPICAL
+        assert len(packets[1]) < const._MAX_MSG_TYPICAL
 
         parsed1 = r.DNSIncoming(packets[0])
         assert len(parsed1.questions) == 85
@@ -286,15 +289,15 @@ class PacketGeneration(unittest.TestCase):
 
         https://datatracker.ietf.org/doc/html/rfc6762#section-17
         """
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
-        query = r.DNSIncoming(r.DNSOutgoing(r._FLAGS_QR_QUERY).packet())
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        query = r.DNSIncoming(r.DNSOutgoing(const._FLAGS_QR_QUERY).packet())
         for i in range(3):
             generated.add_answer(
                 query,
                 r.DNSText(
                     "zoom._hap._tcp.local.",
-                    r._TYPE_TXT,
-                    r._CLASS_IN | r._CLASS_UNIQUE,
+                    const._TYPE_TXT,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
                     1200,
                     b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==' * 100,
                 ),
@@ -303,9 +306,9 @@ class PacketGeneration(unittest.TestCase):
             query,
             r.DNSService(
                 "testname1.local.",
-                r._TYPE_SRV,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_HOST_TTL,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
                 0,
                 0,
                 80,
@@ -316,16 +319,16 @@ class PacketGeneration(unittest.TestCase):
 
         packets = generated.packets()
         assert len(packets) == 4
-        assert len(packets[0]) <= r._MAX_MSG_ABSOLUTE
-        assert len(packets[0]) > r._MAX_MSG_TYPICAL
+        assert len(packets[0]) <= const._MAX_MSG_ABSOLUTE
+        assert len(packets[0]) > const._MAX_MSG_TYPICAL
 
-        assert len(packets[1]) <= r._MAX_MSG_ABSOLUTE
-        assert len(packets[1]) > r._MAX_MSG_TYPICAL
+        assert len(packets[1]) <= const._MAX_MSG_ABSOLUTE
+        assert len(packets[1]) > const._MAX_MSG_TYPICAL
 
-        assert len(packets[2]) <= r._MAX_MSG_ABSOLUTE
-        assert len(packets[2]) > r._MAX_MSG_TYPICAL
+        assert len(packets[2]) <= const._MAX_MSG_ABSOLUTE
+        assert len(packets[2]) > const._MAX_MSG_TYPICAL
 
-        assert len(packets[3]) <= r._MAX_MSG_TYPICAL
+        assert len(packets[3]) <= const._MAX_MSG_TYPICAL
 
         for packet in packets:
             parsed = r.DNSIncoming(packet)
@@ -341,15 +344,15 @@ class PacketGeneration(unittest.TestCase):
         questions and as many more Known-Answer records as will fit.
         """
 
-        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         for i in range(35):
-            question = r.DNSQuestion(f"testname{i}.local.", r._TYPE_SRV, r._CLASS_IN)
+            question = r.DNSQuestion(f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN)
             generated.add_question(question)
             answer = r.DNSService(
                 f"testname{i}.local.",
-                r._TYPE_SRV,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_HOST_TTL,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
                 0,
                 0,
                 80,
@@ -362,8 +365,8 @@ class PacketGeneration(unittest.TestCase):
 
         packets = generated.packets()
         assert len(packets) == 2
-        assert len(packets[0]) <= r._MAX_MSG_TYPICAL
-        assert len(packets[1]) <= r._MAX_MSG_TYPICAL
+        assert len(packets[0]) <= const._MAX_MSG_TYPICAL
+        assert len(packets[1]) <= const._MAX_MSG_TYPICAL
 
         parsed1 = r.DNSIncoming(packets[0])
         assert len(parsed1.questions) == 35
@@ -377,25 +380,25 @@ class PacketGeneration(unittest.TestCase):
 class PacketForm(unittest.TestCase):
     def test_transaction_id(self):
         """ID must be zero in a DNS-SD packet"""
-        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         bytes = generated.packet()
         id = bytes[0] << 8 | bytes[1]
         assert id == 0
 
     def test_query_header_bits(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_QUERY)
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         bytes = generated.packet()
         flags = bytes[2] << 8 | bytes[3]
         assert flags == 0x0
 
     def test_response_header_bits(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         flags = bytes[2] << 8 | bytes[3]
         assert flags == 0x8000
 
     def test_numbers(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         bytes = generated.packet()
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
         assert num_questions == 0
@@ -404,8 +407,8 @@ class PacketForm(unittest.TestCase):
         assert num_additionals == 0
 
     def test_numbers_questions(self):
-        generated = r.DNSOutgoing(r._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion("testname.local.", r._TYPE_SRV, r._CLASS_IN)
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
         for i in range(10):
             generated.add_question(question)
         bytes = generated.packet()
@@ -427,7 +430,7 @@ class TestDnsIncoming(unittest.TestCase):
 
     def test_incoming_unknown_type(self):
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
+        answer = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         generated.add_additional_answer(answer)
         packet = generated.packet()
         parsed = r.DNSIncoming(packet)
@@ -438,7 +441,7 @@ class TestDnsIncoming(unittest.TestCase):
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
         packed = socket.inet_pton(socket.AF_INET6, addr)
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress('domain', r._TYPE_AAAA, r._CLASS_IN | r._CLASS_UNIQUE, 1, packed)
+        answer = r.DNSAddress('domain', const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 1, packed)
         generated.add_additional_answer(answer)
         packet = generated.packet()
         parsed = r.DNSIncoming(packet)
@@ -449,18 +452,18 @@ class TestDnsIncoming(unittest.TestCase):
 
 class TestDNSCache(unittest.TestCase):
     def test_order(self):
-        record1 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
-        record2 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        record1 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
         cache.add(record1)
         cache.add(record2)
-        entry = r.DNSEntry('a', r._TYPE_SOA, r._CLASS_IN)
+        entry = r.DNSEntry('a', const._TYPE_SOA, const._CLASS_IN)
         cached_record = cache.get(entry)
         assert cached_record == record2
 
     def test_cache_empty_does_not_leak_memory_by_leaving_empty_list(self):
-        record1 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
-        record2 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        record1 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
         cache.add(record1)
         cache.add(record2)
@@ -470,8 +473,8 @@ class TestDNSCache(unittest.TestCase):
         assert 'a' not in cache.cache
 
     def test_cache_empty_multiple_calls_does_not_throw(self):
-        record1 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'a')
-        record2 = r.DNSAddress('a', r._TYPE_SOA, r._CLASS_IN, 1, b'b')
+        record1 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
         cache.add(record1)
         cache.add(record2)
@@ -486,7 +489,7 @@ class TestDNSCache(unittest.TestCase):
 
 def test_dns_compression_rollback_for_corruption():
     """Verify rolling back does not lead to dns compression corruption."""
-    out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
+    out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
     address = socket.inet_pton(socket.AF_INET, "192.168.208.5")
 
     additionals = [
@@ -589,9 +592,9 @@ def test_dns_compression_rollback_for_corruption():
     out.add_answer_at_time(
         DNSText(
             "HASS Bridge W9DN 5B5CC5._hap._tcp.local.",
-            r._TYPE_TXT,
-            r._CLASS_IN | r._CLASS_UNIQUE,
-            r._DNS_OTHER_TTL,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
             b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
             b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
         ),
@@ -602,9 +605,9 @@ def test_dns_compression_rollback_for_corruption():
         out.add_additional_answer(
             r.DNSService(
                 record["name"],  # type: ignore
-                r._TYPE_SRV,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_HOST_TTL,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
                 0,
                 0,
                 record["port"],  # type: ignore
@@ -614,18 +617,18 @@ def test_dns_compression_rollback_for_corruption():
         out.add_additional_answer(
             r.DNSText(
                 record["name"],  # type: ignore
-                r._TYPE_TXT,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_OTHER_TTL,
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_OTHER_TTL,
                 record["text"],  # type: ignore
             )
         )
         out.add_additional_answer(
             r.DNSAddress(
                 record["name"],  # type: ignore
-                r._TYPE_A,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_HOST_TTL,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_HOST_TTL,
                 record["address"],  # type: ignore
             )
         )
@@ -639,17 +642,17 @@ def test_dns_compression_rollback_for_corruption():
 
 def test_tc_bit_in_query_packet():
     """Verify the TC bit is set when known answers exceed the packet size."""
-    out = r.DNSOutgoing(r._FLAGS_QR_QUERY | r._FLAGS_AA)
+    out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     type_ = "_hap._tcp.local."
-    out.add_question(r.DNSQuestion(type_, r._TYPE_PTR, r._CLASS_IN))
+    out.add_question(r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN))
 
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
                 ("HASS Bridge W9DN %s._hap._tcp.local." % i),
-                r._TYPE_TXT,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_OTHER_TTL,
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_OTHER_TTL,
                 b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
                 b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
             ),
@@ -660,28 +663,28 @@ def test_tc_bit_in_query_packet():
     assert len(packets) == 3
 
     first_packet = r.DNSIncoming(packets[0])
-    assert first_packet.flags & r._FLAGS_TC == r._FLAGS_TC
+    assert first_packet.flags & const._FLAGS_TC == const._FLAGS_TC
     assert first_packet.valid is True
 
     second_packet = r.DNSIncoming(packets[1])
-    assert second_packet.flags & r._FLAGS_TC == r._FLAGS_TC
+    assert second_packet.flags & const._FLAGS_TC == const._FLAGS_TC
     assert second_packet.valid is True
 
     third_packet = r.DNSIncoming(packets[2])
-    assert third_packet.flags & r._FLAGS_TC == 0
+    assert third_packet.flags & const._FLAGS_TC == 0
     assert third_packet.valid is True
 
 
 def test_tc_bit_not_set_in_answer_packet():
     """Verify the TC bit is not set when there are no questions and answers exceed the packet size."""
-    out = r.DNSOutgoing(r._FLAGS_QR_RESPONSE | r._FLAGS_AA)
+    out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
                 ("HASS Bridge W9DN %s._hap._tcp.local." % i),
-                r._TYPE_TXT,
-                r._CLASS_IN | r._CLASS_UNIQUE,
-                r._DNS_OTHER_TTL,
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_OTHER_TTL,
                 b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
                 b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
             ),
@@ -692,13 +695,13 @@ def test_tc_bit_not_set_in_answer_packet():
     assert len(packets) == 3
 
     first_packet = r.DNSIncoming(packets[0])
-    assert first_packet.flags & r._FLAGS_TC == 0
+    assert first_packet.flags & const._FLAGS_TC == 0
     assert first_packet.valid is True
 
     second_packet = r.DNSIncoming(packets[1])
-    assert second_packet.flags & r._FLAGS_TC == 0
+    assert second_packet.flags & const._FLAGS_TC == 0
     assert second_packet.valid is True
 
     third_packet = r.DNSIncoming(packets[2])
-    assert third_packet.flags & r._FLAGS_TC == 0
+    assert third_packet.flags & const._FLAGS_TC == 0
     assert third_packet.valid is True
