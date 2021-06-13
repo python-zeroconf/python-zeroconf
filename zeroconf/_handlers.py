@@ -90,8 +90,22 @@ class QueryHandler:
         name_to_find = question.name.lower()
         # Answer A record queries for any service addresses we know
         if question.type in (_TYPE_A, _TYPE_ANY):
+            log.debug("Answer type a/any question: %s for name: %s", question, name_to_find)
             for service in self.registry.get_infos_server(name_to_find):
+                log.debug(
+                    "Answer type a/any question: %s for name: %s found SERVICE: %s",
+                    question,
+                    name_to_find,
+                    service,
+                )
                 for dns_address in service.dns_addresses():
+                    log.debug(
+                        "Answer type a/any question: %s for name: %s found SERVICE: %s ADDRESS: %s",
+                        question,
+                        name_to_find,
+                        service,
+                        dns_address,
+                    )
                     out.add_answer(msg, dns_address)
 
         service = self.registry.get_info_name(name_to_find)  # type: ignore
