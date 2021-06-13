@@ -108,6 +108,7 @@ from .services import (  # noqa # import needed for backwards compat
     _ServiceBrowserBase,
     ServiceBrowser,
     ServiceInfo,
+    ServiceListener,
     ServiceStateChange,
 )
 from .services.registry import ServiceRegistry  # noqa # import needed for backwards compat
@@ -157,17 +158,6 @@ If you need support for Python 3.5 please use version 0.28.0
 
 
 # implementation classes
-
-
-class ServiceListener:
-    def add_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
-        raise NotImplementedError()
-
-    def remove_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
-        raise NotImplementedError()
-
-    def update_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
-        raise NotImplementedError()
 
 
 class ZeroconfServiceTypes(ServiceListener):
