@@ -189,6 +189,65 @@ Changelog
   The Engine thread is now started after all the listeners have been added to avoid a
   race condition where packets could be missed at startup.
 
+* Breaking change: Remove DNSOutgoing.packet backwards compatibility (#569) @bdraco
+
+  DNSOutgoing.packet only returned a partial message when the
+  DNSOutgoing contents exceeded _MAX_MSG_ABSOLUTE or _MAX_MSG_TYPICAL
+  This was a legacy function that was replaced with .packets()
+  which always returns a complete payload in #248  As packet()
+  should not be used since it will end up missing data, it has
+  been removed
+
+* Breakout DNSCache into zeroconf.cache (#568) @bdraco
+
+* Removed protected imports from zeroconf namespace (#567) @bdraco
+
+* Fix invalid typing in ServiceInfo._set_text (#554) @bdraco
+
+* Move QueryHandler and RecordManager handlers into zeroconf.handlers (#551) @bdraco
+
+* Move ServiceListener to zeroconf.services (#550) @bdraco
+
+* Move the ServiceRegistry into its own module (#549) @bdraco
+
+* Move ServiceStateChange to zeroconf.services (#548) @bdraco
+
+* Relocate core functions into zeroconf.core (#547) @bdraco
+
+* Breakout service classes into zeroconf.services (#544) @bdraco
+
+* Move service_type_name to zeroconf.utils.name (#543) @bdraco
+
+* Relocate DNS classes to zeroconf.dns (#541) @bdraco
+
+* Update zeroconf.aio import locations (#539) @bdraco
+
+* Move int2byte to zeroconf.utils.struct (#540) @bdraco
+
+* Breakout network utils into zeroconf.utils.net (#537) @bdraco
+
+* Move time utility functions into zeroconf.utils.time (#536) @bdraco
+
+* Avoid making DNSOutgoing aware of the Zeroconf object (#535) @bdraco
+
+* Move logger into zeroconf.logger (#533) @bdraco
+
+* Move exceptions into zeroconf.exceptions (#532) @bdraco
+
+* Move constants into const.py (#531) @bdraco
+
+* Move asyncio utils into zeroconf.utils.aio (#530) @bdraco
+
+* Move ipversion auto detection code into its own function (#524) @bdraco
+
+* Breaking change: Update python compatibility as PyPy3 7.2 is required (#523) @bdraco
+
+* Remove broad exception catch from RecordManager.remove_listener (#517) @bdraco
+
+* Small cleanups to RecordManager.add_listener (#516) @bdraco
+
+* Move RecordUpdateListener management into RecordManager (#514) @bdraco
+
 * Break out record updating into RecordManager (#512) @bdraco
 
 * Remove uneeded wait in the Engine thread (#511) @bdraco
