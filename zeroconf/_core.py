@@ -28,11 +28,11 @@ import threading
 from types import TracebackType  # noqa # used in type hints
 from typing import Dict, List, Optional, Type, Union, cast
 
+from ._cache import DNSCache
 from ._dns import DNSIncoming, DNSOutgoing, DNSQuestion
 from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
 from ._logger import QuietLogger, log
-from .cache import DNSCache
 from .const import (
     _CACHE_CLEANUP_INTERVAL,
     _CHECK_TIME,

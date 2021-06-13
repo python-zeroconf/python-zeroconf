@@ -56,7 +56,7 @@ from .utils.time import current_time_millis, millis_to_seconds
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
-    from .cache import DNSCache  # pylint: disable=cyclic-import
+    from ._cache import DNSCache  # pylint: disable=cyclic-import
 
 
 class DNSEntry:
