@@ -23,7 +23,7 @@
 import enum
 import socket
 import struct
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, cast
 
 from .const import (
     _CLASSES,
@@ -52,6 +52,11 @@ from .logger import QuietLogger, log
 from .utils.net import _is_v6_address
 from .utils.struct import int2byte
 from .utils.time import current_time_millis, millis_to_seconds
+
+
+if TYPE_CHECKING:
+    # https://github.com/PyCQA/pylint/issues/3525
+    from .cache import DNSCache  # pylint: disable=cyclic-import
 
 
 class DNSEntry:
@@ -937,94 +942,3 @@ class DNSOutgoing(DNSMessage):
                 break
         self.state = self.State.finished
         return self.packets_data
-
-
-class DNSCache:
-
-    """A cache of DNS entries"""
-
-    def __init__(self) -> None:
-        self.cache = {}  # type: Dict[str, List[DNSRecord]]
-        self.service_cache = {}  # type: Dict[str, List[DNSRecord]]
-
-    def add(self, entry: DNSRecord) -> None:
-        """Adds an entry"""
-        # Insert last in list, get will return newest entry
-        # iteration will result in last update winning
-        self.cache.setdefault(entry.key, []).append(entry)
-        if isinstance(entry, DNSService):
-            self.service_cache.setdefault(entry.server, []).append(entry)
-
-    def add_records(self, entries: Iterable[DNSRecord]) -> None:
-        """Add multiple records."""
-        for entry in entries:
-            self.add(entry)
-
-    def remove(self, entry: DNSRecord) -> None:
-        """Removes an entry."""
-        if isinstance(entry, DNSService):
-            DNSCache.remove_key(self.service_cache, entry.server, entry)
-        DNSCache.remove_key(self.cache, entry.key, entry)
-
-    def remove_records(self, entries: Iterable[DNSRecord]) -> None:
-        """Remove multiple records."""
-        for entry in entries:
-            self.remove(entry)
-
-    @staticmethod
-    def remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
-        """Forgiving remove of a cache key."""
-        try:
-            cache[key].remove(entry)
-            if not cache[key]:
-                del cache[key]
-        except (KeyError, ValueError):
-            pass
-
-    def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
-        """Gets an entry by key.  Will return None if there is no
-        matching entry."""
-        for cached_entry in reversed(self.entries_with_name(entry.key)):
-            if entry.__eq__(cached_entry):
-                return cached_entry
-        return None
-
-    def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
-        """Gets the first matching entry by details. Returns None if no entries match."""
-        return self.get(DNSEntry(name, type_, class_))
-
-    def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
-        """Gets all matching entries by details."""
-        match_entry = DNSEntry(name, type_, class_)
-        return [entry for entry in self.entries_with_name(name) if match_entry.__eq__(entry)]
-
-    def entries_with_server(self, server: str) -> List[DNSRecord]:
-        """Returns a list of entries whose server matches the name."""
-        return self.service_cache.get(server, [])[:]
-
-    def entries_with_name(self, name: str) -> List[DNSRecord]:
-        """Returns a list of entries whose key matches the name."""
-        return self.cache.get(name.lower(), [])[:]
-
-    def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
-        now = current_time_millis()
-        for record in reversed(self.entries_with_name(name)):
-            if (
-                record.type == _TYPE_PTR
-                and not record.is_expired(now)
-                and cast(DNSPointer, record).alias == alias
-            ):
-                return record
-        return None
-
-    def names(self) -> List[str]:
-        """Return a copy of the list of current cache names."""
-        return list(self.cache)
-
-    def expire(self, now: float) -> Iterable[DNSRecord]:
-        """Purge expired entries from the cache."""
-        for name in self.names():
-            for record in self.entries_with_name(name):
-                if record.is_expired(now):
-                    self.remove(record)
-                    yield record

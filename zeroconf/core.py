@@ -28,6 +28,7 @@ import threading
 from types import TracebackType  # noqa # used in type hints
 from typing import Dict, List, Optional, Type, Union, cast
 
+from .cache import DNSCache
 from .const import (
     _CACHE_CLEANUP_INTERVAL,
     _CHECK_TIME,
@@ -44,7 +45,7 @@ from .const import (
     _TYPE_PTR,
     _UNREGISTER_TIME,
 )
-from .dns import DNSCache, DNSIncoming, DNSOutgoing, DNSQuestion
+from .dns import DNSIncoming, DNSOutgoing, DNSQuestion
 from .exceptions import NonUniqueNameException
 from .handlers import QueryHandler, RecordManager
 from .logger import QuietLogger, log
