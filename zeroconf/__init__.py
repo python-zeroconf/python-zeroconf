@@ -21,9 +21,6 @@
 """
 
 import sys
-import time
-from typing import Optional, Union
-from typing import Set, Tuple  # noqa # used in type hints
 
 from .const import (  # noqa # import needed for backwards compat
     _BROWSER_BACKOFF_LIMIT,
@@ -112,6 +109,7 @@ from .services import (  # noqa # import needed for backwards compat
     ServiceStateChange,
 )
 from .services.registry import ServiceRegistry  # noqa # import needed for backwards compat
+from .services.types import ZeroconfServiceTypes  # noqa # import needed for backwards compat
 from .utils.name import service_type_name  # noqa # import needed for backwards compat
 from .utils.net import (  # noqa # import needed for backwards compat
     add_multicast_member,
@@ -155,59 +153,3 @@ If you need support for Python 2 or Python 3.3-3.4 please use version 19.1
 If you need support for Python 3.5 please use version 0.28.0
     '''
     )
-
-
-# implementation classes
-
-
-class ZeroconfServiceTypes(ServiceListener):
-    """
-    Return all of the advertised services on any local networks
-    """
-
-    def __init__(self) -> None:
-        """Keep track of found services in a set."""
-        self.found_services = set()  # type: Set[str]
-
-    def add_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
-        """Service added."""
-        self.found_services.add(name)
-
-    def update_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
-        """Service updated."""
-
-    def remove_service(self, zc: 'Zeroconf', type_: str, name: str) -> None:
-        """Service removed."""
-
-    @classmethod
-    def find(
-        cls,
-        zc: Optional['Zeroconf'] = None,
-        timeout: Union[int, float] = 5,
-        interfaces: InterfacesType = InterfaceChoice.All,
-        ip_version: Optional[IPVersion] = None,
-    ) -> Tuple[str, ...]:
-        """
-        Return all of the advertised services on any local networks.
-
-        :param zc: Zeroconf() instance.  Pass in if already have an
-                instance running or if non-default interfaces are needed
-        :param timeout: seconds to wait for any responses
-        :param interfaces: interfaces to listen on.
-        :param ip_version: IP protocol version to use.
-        :return: tuple of service type strings
-        """
-        local_zc = zc or Zeroconf(interfaces=interfaces, ip_version=ip_version)
-        listener = cls()
-        browser = ServiceBrowser(local_zc, _SERVICE_TYPE_ENUMERATION_NAME, listener=listener)
-
-        # wait for responses
-        time.sleep(timeout)
-
-        browser.cancel()
-
-        # close down anything we opened
-        if zc is None:
-            local_zc.close()
-
-        return tuple(sorted(listener.found_services))
