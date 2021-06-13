@@ -26,16 +26,11 @@ import threading
 from types import TracebackType  # noqa # used in type hints
 from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 
-from . import (
-    DNSOutgoing,
-    NotifyListener,
-    ServiceInfo,
-    Zeroconf,
-    _ServiceBrowserBase,
-    instance_name_from_service_info,
-)
 from .const import _BROWSER_TIME, _CHECK_TIME, _LISTENER_TIME, _MDNS_PORT, _REGISTER_TIME, _UNREGISTER_TIME
+from .core import NotifyListener, Zeroconf
+from .dns import DNSOutgoing
 from .exceptions import NonUniqueNameException
+from .services import ServiceInfo, _ServiceBrowserBase, instance_name_from_service_info
 from .utils.aio import wait_condition_or_timeout
 from .utils.net import IPVersion, InterfaceChoice, InterfacesType
 from .utils.time import current_time_millis, millis_to_seconds

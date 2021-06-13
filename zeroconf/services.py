@@ -65,6 +65,16 @@ if TYPE_CHECKING:
     )
 
 
+def instance_name_from_service_info(info: "ServiceInfo") -> str:
+    """Calculate the instance name from the ServiceInfo."""
+    # This is kind of funky because of the subtype based tests
+    # need to make subtypes a first class citizen
+    service_name = service_type_name(info.name)
+    if not info.type.endswith(service_name):
+        raise BadTypeInNameException
+    return info.name[: -len(service_name) - 1]
+
+
 class Signal:
     def __init__(self) -> None:
         self._handlers = []  # type: List[Callable[..., None]]
