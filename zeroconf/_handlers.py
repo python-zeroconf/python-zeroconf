@@ -2,7 +2,7 @@
     Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
     This module provides a framework for the use of DNS Service Discovery
-    using IP mcast.
+    using IP multicast.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
