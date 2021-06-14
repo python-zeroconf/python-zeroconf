@@ -501,14 +501,19 @@ class Zeroconf(QuietLogger):
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""
-        packets = out.packets()
-        packet_num = 0
-        for packet in packets:
-            packet_num += 1
+        for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
-            log.debug('Sending (%d bytes #%d) %r as %r...', len(packet), packet_num, out, packet)
+            log.debug(
+                'Sending to (%s, %d) (%d bytes #%d) %r as %r...',
+                addr,
+                port,
+                len(packet),
+                packet_num + 1,
+                out,
+                packet,
+            )
             for s in self._respond_sockets:
                 if self._GLOBAL_DONE:
                     return
