@@ -119,7 +119,7 @@ class QueryHandler:
         unicast_out: Optional[DNSOutgoing] = None
         multicast_out: Optional[DNSOutgoing] = None
 
-        is_probe = msg.num_authorities
+        is_probe = msg.num_authorities > 0
         unicast_answers: Set[DNSRecord] = set()
         unicast_additionals: Set[DNSRecord] = set()
         multicast_answers: Set[DNSRecord] = set()
@@ -174,7 +174,7 @@ class QueryHandler:
             multicast_additionals -= multicast_answers
             multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
             self._add_multicast_answers_to_outgoing(
-                multicast_out, multicast_answers, multicast_additionals, now
+                multicast_out, multicast_answers, multicast_additionals, is_probe, now
             )
 
         return unicast_out, multicast_out
@@ -184,7 +184,7 @@ class QueryHandler:
         maybe_entry = self.cache.get(record)
         return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > now)
 
-    def _has_multicast_record_in_last_second(self, record, now: float) -> bool:
+    def _has_multicast_record_in_last_second(self, record: DNSRecord, now: float) -> bool:
         """Remove answers that were just broadcast
 
         Protect the network against excessive packet flooding
@@ -194,14 +194,19 @@ class QueryHandler:
         return bool(maybe_entry and now - maybe_entry.created < 1000)
 
     def _add_multicast_answers_to_outgoing(
-        self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord], now: float
+        self,
+        out: DNSOutgoing,
+        answers: Set[DNSRecord],
+        additionals: Set[DNSRecord],
+        is_probe: bool,
+        now: float,
     ) -> None:
         """Add answers and additionals to a DNSOutgoing."""
         for answer in answers:
-            if not self._has_multicast_record_in_last_second(answer, now):
+            if is_probe or not self._has_multicast_record_in_last_second(answer, now):
                 out.add_answer_at_time(answer, 0)
         for additional in additionals:
-            if not self._has_multicast_record_in_last_second(additional, now):
+            if is_probe or not self._has_multicast_record_in_last_second(additional, now):
                 out.add_additional_answer(additional)
 
     def _add_unicast_answers_to_outgoing(
