@@ -89,7 +89,6 @@ class QueryHandler:
         """
         # Answer A record queries for any service addresses we know
         if question.type in (_TYPE_A, _TYPE_ANY):
-            log.debug("Answering question: %s -- servers in registry: %s", question, self.registry.servers)
             for service in self.registry.get_infos_server(question.name):
                 for dns_address in service.dns_addresses():
                     out.add_answer(msg, dns_address)
