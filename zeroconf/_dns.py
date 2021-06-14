@@ -757,8 +757,15 @@ class DNSOutgoing(DNSMessage):
         start_data_length, start_size = len(self.data), self.size
         self.write_name(question.name)
         self.write_short(question.type)
-        self.write_short(question.class_)
+        self.write_record_class(question)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
+
+    def write_record_class(self, record: Union[DNSQuestion, DNSRecord]) -> None:
+        """Write out the record class including the unique/unicast (QU) bit."""
+        if record.unique and self.multicast:
+            self.write_short(record.class_ | _CLASS_UNIQUE)
+        else:
+            self.write_short(record.class_)
 
     def write_record(self, record: DNSRecord, now: float) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
@@ -771,10 +778,7 @@ class DNSOutgoing(DNSMessage):
         start_data_length, start_size = len(self.data), self.size
         self.write_name(record.name)
         self.write_short(record.type)
-        if record.unique and self.multicast:
-            self.write_short(record.class_ | _CLASS_UNIQUE)
-        else:
-            self.write_short(record.class_)
+        self.write_record_class(record)
         if now == 0:
             self.write_int(record.ttl)
         else:
