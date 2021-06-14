@@ -103,7 +103,7 @@ class TestRegistrar(unittest.TestCase):
 
         # The additonals should all be suppresed since they are all in the answers section
         #
-        assert nbr_answers == 4 and nbr_additionals == 3 and nbr_authorities == 0
+        assert nbr_answers == 4 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
@@ -136,7 +136,7 @@ class TestRegistrar(unittest.TestCase):
         _process_outgoing_packet(
             zc.query_handler.response(r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT)[1]
         )
-        assert nbr_answers == 4 and nbr_additionals == 3 and nbr_authorities == 0
+        assert nbr_answers == 4 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # unregister
