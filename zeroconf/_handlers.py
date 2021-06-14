@@ -2,7 +2,7 @@
     Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
     This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+    using IP mcast.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -54,24 +54,118 @@ if TYPE_CHECKING:
 
 
 class _QueryResponse:
+    """A precursor to a DNSOutgoing response."""
 
     __slots__ = (
-        'unicast_out',
-        'multicast_out',
-        'unicast_answers',
-        'unicast_additionals',
-        'multicast_answers',
-        'multicast_additionals',
+        'answers',
+        'additionals',
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Build a query response."""
-        self.unicast_out: Optional[DNSOutgoing] = None
-        self.multicast_out: Optional[DNSOutgoing] = None
-        self.unicast_answers: Set[DNSRecord] = set()
-        self.unicast_additionals: Set[DNSRecord] = set()
-        self.multicast_answers: Set[DNSRecord] = set()
-        self.multicast_additionals: Set[DNSRecord] = set()
+        self.answers: Set[DNSRecord] = set()
+        self.additionals: Set[DNSRecord] = set()
+
+    def add_query_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
+        self.answers.update(answers)
+        self.additionals.update(additionals)
+
+    def construct_outgoing(self, multicast: bool, id_: int) -> DNSOutgoing:
+        """Add answers and additionals to a DNSOutgoing."""
+        if not self.answers and not self.additionals:
+            return None
+
+        # Suppress any additionals that are already in answers
+        self.additionals -= self.answers
+
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=id_)
+        for answer in self.answers:
+            out.add_answer_at_time(answer, 0)
+        for additional in self.additionals:
+            out.add_additional_answer(additional)
+        return out
+
+
+class _QueryResponsePair:
+    """A pair for unicast and multicast DNSOutgoing responses."""
+
+    __slots__ = (
+        '_cache',
+        '_ucast',
+        '_mcast',
+    )
+
+    def __init__(self, cache: DNSCache) -> None:
+        """Build a query response."""
+        self._cache = cache
+        self._ucast = _QueryResponse()
+        self._mcast = _QueryResponse()
+
+    def add_qu_question_response(
+        self,
+        answers: Set[DNSRecord],
+        additionals: Set[DNSRecord],
+        now: float,
+        is_probe: bool,
+    ) -> None:
+        for answer in answers:
+            if is_probe:
+                self._ucast.answers.add(answer)
+            if not self._has_mcast_record_recently(answer, now):
+                self._mcast.answers.add(answer)
+            elif not is_probe:
+                self._ucast.answers.add(answer)
+
+        for additional in additionals:
+            if is_probe:
+                self._ucast.additionals.add(additional)
+            if not self._has_mcast_record_recently(additional, now):
+                self._mcast.additionals.add(additional)
+            elif not is_probe:
+                self._ucast.additionals.add(additional)
+
+    def add_ucast_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
+        # Unicast source, always send back to source and mcast
+        self._ucast.add_query_response(answers, additionals)
+
+    def add_mcast_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
+        # Standard Multicast
+        self._mcast.add_query_response(answers, additionals)
+
+    def build_outgoing(
+        self, msg: DNSIncoming, ucast_source: bool, is_probe: bool, now: float
+    ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
+        """Build the outgoing unicast and multicast respones."""
+        ucastout = self._ucast.construct_outgoing(False, msg.id)
+        if ucastout and ucast_source:
+            for question in msg.questions:
+                ucastout.add_question(question)
+
+        if not is_probe:
+            self._suppress_mcasts_from_last_second(self._mcast.answers, now)
+            self._suppress_mcasts_from_last_second(self._mcast.additionals, now)
+
+        return ucastout, self._mcast.construct_outgoing(True, msg.id)
+
+    def _suppress_mcasts_from_last_second(self, records: Set[DNSRecord], now: float) -> None:
+        """Remove any records that were already sent in the last second."""
+        remove = set(record for record in records if self._has_mcast_record_in_last_second(record, now))
+        if remove:
+            records -= remove
+
+    def _has_mcast_record_recently(self, record: DNSRecord, now: float) -> bool:
+        """Check to see if a record has been mcasted recently."""
+        maybe_entry = self._cache.get(record)
+        return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > now)
+
+    def _has_mcast_record_in_last_second(self, record: DNSRecord, now: float) -> bool:
+        """Remove answers that were just broadcast
+
+        Protect the network against excessive packet flooding
+        https://datatracker.ietf.org/doc/html/rfc6762#section-14
+        """
+        maybe_entry = self._cache.get(record)
+        return bool(maybe_entry and now - maybe_entry.created < 1000)
 
 
 class QueryHandler:
@@ -92,7 +186,28 @@ class QueryHandler:
             for stype in self.registry.get_types()
         )
 
-    def _answer_question(  # pylint: disable=too-many-branches
+    def _add_pointer_answers(
+        self, name: str, msg: DNSIncoming, answers: Set[DNSRecord], additionals: Set[DNSRecord]
+    ) -> None:
+        """Answer PTR/ANY question."""
+        for service in self.registry.get_infos_type(name):
+            # Add recommended additional answers according to
+            # https://tools.ietf.org/html/rfc6763#section-12.1.
+            dns_pointer = service.dns_pointer()
+            if not dns_pointer.suppressed_by(msg):
+                answers.add(service.dns_pointer())
+                additionals.add(service.dns_service())
+                additionals.add(service.dns_text())
+                additionals.update(service.dns_addresses())
+
+    def _add_address_answers(self, name: str, msg: DNSIncoming, answers: Set[DNSRecord], type_: int) -> None:
+        """Answer A/AAAA/ANY question."""
+        for service in self.registry.get_infos_server(name):
+            for dns_address in service.dns_addresses(version=_TYPE_TO_IP_VERSION[type_]):
+                if not dns_address.suppressed_by(msg):
+                    answers.add(dns_address)
+
+    def _answer_question(
         self, msg: DNSIncoming, question: DNSQuestion
     ) -> Tuple[Set[DNSRecord], Set[DNSRecord]]:
         answers: Set[DNSRecord] = set()
@@ -100,21 +215,10 @@ class QueryHandler:
         type_ = question.type
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
-            for service in self.registry.get_infos_type(question.name):
-                # Add recommended additional answers according to
-                # https://tools.ietf.org/html/rfc6763#section-12.1.
-                dns_pointer = service.dns_pointer()
-                if not dns_pointer.suppressed_by(msg):
-                    answers.add(service.dns_pointer())
-                    additionals.add(service.dns_service())
-                    additionals.add(service.dns_text())
-                    additionals.update(service.dns_addresses())
+            self._add_pointer_answers(question.name, msg, answers, additionals)
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
-            for service in self.registry.get_infos_server(question.name):
-                for dns_address in service.dns_addresses(version=_TYPE_TO_IP_VERSION[type_]):
-                    if not dns_address.suppressed_by(msg):
-                        answers.add(dns_address)
+            self._add_address_answers(question.name, msg, answers, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
             service = self.registry.get_info_name(question.name)  # type: ignore
@@ -131,105 +235,40 @@ class QueryHandler:
 
         return answers, additionals
 
+    def _answer_any_question(
+        self, msg: DNSIncoming, question: DNSQuestion
+    ) -> Tuple[Set[DNSRecord], Set[DNSRecord]]:
+        if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
+            empty_additionals: Set[DNSRecord] = set()
+            return self._answer_service_type_enumeration_query(), empty_additionals
+
+        return self._answer_question(msg, question)
+
     def response(  # pylint: disable=unused-argument
         self, msg: DNSIncoming, addr: Optional[str], port: int
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
-        query_response = _QueryResponse()
+        response_pair = _QueryResponsePair(self.cache)
         is_probe = msg.num_authorities > 0
-        unicast_source = port != _MDNS_PORT
+        ucast_source = port != _MDNS_PORT
         now = current_time_millis()
 
         for question in msg.questions:
-            if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
-                answers = self._answer_service_type_enumeration_query()
-                additionals: Set[DNSRecord] = set()
-            else:
-                answers, additionals = self._answer_question(msg, question)
-
+            answers, additionals = self._answer_any_question(msg, question)
             if not answers and not additionals:
                 continue
 
-            if not unicast_source and question.unicast:
+            if not ucast_source and question.unicast:
                 # QU bit set
-                for answer in answers:
-                    if is_probe:
-                        query_response.unicast_answers.add(answer)
-                    if not self._has_multicast_record_recently(answer, now):
-                        query_response.multicast_answers.add(answer)
-                    elif not is_probe:
-                        query_response.unicast_answers.add(answer)
-                for additional in additionals:
-                    if is_probe:
-                        query_response.unicast_additionals.add(additional)
-                    if not self._has_multicast_record_recently(additional, now):
-                        query_response.multicast_additionals.add(additional)
-                    elif not is_probe:
-                        query_response.unicast_additionals.add(additional)
+                response_pair.add_qu_question_response(answers, additionals, now, is_probe)
             else:
-                if unicast_source:
-                    # Unicast source, always send back to source and multicast
-                    query_response.unicast_answers.update(answers)
-                    query_response.unicast_additionals.update(additionals)
+                if ucast_source:
+                    # Unicast source, always send back to source and mcast
+                    response_pair.add_ucast_response(answers, additionals)
                 # Standard Multicast
-                query_response.multicast_answers.update(answers)
-                query_response.multicast_additionals.update(additionals)
+                response_pair.add_mcast_response(answers, additionals)
 
-        if query_response.unicast_answers or query_response.unicast_additionals:
-            query_response.unicast_additionals -= query_response.unicast_answers
-            query_response.unicast_out = DNSOutgoing(
-                _FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=msg.id
-            )
-            if unicast_source:
-                for question in msg.questions:
-                    query_response.unicast_out.add_question(question)
-            self._add_answers_to_outgoing(
-                query_response.unicast_out, query_response.unicast_answers, query_response.unicast_additionals
-            )
-
-        if not is_probe:
-            self._suppress_multicasts_from_last_second(query_response.multicast_answers, now)
-            self._suppress_multicasts_from_last_second(query_response.multicast_additionals, now)
-
-        if query_response.multicast_answers or query_response.multicast_additionals:
-            query_response.multicast_additionals -= query_response.multicast_answers
-            query_response.multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
-            self._add_answers_to_outgoing(
-                query_response.multicast_out,
-                query_response.multicast_answers,
-                query_response.multicast_additionals,
-            )
-
-        return query_response.unicast_out, query_response.multicast_out
-
-    def _suppress_multicasts_from_last_second(self, records: Set[DNSRecord], now: float) -> None:
-        """Remove any records that were already sent in the last second."""
-        remove = set(record for record in records if self._has_multicast_record_in_last_second(record, now))
-        if remove:
-            records -= remove
-
-    def _has_multicast_record_recently(self, record: DNSRecord, now: float) -> bool:
-        """Check to see if a record has been multicasted recently."""
-        maybe_entry = self.cache.get(record)
-        return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > now)
-
-    def _has_multicast_record_in_last_second(self, record: DNSRecord, now: float) -> bool:
-        """Remove answers that were just broadcast
-
-        Protect the network against excessive packet flooding
-        https://datatracker.ietf.org/doc/html/rfc6762#section-14
-        """
-        maybe_entry = self.cache.get(record)
-        return bool(maybe_entry and now - maybe_entry.created < 1000)
-
-    def _add_answers_to_outgoing(  # pylint: disable=no-self-use
-        self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord]
-    ) -> None:
-        """Add answers and additionals to a DNSOutgoing."""
-        for answer in answers:
-            out.add_answer_at_time(answer, 0)
-        for additional in additionals:
-            out.add_additional_answer(additional)
+        return response_pair.build_outgoing(msg, ucast_source, is_probe, now)
 
 
 class RecordManager:
