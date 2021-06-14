@@ -116,12 +116,12 @@ class QueryHandler:
         """Deal with incoming query packets. Provides a response if possible."""
         unicast_out: Optional[DNSOutgoing] = None
         multicast_out: Optional[DNSOutgoing] = None
-
-        is_probe = msg.num_authorities > 0
         unicast_answers: Set[DNSRecord] = set()
         unicast_additionals: Set[DNSRecord] = set()
         multicast_answers: Set[DNSRecord] = set()
         multicast_additionals: Set[DNSRecord] = set()
+
+        is_probe = msg.num_authorities > 0
         unicast_source = port != _MDNS_PORT
         now = current_time_millis()
 
@@ -166,16 +166,24 @@ class QueryHandler:
             if unicast_source:
                 for question in msg.questions:
                     unicast_out.add_question(question)
-            self._add_unicast_answers_to_outgoing(unicast_out, unicast_answers, unicast_additionals)
+            self._add_answers_to_outgoing(unicast_out, unicast_answers, unicast_additionals)
+
+        if not is_probe:
+            self._suppress_multicasts_from_last_second(multicast_answers, now)
+            self._suppress_multicasts_from_last_second(multicast_additionals, now)
 
         if multicast_answers or multicast_additionals:
             multicast_additionals -= multicast_answers
             multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
-            self._add_multicast_answers_to_outgoing(
-                multicast_out, multicast_answers, multicast_additionals, is_probe, now
-            )
+            self._add_answers_to_outgoing(multicast_out, multicast_answers, multicast_additionals)
 
         return unicast_out, multicast_out
+
+    def _suppress_multicasts_from_last_second(self, records: Set[DNSRecord], now: float) -> None:
+        """Remove any records that were already sent in the last second."""
+        remove = set(record for record in records if self._has_multicast_record_in_last_second(record, now))
+        if remove:
+            records -= remove
 
     def _has_multicast_record_recently(self, record: DNSRecord, now: float) -> bool:
         """Check to see if a record has been multicasted recently."""
@@ -191,23 +199,7 @@ class QueryHandler:
         maybe_entry = self.cache.get(record)
         return bool(maybe_entry and now - maybe_entry.created < 1000)
 
-    def _add_multicast_answers_to_outgoing(
-        self,
-        out: DNSOutgoing,
-        answers: Set[DNSRecord],
-        additionals: Set[DNSRecord],
-        is_probe: bool,
-        now: float,
-    ) -> None:
-        """Add answers and additionals to a DNSOutgoing."""
-        for answer in answers:
-            if is_probe or not self._has_multicast_record_in_last_second(answer, now):
-                out.add_answer_at_time(answer, 0)
-        for additional in additionals:
-            if is_probe or not self._has_multicast_record_in_last_second(additional, now):
-                out.add_additional_answer(additional)
-
-    def _add_unicast_answers_to_outgoing(  # pylint: disable=no-self-use
+    def _add_answers_to_outgoing(  # pylint: disable=no-self-use
         self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord]
     ) -> None:
         """Add answers and additionals to a DNSOutgoing."""

@@ -229,23 +229,8 @@ def test_ptr_optimization():
     unicast_out, multicast_out = zc.query_handler.response(
         r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT
     )
-    assert multicast_out.id == query.id
     assert unicast_out is None
-    assert multicast_out is not None
-    has_srv = has_txt = has_a = False
-    nbr_additionals = 0
-    nbr_answers = len(multicast_out.answers)
-    nbr_authorities = len(multicast_out.authorities)
-    for answer in multicast_out.additionals:
-        nbr_additionals += 1
-        if answer.type == const._TYPE_SRV:
-            has_srv = True
-        elif answer.type == const._TYPE_TXT:
-            has_txt = True
-        elif answer.type == const._TYPE_A:
-            has_a = True
-    assert nbr_answers == 0 and nbr_additionals == 0 and nbr_authorities == 0
-    assert not has_srv and not has_txt and not has_a
+    assert multicast_out is None
 
     # Clear the cache to allow responding again
     _clear_cache(zc)
