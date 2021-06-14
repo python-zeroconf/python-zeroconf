@@ -622,7 +622,7 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_true'] == b'1'
             assert info.properties[b'prop_false'] == b'0'
             assert info.addresses == addresses[:1]  # no V6 by default
-            assert info.addresses_by_version(r.IPVersion.All) == addresses
+            assert set(info.addresses_by_version(r.IPVersion.All)) == set(addresses)
 
             cached_info = ServiceInfo(type_, registration_name)
             cached_info.load_from_cache(zeroconf_browser)
