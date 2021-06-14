@@ -308,7 +308,7 @@ def test_unicast_response():
 
 
 def test_qu_response():
-    """Ensure we send a unicast response when the source port is not the MDNS port."""
+    """Handle multicast incoming with the QU bit set."""
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
 
