@@ -53,6 +53,27 @@ if TYPE_CHECKING:
     from ._core import Zeroconf  # pylint: disable=cyclic-import
 
 
+class _QueryResponse:
+
+    __slots__ = (
+        'unicast_out',
+        'multicast_out',
+        'unicast_answers',
+        'unicast_additionals',
+        'multicast_answers',
+        'multicast_additionals',
+    )
+
+    def __init__(self):
+        """Build a query response."""
+        self.unicast_out: Optional[DNSOutgoing] = None
+        self.multicast_out: Optional[DNSOutgoing] = None
+        self.unicast_answers: Set[DNSRecord] = set()
+        self.unicast_additionals: Set[DNSRecord] = set()
+        self.multicast_answers: Set[DNSRecord] = set()
+        self.multicast_additionals: Set[DNSRecord] = set()
+
+
 class QueryHandler:
     """Query the ServiceRegistry."""
 
@@ -110,17 +131,11 @@ class QueryHandler:
 
         return answers, additionals
 
-    def response(  # pylint: disable=unused-argument, too-many-branches, too-many-locals
+    def response(  # pylint: disable=unused-argument
         self, msg: DNSIncoming, addr: Optional[str], port: int
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
-        unicast_out: Optional[DNSOutgoing] = None
-        multicast_out: Optional[DNSOutgoing] = None
-        unicast_answers: Set[DNSRecord] = set()
-        unicast_additionals: Set[DNSRecord] = set()
-        multicast_answers: Set[DNSRecord] = set()
-        multicast_additionals: Set[DNSRecord] = set()
-
+        query_response = _QueryResponse()
         is_probe = msg.num_authorities > 0
         unicast_source = port != _MDNS_PORT
         now = current_time_millis()
@@ -139,45 +154,53 @@ class QueryHandler:
                 # QU bit set
                 for answer in answers:
                     if is_probe:
-                        unicast_answers.add(answer)
+                        query_response.unicast_answers.add(answer)
                     if not self._has_multicast_record_recently(answer, now):
-                        multicast_answers.add(answer)
+                        query_response.multicast_answers.add(answer)
                     elif not is_probe:
-                        unicast_answers.add(answer)
+                        query_response.unicast_answers.add(answer)
                 for additional in additionals:
                     if is_probe:
-                        unicast_additionals.add(additional)
+                        query_response.unicast_additionals.add(additional)
                     if not self._has_multicast_record_recently(additional, now):
-                        multicast_additionals.add(additional)
+                        query_response.multicast_additionals.add(additional)
                     elif not is_probe:
-                        unicast_additionals.add(additional)
+                        query_response.unicast_additionals.add(additional)
             else:
                 if unicast_source:
                     # Unicast source, always send back to source and multicast
-                    unicast_answers.update(answers)
-                    unicast_additionals.update(additionals)
+                    query_response.unicast_answers.update(answers)
+                    query_response.unicast_additionals.update(additionals)
                 # Standard Multicast
-                multicast_answers.update(answers)
-                multicast_additionals.update(additionals)
+                query_response.multicast_answers.update(answers)
+                query_response.multicast_additionals.update(additionals)
 
-        if unicast_answers or unicast_additionals:
-            unicast_additionals -= unicast_answers
-            unicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=msg.id)
+        if query_response.unicast_answers or query_response.unicast_additionals:
+            query_response.unicast_additionals -= query_response.unicast_answers
+            query_response.unicast_out = DNSOutgoing(
+                _FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=msg.id
+            )
             if unicast_source:
                 for question in msg.questions:
-                    unicast_out.add_question(question)
-            self._add_answers_to_outgoing(unicast_out, unicast_answers, unicast_additionals)
+                    query_response.unicast_out.add_question(question)
+            self._add_answers_to_outgoing(
+                query_response.unicast_out, query_response.unicast_answers, query_response.unicast_additionals
+            )
 
         if not is_probe:
-            self._suppress_multicasts_from_last_second(multicast_answers, now)
-            self._suppress_multicasts_from_last_second(multicast_additionals, now)
+            self._suppress_multicasts_from_last_second(query_response.multicast_answers, now)
+            self._suppress_multicasts_from_last_second(query_response.multicast_additionals, now)
 
-        if multicast_answers or multicast_additionals:
-            multicast_additionals -= multicast_answers
-            multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
-            self._add_answers_to_outgoing(multicast_out, multicast_answers, multicast_additionals)
+        if query_response.multicast_answers or query_response.multicast_additionals:
+            query_response.multicast_additionals -= query_response.multicast_answers
+            query_response.multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
+            self._add_answers_to_outgoing(
+                query_response.multicast_out,
+                query_response.multicast_answers,
+                query_response.multicast_additionals,
+            )
 
-        return unicast_out, multicast_out
+        return query_response.unicast_out, query_response.multicast_out
 
     def _suppress_multicasts_from_last_second(self, records: Set[DNSRecord], now: float) -> None:
         """Remove any records that were already sent in the last second."""
