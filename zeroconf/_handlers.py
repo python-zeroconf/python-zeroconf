@@ -75,6 +75,9 @@ class QueryHandler:
     def _answer_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
         """Answer a PTR query."""
         for service in self.registry.get_infos_type(question.name):
+            dns_pointer = service.dns_pointer()
+            if dns_pointer.suppressed_by(msg):
+                continue
             out.add_answer(msg, service.dns_pointer())
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
@@ -103,8 +106,12 @@ class QueryHandler:
         if question.type in (_TYPE_TXT, _TYPE_ANY):
             out.add_answer(msg, service.dns_text())
         if question.type == _TYPE_SRV:
-            for dns_address in service.dns_addresses():
-                out.add_additional_answer(dns_address)
+            dns_service = service.dns_service()
+            if not dns_service.suppressed_by(msg):
+                # Add recommended additional answers according to
+                # https://datatracker.ietf.org/doc/html/rfc6763#section-12.2
+                for dns_address in service.dns_addresses():
+                    out.add_additional_answer(dns_address)
 
     def response(  # pylint: disable=unused-argument
         self, msg: DNSIncoming, addr: Optional[str], port: int
