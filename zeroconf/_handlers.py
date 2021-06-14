@@ -28,6 +28,7 @@ from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion,
 from ._logger import log
 from ._services import RecordUpdateListener
 from ._services.registry import ServiceRegistry
+from ._utils.net import IPVersion
 from ._utils.time import current_time_millis
 from .const import (
     _CLASS_IN,
@@ -37,12 +38,14 @@ from .const import (
     _MDNS_PORT,
     _SERVICE_TYPE_ENUMERATION_NAME,
     _TYPE_A,
+    _TYPE_AAAA,
     _TYPE_ANY,
     _TYPE_PTR,
     _TYPE_SRV,
     _TYPE_TXT,
 )
 
+_TYPE_TO_IP_VERSION = {_TYPE_A: IPVersion.V4Only, _TYPE_AAAA: IPVersion.V6Only, _TYPE_ANY: IPVersion.All}
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -146,10 +149,10 @@ class QueryHandler:
                 additionals.add(service.dns_text())
                 additionals.update(service.dns_addresses())
 
-    def _add_address_answers(self, name: str, msg: DNSIncoming, answers: Set[DNSRecord]) -> None:
-        """Answer address question."""
+    def _add_address_answers(self, name: str, msg: DNSIncoming, answers: Set[DNSRecord], type_: int) -> None:
+        """Answer A/AAAA/ANY question."""
         for service in self.registry.get_infos_server(name):
-            for dns_address in service.dns_addresses():
+            for dns_address in service.dns_addresses(version=_TYPE_TO_IP_VERSION[type_]):
                 if not dns_address.suppressed_by(msg):
                     answers.add(dns_address)
 
@@ -163,8 +166,8 @@ class QueryHandler:
         if type_ == _TYPE_PTR:
             self._add_pointer_answers(question.name, msg, answers, additionals)
 
-        if type_ in (_TYPE_A, _TYPE_ANY):
-            self._add_address_answers(question.name, msg, answers)
+        if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
+            self._add_address_answers(question.name, msg, answers, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
             service = self.registry.get_info_name(question.name)  # type: ignore
