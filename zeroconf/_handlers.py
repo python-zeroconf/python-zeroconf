@@ -87,6 +87,7 @@ class _QueryResponse:
         self._add_qu_question_response_to_target(additionals, RecordSetKeys.Additionals)
 
     def _add_qu_question_response_to_target(self, target: Set[DNSRecord], answer_type: RecordSetKeys) -> None:
+        """Add part of the QU response."""
         for record in target:
             if self._is_probe:
                 self._ucast[answer_type].add(record)
@@ -105,7 +106,7 @@ class _QueryResponse:
         self._mcast[RecordSetKeys.Answers].update(answers)
         self._mcast[RecordSetKeys.Additionals].update(additionals)
 
-    def build_outgoing_unicast(self) -> Optional[DNSOutgoing]:
+    def outgoing_unicast(self) -> Optional[DNSOutgoing]:
         """Build the outgoing unicast response."""
         ucastout = self._construct_outgoing_from_record_set(self._ucast, False)
         # Adding the questions back when the source is
@@ -116,7 +117,7 @@ class _QueryResponse:
                 ucastout.add_question(question)
         return ucastout
 
-    def build_outgoing_multicast(self) -> Optional[DNSOutgoing]:
+    def outgoing_multicast(self) -> Optional[DNSOutgoing]:
         """Build the outgoing multicast response."""
         if not self._is_probe:
             self._suppress_mcasts_from_last_second(self._mcast[RecordSetKeys.Answers])
@@ -250,23 +251,20 @@ class QueryHandler:
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
         ucast_source = port != _MDNS_PORT
-        query_response = _QueryResponse(self.cache, msg, ucast_source)
+        query_res = _QueryResponse(self.cache, msg, ucast_source)
 
         for question in msg.questions:
             all_answers = self._answer_any_question(msg, question)
             if not ucast_source and question.unicast:
-                query_response.add_qu_question_response(*all_answers)
+                query_res.add_qu_question_response(*all_answers)
             else:
                 if ucast_source:
-                    query_response.add_ucast_question_response(*all_answers)
+                    query_res.add_ucast_question_response(*all_answers)
                 # We always multicast as well even if its a unicast
                 # source as long as we haven't done it recently (75% of ttl)
-                query_response.add_mcast_question_response(*all_answers)
+                query_res.add_mcast_question_response(*all_answers)
 
-        return (
-            query_response.build_outgoing_unicast(),
-            query_response.build_outgoing_multicast(),
-        )
+        return query_res.outgoing_unicast(), query_res.outgoing_multicast()
 
 
 class RecordManager:
