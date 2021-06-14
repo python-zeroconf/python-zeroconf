@@ -20,8 +20,9 @@
     USA
 """
 
+import enum
 import itertools
-from typing import List, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from ._logger import log
@@ -48,97 +49,165 @@ if TYPE_CHECKING:
     from ._core import Zeroconf  # pylint: disable=cyclic-import
 
 
+@enum.unique
+class RecordSetKeys(enum.Enum):
+    Answers = 1
+    Additionals = 2
+
+
+# Switch to a TypedDict once Python 3.8 is the minimum supported version
+_RecordSetType = Dict[RecordSetKeys, Set[DNSRecord]]
+
+
+class _QueryResponse:
+    """A pair for unicast and multicast DNSOutgoing responses."""
+
+    def __init__(self, msg: DNSIncoming, ucast_source: bool) -> None:
+        """Build a query response."""
+        self._msg = msg
+        self._ucast_source = ucast_source
+        self._is_probe = msg.num_authorities > 0
+        self._now = current_time_millis()
+        self._ucast: _RecordSetType = {RecordSetKeys.Answers: set(), RecordSetKeys.Additionals: set()}
+        self._mcast: _RecordSetType = {RecordSetKeys.Answers: set(), RecordSetKeys.Additionals: set()}
+
+    def add_ucast_question_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
+        """Generate a response to a unicast query."""
+        self._ucast[RecordSetKeys.Answers].update(answers)
+        self._ucast[RecordSetKeys.Additionals].update(additionals)
+
+    def add_mcast_question_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
+        """Generate a response to a multicast query."""
+        self._mcast[RecordSetKeys.Answers].update(answers)
+        self._mcast[RecordSetKeys.Additionals].update(additionals)
+
+    def outgoing_unicast(self) -> Optional[DNSOutgoing]:
+        """Build the outgoing unicast response."""
+        ucastout = self._construct_outgoing_from_record_set(self._ucast, False)
+        # Adding the questions back when the source is
+        # unicast (not MDNS port) is legacy behavior
+        # Is this correct?
+        if ucastout and self._ucast_source:
+            for question in self._msg.questions:
+                ucastout.add_question(question)
+        return ucastout
+
+    def outgoing_multicast(self) -> Optional[DNSOutgoing]:
+        """Build the outgoing multicast response."""
+        return self._construct_outgoing_from_record_set(self._mcast, True)
+
+    def _construct_outgoing_from_record_set(
+        self, rrset: _RecordSetType, multicast: bool
+    ) -> Optional[DNSOutgoing]:
+        """Add answers and additionals to a DNSOutgoing."""
+        if not rrset[RecordSetKeys.Answers] and not rrset[RecordSetKeys.Additionals]:
+            return None
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=self._msg.id)
+        for answer in rrset[RecordSetKeys.Answers]:
+            out.add_answer_at_time(answer, 0)
+        for additional in rrset[RecordSetKeys.Additionals]:
+            out.add_additional_answer(additional)
+        return out
+
+
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    def __init__(self, registry: ServiceRegistry):
+    def __init__(self, registry: ServiceRegistry) -> None:
         """Init the query handler."""
         self.registry = registry
 
-    def _answer_service_type_enumeration_query(self, msg: DNSIncoming, out: DNSOutgoing) -> None:
+    def _answer_service_type_enumeration_query(
+        self,
+        msg: DNSIncoming,
+    ) -> Set[DNSRecord]:
         """Provide an answer to a service type enumeration query.
 
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
         """
-        for stype in self.registry.get_types():
-            out.add_answer(
-                msg,
-                DNSPointer(
-                    _SERVICE_TYPE_ENUMERATION_NAME,
-                    _TYPE_PTR,
-                    _CLASS_IN,
-                    _DNS_OTHER_TTL,
-                    stype,
-                ),
-            )
+        records: Set[DNSRecord] = set(
+            DNSPointer(_SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype)
+            for stype in self.registry.get_types()
+        )
+        records -= set(dns_pointer for dns_pointer in records if dns_pointer.suppressed_by(msg))
+        return records
 
-    def _answer_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
-        """Answer a PTR query."""
-        for service in self.registry.get_infos_type(question.name):
-            dns_pointer = service.dns_pointer()
-            if dns_pointer.suppressed_by(msg):
-                continue
-            out.add_answer(msg, service.dns_pointer())
+    def _add_pointer_answers(
+        self, name: str, msg: DNSIncoming, answers: Set[DNSRecord], additionals: Set[DNSRecord]
+    ) -> None:
+        """Answer PTR/ANY question."""
+        for service in self.registry.get_infos_type(name):
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
-            out.add_additional_answer(service.dns_service())
-            out.add_additional_answer(service.dns_text())
+            dns_pointer = service.dns_pointer()
+            if not dns_pointer.suppressed_by(msg):
+                answers.add(service.dns_pointer())
+                additionals.add(service.dns_service())
+                additionals.add(service.dns_text())
+                additionals.update(service.dns_addresses())
+
+    def _add_address_answers(self, name: str, msg: DNSIncoming, answers: Set[DNSRecord]) -> None:
+        """Answer address question."""
+        for service in self.registry.get_infos_server(name):
             for dns_address in service.dns_addresses():
-                out.add_additional_answer(dns_address)
+                if not dns_address.suppressed_by(msg):
+                    answers.add(dns_address)
 
-    def _answer_non_ptr_query(self, msg: DNSIncoming, out: DNSOutgoing, question: DNSQuestion) -> None:
-        """Answer a query any query other then PTR.
+    def _answer_question(
+        self, msg: DNSIncoming, question: DNSQuestion
+    ) -> Tuple[Set[DNSRecord], Set[DNSRecord]]:
+        answers: Set[DNSRecord] = set()
+        additionals: Set[DNSRecord] = set()
+        type_ = question.type
 
-        Add answer(s) for A, AAAA, SRV, or TXT queries.
-        """
-        # Answer A record queries for any service addresses we know
-        if question.type in (_TYPE_A, _TYPE_ANY):
-            for service in self.registry.get_infos_server(question.name):
-                for dns_address in service.dns_addresses():
-                    out.add_answer(msg, dns_address)
+        if type_ == _TYPE_PTR:
+            self._add_pointer_answers(question.name, msg, answers, additionals)
 
-        service = self.registry.get_info_name(question.name)  # type: ignore
-        if service is None:
-            return
+        if type_ in (_TYPE_A, _TYPE_ANY):
+            self._add_address_answers(question.name, msg, answers)
 
-        if question.type in (_TYPE_SRV, _TYPE_ANY):
-            out.add_answer(msg, service.dns_service())
-        if question.type in (_TYPE_TXT, _TYPE_ANY):
-            out.add_answer(msg, service.dns_text())
-        if question.type == _TYPE_SRV:
-            dns_service = service.dns_service()
-            if not dns_service.suppressed_by(msg):
-                # Add recommended additional answers according to
-                # https://datatracker.ietf.org/doc/html/rfc6763#section-12.2
-                for dns_address in service.dns_addresses():
-                    out.add_additional_answer(dns_address)
+        if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
+            service = self.registry.get_info_name(question.name)  # type: ignore
+            if service is not None:
+                if type_ in (_TYPE_SRV, _TYPE_ANY):
+                    dns_service = service.dns_service()
+                    if not dns_service.suppressed_by(msg):
+                        # Add recommended additional answers according to
+                        # https://tools.ietf.org/html/rfc6763#section-12.2.
+                        answers.add(service.dns_service())
+                        additionals.update(service.dns_addresses())
+                if type_ in (_TYPE_TXT, _TYPE_ANY):
+                    dns_text = service.dns_text()
+                    if not dns_text.suppressed_by(msg):
+                        answers.add(service.dns_text())
+
+        return answers, additionals
+
+    def _answer_any_question(
+        self, msg: DNSIncoming, question: DNSQuestion
+    ) -> Tuple[Set[DNSRecord], Set[DNSRecord]]:
+        if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
+            empty_additionals: Set[DNSRecord] = set()
+            return self._answer_service_type_enumeration_query(msg), empty_additionals
+
+        return self._answer_question(msg, question)
 
     def response(  # pylint: disable=unused-argument
         self, msg: DNSIncoming, addr: Optional[str], port: int
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
-        unicast_out = None
-        multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
-        outputs = [multicast_out]
+        ucast_source = port != _MDNS_PORT
+        query_res = _QueryResponse(msg, ucast_source)
 
-        if port != _MDNS_PORT:
-            unicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=msg.id)
-            outputs.append(unicast_out)
-            for question in msg.questions:
-                unicast_out.add_question(question)
+        for question in msg.questions:
+            all_answers = self._answer_any_question(msg, question)
+            if ucast_source:
+                query_res.add_ucast_question_response(*all_answers)
+            # We always multicast as well even if its a unicast
+            # source as long as we haven't done it recently (75% of ttl)
+            query_res.add_mcast_question_response(*all_answers)
 
-        for out in outputs:
-            for question in msg.questions:
-                if question.type == _TYPE_PTR:
-                    if question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
-                        self._answer_service_type_enumeration_query(msg, out)
-                    else:
-                        self._answer_ptr_query(msg, out, question)
-                    continue
-
-                self._answer_non_ptr_query(msg, out, question)
-
-        return unicast_out, multicast_out
+        return query_res.outgoing_unicast(), query_res.outgoing_multicast()
 
 
 class RecordManager:
