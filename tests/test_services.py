@@ -11,11 +11,12 @@ import time
 import os
 import unittest
 from threading import Event
+from typing import List
 
 import pytest
 
 import zeroconf as r
-from zeroconf import const
+from zeroconf import DNSAddress, const
 import zeroconf._services as s
 from zeroconf import Zeroconf
 from zeroconf._services import (
@@ -1170,3 +1171,22 @@ def test_legacy_record_update_listener():
     zc.remove_listener(listener)
 
     zc.close()
+
+
+def test_filter_address_by_type_from_service_info():
+    """Verify dns_addresses can filter by ipversion."""
+    desc = {'path': '/~paulsm/'}
+    type_ = "_homeassistant._tcp.local."
+    name = "MyTestHome"
+    registration_name = "%s.%s" % (name, type_)
+    ipv4 = socket.inet_aton("10.0.1.2")
+    ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6])
+
+    def dns_addresses_to_addresses(dns_address: List[DNSAddress]):
+        return [address.address for address in dns_address]
+
+    assert dns_addresses_to_addresses(info.dns_addresses()) == [ipv4, ipv6]
+    assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.All)) == [ipv4, ipv6]
+    assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.V4Only)) == [ipv4]
+    assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.V6Only)) == [ipv6]
