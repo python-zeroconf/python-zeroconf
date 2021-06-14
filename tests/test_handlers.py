@@ -314,11 +314,23 @@ def test_qu_response():
 
     # service definition
     type_ = "_test-srvc-type._tcp.local."
+    other_type_ = "_notthesame._tcp.local."
     name = "xxxyyy"
     registration_name = "%s.%s" % (name, type_)
+    registration_name2 = "%s.%s" % (name, other_type_)
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info2 = ServiceInfo(
+        other_type_,
+        registration_name2,
+        80,
+        0,
+        0,
+        desc,
+        "ash-other.local.",
+        addresses=[socket.inet_aton("10.0.4.2")],
     )
     # register
     zc.register_service(info)
@@ -344,18 +356,38 @@ def test_qu_response():
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
+    assert question.unicast is True
     query.add_question(question)
-    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+    )
     assert multicast_out is None
     _validate_complete_response(query, unicast_out)
 
     _clear_cache(zc)
-    # With QU should respond to both unicast and multicast if the answer is not in the cache
+    # With QU should respond to only multicast since the response hasn't been seen since 75% of the ttl
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
+    assert question.unicast is True
     query.add_question(question)
-    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    _validate_complete_response(query, multicast_out)
+
+    # With QU set and an authorative answer (probe) should respond to both unitcast and multicast since the response hasn't been seen since 75% of the ttl
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unique = True  # Set the QU bit
+    assert question.unicast is True
+    query.add_question(question)
+    query.add_authorative_answer(info2.dns_pointer())
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+    )
     _validate_complete_response(query, unicast_out)
     _validate_complete_response(query, multicast_out)
 
@@ -364,8 +396,11 @@ def test_qu_response():
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
+    assert question.unicast is True
     query.add_question(question)
-    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+    )
     assert multicast_out is None
     _validate_complete_response(query, unicast_out)
 

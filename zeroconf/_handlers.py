@@ -258,7 +258,6 @@ class QueryHandler:
             answers, additionals = self._answer_any_question(msg, question)
             if not answers and not additionals:
                 continue
-
             if not ucast_source and question.unicast:
                 # QU bit set
                 response_pair.add_qu_question_response(answers, additionals, now, is_probe)
