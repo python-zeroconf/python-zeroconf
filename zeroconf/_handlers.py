@@ -105,6 +105,10 @@ class _QueryResponse:
         """Add answers and additionals to a DNSOutgoing."""
         if not rrset[RecordSetKeys.Answers] and not rrset[RecordSetKeys.Additionals]:
             return None
+
+        # Suppress any additionals that are already in answers
+        rrset[RecordSetKeys.Additionals] -= rrset[RecordSetKeys.Answers]
+
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=self._msg.id)
         for answer in rrset[RecordSetKeys.Answers]:
             out.add_answer_at_time(answer, 0)
