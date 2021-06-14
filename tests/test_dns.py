@@ -427,6 +427,11 @@ class PacketForm(unittest.TestCase):
         id = bytes[0] << 8 | bytes[1]
         assert id == 0
 
+    def test_setting_id(self):
+        """Test setting id in the constructor"""
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY, id_=4444)
+        assert generated.id == 4444
+
     def test_query_header_bits(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         bytes = generated.packets()[0]
