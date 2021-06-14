@@ -174,7 +174,7 @@ class QueryHandler:
             multicast_additionals -= multicast_answers
             multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
             self._add_multicast_answers_to_outgoing(
-                multicast_out, multicast_answers, multicast_additionals, now
+                multicast_out, multicast_answers, multicast_additionals, is_probe, now
             )
 
         return unicast_out, multicast_out
@@ -194,14 +194,14 @@ class QueryHandler:
         return bool(maybe_entry and now - maybe_entry.created < 1000)
 
     def _add_multicast_answers_to_outgoing(
-        self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord], now: float
+        self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord], is_probe: bool, now: float
     ) -> None:
         """Add answers and additionals to a DNSOutgoing."""
         for answer in answers:
-            if not self._has_multicast_record_in_last_second(answer, now):
+            if is_probe or not self._has_multicast_record_in_last_second(answer, now):
                 out.add_answer_at_time(answer, 0)
         for additional in additionals:
-            if not self._has_multicast_record_in_last_second(additional, now):
+            if is_probe or not self._has_multicast_record_in_last_second(additional, now):
                 out.add_additional_answer(additional)
 
     def _add_unicast_answers_to_outgoing(
