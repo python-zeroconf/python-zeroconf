@@ -105,22 +105,23 @@ class _QueryResponse:
         self._mcast[RecordSetKeys.Answers].update(answers)
         self._mcast[RecordSetKeys.Additionals].update(additionals)
 
-    def build_outgoing(self) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
-        """Build the outgoing unicast and multicast respones."""
+    def build_outgoing_unicast(self) -> Optional[DNSOutgoing]:
+        """Build the outgoing unicast response."""
         ucastout = self._construct_outgoing_from_record_set(self._ucast, False)
-
         # Adding the questions back when the source is
         # unicast (not MDNS port) is legacy behavior
         # Is this correct?
         if ucastout and self._ucast_source:
             for question in self._msg.questions:
                 ucastout.add_question(question)
+        return ucastout
 
+    def build_outgoing_multicast(self) -> Optional[DNSOutgoing]:
+        """Build the outgoing multicast response."""
         if not self._is_probe:
             self._suppress_mcasts_from_last_second(self._mcast[RecordSetKeys.Answers])
             self._suppress_mcasts_from_last_second(self._mcast[RecordSetKeys.Additionals])
-
-        return ucastout, self._construct_outgoing_from_record_set(self._mcast, True)
+        return self._construct_outgoing_from_record_set(self._mcast, True)
 
     def _construct_outgoing_from_record_set(
         self, rrset: _RecordSetType, multicast: bool
@@ -262,7 +263,10 @@ class QueryHandler:
                 # source as long as we haven't done it recently (75% of ttl)
                 query_response.add_mcast_question_response(*all_answers)
 
-        return query_response.build_outgoing()
+        return (
+            query_response.build_outgoing_unicast(),
+            query_response.build_outgoing_multicast(),
+        )
 
 
 class RecordManager:
