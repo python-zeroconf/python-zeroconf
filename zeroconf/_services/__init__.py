@@ -655,7 +655,9 @@ class ServiceInfo(RecordUpdateListener):
             if record.key == self.key:
                 self._set_text(record.text)
 
-    def dns_addresses(self, override_ttl: Optional[int] = None) -> List[DNSAddress]:
+    def dns_addresses(
+        self, override_ttl: Optional[int] = None, version: IPVersion = IPVersion.All
+    ) -> List[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
         return [
             DNSAddress(
@@ -665,7 +667,7 @@ class ServiceInfo(RecordUpdateListener):
                 override_ttl if override_ttl is not None else self.host_ttl,
                 address,
             )
-            for address in self._addresses
+            for address in self.addresses_by_version(version)
         ]
 
     def dns_pointer(self, override_ttl: Optional[int] = None) -> DNSPointer:
