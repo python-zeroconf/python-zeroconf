@@ -125,6 +125,7 @@ class QueryHandler:
         multicast_answers: Set[DNSRecord] = set()
         multicast_additionals: Set[DNSRecord] = set()
         unicast_source = port != _MDNS_PORT
+        now = current_time_millis()
 
         for question in msg.questions:
             if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
@@ -138,7 +139,6 @@ class QueryHandler:
 
             if not unicast_source and question.unicast:
                 # QU bit set
-                now = current_time_millis()
                 for answer in answers:
                     if is_probe:
                         unicast_answers.add(answer)
@@ -148,7 +148,7 @@ class QueryHandler:
                         unicast_answers.add(answer)
                 for additional in additionals:
                     if is_probe:
-                        unicast_additionals.add(additional)                    
+                        unicast_additionals.add(additional)
                     if not self._has_multicast_record_recently(additional, now):
                         multicast_additionals.add(additional)
                     elif not is_probe:
@@ -168,12 +168,14 @@ class QueryHandler:
             if unicast_source:
                 for question in msg.questions:
                     unicast_out.add_question(question)
-            self._add_answers_to_outgoing(unicast_out, unicast_answers, unicast_additionals)
+            self._add_unicast_answers_to_outgoing(unicast_out, unicast_answers, unicast_additionals)
 
         if multicast_answers or multicast_additionals:
             multicast_additionals -= multicast_answers
             multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
-            self._add_answers_to_outgoing(multicast_out, multicast_answers, multicast_additionals)
+            self._add_multicast_answers_to_outgoing(
+                multicast_out, multicast_answers, multicast_additionals, now
+            )
 
         return unicast_out, multicast_out
 
@@ -182,7 +184,27 @@ class QueryHandler:
         maybe_entry = self.cache.get(record)
         return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > now)
 
-    def _add_answers_to_outgoing(
+    def _has_multicast_record_in_last_second(self, record, now: float) -> bool:
+        """Remove answers that were just broadcast
+
+        Protect the network against excessive packet flooding
+        https://datatracker.ietf.org/doc/html/rfc6762#section-14
+        """
+        maybe_entry = self.cache.get(record)
+        return bool(maybe_entry and now - maybe_entry.created < 1000)
+
+    def _add_multicast_answers_to_outgoing(
+        self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord], now: float
+    ) -> None:
+        """Add answers and additionals to a DNSOutgoing."""
+        for answer in answers:
+            if not self._has_multicast_record_in_last_second(answer, now):
+                out.add_answer_at_time(answer, 0)
+        for additional in additionals:
+            if not self._has_multicast_record_in_last_second(additional, now):
+                out.add_additional_answer(additional)
+
+    def _add_unicast_answers_to_outgoing(
         self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord]
     ) -> None:
         """Add answers and additionals to a DNSOutgoing."""
