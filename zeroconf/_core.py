@@ -276,8 +276,8 @@ class Zeroconf(QuietLogger):
         self._notify_listeners: List[NotifyListener] = []
         self.browsers: Dict[ServiceListener, ServiceBrowser] = {}
         self.registry = ServiceRegistry()
-        self.query_handler = QueryHandler(self.registry)
         self.cache = DNSCache()
+        self.query_handler = QueryHandler(self.registry, self.cache)
         self.record_manager = RecordManager(self)
 
         self.condition = threading.Condition()

@@ -70,6 +70,10 @@ class DNSEntry:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
+    def _entry_tuple(self) -> Tuple[str, int, int]:
+        """Entry Tuple for DNSEntry."""
+        return (self.key, self.type, self.class_)
+
     def __eq__(self, other: Any) -> bool:
         """Equality test on key (lowercase name), type, and class"""
         return (
@@ -106,7 +110,7 @@ class DNSQuestion(DNSEntry):
     """A DNS question entry"""
 
     def __init__(self, name: str, type_: int, class_: int) -> None:
-        DNSEntry.__init__(self, name, type_, class_)
+        super().__init__(name, type_, class_)
 
     def answered_by(self, rec: 'DNSRecord') -> bool:
         """Returns true if the question is answered by the record"""
@@ -141,7 +145,7 @@ class DNSRecord(DNSEntry):
 
     # TODO: Switch to just int ttl
     def __init__(self, name: str, type_: int, class_: int, ttl: Union[float, int]) -> None:
-        DNSEntry.__init__(self, name, type_, class_)
+        super().__init__(name, type_, class_)
         self.ttl = ttl
         self.created = current_time_millis()
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
@@ -205,7 +209,7 @@ class DNSAddress(DNSRecord):
     """A DNS address record"""
 
     def __init__(self, name: str, type_: int, class_: int, ttl: int, address: bytes) -> None:
-        DNSRecord.__init__(self, name, type_, class_, ttl)
+        super().__init__(name, type_, class_, ttl)
         self.address = address
 
     def write(self, out: 'DNSOutgoing') -> None:
@@ -217,6 +221,10 @@ class DNSAddress(DNSRecord):
         return (
             isinstance(other, DNSAddress) and DNSEntry.__eq__(self, other) and self.address == other.address
         )
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSAddresses."""
+        return hash((*self._entry_tuple(), self.address))
 
     def __repr__(self) -> str:
         """String representation"""
@@ -235,7 +243,7 @@ class DNSHinfo(DNSRecord):
     """A DNS host information record"""
 
     def __init__(self, name: str, type_: int, class_: int, ttl: int, cpu: str, os: str) -> None:
-        DNSRecord.__init__(self, name, type_, class_, ttl)
+        super().__init__(name, type_, class_, ttl)
         self.cpu = cpu
         self.os = os
 
@@ -253,6 +261,10 @@ class DNSHinfo(DNSRecord):
             and self.os == other.os
         )
 
+    def __hash__(self) -> int:
+        """Hash to compare like DNSHinfo."""
+        return hash((*self._entry_tuple(), self.cpu, self.os))
+
     def __repr__(self) -> str:
         """String representation"""
         return self.to_string(self.cpu + " " + self.os)
@@ -263,7 +275,7 @@ class DNSPointer(DNSRecord):
     """A DNS pointer record"""
 
     def __init__(self, name: str, type_: int, class_: int, ttl: int, alias: str) -> None:
-        DNSRecord.__init__(self, name, type_, class_, ttl)
+        super().__init__(name, type_, class_, ttl)
         self.alias = alias
 
     def write(self, out: 'DNSOutgoing') -> None:
@@ -273,6 +285,10 @@ class DNSPointer(DNSRecord):
     def __eq__(self, other: Any) -> bool:
         """Tests equality on alias"""
         return isinstance(other, DNSPointer) and self.alias == other.alias and DNSEntry.__eq__(self, other)
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSPointer."""
+        return hash((*self._entry_tuple(), self.alias))
 
     def __repr__(self) -> str:
         """String representation"""
@@ -285,12 +301,16 @@ class DNSText(DNSRecord):
 
     def __init__(self, name: str, type_: int, class_: int, ttl: int, text: bytes) -> None:
         assert isinstance(text, (bytes, type(None)))
-        DNSRecord.__init__(self, name, type_, class_, ttl)
+        super().__init__(name, type_, class_, ttl)
         self.text = text
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
         out.write_string(self.text)
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSText."""
+        return hash((*self._entry_tuple(), self.text))
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on text"""
@@ -318,7 +338,7 @@ class DNSService(DNSRecord):
         port: int,
         server: str,
     ) -> None:
-        DNSRecord.__init__(self, name, type_, class_, ttl)
+        super().__init__(name, type_, class_, ttl)
         self.priority = priority
         self.weight = weight
         self.port = port
@@ -341,6 +361,10 @@ class DNSService(DNSRecord):
             and self.server == other.server
             and DNSEntry.__eq__(self, other)
         )
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSService."""
+        return hash((*self._entry_tuple(), self.priority, self.weight, self.port, self.server))
 
     def __repr__(self) -> str:
         """String representation"""
