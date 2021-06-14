@@ -167,7 +167,7 @@ class QueryHandler:
         additionals: Set[DNSRecord] = set()
         type_ = question.type
 
-        if type_ == _TYPE_PTR:
+        if type_ in (_TYPE_PTR, _TYPE_ANY):
             self._add_pointer_answers(question.name, msg, answers, additionals)
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
