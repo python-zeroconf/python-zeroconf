@@ -178,15 +178,20 @@ class QueryHandler:
         self.registry = registry
         self.cache = cache
 
-    def _answer_service_type_enumeration_query(self) -> Set[DNSRecord]:
+    def _answer_service_type_enumeration_query(
+        self,
+        msg: DNSIncoming,
+    ) -> Set[DNSRecord]:
         """Provide an answer to a service type enumeration query.
 
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
         """
-        return set(
+        records: Set[DNSRecord] = set(
             DNSPointer(_SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype)
             for stype in self.registry.get_types()
         )
+        records -= set(dns_pointer for dns_pointer in records if dns_pointer.suppressed_by(msg))
+        return records
 
     def _add_pointer_answers(
         self, name: str, msg: DNSIncoming, answers: Set[DNSRecord], additionals: Set[DNSRecord]
@@ -244,7 +249,7 @@ class QueryHandler:
     ) -> Tuple[Set[DNSRecord], Set[DNSRecord]]:
         if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
             empty_additionals: Set[DNSRecord] = set()
-            return self._answer_service_type_enumeration_query(), empty_additionals
+            return self._answer_service_type_enumeration_query(msg), empty_additionals
 
         return self._answer_question(msg, question)
 
