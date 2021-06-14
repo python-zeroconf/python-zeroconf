@@ -165,8 +165,9 @@ class QueryHandler:
         if unicast_answers or unicast_additionals:
             unicast_additionals -= unicast_answers
             unicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=msg.id)
-            for question in msg.questions:
-                unicast_out.add_question(question)
+            if unicast_source:
+                for question in msg.questions:
+                    unicast_out.add_question(question)
             self._add_answers_to_outgoing(unicast_out, unicast_answers, unicast_additionals)
 
         if multicast_answers or multicast_additionals:
