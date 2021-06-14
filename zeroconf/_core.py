@@ -57,6 +57,7 @@ from .const import (
     _CACHE_CLEANUP_INTERVAL,
     _CHECK_TIME,
     _CLASS_IN,
+    _CLASS_UNIQUE,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -430,7 +431,15 @@ class Zeroconf(QuietLogger):
     def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:  # pylint: disable=no-self-use
         """Generate a query to lookup a service."""
         out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
-        out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-8.1
+        # Because of the mDNS multicast rate-limiting
+        # rules, the probes SHOULD be sent as "QU" questions with the unicast-
+        # response bit set, to allow a defending host to respond immediately
+        # via unicast, instead of potentially having to wait before replying
+        # via multicast.
+        #
+        # _CLASS_UNIQUE is the "QU" bit
+        out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN | _CLASS_UNIQUE))
         out.add_authorative_answer(info.dns_pointer())
         return out
 

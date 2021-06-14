@@ -271,3 +271,18 @@ def test_notify_listeners():
     assert not notify_called
 
     zc.close()
+
+
+def test_generate_service_query_set_qu_bit():
+    """Test generate_service_query sets the QU bit."""
+
+    zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+    desc = {'path': '/~paulsm/'}
+    type_ = "._hap._tcp.local."
+    registration_name = "this-host-is-not-used._hap._tcp.local."
+    info = r.ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    out = zeroconf_registrar.generate_service_query(info)
+    assert out.questions[0].unicast is True
+    zeroconf_registrar.close()
