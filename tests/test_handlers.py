@@ -15,7 +15,7 @@ import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
 
-from . import _clear_cache
+from . import _clear_cache, _inject_response
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -227,7 +227,19 @@ def test_ptr_optimization():
     # register
     zc.register_service(info)
 
-    # query
+    # Verify we won't respond for 1s with the same multicast
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is None
+
+    # Clear the cache to allow responding again
+    _clear_cache(zc)
+
+    # Verify we will now respond
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
@@ -320,6 +332,7 @@ def test_unicast_response():
     )
     # register
     zc.register_service(info)
+    _clear_cache(zc)
 
     # query
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
@@ -329,8 +342,8 @@ def test_unicast_response():
         assert out.id == query.id
         has_srv = has_txt = has_a = False
         nbr_additionals = 0
-        nbr_answers = len(multicast_out.answers)
-        nbr_authorities = len(multicast_out.authorities)
+        nbr_answers = len(out.answers)
+        nbr_authorities = len(out.authorities)
         for answer in out.additionals:
             nbr_additionals += 1
             if answer.type == const._TYPE_SRV:
@@ -360,7 +373,7 @@ def test_known_answer_supression():
     zc.register_service(info)
 
     now = current_time_millis()
-
+    _clear_cache(zc)
     # Test PTR supression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
