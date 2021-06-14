@@ -22,7 +22,7 @@
 
 import enum
 import itertools
-from typing import Dict, List, Literal, Optional, Set, TYPE_CHECKING, Tuple, Union
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 from ._cache import DNSCache
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
@@ -53,17 +53,13 @@ if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
     from ._core import Zeroconf  # pylint: disable=cyclic-import
 
-
 @enum.unique
 class RecordSetKeys(enum.Enum):
     Answers = 1
     Additionals = 2
 
-
 # Switch to a TypedDict once Python 3.8 is the minimum supported version
-_RecordSetKeysType = Union[Literal[RecordSetKeys.Answers], Literal[RecordSetKeys.Additionals]]
-_RecordSetType = Dict[_RecordSetKeysType, Set[DNSRecord]]
-
+_RecordSetType = Dict[RecordSetKeys, Set[DNSRecord]]
 
 def _construct_outgoing_from_record_set(
     rrset: _RecordSetType, multicast: bool, id_: int
@@ -106,9 +102,7 @@ class _QueryResponse:
         self._add_qu_question_response_to_target(answers, RecordSetKeys.Answers)
         self._add_qu_question_response_to_target(additionals, RecordSetKeys.Additionals)
 
-    def _add_qu_question_response_to_target(
-        self, target: Set[DNSRecord], answer_type: _RecordSetKeysType
-    ) -> None:
+    def _add_qu_question_response_to_target(self, target: Set[DNSRecord], answer_type: RecordSetKeys) -> None:
         for record in target:
             if self._is_probe:
                 self._ucast[answer_type].add(record)
