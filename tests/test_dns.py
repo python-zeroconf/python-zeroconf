@@ -326,6 +326,44 @@ class PacketGeneration(unittest.TestCase):
         parsed2 = r.DNSIncoming(packets[1])
         assert len(parsed2.questions) == 15
 
+    def test_many_questions_with_many_known_answers(self):
+        """Test many questions and known answers get seperated into multiple packets."""
+        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+        questions = []
+        for i in range(30):
+            question = r.DNSQuestion(f"_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+            generated.add_question(question)
+            questions.append(question)
+        assert len(generated.questions) == 30
+        now = current_time_millis()
+        for i in range(200):
+            known_answer = r.DNSPointer(
+                "myservice{i}_tcp._tcp.local.",
+                const._TYPE_PTR,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_OTHER_TTL,
+                '123.local.',
+            )
+            generated.add_answer_at_time(known_answer, now)
+        packets = generated.packets()
+        assert len(packets) == 3
+        assert len(packets[0]) <= const._MAX_MSG_TYPICAL
+        assert len(packets[1]) <= const._MAX_MSG_TYPICAL
+        assert len(packets[2]) <= const._MAX_MSG_TYPICAL
+
+        parsed1 = r.DNSIncoming(packets[0])
+        assert len(parsed1.questions) == 30
+        assert len(parsed1.answers) == 88
+        assert parsed1.flags & const._FLAGS_TC == const._FLAGS_TC
+        parsed2 = r.DNSIncoming(packets[1])
+        assert len(parsed2.questions) == 0
+        assert len(parsed2.answers) == 101
+        assert parsed2.flags & const._FLAGS_TC == const._FLAGS_TC
+        parsed3 = r.DNSIncoming(packets[2])
+        assert len(parsed3.questions) == 0
+        assert len(parsed3.answers) == 11
+        assert parsed3.flags & const._FLAGS_TC == 0
+
     def test_only_one_answer_can_by_large(self):
         """Test that only the first answer in each packet can be large.
 
