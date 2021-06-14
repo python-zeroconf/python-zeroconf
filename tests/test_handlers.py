@@ -15,7 +15,7 @@ import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf
 from zeroconf import const
 
-from . import _clear_cache
+from . import _clear_cache, _inject_response
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -289,8 +289,8 @@ def test_unicast_response():
         assert out.id == query.id
         has_srv = has_txt = has_a = False
         nbr_additionals = 0
-        nbr_answers = len(multicast_out.answers)
-        nbr_authorities = len(multicast_out.authorities)
+        nbr_answers = len(out.answers)
+        nbr_authorities = len(out.authorities)
         for answer in out.additionals:
             nbr_additionals += 1
             if answer.type == const._TYPE_SRV:
@@ -301,6 +301,73 @@ def test_unicast_response():
                 has_a = True
         assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
         assert has_srv and has_txt and has_a
+
+    # unregister
+    zc.unregister_service(info)
+    zc.close()
+
+
+def test_qu_response():
+    """Ensure we send a unicast response when the source port is not the MDNS port."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # service definition
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    # register
+    zc.register_service(info)
+
+    def _validate_complete_response(query, out):
+        assert out.id == query.id
+        has_srv = has_txt = has_a = False
+        nbr_additionals = 0
+        nbr_answers = len(out.answers)
+        nbr_authorities = len(out.authorities)
+        for answer in out.additionals:
+            nbr_additionals += 1
+            if answer.type == const._TYPE_SRV:
+                has_srv = True
+            elif answer.type == const._TYPE_TXT:
+                has_txt = True
+            elif answer.type == const._TYPE_A:
+                has_a = True
+        assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
+        assert has_srv and has_txt and has_a
+
+    # With QU should respond to only unicast when the answer has been recently multicast
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unique = True  # Set the QU bit
+    query.add_question(question)
+    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    assert multicast_out is None
+    _validate_complete_response(query, unicast_out)
+
+    _clear_cache(zc)
+    # With QU should respond to both unicast and multicast if the answer is not in the cache
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unique = True  # Set the QU bit
+    query.add_question(question)
+    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    _validate_complete_response(query, unicast_out)
+    _validate_complete_response(query, multicast_out)
+
+    _inject_response(zc, r.DNSIncoming(multicast_out.packets()[0]))
+    # With the cache repopulated; should respond to only unicast when the answer has been recently multicast
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unique = True  # Set the QU bit
+    query.add_question(question)
+    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    assert multicast_out is None
+    _validate_complete_response(query, unicast_out)
 
     # unregister
     zc.unregister_service(info)

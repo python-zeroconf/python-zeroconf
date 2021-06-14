@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import List, Optional, Set, TYPE_CHECKING, Tuple, Union
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 from ._cache import DNSCache
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
@@ -52,38 +52,9 @@ if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
     from ._core import Zeroconf  # pylint: disable=cyclic-import
 
-
-class _QueryResponse:
-    """A precursor to a DNSOutgoing response."""
-
-    __slots__ = (
-        'answers',
-        'additionals',
-    )
-
-    def __init__(self) -> None:
-        """Build a query response."""
-        self.answers: Set[DNSRecord] = set()
-        self.additionals: Set[DNSRecord] = set()
-
-    def add_query_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
-        self.answers.update(answers)
-        self.additionals.update(additionals)
-
-    def construct_outgoing(self, multicast: bool, id_: int) -> DNSOutgoing:
-        """Add answers and additionals to a DNSOutgoing."""
-        if not self.answers and not self.additionals:
-            return None
-
-        # Suppress any additionals that are already in answers
-        self.additionals -= self.answers
-
-        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=id_)
-        for answer in self.answers:
-            out.add_answer_at_time(answer, 0)
-        for additional in self.additionals:
-            out.add_additional_answer(additional)
-        return out
+_ANSWERS = "answers"
+_ADDITIONALS = "additionals"
+_ALL_ANSWERS = (_ANSWERS, _ADDITIONALS)
 
 
 class _QueryResponsePair:
@@ -98,8 +69,8 @@ class _QueryResponsePair:
     def __init__(self, cache: DNSCache) -> None:
         """Build a query response."""
         self._cache = cache
-        self._ucast = _QueryResponse()
-        self._mcast = _QueryResponse()
+        self._ucast: Dict[str, Set[DNSRecord]] = {_ANSWERS: set(), _ADDITIONALS: set()}
+        self._mcast: Dict[str, Set[DNSRecord]] = {_ANSWERS: set(), _ADDITIONALS: set()}
 
     def add_qu_question_response(
         self,
@@ -108,44 +79,61 @@ class _QueryResponsePair:
         now: float,
         is_probe: bool,
     ) -> None:
-        for answer in answers:
-            if is_probe:
-                self._ucast.answers.add(answer)
-            if not self._has_mcast_record_recently(answer, now):
-                self._mcast.answers.add(answer)
-            elif not is_probe:
-                self._ucast.answers.add(answer)
+        self._add_qu_question_response_to_target(answers, _ANSWERS, now, is_probe)
+        self._add_qu_question_response_to_target(additionals, _ADDITIONALS, now, is_probe)
 
-        for additional in additionals:
+    def _add_qu_question_response_to_target(
+        self, target: Set[DNSRecord], key: str, now: float, is_probe: float
+    ) -> None:
+        for record in target:
             if is_probe:
-                self._ucast.additionals.add(additional)
-            if not self._has_mcast_record_recently(additional, now):
-                self._mcast.additionals.add(additional)
+                self._ucast[key].add(record)
+            if not self._has_mcast_record_recently(record, now):
+                self._mcast[key].add(record)
             elif not is_probe:
-                self._ucast.additionals.add(additional)
+                self._ucast[key].add(record)
 
     def add_ucast_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
         # Unicast source, always send back to source and mcast
-        self._ucast.add_query_response(answers, additionals)
+        self._ucast[_ANSWERS].update(answers)
+        self._ucast[_ADDITIONALS].update(additionals)
 
     def add_mcast_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
         # Standard Multicast
-        self._mcast.add_query_response(answers, additionals)
+        self._mcast[_ANSWERS].update(answers)
+        self._mcast[_ADDITIONALS].update(additionals)
+
+    def _construct_outgoing(
+        self, source: Dict[str, Set[DNSRecord]], multicast: bool, id_: int
+    ) -> DNSOutgoing:
+        """Add answers and additionals to a DNSOutgoing."""
+        if not source[_ANSWERS] and not source[_ADDITIONALS]:
+            return None
+
+        # Suppress any additionals that are already in answers
+        source[_ADDITIONALS] -= source[_ANSWERS]
+
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=id_)
+        for answer in source[_ANSWERS]:
+            out.add_answer_at_time(answer, 0)
+        for additional in source[_ADDITIONALS]:
+            out.add_additional_answer(additional)
+        return out
 
     def build_outgoing(
         self, msg: DNSIncoming, ucast_source: bool, is_probe: bool, now: float
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Build the outgoing unicast and multicast respones."""
-        ucastout = self._ucast.construct_outgoing(False, msg.id)
+        ucastout = self._construct_outgoing(self._ucast, False, msg.id)
         if ucastout and ucast_source:
             for question in msg.questions:
                 ucastout.add_question(question)
 
         if not is_probe:
-            self._suppress_mcasts_from_last_second(self._mcast.answers, now)
-            self._suppress_mcasts_from_last_second(self._mcast.additionals, now)
+            for answer_type in _ALL_ANSWERS:
+                self._suppress_mcasts_from_last_second(self._mcast[answer_type], now)
 
-        return ucastout, self._mcast.construct_outgoing(True, msg.id)
+        return ucastout, self._construct_outgoing(self._mcast, True, msg.id)
 
     def _suppress_mcasts_from_last_second(self, records: Set[DNSRecord], now: float) -> None:
         """Remove any records that were already sent in the last second."""
