@@ -228,6 +228,8 @@ class QueryHandler:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     dns_service = service.dns_service()
                     if not dns_service.suppressed_by(msg):
+                        # Add recommended additional answers according to
+                        # https://tools.ietf.org/html/rfc6763#section-12.2.
                         answers.add(service.dns_service())
                         additionals.update(service.dns_addresses())
                 if type_ in (_TYPE_TXT, _TYPE_ANY):

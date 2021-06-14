@@ -12,7 +12,7 @@ import unittest
 import unittest.mock
 
 import zeroconf as r
-from zeroconf import ServiceInfo, Zeroconf
+from zeroconf import ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
 
 from . import _clear_cache, _inject_response
@@ -403,6 +403,115 @@ def test_qu_response():
     )
     assert multicast_out is None
     _validate_complete_response(query, unicast_out)
+    # unregister
+    zc.unregister_service(info)
+    zc.close()
+
+
+def test_known_answer_supression():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_knownservice._tcp.local."
+    name = "knownname"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.register_service(info)
+
+    now = current_time_millis()
+    _clear_cache(zc)
+    # Test PTR supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is not None and multicast_out.answers
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    generated.add_answer_at_time(info.dns_pointer(), now)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    # If the answer is suppressed, the additional should be suppresed as well
+    assert not multicast_out or not multicast_out.answers
+
+    # Test A supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is not None and multicast_out.answers
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
+    generated.add_question(question)
+    for dns_address in info.dns_addresses():
+        generated.add_answer_at_time(dns_address, now)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert not multicast_out or not multicast_out.answers
+
+    # Test SRV supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(registration_name, const._TYPE_SRV, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is not None and multicast_out.answers
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(registration_name, const._TYPE_SRV, const._CLASS_IN)
+    generated.add_question(question)
+    generated.add_answer_at_time(info.dns_service(), now)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    # If the answer is suppressed, the additional should be suppresed as well
+    assert not multicast_out or not multicast_out.answers
+
+    # Test TXT supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(registration_name, const._TYPE_TXT, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is not None and multicast_out.answers
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(registration_name, const._TYPE_TXT, const._CLASS_IN)
+    generated.add_question(question)
+    generated.add_answer_at_time(info.dns_text(), now)
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert not multicast_out or not multicast_out.answers
 
     # unregister
     zc.unregister_service(info)
