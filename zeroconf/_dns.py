@@ -109,9 +109,6 @@ class DNSQuestion(DNSEntry):
 
     """A DNS question entry"""
 
-    def __init__(self, name: str, type_: int, class_: int) -> None:
-        super().__init__(name, type_, class_)
-
     def answered_by(self, rec: 'DNSRecord') -> bool:
         """Returns true if the question is answered by the record"""
         return (
