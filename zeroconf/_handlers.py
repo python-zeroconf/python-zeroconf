@@ -53,31 +53,15 @@ if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
     from ._core import Zeroconf  # pylint: disable=cyclic-import
 
+
 @enum.unique
 class RecordSetKeys(enum.Enum):
     Answers = 1
     Additionals = 2
 
+
 # Switch to a TypedDict once Python 3.8 is the minimum supported version
 _RecordSetType = Dict[RecordSetKeys, Set[DNSRecord]]
-
-def _construct_outgoing_from_record_set(
-    rrset: _RecordSetType, multicast: bool, id_: int
-) -> Optional[DNSOutgoing]:
-    """Add answers and additionals to a DNSOutgoing."""
-    if not rrset[RecordSetKeys.Answers] and not rrset[RecordSetKeys.Additionals]:
-        return None
-
-    # Suppress any additionals that are already in answers
-    rrset[RecordSetKeys.Additionals] -= rrset[RecordSetKeys.Answers]
-
-    out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=id_)
-    for answer in rrset[RecordSetKeys.Answers]:
-        out.add_answer_at_time(answer, 0)
-    for additional in rrset[RecordSetKeys.Additionals]:
-        out.add_additional_answer(additional)
-
-    return out
 
 
 class _QueryResponse:
@@ -123,7 +107,7 @@ class _QueryResponse:
 
     def build_outgoing(self) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Build the outgoing unicast and multicast respones."""
-        ucastout = _construct_outgoing_from_record_set(self._ucast, False, self._msg.id)
+        ucastout = self._construct_outgoing_from_record_set(self._ucast, False)
 
         # Adding the questions back when the source is
         # unicast (not MDNS port) is legacy behavior
@@ -136,7 +120,25 @@ class _QueryResponse:
             self._suppress_mcasts_from_last_second(self._mcast[RecordSetKeys.Answers])
             self._suppress_mcasts_from_last_second(self._mcast[RecordSetKeys.Additionals])
 
-        return ucastout, _construct_outgoing_from_record_set(self._mcast, True, self._msg.id)
+        return ucastout, self._construct_outgoing_from_record_set(self._mcast, True)
+
+    def _construct_outgoing_from_record_set(
+        self, rrset: _RecordSetType, multicast: bool
+    ) -> Optional[DNSOutgoing]:
+        """Add answers and additionals to a DNSOutgoing."""
+        if not rrset[RecordSetKeys.Answers] and not rrset[RecordSetKeys.Additionals]:
+            return None
+
+        # Suppress any additionals that are already in answers
+        rrset[RecordSetKeys.Additionals] -= rrset[RecordSetKeys.Answers]
+
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=self._msg.id)
+        for answer in rrset[RecordSetKeys.Answers]:
+            out.add_answer_at_time(answer, 0)
+        for additional in rrset[RecordSetKeys.Additionals]:
+            out.add_additional_answer(additional)
+
+        return out
 
     def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord) -> bool:
         """Check to see if a record has been mcasted recently.
