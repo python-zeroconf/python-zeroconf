@@ -100,6 +100,9 @@ class TestRegistrar(unittest.TestCase):
             1
         ]
         _process_outgoing_packet(multicast_out)
+
+        # The additonals should all be suppresed since they are all in the answers section
+        #
         assert nbr_answers == 4 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
