@@ -268,6 +268,31 @@ def test_ptr_optimization():
     zc.close()
 
 
+def test_any_query_for_ptr():
+    """Test that queries for ANY will return PTR records."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_knownservice._tcp.local."
+    name = "knownname"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
+    zc.register_service(info)
+
+    _clear_cache(zc)
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(type_, const._TYPE_ANY, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    _, multicast_out = zc.query_handler.response(r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT)
+    assert multicast_out.answers[0][0].name == type_
+    assert multicast_out.answers[0][0].alias == registration_name
+    # unregister
+    zc.unregister_service(info)
+    zc.close()
+
+
 def test_aaaa_query():
     """Test that queries for AAAA records work."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
