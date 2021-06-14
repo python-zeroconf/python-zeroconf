@@ -107,7 +107,7 @@ class _QueryResponsePair:
         for record in target:
             if is_probe:
                 self._ucast[key].add(record)
-            if not self._has_mcast_record_recently(record, now):
+            if not self._has_mcast_within_one_quarter_ttl(record, now):
                 self._mcast[key].add(record)
             elif not is_probe:
                 self._ucast[key].add(record)
@@ -141,14 +141,23 @@ class _QueryResponsePair:
 
         return ucastout, _construct_outgoing(self._mcast, True, msg.id)
 
+    def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord, now: float) -> bool:
+        """Check to see if a record has been mcasted recently.
+
+        https://datatracker.ietf.org/doc/html/rfc6762#section-5.4
+        When receiving a question with the unicast-response bit set, a
+        responder SHOULD usually respond with a unicast packet directed back
+        to the querier.  However, if the responder has not multicast that
+        record recently (within one quarter of its TTL), then the responder
+        SHOULD instead multicast the response so as to keep all the peer
+        caches up to date
+        """
+        maybe_entry = self._cache.get(record)
+        return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > now)
+
     def _suppress_mcasts_from_last_second(self, records: Set[DNSRecord], now: float) -> None:
         """Remove any records that were already sent in the last second."""
         records -= set(record for record in records if self._has_mcast_record_in_last_second(record, now))
-
-    def _has_mcast_record_recently(self, record: DNSRecord, now: float) -> bool:
-        """Check to see if a record has been mcasted recently."""
-        maybe_entry = self._cache.get(record)
-        return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > now)
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord, now: float) -> bool:
         """Remove answers that were just broadcast
