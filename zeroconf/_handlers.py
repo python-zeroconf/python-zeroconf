@@ -194,7 +194,12 @@ class QueryHandler:
         return bool(maybe_entry and now - maybe_entry.created < 1000)
 
     def _add_multicast_answers_to_outgoing(
-        self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord], is_probe: bool, now: float
+        self,
+        out: DNSOutgoing,
+        answers: Set[DNSRecord],
+        additionals: Set[DNSRecord],
+        is_probe: bool,
+        now: float,
     ) -> None:
         """Add answers and additionals to a DNSOutgoing."""
         for answer in answers:
