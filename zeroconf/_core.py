@@ -55,6 +55,7 @@ from .const import (
     _CACHE_CLEANUP_INTERVAL,
     _CHECK_TIME,
     _CLASS_IN,
+    _CLASS_UNIQUE,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -399,7 +400,15 @@ class Zeroconf(QuietLogger):
     def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:  # pylint: disable=no-self-use
         """Generate a query to lookup a service."""
         out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
-        out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-8.1
+        # Because of the mDNS multicast rate-limiting
+        # rules, the probes SHOULD be sent as "QU" questions with the unicast-
+        # response bit set, to allow a defending host to respond immediately
+        # via unicast, instead of potentially having to wait before replying
+        # via multicast.
+        #
+        # _CLASS_UNIQUE is the "QU" bit
+        out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN | _CLASS_UNIQUE))
         out.add_authorative_answer(info.dns_pointer())
         return out
 
@@ -501,14 +510,19 @@ class Zeroconf(QuietLogger):
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""
-        packets = out.packets()
-        packet_num = 0
-        for packet in packets:
-            packet_num += 1
+        for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
-            log.debug('Sending (%d bytes #%d) %r as %r...', len(packet), packet_num, out, packet)
+            log.debug(
+                'Sending to (%s, %d) (%d bytes #%d) %r as %r...',
+                addr,
+                port,
+                len(packet),
+                packet_num + 1,
+                out,
+                packet,
+            )
             for s in self._respond_sockets:
                 if self._GLOBAL_DONE:
                     return
