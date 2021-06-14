@@ -119,7 +119,7 @@ class QueryHandler:
         unicast_out: Optional[DNSOutgoing] = None
         multicast_out: Optional[DNSOutgoing] = None
 
-        is_probe = msg.num_authorities
+        is_probe = msg.num_authorities > 0
         unicast_answers: Set[DNSRecord] = set()
         unicast_additionals: Set[DNSRecord] = set()
         multicast_answers: Set[DNSRecord] = set()
@@ -184,7 +184,7 @@ class QueryHandler:
         maybe_entry = self.cache.get(record)
         return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > now)
 
-    def _has_multicast_record_in_last_second(self, record, now: float) -> bool:
+    def _has_multicast_record_in_last_second(self, record: DNSRecord, now: float) -> bool:
         """Remove answers that were just broadcast
 
         Protect the network against excessive packet flooding
