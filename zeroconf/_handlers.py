@@ -105,7 +105,7 @@ class _QueryResponsePair:
 
     def _construct_outgoing(
         self, source: Dict[str, Set[DNSRecord]], multicast: bool, id_: int
-    ) -> DNSOutgoing:
+    ) -> Optional[DNSOutgoing]:
         """Add answers and additionals to a DNSOutgoing."""
         if not source[_ANSWERS] and not source[_ADDITIONALS]:
             return None
@@ -118,6 +118,7 @@ class _QueryResponsePair:
             out.add_answer_at_time(answer, 0)
         for additional in source[_ADDITIONALS]:
             out.add_additional_answer(additional)
+
         return out
 
     def build_outgoing(
