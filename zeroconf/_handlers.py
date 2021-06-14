@@ -126,6 +126,10 @@ class _QueryResponsePair:
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Build the outgoing unicast and multicast respones."""
         ucastout = self._construct_outgoing(self._ucast, False, msg.id)
+
+        # Adding the questions back when the source is
+        # unicast (not MDNS port) is legacy behavior
+        # Is this correct?
         if ucastout and ucast_source:
             for question in msg.questions:
                 ucastout.add_question(question)
