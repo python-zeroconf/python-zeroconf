@@ -67,13 +67,11 @@ class QueryHandler:
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
         """
         return set(
-            [
-                DNSPointer(_SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype)
-                for stype in self.registry.get_types()
-            ]
+            DNSPointer(_SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype)
+            for stype in self.registry.get_types()
         )
 
-    def _answer_question(
+    def _answer_question(  # pylint: disable=too-many-branches
         self, msg: DNSIncoming, question: DNSQuestion
     ) -> Tuple[Set[DNSRecord], Set[DNSRecord]]:
         answers: Set[DNSRecord] = set()
@@ -112,7 +110,7 @@ class QueryHandler:
 
         return answers, additionals
 
-    def response(  # pylint: disable=unused-argument
+    def response(  # pylint: disable=unused-argument, too-many-branches, too-many-locals
         self, msg: DNSIncoming, addr: Optional[str], port: int
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
@@ -209,7 +207,7 @@ class QueryHandler:
             if is_probe or not self._has_multicast_record_in_last_second(additional, now):
                 out.add_additional_answer(additional)
 
-    def _add_unicast_answers_to_outgoing(
+    def _add_unicast_answers_to_outgoing(  # pylint: disable=no-self-use
         self, out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord]
     ) -> None:
         """Add answers and additionals to a DNSOutgoing."""
