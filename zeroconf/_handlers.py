@@ -249,20 +249,20 @@ class QueryHandler:
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
         ucast_source = port != _MDNS_PORT
-        response_pair = _QueryResponse(self.cache, msg, ucast_source)
+        query_response = _QueryResponse(self.cache, msg, ucast_source)
 
         for question in msg.questions:
             all_answers = self._answer_any_question(msg, question)
             if not ucast_source and question.unicast:
-                response_pair.add_qu_question_response(*all_answers)
+                query_response.add_qu_question_response(*all_answers)
             else:
                 if ucast_source:
-                    response_pair.add_ucast_question_response(*all_answers)
+                    query_response.add_ucast_question_response(*all_answers)
                 # We always multicast as well even if its a unicast
                 # source as long as we haven't done it recently (75% of ttl)
-                response_pair.add_mcast_question_response(*all_answers)
+                query_response.add_mcast_question_response(*all_answers)
 
-        return response_pair.build_outgoing()
+        return query_response.build_outgoing()
 
 
 class RecordManager:
