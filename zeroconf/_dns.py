@@ -537,25 +537,25 @@ class DNSOutgoing(DNSMessage):
 
     """Object representation of an outgoing packet"""
 
-    def __init__(self, flags: int, multicast: bool = True) -> None:
+    def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:
         super().__init__(flags)
         self.finished = False
-        self.id = 0
+        self.id = id_
         self.multicast = multicast
-        self.packets_data = []  # type: List[bytes]
+        self.packets_data: List[bytes] = []
 
         # these 3 are per-packet -- see also reset_for_next_packet()
-        self.names = {}  # type: Dict[str, int]
-        self.data = []  # type: List[bytes]
-        self.size = 12
-        self.allow_long = True
+        self.names: Dict[str, int] = {}
+        self.data: List[bytes] = []
+        self.size: int = 12
+        self.allow_long: bool = True
 
         self.state = self.State.init
 
-        self.questions = []  # type: List[DNSQuestion]
-        self.answers = []  # type: List[Tuple[DNSRecord, float]]
-        self.authorities = []  # type: List[DNSPointer]
-        self.additionals = []  # type: List[DNSRecord]
+        self.questions: List[DNSQuestion] = []
+        self.answers: List[Tuple[DNSRecord, float]] = []
+        self.authorities: List[DNSPointer] = []
+        self.additionals: List[DNSRecord] = []
 
     def reset_for_next_packet(self) -> None:
         self.names = {}

@@ -57,7 +57,6 @@ from .const import (
     _CACHE_CLEANUP_INTERVAL,
     _CHECK_TIME,
     _CLASS_IN,
-    _DNS_PORT,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -222,11 +221,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.zc.handle_response(msg)
             return
 
-        if port != _MDNS_PORT:
-            # If it's not a multicast query, reply via unicast as well
-            self.zc.handle_query(msg, addr, port)
-        # Always multicast responses
-        self.zc.handle_query(msg, None, _MDNS_PORT)
+        self.zc.handle_query(msg, addr, port)
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
@@ -529,9 +524,11 @@ class Zeroconf(QuietLogger):
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        out = self.query_handler.response(msg, port != _MDNS_PORT)
-        if out:
-            self.async_send(out, addr, port)
+        unicast_out, multicast_out = self.query_handler.response(msg, addr, port)
+        if unicast_out and unicast_out.answers:
+            self.async_send(unicast_out, addr, port)
+        if multicast_out and multicast_out.answers:
+            self.async_send(multicast_out, None, _MDNS_PORT)
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet threadsafe."""
