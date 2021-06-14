@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import List, Optional, TYPE_CHECKING, Union
+from typing import List, Optional, TYPE_CHECKING, Tuple, Union
 
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from ._logger import log
@@ -33,6 +33,7 @@ from .const import (
     _DNS_OTHER_TTL,
     _FLAGS_AA,
     _FLAGS_QR_RESPONSE,
+    _MDNS_PORT,
     _SERVICE_TYPE_ENUMERATION_NAME,
     _TYPE_A,
     _TYPE_ANY,
@@ -105,30 +106,32 @@ class QueryHandler:
             for dns_address in service.dns_addresses():
                 out.add_additional_answer(dns_address)
 
-    def response(self, msg: DNSIncoming, unicast: bool) -> Optional[DNSOutgoing]:
+    def response(  # pylint: disable=unused-argument
+        self, msg: DNSIncoming, addr: Optional[str], port: int
+    ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
-        if unicast:
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False)
+        unicast_out = None
+        multicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, id_=msg.id)
+        outputs = [multicast_out]
+
+        if port != _MDNS_PORT:
+            unicast_out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=msg.id)
+            outputs.append(unicast_out)
             for question in msg.questions:
-                out.add_question(question)
-        else:
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+                unicast_out.add_question(question)
 
-        for question in msg.questions:
-            if question.type == _TYPE_PTR:
-                if question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
-                    self._answer_service_type_enumeration_query(msg, out)
-                else:
-                    self._answer_ptr_query(msg, out, question)
-                continue
+        for out in outputs:
+            for question in msg.questions:
+                if question.type == _TYPE_PTR:
+                    if question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
+                        self._answer_service_type_enumeration_query(msg, out)
+                    else:
+                        self._answer_ptr_query(msg, out, question)
+                    continue
 
-            self._answer_non_ptr_query(msg, out, question)
+                self._answer_non_ptr_query(msg, out, question)
 
-        if out is not None and out.answers:
-            out.id = msg.id
-            return out
-
-        return None
+        return unicast_out, multicast_out
 
 
 class RecordManager:

@@ -55,7 +55,6 @@ from .const import (
     _CACHE_CLEANUP_INTERVAL,
     _CHECK_TIME,
     _CLASS_IN,
-    _DNS_PORT,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -209,19 +208,11 @@ class Listener(QuietLogger):
         if not msg.valid:
             pass
 
-        elif msg.is_query():
-            # Always multicast responses
-            if port == _MDNS_PORT:
-                self.zc.handle_query(msg, None, _MDNS_PORT)
-
-            # If it's not a multicast query, reply via unicast
-            # and multicast
-            elif port == _DNS_PORT:
-                self.zc.handle_query(msg, addr, port)
-                self.zc.handle_query(msg, None, _MDNS_PORT)
-
-        else:
+        elif not msg.is_query():
             self.zc.handle_response(msg)
+            return
+
+        self.zc.handle_query(msg, addr, port)
 
 
 class Zeroconf(QuietLogger):
@@ -502,9 +493,11 @@ class Zeroconf(QuietLogger):
     def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        out = self.query_handler.response(msg, port != _MDNS_PORT)
-        if out:
-            self.send(out, addr, port)
+        unicast_out, multicast_out = self.query_handler.response(msg, addr, port)
+        if unicast_out and unicast_out.answers:
+            self.send(unicast_out, addr, port)
+        if multicast_out and multicast_out.answers:
+            self.send(multicast_out, None, _MDNS_PORT)
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
         """Sends an outgoing packet."""

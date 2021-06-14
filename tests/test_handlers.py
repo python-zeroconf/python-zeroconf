@@ -96,7 +96,9 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packets()[0]), False))
+        _process_outgoing_packet(
+            zc.query_handler.response(r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT)[1]
+        )
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -127,7 +129,9 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        _process_outgoing_packet(zc.query_handler.response(r.DNSIncoming(query.packets()[0]), False))
+        _process_outgoing_packet(
+            zc.query_handler.response(r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT)[1]
+        )
         assert nbr_answers == 4 and nbr_additionals == 4 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -216,21 +220,23 @@ def test_ptr_optimization():
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
 
-    nbr_answers = nbr_additionals = nbr_authorities = 0
-    has_srv = has_txt = has_a = False
-
     # register
     zc.register_service(info)
-    nbr_answers = nbr_additionals = nbr_authorities = 0
 
     # query
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
-    out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), False)
-    assert out is not None
-    nbr_answers += len(out.answers)
-    nbr_authorities += len(out.authorities)
-    for answer in out.additionals:
+    unicast_out, multicast_out = zc.query_handler.response(
+        r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT
+    )
+    assert multicast_out.id == query.id
+    assert unicast_out is None
+    assert multicast_out is not None
+    has_srv = has_txt = has_a = False
+    nbr_additionals = 0
+    nbr_answers = len(multicast_out.answers)
+    nbr_authorities = len(multicast_out.authorities)
+    for answer in multicast_out.additionals:
         nbr_additionals += 1
         if answer.type == const._TYPE_SRV:
             has_srv = True
@@ -240,6 +246,48 @@ def test_ptr_optimization():
             has_a = True
     assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
     assert has_srv and has_txt and has_a
+
+    # unregister
+    zc.unregister_service(info)
+    zc.close()
+
+
+def test_unicast_response():
+    """Ensure we send a unicast response when the source port is not the MDNS port."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # service definition
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    # register
+    zc.register_service(info)
+
+    # query
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
+    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    for out in (unicast_out, multicast_out):
+        assert out.id == query.id
+        has_srv = has_txt = has_a = False
+        nbr_additionals = 0
+        nbr_answers = len(multicast_out.answers)
+        nbr_authorities = len(multicast_out.authorities)
+        for answer in out.additionals:
+            nbr_additionals += 1
+            if answer.type == const._TYPE_SRV:
+                has_srv = True
+            elif answer.type == const._TYPE_TXT:
+                has_txt = True
+            elif answer.type == const._TYPE_A:
+                has_a = True
+        assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
+        assert has_srv and has_txt and has_a
 
     # unregister
     zc.unregister_service(info)
