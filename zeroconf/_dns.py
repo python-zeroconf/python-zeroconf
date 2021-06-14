@@ -781,7 +781,7 @@ class DNSOutgoing(DNSMessage):
         self.write_record_class(question)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-    def write_record_class(self, record: DNSRecord) -> None:
+    def write_record_class(self, record: Union[DNSQuestion, DNSRecord]) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
         if record.unique and self.multicast:
             self.write_short(record.class_ | _CLASS_UNIQUE)
