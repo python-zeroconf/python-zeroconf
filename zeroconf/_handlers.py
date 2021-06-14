@@ -173,7 +173,7 @@ class _QueryResponse:
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    def __init__(self, registry: ServiceRegistry, cache: DNSCache):
+    def __init__(self, registry: ServiceRegistry, cache: DNSCache) -> None:
         """Init the query handler."""
         self.registry = registry
         self.cache = cache
