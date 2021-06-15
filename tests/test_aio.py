@@ -21,6 +21,9 @@ from zeroconf._utils.time import current_time_millis
 from . import _clear_cache
 
 
+from . import _clear_cache
+
+
 @pytest.fixture(autouse=True)
 def verify_threads_ended():
     """Verify that the threads are not running after the test."""
@@ -389,9 +392,7 @@ async def test_service_info_async_request() -> None:
     assert aiosinfos[1].addresses == [socket.inet_aton("10.0.1.5")]
 
     aiosinfo = AsyncServiceInfo(type_, registration_name)
-
     _clear_cache(aiozc.zeroconf)
-
     # Generating the race condition is almost impossible
     # without patching since its a TOCTOU race
     with unittest.mock.patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
@@ -552,5 +553,8 @@ async def test_async_unregister_all_services() -> None:
     results = await asyncio.gather(*tasks)
     assert results[0] is None
     assert results[1] is None
+
+    # Verify we can call again
+    await aiozc.async_unregister_all_services()
 
     await aiozc.async_close()
