@@ -317,3 +317,32 @@ def test_invalid_packets_ignored_and_does_not_cause_loop_exception():
     time.sleep(0.2)
     zc.close()
     assert zc.cache.get(entry) is not None
+
+
+def test_goodbye_all_services():
+    """Verify generating the goodbye query does not change with time."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    out = zc.generate_unregister_all_services()
+    assert out is None
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    info = r.ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.add(info)
+    out = zc.generate_unregister_all_services()
+    assert out is not None
+    first_packet = out.packets()
+    zc.registry.add(info)
+    out2 = zc.generate_unregister_all_services()
+    assert out2 is not None
+    second_packet = out.packets()
+    assert second_packet == first_packet
+
+    # Verify the registery is empty
+    out3 = zc.generate_unregister_all_services()
+    assert out3 is None
+    assert zc.registry.get_service_infos() == []
+
+    zc.close()

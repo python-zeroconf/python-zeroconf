@@ -21,7 +21,7 @@
 """
 
 import threading
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 
 from .._exceptions import ServiceNameAlreadyRegistered
@@ -47,21 +47,21 @@ class ServiceRegistry:
 
     def add(self, info: ServiceInfo) -> None:
         """Add a new service to the registry."""
-
         with self._lock:
             self._add(info)
 
-    def remove(self, info: ServiceInfo) -> None:
+    def remove(self, info: Union[List[ServiceInfo], ServiceInfo]) -> None:
         """Remove a new service from the registry."""
+        infos = info if isinstance(info, list) else [info]
 
         with self._lock:
-            self._remove(info)
+            self._remove(infos)
 
     def update(self, info: ServiceInfo) -> None:
         """Update new service in the registry."""
 
         with self._lock:
-            self._remove(info)
+            self._remove([info])
             self._add(info)
 
     def get_service_infos(self) -> List[ServiceInfo]:
@@ -103,9 +103,10 @@ class ServiceRegistry:
         self.types.setdefault(info.type.lower(), []).append(info.key)
         self.servers.setdefault(info.server_key, []).append(info.key)
 
-    def _remove(self, info: ServiceInfo) -> None:
-        """Remove a service under the lock."""
-        old_service_info = self._services[info.key]
-        self.types[old_service_info.type.lower()].remove(info.key)
-        self.servers[old_service_info.server_key].remove(info.key)
-        del self._services[info.key]
+    def _remove(self, infos: List[ServiceInfo]) -> None:
+        """Remove a services under the lock."""
+        for info in infos:
+            old_service_info = self._services[info.key]
+            self.types[old_service_info.type.lower()].remove(info.key)
+            self.servers[old_service_info.server_key].remove(info.key)
+            del self._services[info.key]
