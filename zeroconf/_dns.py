@@ -35,6 +35,7 @@ from .const import (
     _CLASS_MASK,
     _CLASS_UNIQUE,
     _EXPIRE_FULL_TIME_PERCENT,
+    _EXPIRE_REFRESH_TIME_PERCENT,
     _EXPIRE_STALE_TIME_PERCENT,
     _FLAGS_QR_MASK,
     _FLAGS_QR_QUERY,
@@ -147,6 +148,7 @@ class DNSRecord(DNSEntry):
         self.created = current_time_millis()
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
+        self._recent_time = self.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
 
     def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
         """Abstract method"""
@@ -183,6 +185,10 @@ class DNSRecord(DNSEntry):
         """Returns true if this record is at least half way expired."""
         return self._stale_time <= now
 
+    def is_recent(self, now: float) -> bool:
+        """Returns true if the record more than one quarter of its TTL remaining."""
+        return self._recent_time > now
+
     def reset_ttl(self, other: 'DNSRecord') -> None:
         """Sets this record's TTL and created time to that of
         another record."""
@@ -190,6 +196,7 @@ class DNSRecord(DNSEntry):
         self.ttl = other.ttl
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
+        self._recent_time = self.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
 
     def write(self, out: 'DNSOutgoing') -> None:  # pylint: disable=no-self-use
         """Abstract method"""
