@@ -21,16 +21,55 @@
 """
 import asyncio
 import contextlib
+import queue
+import threading
 from types import TracebackType  # noqa # used in type hints
 from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 
 from ._core import NotifyListener, Zeroconf
+from ._dns import DNSOutgoing
 from ._exceptions import NonUniqueNameException
 from ._services import ServiceInfo, _ServiceBrowserBase, instance_name_from_service_info
 from ._utils.aio import wait_condition_or_timeout
 from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
 from ._utils.time import current_time_millis, millis_to_seconds
 from .const import _BROWSER_TIME, _CHECK_TIME, _LISTENER_TIME, _MDNS_PORT, _REGISTER_TIME, _UNREGISTER_TIME
+
+
+def _get_best_available_queue() -> queue.Queue:
+    """Create the best available queue type."""
+    if hasattr(queue, "SimpleQueue"):
+        return queue.SimpleQueue()  # type: ignore  # pylint: disable=all
+    return queue.Queue()
+
+
+class _AsyncSender(threading.Thread):
+    """A thread to handle sending DNSOutgoing for asyncio."""
+
+    def __init__(self, zc: 'Zeroconf'):
+        """Create the sender thread."""
+        super().__init__()
+        self.zc = zc
+        self.queue = _get_best_available_queue()
+        self.start()
+        self.name = "AsyncZeroconfSender"
+
+    def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
+        """Queue a send to be processed by the thread."""
+        self.queue.put((out, addr, port))
+
+    def close(self) -> None:
+        """Close the instance."""
+        self.queue.put(None)
+        self.join()
+
+    def run(self) -> None:
+        """Runner that processes sends FIFO."""
+        while True:
+            event = self.queue.get()
+            if event is None:
+                return
+            self.zc.send(*event)
 
 
 class AsyncNotifyListener(NotifyListener):
@@ -76,7 +115,6 @@ class AsyncServiceInfo(ServiceInfo):
         delay = _LISTENER_TIME
         next_ = now
         last = now + timeout
-        await aiozc.zeroconf.async_wait_for_start()
         try:
             aiozc.zeroconf.add_listener(self, None)
             while not self._is_complete:
@@ -86,7 +124,7 @@ class AsyncServiceInfo(ServiceInfo):
                     out = self.generate_request_query(aiozc.zeroconf, now)
                     if not out.questions:
                         return self.load_from_cache(aiozc.zeroconf)
-                    aiozc.zeroconf.async_send(out)
+                    aiozc.sender.send(out)
                     next_ = now + delay
                     delay *= 2
 
@@ -142,7 +180,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
 
             out = self.generate_ready_queries()
             if out:
-                self.aiozc.zeroconf.async_send(out, addr=self.addr, port=self.port)
+                self.aiozc.sender.send(out, addr=self.addr, port=self.port)
 
             if not self._handlers_to_call:
                 continue
@@ -198,6 +236,7 @@ class AsyncZeroconf:
         self.async_notify = AsyncNotifyListener(self)
         self.zeroconf.add_notify_listener(self.async_notify)
         self.async_browsers: Dict[AsyncServiceListener, AsyncServiceBrowser] = {}
+        self.sender = _AsyncSender(self.zeroconf)
         self.condition = asyncio.Condition()
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
@@ -205,7 +244,7 @@ class AsyncZeroconf:
         for i in range(3):
             if i != 0:
                 await asyncio.sleep(millis_to_seconds(interval))
-            self.zeroconf.async_send(self.zeroconf.generate_service_broadcast(info, ttl))
+            self.sender.send(self.zeroconf.generate_service_broadcast(info, ttl))
 
     async def async_register_service(
         self,
@@ -222,7 +261,6 @@ class AsyncZeroconf:
         The service will be broadcast in a task. This task is returned
         and therefore can be awaited if necessary.
         """
-        await self.zeroconf.async_wait_for_start()
         await self.async_check_service(info, cooperating_responders)
         self.zeroconf.registry.add(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
@@ -236,7 +274,7 @@ class AsyncZeroconf:
         for i in range(3):
             if i != 0:
                 await asyncio.sleep(millis_to_seconds(_CHECK_TIME))
-            self.zeroconf.async_send(self.zeroconf.generate_service_query(info))
+            self.sender.send(self.zeroconf.generate_service_query(info))
             self._raise_on_name_conflict(info)
 
     def _raise_on_name_conflict(self, info: ServiceInfo) -> None:
@@ -266,13 +304,13 @@ class AsyncZeroconf:
 
     def _close(self) -> None:
         """Shutdown zeroconf and the sender."""
+        self.sender.close()
         self.zeroconf.remove_notify_listener(self.async_notify)
         self.zeroconf.close()
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        await self.zeroconf.async_wait_for_start()
         await self.async_remove_all_service_listeners()
         await self.loop.run_in_executor(None, self._close)
 
