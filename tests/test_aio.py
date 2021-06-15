@@ -5,6 +5,7 @@
 """Unit tests for aio.py."""
 
 import asyncio
+import logging
 import socket
 import threading
 import unittest.mock
@@ -20,8 +21,19 @@ from zeroconf._utils.time import current_time_millis
 
 from . import _clear_cache
 
+log = logging.getLogger('zeroconf')
+original_logging_level = logging.NOTSET
 
-from . import _clear_cache
+
+def setup_module():
+    global original_logging_level
+    original_logging_level = log.level
+    log.setLevel(logging.DEBUG)
+
+
+def teardown_module():
+    if original_logging_level != logging.NOTSET:
+        log.setLevel(original_logging_level)
 
 
 @pytest.fixture(autouse=True)
@@ -580,6 +592,8 @@ async def test_async_zeroconf_service_types():
     )
     task = await zeroconf_registrar.async_register_service(info)
     await task
+    # Ensure we do not clear the cache until after the last broadcast is processed
+    await asyncio.sleep(0.2)
     _clear_cache(zeroconf_registrar.zeroconf)
     try:
         service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=['127.0.0.1'], timeout=0.5)
