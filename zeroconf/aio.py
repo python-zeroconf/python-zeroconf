@@ -264,17 +264,14 @@ class AsyncZeroconf:
         self.zeroconf.registry.update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
-    def _close(self) -> None:
-        """Shutdown zeroconf and the sender."""
-        self.zeroconf.remove_notify_listener(self.async_notify)
-        self.zeroconf.close()
-
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
-        await self.zeroconf.async_wait_for_start()
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(self.zeroconf.async_wait_for_start(), timeout=1)
         await self.async_remove_all_service_listeners()
-        await self.loop.run_in_executor(None, self._close)
+        self.zeroconf.remove_notify_listener(self.async_notify)
+        await self.loop.run_in_executor(None, self.zeroconf.close)
 
     async def async_get_service_info(
         self, type_: str, name: str, timeout: int = 3000

@@ -146,22 +146,31 @@ class AsyncEngine:
             self.zc.record_manager.updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
 
-    async def _async_stop_cleanup_task(self) -> None:
-        """Stop the cleanup task."""
+    async def _async_close(self) -> None:
+        """Cancel and wait for the cleanup task to finish."""
+        self._async_shutdown()
         assert self._cache_cleanup_task is not None
         self._cache_cleanup_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await self._cache_cleanup_task
         self._cache_cleanup_task = None
+        await asyncio.sleep(0)  # flush out any call soons
 
-    def close(self) -> None:
-        """Close the engine."""
+    def _async_shutdown(self) -> None:
+        """Shutdown transports and sockets."""
         for transport in itertools.chain(self.senders, self.readers):
             transport.close()
         for s in self._respond_sockets:
             s.close()
+
+    def close(self) -> None:
+        """Close from sync context."""
         assert self.loop is not None
-        asyncio.run_coroutine_threadsafe(self._async_stop_cleanup_task(), self.loop).result()
+        # Guard against Zeroconf.close() being called from the eventloop
+        if get_running_loop() == self.loop:
+            self._async_shutdown()
+            return
+        asyncio.run_coroutine_threadsafe(self._async_close(), self.loop).result()
 
 
 class AsyncListener(asyncio.Protocol, QuietLogger):
@@ -355,7 +364,8 @@ class Zeroconf(QuietLogger):
 
     def remove_notify_listener(self, listener: NotifyListener) -> None:
         """Removes a listener from the set that is currently listening."""
-        self._notify_listeners.remove(listener)
+        with contextlib.suppress(ValueError):
+            self._notify_listeners.remove(listener)
 
     def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
