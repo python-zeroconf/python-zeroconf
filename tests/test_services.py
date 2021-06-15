@@ -221,119 +221,119 @@ class TestServiceInfo(unittest.TestCase):
             last_sent = out
             send_event.set()
 
-        # monkey patch the zeroconf send
-        setattr(zc, "send", send)
+        # patch the zeroconf send
+        with unittest.mock.patch.object(zc, "send", send):
 
-        def mock_incoming_msg(records) -> r.DNSIncoming:
+            def mock_incoming_msg(records) -> r.DNSIncoming:
 
-            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+                generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
-            for record in records:
-                generated.add_answer_at_time(record, 0)
+                for record in records:
+                    generated.add_answer_at_time(record, 0)
 
-            return r.DNSIncoming(generated.packets()[0])
+                return r.DNSIncoming(generated.packets()[0])
 
-        def get_service_info_helper(zc, type, name):
-            nonlocal service_info
-            service_info = zc.get_service_info(type, name)
-            service_info_event.set()
+            def get_service_info_helper(zc, type, name):
+                nonlocal service_info
+                service_info = zc.get_service_info(type, name)
+                service_info_event.set()
 
-        try:
-            ttl = 120
-            helper_thread = threading.Thread(
-                target=get_service_info_helper, args=(zc, service_type, service_name)
-            )
-            helper_thread.start()
-            wait_time = 1
+            try:
+                ttl = 120
+                helper_thread = threading.Thread(
+                    target=get_service_info_helper, args=(zc, service_type, service_name)
+                )
+                helper_thread.start()
+                wait_time = 1
 
-            # Expext query for SRV, TXT, A, AAAA
-            send_event.wait(wait_time)
-            assert last_sent is not None
-            assert len(last_sent.questions) == 4
-            assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
-            assert service_info is None
+                # Expext query for SRV, TXT, A, AAAA
+                send_event.wait(wait_time)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 4
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
+                assert service_info is None
 
-            # Expext query for SRV, A, AAAA
-            last_sent = None
-            send_event.clear()
-            _inject_response(
-                zc,
-                mock_incoming_msg(
-                    [
-                        r.DNSText(
-                            service_name,
-                            const._TYPE_TXT,
-                            const._CLASS_IN | const._CLASS_UNIQUE,
-                            ttl,
-                            service_text,
-                        )
-                    ]
-                ),
-            )
-            send_event.wait(wait_time)
-            assert last_sent is not None
-            assert len(last_sent.questions) == 3
-            assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
-            assert service_info is None
+                # Expext query for SRV, A, AAAA
+                last_sent = None
+                send_event.clear()
+                _inject_response(
+                    zc,
+                    mock_incoming_msg(
+                        [
+                            r.DNSText(
+                                service_name,
+                                const._TYPE_TXT,
+                                const._CLASS_IN | const._CLASS_UNIQUE,
+                                ttl,
+                                service_text,
+                            )
+                        ]
+                    ),
+                )
+                send_event.wait(wait_time)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 3
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
+                assert service_info is None
 
-            # Expext query for A, AAAA
-            last_sent = None
-            send_event.clear()
-            _inject_response(
-                zc,
-                mock_incoming_msg(
-                    [
-                        r.DNSService(
-                            service_name,
-                            const._TYPE_SRV,
-                            const._CLASS_IN | const._CLASS_UNIQUE,
-                            ttl,
-                            0,
-                            0,
-                            80,
-                            service_server,
-                        )
-                    ]
-                ),
-            )
-            send_event.wait(wait_time)
-            assert last_sent is not None
-            assert len(last_sent.questions) == 2
-            assert r.DNSQuestion(service_server, const._TYPE_A, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_server, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
-            last_sent = None
-            assert service_info is None
+                # Expext query for A, AAAA
+                last_sent = None
+                send_event.clear()
+                _inject_response(
+                    zc,
+                    mock_incoming_msg(
+                        [
+                            r.DNSService(
+                                service_name,
+                                const._TYPE_SRV,
+                                const._CLASS_IN | const._CLASS_UNIQUE,
+                                ttl,
+                                0,
+                                0,
+                                80,
+                                service_server,
+                            )
+                        ]
+                    ),
+                )
+                send_event.wait(wait_time)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 2
+                assert r.DNSQuestion(service_server, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_server, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
+                last_sent = None
+                assert service_info is None
 
-            # Expext no further queries
-            last_sent = None
-            send_event.clear()
-            _inject_response(
-                zc,
-                mock_incoming_msg(
-                    [
-                        r.DNSAddress(
-                            service_server,
-                            const._TYPE_A,
-                            const._CLASS_IN | const._CLASS_UNIQUE,
-                            ttl,
-                            socket.inet_pton(socket.AF_INET, service_address),
-                        )
-                    ]
-                ),
-            )
-            send_event.wait(wait_time)
-            assert last_sent is None
-            assert service_info is not None
+                # Expext no further queries
+                last_sent = None
+                send_event.clear()
+                _inject_response(
+                    zc,
+                    mock_incoming_msg(
+                        [
+                            r.DNSAddress(
+                                service_server,
+                                const._TYPE_A,
+                                const._CLASS_IN | const._CLASS_UNIQUE,
+                                ttl,
+                                socket.inet_pton(socket.AF_INET, service_address),
+                            )
+                        ]
+                    ),
+                )
+                send_event.wait(wait_time)
+                assert last_sent is None
+                assert service_info is not None
 
-        finally:
-            helper_thread.join()
-            zc.remove_all_service_listeners()
-            zc.close()
+            finally:
+                helper_thread.join()
+                zc.remove_all_service_listeners()
+                zc.close()
 
     def test_get_info_single(self):
 
@@ -358,83 +358,83 @@ class TestServiceInfo(unittest.TestCase):
             last_sent = out
             send_event.set()
 
-        # monkey patch the zeroconf send
-        setattr(zc, "send", send)
+        # patch the zeroconf send
+        with unittest.mock.patch.object(zc, "send", send):
 
-        def mock_incoming_msg(records) -> r.DNSIncoming:
+            def mock_incoming_msg(records) -> r.DNSIncoming:
 
-            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+                generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
-            for record in records:
-                generated.add_answer_at_time(record, 0)
+                for record in records:
+                    generated.add_answer_at_time(record, 0)
 
-            return r.DNSIncoming(generated.packets()[0])
+                return r.DNSIncoming(generated.packets()[0])
 
-        def get_service_info_helper(zc, type, name):
-            nonlocal service_info
-            service_info = zc.get_service_info(type, name)
-            service_info_event.set()
+            def get_service_info_helper(zc, type, name):
+                nonlocal service_info
+                service_info = zc.get_service_info(type, name)
+                service_info_event.set()
 
-        try:
-            ttl = 120
-            helper_thread = threading.Thread(
-                target=get_service_info_helper, args=(zc, service_type, service_name)
-            )
-            helper_thread.start()
-            wait_time = 1
+            try:
+                ttl = 120
+                helper_thread = threading.Thread(
+                    target=get_service_info_helper, args=(zc, service_type, service_name)
+                )
+                helper_thread.start()
+                wait_time = 1
 
-            # Expext query for SRV, TXT, A, AAAA
-            send_event.wait(wait_time)
-            assert last_sent is not None
-            assert len(last_sent.questions) == 4
-            assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
-            assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
-            assert service_info is None
+                # Expext query for SRV, TXT, A, AAAA
+                send_event.wait(wait_time)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 4
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
+                assert service_info is None
 
-            # Expext no further queries
-            last_sent = None
-            send_event.clear()
-            _inject_response(
-                zc,
-                mock_incoming_msg(
-                    [
-                        r.DNSText(
-                            service_name,
-                            const._TYPE_TXT,
-                            const._CLASS_IN | const._CLASS_UNIQUE,
-                            ttl,
-                            service_text,
-                        ),
-                        r.DNSService(
-                            service_name,
-                            const._TYPE_SRV,
-                            const._CLASS_IN | const._CLASS_UNIQUE,
-                            ttl,
-                            0,
-                            0,
-                            80,
-                            service_server,
-                        ),
-                        r.DNSAddress(
-                            service_server,
-                            const._TYPE_A,
-                            const._CLASS_IN | const._CLASS_UNIQUE,
-                            ttl,
-                            socket.inet_pton(socket.AF_INET, service_address),
-                        ),
-                    ]
-                ),
-            )
-            send_event.wait(wait_time)
-            assert last_sent is None
-            assert service_info is not None
+                # Expext no further queries
+                last_sent = None
+                send_event.clear()
+                _inject_response(
+                    zc,
+                    mock_incoming_msg(
+                        [
+                            r.DNSText(
+                                service_name,
+                                const._TYPE_TXT,
+                                const._CLASS_IN | const._CLASS_UNIQUE,
+                                ttl,
+                                service_text,
+                            ),
+                            r.DNSService(
+                                service_name,
+                                const._TYPE_SRV,
+                                const._CLASS_IN | const._CLASS_UNIQUE,
+                                ttl,
+                                0,
+                                0,
+                                80,
+                                service_server,
+                            ),
+                            r.DNSAddress(
+                                service_server,
+                                const._TYPE_A,
+                                const._CLASS_IN | const._CLASS_UNIQUE,
+                                ttl,
+                                socket.inet_pton(socket.AF_INET, service_address),
+                            ),
+                        ]
+                    ),
+                )
+                send_event.wait(wait_time)
+                assert last_sent is None
+                assert service_info is not None
 
-        finally:
-            helper_thread.join()
-            zc.remove_all_service_listeners()
-            zc.close()
+            finally:
+                helper_thread.join()
+                zc.remove_all_service_listeners()
+                zc.close()
 
 
 class TestServiceBrowserMultipleTypes(unittest.TestCase):
@@ -953,7 +953,7 @@ def test_backoff():
     type_ = "_http._tcp.local."
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
-    # we are going to monkey patch the zeroconf send to check query transmission
+    # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.send
 
     time_offset = 0.0
@@ -969,55 +969,52 @@ def test_backoff():
         got_query.set()
         old_send(out, addr=addr, port=port)
 
-    # monkey patch the zeroconf send
-    setattr(zeroconf_browser, "send", send)
+    # patch the zeroconf send
+    # patch the zeroconf current_time_millis
+    # patch the backoff limit to prevent test running forever
+    with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
+        s, "current_time_millis", current_time_millis
+    ), unittest.mock.patch.object(s, "_BROWSER_BACKOFF_LIMIT", 10):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
 
-    # monkey patch the zeroconf current_time_millis
-    s.current_time_millis = current_time_millis
+        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
-    # monkey patch the backoff limit to prevent test running forever
-    s._BROWSER_BACKOFF_LIMIT = 10  # seconds
-
-    # dummy service callback
-    def on_service_state_change(zeroconf, service_type, state_change, name):
-        pass
-
-    browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-
-    try:
-        # Test that queries are sent at increasing intervals
-        sleep_count = 0
-        next_query_interval = 0.0
-        expected_query_time = 0.0
-        while True:
-            sleep_count += 1
-            for _ in range(2):
-                # If the browser thread is starting up
-                # its possible we notify before the initial sleep
-                # which means the test will fail so we need to d
-                # this twice to eliminate the race condition
-                zeroconf_browser.notify_all()
-                got_query.wait(0.05)
-            if time_offset == expected_query_time:
-                assert got_query.is_set()
-                got_query.clear()
-                if next_query_interval == s._BROWSER_BACKOFF_LIMIT:
-                    # Only need to test up to the point where we've seen a query
-                    # after the backoff limit has been hit
-                    break
-                elif next_query_interval == 0:
-                    next_query_interval = initial_query_interval
-                    expected_query_time = initial_query_interval
+        try:
+            # Test that queries are sent at increasing intervals
+            sleep_count = 0
+            next_query_interval = 0.0
+            expected_query_time = 0.0
+            while True:
+                sleep_count += 1
+                for _ in range(2):
+                    # If the browser thread is starting up
+                    # its possible we notify before the initial sleep
+                    # which means the test will fail so we need to d
+                    # this twice to eliminate the race condition
+                    zeroconf_browser.notify_all()
+                    got_query.wait(0.05)
+                if time_offset == expected_query_time:
+                    assert got_query.is_set()
+                    got_query.clear()
+                    if next_query_interval == s._BROWSER_BACKOFF_LIMIT:
+                        # Only need to test up to the point where we've seen a query
+                        # after the backoff limit has been hit
+                        break
+                    elif next_query_interval == 0:
+                        next_query_interval = initial_query_interval
+                        expected_query_time = initial_query_interval
+                    else:
+                        next_query_interval = min(2 * next_query_interval, s._BROWSER_BACKOFF_LIMIT)
+                        expected_query_time += next_query_interval
                 else:
-                    next_query_interval = min(2 * next_query_interval, s._BROWSER_BACKOFF_LIMIT)
-                    expected_query_time += next_query_interval
-            else:
-                assert not got_query.is_set()
-            time_offset += initial_query_interval
+                    assert not got_query.is_set()
+                time_offset += initial_query_interval
 
-    finally:
-        browser.cancel()
-        zeroconf_browser.close()
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
 
 
 def test_integration():
@@ -1038,7 +1035,7 @@ def test_integration():
 
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
-    # we are going to monkey patch the zeroconf send to check packet sizes
+    # we are going to patch the zeroconf send to check packet sizes
     old_send = zeroconf_browser.send
 
     time_offset = 0.0
@@ -1063,54 +1060,51 @@ def test_integration():
         got_query.set()
         old_send(out, addr=addr, port=port)
 
-    # monkey patch the zeroconf send
-    setattr(zeroconf_browser, "send", send)
+    # patch the zeroconf send
+    # patch the zeroconf current_time_millis
+    # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
+    with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
+        s, "current_time_millis", current_time_millis
+    ), unittest.mock.patch.object(s, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
+        service_added = Event()
+        service_removed = Event()
 
-    # monkey patch the zeroconf current_time_millis
-    s.current_time_millis = current_time_millis
+        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
-    # monkey patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
-    s._BROWSER_BACKOFF_LIMIT = int(expected_ttl / 4)
+        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        )
+        zeroconf_registrar.register_service(info)
 
-    service_added = Event()
-    service_removed = Event()
+        try:
+            service_added.wait(1)
+            assert service_added.is_set()
 
-    browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+            # Test that we receive queries containing answers only if the remaining TTL
+            # is greater than half the original TTL
+            sleep_count = 0
+            test_iterations = 50
+            while nbr_answers < test_iterations:
+                # Increase simulated time shift by 1/4 of the TTL in seconds
+                time_offset += expected_ttl / 4
+                zeroconf_browser.notify_all()
+                sleep_count += 1
+                got_query.wait(0.1)
+                got_query.clear()
+                # Prevent the test running indefinitely in an error condition
+                assert sleep_count < test_iterations * 4
+            assert not unexpected_ttl.is_set()
 
-    zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
-    desc = {'path': '/~paulsm/'}
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
-    )
-    zeroconf_registrar.register_service(info)
+            # Don't remove service, allow close() to cleanup
 
-    try:
-        service_added.wait(1)
-        assert service_added.is_set()
-
-        # Test that we receive queries containing answers only if the remaining TTL
-        # is greater than half the original TTL
-        sleep_count = 0
-        test_iterations = 50
-        while nbr_answers < test_iterations:
-            # Increase simulated time shift by 1/4 of the TTL in seconds
-            time_offset += expected_ttl / 4
-            zeroconf_browser.notify_all()
-            sleep_count += 1
-            got_query.wait(0.1)
-            got_query.clear()
-            # Prevent the test running indefinitely in an error condition
-            assert sleep_count < test_iterations * 4
-        assert not unexpected_ttl.is_set()
-
-        # Don't remove service, allow close() to cleanup
-
-    finally:
-        zeroconf_registrar.close()
-        service_removed.wait(1)
-        assert service_removed.is_set()
-        browser.cancel()
-        zeroconf_browser.close()
+        finally:
+            zeroconf_registrar.close()
+            service_removed.wait(1)
+            assert service_removed.is_set()
+            browser.cancel()
+            zeroconf_browser.close()
 
 
 def test_legacy_record_update_listener():
