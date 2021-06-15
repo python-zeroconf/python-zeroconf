@@ -248,12 +248,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         ):
             self._pending_handlers[key] = state_change
 
-    def _process_record_update(
-        self,
-        zc: 'Zeroconf',
-        now: float,
-        record: DNSRecord,
-    ) -> None:
+    def _process_record_update(self, now: float, record: DNSRecord) -> None:
         """Process a single record update from a batch of updates."""
         expired = record.is_expired(now)
 
@@ -281,14 +276,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
             return
 
         if isinstance(record, DNSAddress):
-            # Only trigger an updated event if the address is new
-            if record.address in set(
-                service.address
-                for service in zc.cache.entries_with_name(record.name)
-                if isinstance(service, DNSAddress)
-            ):
-                return
-
             # Iterate through the DNSCache and callback any services that use this address
             for service in self.zc.cache.entries_with_server(record.name):
                 type_ = self._record_matching_type(service)
@@ -310,7 +297,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         Ensures that there is are no unecessary duplicates in the list.
         """
         for record in records:
-            self._process_record_update(zc, now, record)
+            self._process_record_update(now, record)
 
     def update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
