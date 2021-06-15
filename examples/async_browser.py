@@ -11,8 +11,7 @@ import logging
 from typing import Any, Optional, cast
 
 from zeroconf import IPVersion, ServiceStateChange
-from zeroconf.aio import (AsyncServiceBrowser, AsyncZeroconf,
-                          AsyncZeroconfServiceTypes)
+from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf, AsyncZeroconfServiceTypes
 
 
 def async_on_service_state_change(
