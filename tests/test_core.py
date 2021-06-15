@@ -346,3 +346,28 @@ def test_goodbye_all_services():
     assert zc.registry.get_service_infos() == []
 
     zc.close()
+
+
+def test_register_service_with_custom_ttl():
+    """Test a registering a service with a custom ttl."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # start a browser
+    type_ = "_homeassistant._tcp.local."
+    name = "MyTestHome"
+    info_service = r.ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {'path': '/~paulsm/'},
+        "ash-90.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+
+    zc.register_service(info_service, ttl=30)
+    assert zc.cache.get(info_service.dns_pointer()).ttl == 30
+    zc.close()
