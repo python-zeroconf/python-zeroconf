@@ -184,8 +184,21 @@ class Names(unittest.TestCase):
         # verify no name conflict https://tools.ietf.org/html/rfc6762#section-6.6
         zc.register_service(info_service, cooperating_responders=True)
 
-        zc.register_service(info_service, allow_name_change=True)
-        assert info_service.name.split('.')[0] == '%s-%d' % (name, number_hosts + 1)
+        # Create a new object since allow_name_change will mutate the
+        # original object and then we will have the wrong service
+        # in the registry
+        info_service2 = ServiceInfo(
+            type_,
+            '%s.%s' % (name, type_),
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        zc.register_service(info_service2, allow_name_change=True)
+        assert info_service2.name.split('.')[0] == '%s-%d' % (name, number_hosts + 1)
 
     def generate_many_hosts(self, zc, type_, name, number_hosts):
         records_per_server = 2

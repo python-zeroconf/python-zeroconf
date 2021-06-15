@@ -466,7 +466,7 @@ class ServiceInfo(RecordUpdateListener):
         if not type_.endswith(service_type_name(name, strict=False)):
             raise BadTypeInNameException
         self.type = type_
-        self.name = name
+        self._name = name
         self.key = name.lower()
         if addresses is not None:
             self._addresses = addresses
@@ -493,6 +493,17 @@ class ServiceInfo(RecordUpdateListener):
         self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
+
+    @property
+    def name(self) -> str:
+        """The name of the service."""
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> None:
+        """Replace the the name and reset the key."""
+        self._name = name
+        self.key = name.lower()
 
     @property
     def addresses(self) -> List[bytes]:
