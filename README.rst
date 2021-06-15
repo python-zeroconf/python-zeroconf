@@ -184,6 +184,11 @@ Changelog
   should not be used since it will end up missing data, it has
   been removed
 
+* BREAKING CHANGE: Mark DNSOutgoing write functions as protected (#633) @bdraco
+
+  These functions are not intended to be used by external
+  callers and the API is not likely to be stable in the future
+
 * TRAFFIC REDUCTION: Add support for handling QU questions (#621) @bdraco
 
   Implements RFC 6762 sec 5.4:
@@ -213,6 +218,8 @@ Changelog
   The above query will now see a response
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
+
+* Return early in the shutdown/close process (#632) @bdraco
 
 * Remove unreachable cache check for DNSAddresses (#629) @bdraco
 
