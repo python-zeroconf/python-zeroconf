@@ -24,6 +24,8 @@ import contextlib
 from types import TracebackType  # noqa # used in type hints
 from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 
+from zeroconf import DNSOutgoing
+
 from ._core import NotifyListener, Zeroconf
 from ._exceptions import NonUniqueNameException
 from ._services import ServiceInfo, _ServiceBrowserBase, instance_name_from_service_info
@@ -226,6 +228,21 @@ class AsyncZeroconf:
         await self.async_check_service(info, cooperating_responders)
         self.zeroconf.registry.add(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+
+    async def async_unregister_all_services(self) -> None:
+        """Unregister all registered services.
+
+        Unlike async_register_service and async_unregister_service, this
+        method does not return a future and is always expected to be
+        awaited since its only called at shutdown.
+        """
+        out = self.zeroconf.generate_unregister_all_services()
+        if not out:
+            return
+        for i in range(3):
+            if i != 0:
+                await asyncio.sleep(millis_to_seconds(_UNREGISTER_TIME))
+            self.zeroconf.async_send(out)
 
     async def async_check_service(self, info: ServiceInfo, cooperating_responders: bool = False) -> None:
         """Checks the network for a unique service name."""

@@ -476,10 +476,24 @@ class Zeroconf(QuietLogger):
         self.registry.remove(info)
         self._broadcast_service(info, _UNREGISTER_TIME, 0)
 
-    def unregister_all_services(self) -> None:
-        """Unregister all registered services."""
+    def generate_unregister_all_services(self) -> None:
+        """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
         service_infos = self.registry.get_service_infos()
         if not service_infos:
+            return
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+        for info in service_infos:
+            self._add_broadcast_answer(out, info, 0)
+        for service_info in service_infos:
+            self.registry.remove(service_info)
+        return out
+
+    def unregister_all_services(self) -> None:
+        """Unregister all registered services."""
+        # Goodbye packets
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
+        out = self.generate_unregister_all_services()
+        if not out:
             return
         now = current_time_millis()
         next_time = now
@@ -489,9 +503,6 @@ class Zeroconf(QuietLogger):
                 self.wait(next_time - now)
                 now = current_time_millis()
                 continue
-            out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-            for info in service_infos:
-                self._add_broadcast_answer(out, info, 0)
             self.send(out)
             i += 1
             next_time += _UNREGISTER_TIME
@@ -604,8 +615,8 @@ class Zeroconf(QuietLogger):
         if self._GLOBAL_DONE:
             return
         # remove service listeners
-        self.remove_all_service_listeners()
         self.unregister_all_services()
+        self.remove_all_service_listeners()
         self._GLOBAL_DONE = True
         self.engine.close()
         # shutdown the rest
