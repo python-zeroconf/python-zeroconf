@@ -4,10 +4,10 @@
 
 """Unit tests for zeroconf._services.types."""
 
+import logging
 import os
 import unittest
 import socket
-import sys
 import time
 
 import zeroconf as r
