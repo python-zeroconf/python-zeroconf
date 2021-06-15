@@ -86,18 +86,13 @@ class ServiceRegistry:
 
     def _get_by_index(self, attr: str, key: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
-        service_infos = []
-
-        for name in getattr(self, attr).get(key.lower(), [])[:]:
-            info = self._services.get(name)
-            # Since we do not get under a lock since it would be
-            # a performance issue, its possible
-            # the service can be unregistered during the get
-            # so we must check if info is None
-            if info is not None:
-                service_infos.append(info)
-
-        return service_infos
+        # Since we do not get under a lock since it would be
+        # a performance issue, its possible
+        # the service can be unregistered during the get
+        # so we must check if info is None
+        return list(
+            filter(None, [self._services.get(name) for name in getattr(self, attr).get(key.lower(), [])[:]])
+        )
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
