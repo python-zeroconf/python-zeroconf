@@ -24,8 +24,8 @@ import asyncio
 import contextlib
 import errno
 import itertools
-import platform
 import socket
+import sys
 import threading
 from types import TracebackType  # noqa # used in type hints
 from typing import Dict, List, Optional, Tuple, Type, Union, cast
@@ -283,7 +283,7 @@ class Zeroconf(QuietLogger):
         # hook for threads
         self._GLOBAL_DONE = False
 
-        if apple_p2p and not platform.system() == 'Darwin':
+        if apple_p2p and not sys.platform == 'darwin':
             raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
 
         listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
