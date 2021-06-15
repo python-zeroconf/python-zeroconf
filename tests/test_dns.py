@@ -148,14 +148,14 @@ class TestDunder(unittest.TestCase):
         record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, 8)
         now = current_time_millis()
         assert record.is_stale(now) is False
-        assert record.is_stale(now + (8 / 4 * 1000)) is False
+        assert record.is_stale(now + (8 / 4.1 * 1000)) is False
         assert record.is_stale(now + (8 / 2 * 1000)) is True
         assert record.is_stale(now + (8 * 1000)) is True
 
     def test_dns_record_is_recent(self):
         now = current_time_millis()
         record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, 8)
-        assert record.is_recent(now + (8 / 4 * 1000)) is True
+        assert record.is_recent(now + (8 / 4.1 * 1000)) is True
         assert record.is_recent(now + (8 / 3 * 1000)) is False
         assert record.is_recent(now + (8 / 2 * 1000)) is False
         assert record.is_recent(now + (8 * 1000)) is False
