@@ -283,7 +283,7 @@ class Zeroconf(QuietLogger):
         # hook for threads
         self._GLOBAL_DONE = False
 
-        if apple_p2p and not sys.platform == 'darwin':
+        if apple_p2p and sys.platform != 'darwin':
             raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
 
         listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
