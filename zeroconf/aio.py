@@ -24,8 +24,6 @@ import contextlib
 from types import TracebackType  # noqa # used in type hints
 from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
 
-from zeroconf import DNSOutgoing
-
 from ._core import NotifyListener, Zeroconf
 from ._exceptions import NonUniqueNameException
 from ._services import ServiceInfo, _ServiceBrowserBase, instance_name_from_service_info
