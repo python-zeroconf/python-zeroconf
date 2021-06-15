@@ -5,6 +5,7 @@
 """Unit tests for zeroconf._utils.aio."""
 
 import asyncio
+import contextlib
 
 import pytest
 
@@ -20,3 +21,25 @@ async def test_get_running_loop_from_async() -> None:
 def test_get_running_loop_no_loop() -> None:
     """Test we get None when there is no loop running."""
     assert aioutils.get_running_loop() is None
+
+
+@pytest.mark.asyncio
+async def test_wait_condition_or_timeout_times_out() -> None:
+    """Test wait_condition_or_timeout will timeout."""
+    test_cond = asyncio.Condition()
+    async with test_cond:
+        await aioutils.wait_condition_or_timeout(test_cond, 0.1)
+
+    async def _hold_condition():
+        async with test_cond:
+            await test_cond.wait()
+
+    task = asyncio.ensure_future(_hold_condition())
+    await asyncio.sleep(0.1)
+
+    async with test_cond:
+        await aioutils.wait_condition_or_timeout(test_cond, 0.1)
+
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
