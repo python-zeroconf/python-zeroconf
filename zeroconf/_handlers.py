@@ -153,7 +153,7 @@ class _QueryResponse:
         caches up to date
         """
         maybe_entry = self._cache.get(record)
-        return bool(maybe_entry and maybe_entry.is_recent())
+        return bool(maybe_entry and maybe_entry.is_recent(self._now))
 
     def _suppress_mcasts_from_last_second(self, records: Set[DNSRecord]) -> None:
         """Remove any records that were already sent in the last second."""
