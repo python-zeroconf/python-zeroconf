@@ -18,6 +18,8 @@ from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException,
 from zeroconf._services import ServiceInfo, ServiceListener
 from zeroconf._utils.time import current_time_millis
 
+from . import _clear_cache
+
 
 from . import _clear_cache
 
@@ -498,3 +500,61 @@ async def test_async_context_manager() -> None:
         await task
         aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
         assert aiosinfo is not None
+
+
+@pytest.mark.asyncio
+async def test_async_unregister_all_services() -> None:
+    """Test unregistering all services."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    type_ = "_test1-srvc-type._tcp.local."
+    name = "xxxyyy"
+    name2 = "abc"
+    registration_name = "%s.%s" % (name, type_)
+    registration_name2 = "%s.%s" % (name2, type_)
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-1.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    info2 = ServiceInfo(
+        type_,
+        registration_name2,
+        80,
+        0,
+        0,
+        desc,
+        "ash-5.local.",
+        addresses=[socket.inet_aton("10.0.1.5")],
+    )
+    tasks = []
+    tasks.append(await aiozc.async_register_service(info))
+    tasks.append(await aiozc.async_register_service(info2))
+    await asyncio.gather(*tasks)
+
+    tasks = []
+    tasks.append(aiozc.async_get_service_info(type_, registration_name))
+    tasks.append(aiozc.async_get_service_info(type_, registration_name2))
+    results = await asyncio.gather(*tasks)
+    assert results[0] is not None
+    assert results[1] is not None
+
+    await aiozc.async_unregister_all_services()
+
+    tasks = []
+    tasks.append(aiozc.async_get_service_info(type_, registration_name))
+    tasks.append(aiozc.async_get_service_info(type_, registration_name2))
+    results = await asyncio.gather(*tasks)
+    assert results[0] is None
+    assert results[1] is None
+
+    # Verify we can call again
+    await aiozc.async_unregister_all_services()
+
+    await aiozc.async_close()
