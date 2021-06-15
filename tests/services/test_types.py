@@ -16,6 +16,21 @@ from zeroconf import Zeroconf, ServiceInfo, ZeroconfServiceTypes
 from .. import _clear_cache, has_working_ipv6
 
 
+log = logging.getLogger('zeroconf')
+original_logging_level = logging.NOTSET
+
+
+def setup_module():
+    global original_logging_level
+    original_logging_level = log.level
+    log.setLevel(logging.DEBUG)
+
+
+def teardown_module():
+    if original_logging_level != logging.NOTSET:
+        log.setLevel(original_logging_level)
+
+
 class ServiceTypesQuery(unittest.TestCase):
     def test_integration_with_listener(self):
 
