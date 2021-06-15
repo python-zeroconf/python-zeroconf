@@ -54,7 +54,9 @@ class AsyncRunner:
 
         services = ["_http._tcp.local.", "_hap._tcp.local."]
         if self.args.find:
-            services = list(await AsyncZeroconfServiceTypes.async_find(ip_version=ip_version))
+            services = list(
+                await AsyncZeroconfServiceTypes.async_find(aiozc=self.aiozc, ip_version=ip_version)
+            )
 
         print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
         self.aiobrowser = AsyncServiceBrowser(self.aiozc, services, handlers=[async_on_service_state_change])
