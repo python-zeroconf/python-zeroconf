@@ -37,8 +37,12 @@ async def test_wait_condition_or_timeout_times_out() -> None:
     task = asyncio.ensure_future(_hold_condition())
     await asyncio.sleep(0.1)
 
-    async with test_cond:
-        await aioutils.wait_condition_or_timeout(test_cond, 0.1)
+    async def _async_wait_or_timeout():
+        async with test_cond:
+            await aioutils.wait_condition_or_timeout(test_cond, 0.1)
+
+    # Test high lock contention
+    await asyncio.gather(*[_async_wait_or_timeout() for _ in range(100)])
 
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
