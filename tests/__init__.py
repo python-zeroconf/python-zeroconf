@@ -20,6 +20,7 @@
     USA
 """
 
+import asyncio
 import socket
 from functools import lru_cache
 
@@ -32,7 +33,12 @@ from zeroconf import DNSIncoming, Zeroconf
 
 def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:
     """Inject a DNSIncoming response."""
-    zc.handle_response(msg)
+    assert zc.loop is not None
+
+    async def _wait_for_response():
+        zc.handle_response(msg)
+
+    asyncio.run_coroutine_threadsafe(_wait_for_response(), zc.loop).result()
 
 
 @lru_cache(maxsize=None)
