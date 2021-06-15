@@ -572,7 +572,7 @@ class DNSOutgoing(DNSMessage):
         self.multicast = multicast
         self.packets_data: List[bytes] = []
 
-        # these 3 are per-packet -- see also reset_for_next_packet()
+        # these 3 are per-packet -- see also _reset_for_next_packet()
         self.names: Dict[str, int] = {}
         self.data: List[bytes] = []
         self.size: int = 12
@@ -585,7 +585,7 @@ class DNSOutgoing(DNSMessage):
         self.authorities: List[DNSPointer] = []
         self.additionals: List[DNSRecord] = []
 
-    def reset_for_next_packet(self) -> None:
+    def _reset_for_next_packet(self) -> None:
         self.names = {}
         self.data = []
         self.size = 12
@@ -686,29 +686,29 @@ class DNSOutgoing(DNSMessage):
         for cached_entry in cached_entries:
             self.add_answer_at_time(cached_entry, now)
 
-    def pack(self, format_: Union[bytes, str], value: Any) -> None:
+    def _pack(self, format_: Union[bytes, str], value: Any) -> None:
         self.data.append(struct.pack(format_, value))
         self.size += struct.calcsize(format_)
 
-    def write_byte(self, value: int) -> None:
+    def _write_byte(self, value: int) -> None:
         """Writes a single byte to the packet"""
-        self.pack(b'!c', int2byte(value))
+        self._pack(b'!c', int2byte(value))
 
-    def insert_short_at_start(self, value: int) -> None:
+    def _insert_short_at_start(self, value: int) -> None:
         """Inserts an unsigned short at the start of the packet"""
         self.data.insert(0, struct.pack(b'!H', value))
 
-    def replace_short(self, index: int, value: int) -> None:
+    def _replace_short(self, index: int, value: int) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
         self.data[index] = struct.pack(b'!H', value)
 
     def write_short(self, value: int) -> None:
         """Writes an unsigned short to the packet"""
-        self.pack(b'!H', value)
+        self._pack(b'!H', value)
 
-    def write_int(self, value: Union[float, int]) -> None:
+    def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self.pack(b'!I', int(value))
+        self._pack(b'!I', int(value))
 
     def write_string(self, value: bytes) -> None:
         """Writes a string to the packet"""
@@ -716,13 +716,13 @@ class DNSOutgoing(DNSMessage):
         self.data.append(value)
         self.size += len(value)
 
-    def write_utf(self, s: str) -> None:
+    def _write_utf(self, s: str) -> None:
         """Writes a UTF-8 string of a given length to the packet"""
         utfstr = s.encode('utf-8')
         length = len(utfstr)
         if length > 64:
             raise NamePartTooLongException
-        self.write_byte(length)
+        self._write_byte(length)
         self.write_string(utfstr)
 
     def write_character_string(self, value: bytes) -> None:
@@ -730,7 +730,7 @@ class DNSOutgoing(DNSMessage):
         length = len(value)
         if length > 256:
             raise NamePartTooLongException
-        self.write_byte(length)
+        self._write_byte(length)
         self.write_string(value)
 
     def write_name(self, name: str) -> None:
@@ -768,49 +768,45 @@ class DNSOutgoing(DNSMessage):
 
         # write the new names out.
         for part in parts[:count]:
-            self.write_utf(part)
+            self._write_utf(part)
 
         # if we wrote part of the name, create a pointer to the rest
         if count != len(name_suffices):
             # Found substring in packet, create pointer
             index = self.names[name_suffices[count]]
-            self.write_byte((index >> 8) | 0xC0)
-            self.write_byte(index & 0xFF)
+            self._write_byte((index >> 8) | 0xC0)
+            self._write_byte(index & 0xFF)
         else:
             # this is the end of a name
-            self.write_byte(0)
+            self._write_byte(0)
 
-    def write_question(self, question: DNSQuestion) -> bool:
+    def _write_question(self, question: DNSQuestion) -> bool:
         """Writes a question to the packet"""
         start_data_length, start_size = len(self.data), self.size
         self.write_name(question.name)
         self.write_short(question.type)
-        self.write_record_class(question)
+        self._write_record_class(question)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-    def write_record_class(self, record: Union[DNSQuestion, DNSRecord]) -> None:
+    def _write_record_class(self, record: Union[DNSQuestion, DNSRecord]) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
         if record.unique and self.multicast:
             self.write_short(record.class_ | _CLASS_UNIQUE)
         else:
             self.write_short(record.class_)
 
-    def write_record(self, record: DNSRecord, now: float) -> bool:
+    def _write_record(self, record: DNSRecord, now: float) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
-        the packet.  Returns True on success, or False if we did not (either
-        because the packet was already finished or because the record does
-        not fit."""
-        if self.state == self.State.finished:
-            return False
-
+        the packet.  Returns True on success, or False if we did not
+        because the packet because the record does not fit."""
         start_data_length, start_size = len(self.data), self.size
         self.write_name(record.name)
         self.write_short(record.type)
-        self.write_record_class(record)
+        self._write_record_class(record)
         if now == 0:
-            self.write_int(record.ttl)
+            self._write_int(record.ttl)
         else:
-            self.write_int(record.get_remaining_ttl(now))
+            self._write_int(record.get_remaining_ttl(now))
         index = len(self.data)
 
         self.write_short(0)  # Will get replaced with the actual size
@@ -819,7 +815,7 @@ class DNSOutgoing(DNSMessage):
         length = sum((len(d) for d in self.data[index + 1 :]))
         # Here we replace the 0 length short we wrote
         # before with the actual length
-        self.replace_short(index, length)
+        self._replace_short(index, length)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
 
     def _check_data_limit_or_rollback(self, start_data_length: int, start_size: int) -> bool:
@@ -844,7 +840,7 @@ class DNSOutgoing(DNSMessage):
     def _write_questions_from_offset(self, questions_offset: int) -> int:
         questions_written = 0
         for question in self.questions[questions_offset:]:
-            if not self.write_question(question):
+            if not self._write_question(question):
                 break
             questions_written += 1
         return questions_written
@@ -852,7 +848,7 @@ class DNSOutgoing(DNSMessage):
     def _write_answers_from_offset(self, answer_offset: int) -> int:
         answers_written = 0
         for answer, time_ in self.answers[answer_offset:]:
-            if not self.write_record(answer, time_):
+            if not self._write_record(answer, time_):
                 break
             answers_written += 1
         return answers_written
@@ -860,7 +856,7 @@ class DNSOutgoing(DNSMessage):
     def _write_authorities_from_offset(self, authority_offset: int) -> int:
         authorities_written = 0
         for authority in self.authorities[authority_offset:]:
-            if not self.write_record(authority, 0):
+            if not self._write_record(authority, 0):
                 break
             authorities_written += 1
         return authorities_written
@@ -868,7 +864,7 @@ class DNSOutgoing(DNSMessage):
     def _write_additionals_from_offset(self, additional_offset: int) -> int:
         additionals_written = 0
         for additional in self.additionals[additional_offset:]:
-            if not self.write_record(additional, 0):
+            if not self._write_record(additional, 0):
                 break
             additionals_written += 1
         return additionals_written
@@ -928,10 +924,10 @@ class DNSOutgoing(DNSMessage):
             authorities_written = self._write_authorities_from_offset(authority_offset)
             additionals_written = self._write_additionals_from_offset(additional_offset)
 
-            self.insert_short_at_start(additionals_written)
-            self.insert_short_at_start(authorities_written)
-            self.insert_short_at_start(answers_written)
-            self.insert_short_at_start(questions_written)
+            self._insert_short_at_start(additionals_written)
+            self._insert_short_at_start(authorities_written)
+            self._insert_short_at_start(answers_written)
+            self._insert_short_at_start(questions_written)
 
             questions_offset += questions_written
             answer_offset += answers_written
@@ -950,17 +946,17 @@ class DNSOutgoing(DNSMessage):
             ):
                 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
                 log.debug("Setting TC flag")
-                self.insert_short_at_start(self.flags | _FLAGS_TC)
+                self._insert_short_at_start(self.flags | _FLAGS_TC)
             else:
-                self.insert_short_at_start(self.flags)
+                self._insert_short_at_start(self.flags)
 
             if self.multicast:
-                self.insert_short_at_start(0)
+                self._insert_short_at_start(0)
             else:
-                self.insert_short_at_start(self.id)
+                self._insert_short_at_start(self.id)
 
             self.packets_data.append(b''.join(self.data))
-            self.reset_for_next_packet()
+            self._reset_for_next_packet()
 
             if (questions_written + answers_written + authorities_written + additionals_written) == 0 and (
                 len(self.questions) + len(self.answers) + len(self.authorities) + len(self.additionals)
