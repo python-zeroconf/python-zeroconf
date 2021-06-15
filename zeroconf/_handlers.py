@@ -34,7 +34,6 @@ from ._utils.time import current_time_millis
 from .const import (
     _CLASS_IN,
     _DNS_OTHER_TTL,
-    _EXPIRE_REFRESH_TIME_PERCENT,
     _FLAGS_AA,
     _FLAGS_QR_RESPONSE,
     _MDNS_PORT,
@@ -154,7 +153,7 @@ class _QueryResponse:
         caches up to date
         """
         maybe_entry = self._cache.get(record)
-        return bool(maybe_entry and maybe_entry.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT) > self._now)
+        return bool(maybe_entry and maybe_entry.is_recent())
 
     def _suppress_mcasts_from_last_second(self, records: Set[DNSRecord]) -> None:
         """Remove any records that were already sent in the last second."""
