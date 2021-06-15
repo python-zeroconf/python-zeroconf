@@ -35,7 +35,6 @@ from .const import (
     _CLASS_MASK,
     _CLASS_UNIQUE,
     _EXPIRE_FULL_TIME_PERCENT,
-    _EXPIRE_REFRESH_TIME_PERCENT,
     _EXPIRE_STALE_TIME_PERCENT,
     _FLAGS_QR_MASK,
     _FLAGS_QR_QUERY,
@@ -43,6 +42,7 @@ from .const import (
     _FLAGS_TC,
     _MAX_MSG_ABSOLUTE,
     _MAX_MSG_TYPICAL,
+    _RECENT_TIME_PERCENT,
     _TYPES,
     _TYPE_A,
     _TYPE_AAAA,
@@ -148,7 +148,7 @@ class DNSRecord(DNSEntry):
         self.created = current_time_millis()
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
-        self._recent_time = self.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+        self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
 
     def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
         """Abstract method"""
@@ -196,7 +196,7 @@ class DNSRecord(DNSEntry):
         self.ttl = other.ttl
         self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
-        self._recent_time = self.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+        self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
 
     def write(self, out: 'DNSOutgoing') -> None:  # pylint: disable=no-self-use
         """Abstract method"""
