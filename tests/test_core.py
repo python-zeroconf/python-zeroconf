@@ -9,6 +9,7 @@ import logging
 import os
 import pytest
 import socket
+import sys
 import time
 import unittest
 import unittest.mock
@@ -98,6 +99,16 @@ class Framework(unittest.TestCase):
         rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
         rv.close()
+
+    @unittest.skipIf(sys.platform != 'darwin', reason="apple_p2p only available on mac")
+    def test_launch_and_close_apple_p2p(self):
+        rv = r.Zeroconf(apple_p2p=True)
+        rv.close()
+
+    @unittest.skipIf(sys.platform == 'darwin', reason="apple_p2p available on mac")
+    def test_launch_and_close_apple_p2p(self):
+        with pytest.raises(RuntimeError):
+            r.Zeroconf(apple_p2p=True)
 
     def test_handle_response(self):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
