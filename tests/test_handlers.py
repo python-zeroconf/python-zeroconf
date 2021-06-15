@@ -593,6 +593,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     )
     zc.register_service(info)
     now = current_time_millis()
+    _clear_cache(zc)
 
     # Test PTR supression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
