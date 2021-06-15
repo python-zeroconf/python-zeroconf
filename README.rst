@@ -214,6 +214,15 @@ Changelog
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
+* Add test to ensure ServiceBrowser sees port change as an update (#625) @bdraco
+
+* Fix random test failures due to monkey patching not being undone between tests (#626) @bdraco
+
+  Switch patching to use unitest.mock.patch to ensure the patch
+  is reverted when the test is completed
+
+* Ensure zeroconf can be loaded when the system disables IPv6 (#624) @bdraco
+
 * Eliminate aio sender thread (#622) @bdraco
 
 * Replace select loop with asyncio loop (#504) @bdraco
