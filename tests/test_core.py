@@ -371,3 +371,10 @@ def test_register_service_with_custom_ttl():
     zc.register_service(info_service, ttl=30)
     assert zc.cache.get(info_service.dns_pointer()).ttl == 30
     zc.close()
+
+
+def test_get_service_info_failure_path():
+    """Verify get_service_info return None when the underlying call returns False."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    assert zc.get_service_info("_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10) is None
+    zc.close()
