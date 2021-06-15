@@ -44,11 +44,29 @@ async def test_async_basic_usage() -> None:
 
 
 @pytest.mark.asyncio
+async def test_async_close_twice() -> None:
+    """Test we can close twice."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.async_close()
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
 async def test_async_with_sync_passed_in() -> None:
     """Test we can create and close the instance when passing in a sync Zeroconf."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
     aiozc = AsyncZeroconf(zc=zc)
     assert aiozc.zeroconf is zc
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_with_sync_passed_in_closed_in_async() -> None:
+    """Test caller closes the sync version in async."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(zc=zc)
+    assert aiozc.zeroconf is zc
+    zc.close()
     await aiozc.async_close()
 
 
