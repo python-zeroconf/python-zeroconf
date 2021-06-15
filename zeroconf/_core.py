@@ -147,13 +147,14 @@ class AsyncEngine:
 
     def close(self) -> None:
         """Close the engine."""
-        if self._cache_cleanup_task:
-            self._cache_cleanup_task.cancel()
-            self._cache_cleanup_task = None
         for transport in itertools.chain(self.senders, self.readers):
             transport.close()
         for s in self._respond_sockets:
             s.close()
+        if not self._cache_cleanup_task:
+            return
+        self._cache_cleanup_task.cancel()
+        self._cache_cleanup_task = None
 
 
 class AsyncListener(asyncio.Protocol, QuietLogger):
@@ -592,10 +593,11 @@ class Zeroconf(QuietLogger):
         self.engine.close()
         # shutdown the rest
         self.notify_all()
-        if self._loop_thread:
-            assert self.loop is not None
-            self.loop.call_soon_threadsafe(self.loop.stop)
-            self._loop_thread.join()
+        if not self._loop_thread:
+            return
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.loop.stop)
+        self._loop_thread.join()
 
     def __enter__(self) -> 'Zeroconf':
         return self
