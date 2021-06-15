@@ -134,35 +134,21 @@ See examples directory for more.
 Changelog
 =========
 
-0.33.0 (Unreleased)
-===================
-
-* Breaking change: zeroconf.asyncio has been removed in favor of zeroconf.aio - TBD
-
-  The asyncio name could shadow system asyncio in some cases. If
-  zeroconf is in sys.path, this would result in loading zeroconf.asyncio
-  when system asyncio was intended.
-
 0.32.0 (Unreleased)
 ===================
 
-* Breaking change: zeroconf.asyncio has been renamed zeroconf.aio (#503) @bdraco
+* BREAKING CHANGE: zeroconf.asyncio has been renamed zeroconf.aio (#503) @bdraco
 
   The asyncio name could shadow system asyncio in some cases. If
   zeroconf is in sys.path, this would result in loading zeroconf.asyncio
   when system asyncio was intended.
 
-  An `zeroconf.asyncio` shim module has been added that imports `zeroconf.aio`
-  that was available in 0.31 to provide backwards compatibility in 0.32.0
-  This module will be removed in 0.33.0 to fix the underlying problem
-  detailed in #502
-
-* Breaking change: Update internal version check to match docs (3.6+) (#491) @bdraco
+* BREAKING CHANGE: Update internal version check to match docs (3.6+) (#491) @bdraco
 
   Python version eariler then 3.6 were likely broken with zeroconf
   already, however the version is now explictly checked.
 
-* Breaking change: RecordUpdateListener now uses update_records instead of update_record (#419) @bdraco
+* BREAKING CHANGE: RecordUpdateListener now uses update_records instead of update_record (#419) @bdraco
 
   This allows the listener to receive all the records that have
   been updated in a single transaction such as a packet or
@@ -181,7 +167,7 @@ Changelog
   has been updated as its a common pattern to call for
   ServiceInfo when a ServiceBrowser handler fires.
 
-* Breaking change: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
+* BREAKING CHANGE: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
 
   When manually creating a zeroconf.Engine object, it is no longer started automatically.
   It must manually be started by calling .start() on the created object.
@@ -189,7 +175,7 @@ Changelog
   The Engine thread is now started after all the listeners have been added to avoid a
   race condition where packets could be missed at startup.
 
-* Breaking change: Remove DNSOutgoing.packet backwards compatibility (#569) @bdraco
+* BREAKING CHANGE: Remove DNSOutgoing.packet backwards compatibility (#569) @bdraco
 
   DNSOutgoing.packet only returned a partial message when the
   DNSOutgoing contents exceeded _MAX_MSG_ABSOLUTE or _MAX_MSG_TYPICAL
@@ -197,6 +183,75 @@ Changelog
   which always returns a complete payload in #248  As packet()
   should not be used since it will end up missing data, it has
   been removed
+
+* TRAFFIC REDUCTION: Add support for handling QU questions (#621) @bdraco
+
+  Implements RFC 6762 sec 5.4:
+  Questions Requesting Unicast Responses
+  datatracker.ietf.org/doc/html/rfc6762#section-5.4
+
+* TRAFFIC REDUCTION: Protect the network against excessive packet flooding (#619) @bdraco
+
+* TRAFFIC REDUCTION: Suppress additionals when they are already in the answers section (#617) @bdraco
+
+* TRAFFIC REDUCTION: Avoid including additionals when the answer is suppressed by known-answer supression (#614) @bdraco
+
+* MAJOR BUG: Ensure matching PTR queries are returned with the ANY query (#618) @bdraco
+
+* MAJOR BUG: Fix lookup of uppercase names in registry (#597) @bdraco
+
+  If the ServiceInfo was registered with an uppercase name and the query was
+  for a lowercase name, it would not be found and vice-versa.
+
+* MAJOR BUG: Ensure unicast responses can be sent to any source port (#598) @bdraco
+
+  Unicast responses were only being sent if the source port
+  was 53, this prevented responses when testing with dig:
+
+    dig -p 5353 @224.0.0.251 media-12.local
+
+  The above query will now see a response
+
+* MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
+
+* Eliminate aio sender thread (#622) @bdraco
+
+* Replace select loop with asyncio loop (#504) @bdraco
+
+* Add is_recent property to DNSRecord (#620) @bdraco
+
+  RFC 6762 defines recent as not multicast within one quarter of its TTL
+  datatracker.ietf.org/doc/html/rfc6762#section-5.4
+
+* Breakout the query response handler into its own class (#615) @bdraco
+
+* Add the ability for ServiceInfo.dns_addresses to filter by address type (#612) @bdraco
+
+* Make DNSRecords hashable (#611) @bdraco
+
+  Allows storing them in a set for de-duplication
+
+  Needed to be able to check for duplicates to solve #604
+
+* Ensure the QU bit is set for probe queries (#609) @bdraco
+
+  The bit should be set per
+  datatracker.ietf.org/doc/html/rfc6762#section-8.1
+
+* Log destination when sending packets (#606) @bdraco
+
+* Fix docs version to match readme (cpython 3.6+) (#602) @bdraco
+
+* Add ZeroconfServiceTypes to zeroconf.__all__ (#601) @bdraco
+
+  This class is in the readme, but is not exported by
+  default
+
+* Add id_ param to allow setting the id in the DNSOutgoing constructor (#599) @bdraco
+
+* Add unicast property to DNSQuestion to determine if the QU bit is set (#593) @bdraco
+
+* Reduce branching in DNSOutgoing.add_answer_at_time (#592) @bdraco
 
 * Breakout DNSCache into zeroconf.cache (#568) @bdraco
 
