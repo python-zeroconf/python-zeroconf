@@ -286,7 +286,8 @@ class AsyncZeroconf:
             await asyncio.wait_for(self.zeroconf.async_wait_for_start(), timeout=1)
         await self.async_remove_all_service_listeners()
         self.zeroconf.remove_notify_listener(self.async_notify)
-        await self.loop.run_in_executor(None, self.zeroconf.close)
+        await self.async_unregister_all_services()
+        await self.zeroconf._async_close()  # pylint: disable=protected-access
 
     async def async_get_service_info(
         self, type_: str, name: str, timeout: int = 3000

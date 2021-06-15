@@ -149,11 +149,11 @@ class AsyncEngine:
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
         self._async_shutdown()
-        assert self._cache_cleanup_task is not None
-        self._cache_cleanup_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await self._cache_cleanup_task
-        self._cache_cleanup_task = None
+        if self._cache_cleanup_task:
+            self._cache_cleanup_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._cache_cleanup_task
+            self._cache_cleanup_task = None
         await asyncio.sleep(0)  # flush out any call soons
 
     def _async_shutdown(self) -> None:
@@ -169,6 +169,8 @@ class AsyncEngine:
         # Guard against Zeroconf.close() being called from the eventloop
         if get_running_loop() == self.loop:
             self._async_shutdown()
+            return
+        if not self.loop.is_running():
             return
         asyncio.run_coroutine_threadsafe(self._async_close(), self.loop).result()
 
@@ -607,23 +609,47 @@ class Zeroconf(QuietLogger):
                     # on send errors, log the exception and keep going
                     self.log_exception_warning('Error sending through socket %d', s.fileno())
 
-    def close(self) -> None:
-        """Ends the background threads, and prevent this instance from
-        servicing further queries."""
+    def _close(self) -> None:
+        """Set global done and remove all service listeners."""
         if self._GLOBAL_DONE:
             return
-        # remove service listeners
-        self.unregister_all_services()
         self.remove_all_service_listeners()
         self._GLOBAL_DONE = True
-        self.engine.close()
-        # shutdown the rest
+
+    def _shutdown_threads(self) -> None:
+        """Shutdown any threads."""
         self.notify_all()
         if not self._loop_thread:
             return
         assert self.loop is not None
         self.loop.call_soon_threadsafe(self.loop.stop)
         self._loop_thread.join()
+
+    def close(self) -> None:
+        """Ends the background threads, and prevent this instance from
+        servicing further queries.
+
+        This method is idempotent and irreversible.
+        """
+        self.unregister_all_services()
+        self._close()
+        self.engine.close()
+        self._shutdown_threads()
+
+    async def _async_close(self) -> None:
+        """Ends the background threads, and prevent this instance from
+        servicing further queries.
+
+        This method is idempotent and irreversible.
+
+        This call only intended to be used by AsyncZeroconf
+
+        Callers are responsible for unregistering all services
+        before calling this function
+        """
+        self._close()
+        await self.engine._async_close()  # pylint: disable=protected-access
+        self._shutdown_threads()
 
     def __enter__(self) -> 'Zeroconf':
         return self
