@@ -24,6 +24,7 @@ import enum
 import itertools
 from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
 
+from ._cache import DNSCache
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from ._logger import log
 from ._services import RecordUpdateListener
@@ -65,12 +66,13 @@ _RecordSetType = Dict[RecordSetKeys, Set[DNSRecord]]
 class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
 
-    def __init__(self, msg: DNSIncoming, ucast_source: bool) -> None:
+    def __init__(self, cache: DNSCache, msg: DNSIncoming, ucast_source: bool) -> None:
         """Build a query response."""
         self._msg = msg
         self._ucast_source = ucast_source
         self._is_probe = msg.num_authorities > 0
         self._now = current_time_millis()
+        self._cache = cache
         self._ucast: _RecordSetType = {RecordSetKeys.Answers: set(), RecordSetKeys.Additionals: set()}
         self._mcast: _RecordSetType = {RecordSetKeys.Answers: set(), RecordSetKeys.Additionals: set()}
 
@@ -97,6 +99,9 @@ class _QueryResponse:
 
     def outgoing_multicast(self) -> Optional[DNSOutgoing]:
         """Build the outgoing multicast response."""
+        if not self._is_probe:
+            self._suppress_mcasts_from_last_second(self._mcast[RecordSetKeys.Answers])
+            self._suppress_mcasts_from_last_second(self._mcast[RecordSetKeys.Additionals])
         return self._construct_outgoing_from_record_set(self._mcast, True)
 
     def _construct_outgoing_from_record_set(
@@ -116,13 +121,26 @@ class _QueryResponse:
             out.add_additional_answer(additional)
         return out
 
+    def _suppress_mcasts_from_last_second(self, records: Set[DNSRecord]) -> None:
+        """Remove any records that were already sent in the last second."""
+        records -= set(record for record in records if self._has_mcast_record_in_last_second(record))
+
+    def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
+        """Remove answers that were just broadcast
+        Protect the network against excessive packet flooding
+        https://datatracker.ietf.org/doc/html/rfc6762#section-14
+        """
+        maybe_entry = self._cache.get(record)
+        return bool(maybe_entry and self._now - maybe_entry.created < 1000)
+
 
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    def __init__(self, registry: ServiceRegistry) -> None:
+    def __init__(self, registry: ServiceRegistry, cache: DNSCache) -> None:
         """Init the query handler."""
         self.registry = registry
+        self.cache = cache
 
     def _answer_service_type_enumeration_query(
         self,
@@ -204,7 +222,7 @@ class QueryHandler:
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
         ucast_source = port != _MDNS_PORT
-        query_res = _QueryResponse(msg, ucast_source)
+        query_res = _QueryResponse(self.cache, msg, ucast_source)
 
         for question in msg.questions:
             all_answers = self._answer_any_question(msg, question)
