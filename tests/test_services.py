@@ -1184,3 +1184,58 @@ def test_filter_address_by_type_from_service_info():
     assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.All)) == [ipv4, ipv6]
     assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.V4Only)) == [ipv4]
     assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.V6Only)) == [ipv6]
+
+
+def test_service_browser_is_aware_of_port_changes():
+    """Test that the ServiceBrowser is aware of port changes."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    callbacks = []
+    # dummy service callback
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        nonlocal callbacks
+        if name == registration_name:
+            callbacks.append((service_type, state_change, name))
+
+    browser = ServiceBrowser(zc, type_, [on_service_state_change])
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+
+    def mock_incoming_msg(records) -> r.DNSIncoming:
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        for record in records:
+            generated.add_answer_at_time(record, 0)
+        return r.DNSIncoming(generated.packets()[0])
+
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
+    )
+    zc.wait(100)
+
+    assert callbacks == [('_hap._tcp.local.', ServiceStateChange.Added, 'xxxyyy._hap._tcp.local.')]
+    assert zc.get_service_info(type_, registration_name).port == 80
+
+    info.port = 400
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_service()]),
+    )
+    zc.wait(100)
+
+    assert callbacks == [
+        ('_hap._tcp.local.', ServiceStateChange.Added, 'xxxyyy._hap._tcp.local.'),
+        ('_hap._tcp.local.', ServiceStateChange.Updated, 'xxxyyy._hap._tcp.local.'),
+    ]
+    assert zc.get_service_info(type_, registration_name).port == 400
+    browser.cancel()
+
+    zc.close()
