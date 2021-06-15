@@ -219,6 +219,8 @@ Changelog
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
+* Ensure eventloop shutdown is threadsafe (#636) @bdraco
+
 * Return early in the shutdown/close process (#632) @bdraco
 
 * Remove unreachable cache check for DNSAddresses (#629) @bdraco
