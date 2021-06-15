@@ -162,7 +162,6 @@ class _QueryResponse:
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
         """Remove answers that were just broadcast
-
         Protect the network against excessive packet flooding
         https://datatracker.ietf.org/doc/html/rfc6762#section-14
         """
