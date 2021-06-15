@@ -489,8 +489,7 @@ class Zeroconf(QuietLogger):
 
     def unregister_all_services(self) -> None:
         """Unregister all registered services."""
-        # Goodbye packets
-        # https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
+        # Send Goodbye packets https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
         out = self.generate_unregister_all_services()
         if not out:
             return
