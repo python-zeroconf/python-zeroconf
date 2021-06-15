@@ -286,3 +286,34 @@ def test_generate_service_query_set_qu_bit():
     out = zeroconf_registrar.generate_service_query(info)
     assert out.questions[0].unicast is True
     zeroconf_registrar.close()
+
+
+def test_invalid_packets_ignored_and_does_not_cause_loop_exception():
+    """Ensure an invalid packet cannot cause the loop to collapse."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    generated = r.DNSOutgoing(0)
+    packet = generated.packets()[0]
+    packet = packet[:8] + b'deadbeef' + packet[8:]
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+
+    mock_out = unittest.mock.Mock()
+    mock_out.packets = lambda: [packet]
+    zc.send(mock_out)
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    entry = r.DNSText(
+        "didnotcrashincoming._crash._tcp.local.",
+        const._TYPE_TXT,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        500,
+        b'path=/~paulsm/',
+    )
+    assert isinstance(entry, r.DNSText)
+    assert isinstance(entry, r.DNSRecord)
+    assert isinstance(entry, r.DNSEntry)
+
+    generated.add_answer_at_time(entry, 0)
+    zc.send(generated)
+    time.sleep(0.2)
+    zc.close()
+    assert zc.cache.get(entry) is not None

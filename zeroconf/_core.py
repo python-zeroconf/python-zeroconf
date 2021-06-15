@@ -214,11 +214,9 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
                 len(data),
                 data,
             )
+            return
 
-        if not msg.valid:
-            pass
-
-        elif not msg.is_query():
+        if not msg.is_query():
             self.zc.handle_response(msg)
             return
 

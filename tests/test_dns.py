@@ -586,6 +586,16 @@ class TestDnsIncoming(unittest.TestCase):
         assert len(parsed.answers) == 0
         assert parsed.is_query() != parsed.is_response()
 
+    def test_incoming_circular_reference(self):
+        assert not r.DNSIncoming(
+            bytes.fromhex(
+                '01005e0000fb542a1bf0577608004500006897934000ff11d81bc0a86a31e00000fb'
+                '14e914e90054f9b2000084000000000100000000095f7365727669636573075f646e'
+                '732d7364045f756470056c6f63616c00000c0001000011940018105f73706f746966'
+                '792d636f6e6e656374045f746370c023'
+            )
+        ).valid
+
     def test_incoming_ipv6(self):
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
         packed = socket.inet_pton(socket.AF_INET6, addr)
