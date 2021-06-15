@@ -214,6 +214,23 @@ Changelog
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
+* Remove unreachable cache check for DNSAddresses (#629) @bdraco
+
+  The ServiceBrowser would check to see if a DNSAddress was
+  already in the cache and return early to avoid sending
+  updates when the address already was held in the cache.
+  This check was not needed since there is already a check
+  a few lines before as `self.zc.cache.get(record)` which
+  effectively does the same thing. This lead to the check
+  never being covered in the tests and 2 cache lookups when
+  only one was needed.
+
+* Add test for wait_condition_or_timeout_times_out util (#630) @bdraco
+
+* Return early on invalid data received (#628)  @bdraco
+
+  Improve coverage for handling invalid incoming data
+
 * Add test to ensure ServiceBrowser sees port change as an update (#625) @bdraco
 
 * Fix random test failures due to monkey patching not being undone between tests (#626) @bdraco
