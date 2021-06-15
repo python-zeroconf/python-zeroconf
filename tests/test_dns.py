@@ -137,6 +137,30 @@ class TestDunder(unittest.TestCase):
         dns_outgoing = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         repr(dns_outgoing)
 
+    def test_dns_record_is_expired(self):
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
+        now = current_time_millis()
+        assert record.is_expired(now) is False
+        assert record.is_expired(now + const._DNS_HOST_TTL * 1000 / 2) is False
+        assert record.is_expired(now + const._DNS_HOST_TTL * 1000) is True
+
+    def test_dns_record_is_stale(self):
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
+        now = current_time_millis()
+        assert record.is_stale(now) is False
+        assert record.is_stale(now + const._DNS_HOST_TTL * 1000 / 4) is False
+        assert record.is_stale(now + const._DNS_HOST_TTL * 1000 / 2) is True
+        assert record.is_stale(now + const._DNS_HOST_TTL * 1000) is True
+
+    def test_dns_record_is_recent(self):
+        now = current_time_millis()
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
+        assert record.is_recent(now) is True
+        assert record.is_recent(now + const._DNS_HOST_TTL * 1000 / 4) is True
+        assert record.is_recent(now + const._DNS_HOST_TTL * 1000 / 3) is False
+        assert record.is_recent(now + const._DNS_HOST_TTL * 1000 / 2) is False
+        assert record.is_recent(now + const._DNS_HOST_TTL * 1000) is False
+
 
 class PacketGeneration(unittest.TestCase):
     def test_parse_own_packet_simple(self):
