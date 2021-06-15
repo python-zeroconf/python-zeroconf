@@ -11,7 +11,7 @@ import unittest.mock
 
 import pytest
 
-from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf
+from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf, AsyncZeroconfServiceTypes
 from zeroconf import Zeroconf
 from zeroconf.const import _LISTENER_TIME
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
@@ -558,3 +558,35 @@ async def test_async_unregister_all_services() -> None:
     await aiozc.async_unregister_all_services()
 
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_zeroconf_service_types():
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    task = await zeroconf_registrar.async_register_service(info)
+    await task
+    _clear_cache(zeroconf_registrar.zeroconf)
+    try:
+        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=['127.0.0.1'], timeout=0.5)
+        assert type_ in service_types
+        _clear_cache(zeroconf_registrar.zeroconf)
+        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=0.5)
+        assert type_ in service_types
+
+    finally:
+        await zeroconf_registrar.async_close()
