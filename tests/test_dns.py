@@ -137,6 +137,29 @@ class TestDunder(unittest.TestCase):
         dns_outgoing = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         repr(dns_outgoing)
 
+    def test_dns_record_is_expired(self):
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, 8)
+        now = current_time_millis()
+        assert record.is_expired(now) is False
+        assert record.is_expired(now + (8 / 2 * 1000)) is False
+        assert record.is_expired(now + (8 * 1000)) is True
+
+    def test_dns_record_is_stale(self):
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, 8)
+        now = current_time_millis()
+        assert record.is_stale(now) is False
+        assert record.is_stale(now + (8 / 4 * 1000)) is False
+        assert record.is_stale(now + (8 / 2 * 1000)) is True
+        assert record.is_stale(now + (8 * 1000)) is True
+
+    def test_dns_record_is_recent(self):
+        now = current_time_millis()
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, 8)
+        assert record.is_recent(now + (8 / 4 * 1000)) is True
+        assert record.is_recent(now + (8 / 3 * 1000)) is False
+        assert record.is_recent(now + (8 / 2 * 1000)) is False
+        assert record.is_recent(now + (8 * 1000)) is False
+
 
 class PacketGeneration(unittest.TestCase):
     def test_parse_own_packet_simple(self):
