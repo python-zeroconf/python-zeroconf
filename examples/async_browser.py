@@ -11,7 +11,7 @@ import logging
 from typing import cast
 
 from zeroconf import IPVersion, ServiceStateChange
-from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf
+from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf, AsyncZeroconfServiceTypes
 
 
 def async_on_service_state_change(
@@ -43,11 +43,35 @@ async def async_display_service_info(zeroconf: AsyncZeroconf, service_type: str,
     print('\n')
 
 
+class AsyncRunner:
+    def __init__(self, args):
+        self.args = args
+        self.aiobrowser = None
+        self.aiozc = None
+
+    async def async_run(self):
+        self.aiozc = AsyncZeroconf(ip_version=ip_version)
+
+        services = ["_http._tcp.local.", "_hap._tcp.local."]
+        if self.args.find:
+            services = list(await AsyncZeroconfServiceTypes.async_find(ip_version=ip_version))
+
+        print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
+        self.aiobrowser = AsyncServiceBrowser(self.aiozc, services, handlers=[async_on_service_state_change])
+        while True:
+            await asyncio.sleep(1)
+
+    async def async_close(self):
+        await self.aiobrowser.async_cancel()
+        await self.aiozc.async_close()
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--find', action='store_true', help='Browse all available services')
     version_group = parser.add_mutually_exclusive_group()
     version_group.add_argument('--v6', action='store_true')
     version_group.add_argument('--v6-only', action='store_true')
@@ -62,17 +86,9 @@ if __name__ == '__main__':
     else:
         ip_version = IPVersion.V4Only
 
-    aiozc = AsyncZeroconf(ip_version=ip_version)
-
-    services = ["_http._tcp.local.", "_hap._tcp.local."]
-    print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
-    aiobrowser = AsyncServiceBrowser(aiozc, services, handlers=[async_on_service_state_change])
-
     loop = asyncio.get_event_loop()
+    runner = AsyncRunner(args)
     try:
-        loop.run_forever()
+        loop.run_until_complete(runner.async_run())
     except KeyboardInterrupt:
-        pass
-    finally:
-        loop.run_until_complete(aiobrowser.async_cancel())
-        loop.run_until_complete(aiozc.async_close())
+        loop.run_until_complete(runner.async_close())
