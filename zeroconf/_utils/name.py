@@ -104,7 +104,8 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
 
         test_service_name = service_name[1:]
 
-        if len(test_service_name) > 15:
+        if strict and len(test_service_name) > 15:
+            # https://datatracker.ietf.org/doc/html/rfc6763#section-7.2
             raise BadTypeInNameException("Service name (%s) must be <= 15 bytes" % test_service_name)
 
         if '--' in test_service_name:

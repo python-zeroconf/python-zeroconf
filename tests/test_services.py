@@ -1258,3 +1258,20 @@ def test_changing_name_updates_serviceinfo_key():
     assert info_service.key == "mytesthome._homeassistant._tcp.local."
     info_service.name = "YourTestHome._homeassistant._tcp.local."
     assert info_service.key == "yourtesthome._homeassistant._tcp.local."
+
+
+def test_servicebrowser_uses_non_strict_names():
+    """Verify we can look for technically invalid names as we cannot change what others do."""
+
+    # dummy service callback
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        pass
+
+    zc = r.Zeroconf(interfaces=['127.0.0.1'])
+    browser = ServiceBrowser(zc, ["_tivo-videostream._tcp.local."], [on_service_state_change])
+    browser.cancel()
+
+    # Still fail on completely invalid
+    with pytest.raises(r.BadTypeInNameException):
+        browser = ServiceBrowser(zc, ["tivo-videostream._tcp.local."], [on_service_state_change])
+    zc.close()
