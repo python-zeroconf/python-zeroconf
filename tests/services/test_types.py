@@ -53,7 +53,7 @@ class ServiceTypesQuery(unittest.TestCase):
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_v6_records(self):
 
-        type_ = "_test-srvc-type._tcp.local."
+        type_ = "_test-srvc-v6rec._tcp.local."
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
@@ -84,11 +84,11 @@ class ServiceTypesQuery(unittest.TestCase):
         finally:
             zeroconf_registrar.close()
 
-    @unittest.skipIf(not has_working_ipv6() or sys.platform == 'win32', 'Requires IPv6')
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_ipv6(self):
 
-        type_ = "_test-srvc-type._tcp.local."
+        type_ = "_test-srvc-v6._tcp.local."
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
 
