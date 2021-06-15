@@ -46,8 +46,14 @@ def test_interface_index_to_ip6_address():
     """Test we can extract from mocked adapters."""
     adapters = _generate_mock_adapters()
     assert netutils.interface_index_to_ip6_address(adapters, 1) == ('2001:db8::', 1, 1)
+
+    # call with invalid adapter
     with pytest.raises(RuntimeError):
         assert netutils.interface_index_to_ip6_address(adapters, 6)
+
+    # call with adapter that has ipv4 address only
+    with pytest.raises(RuntimeError):
+        assert netutils.interface_index_to_ip6_address(adapters, 2)
 
 
 def test_ip6_addresses_to_indexes():
