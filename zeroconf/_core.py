@@ -21,6 +21,7 @@
 """
 
 import asyncio
+import contextlib
 import errno
 import itertools
 import platform
@@ -145,16 +146,22 @@ class AsyncEngine:
             self.zc.record_manager.updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
 
+    async def _async_stop_cleanup_task(self) -> None:
+        """Stop the cleanup task."""
+        assert self._cache_cleanup_task is not None
+        self._cache_cleanup_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self._cache_cleanup_task
+        self._cache_cleanup_task = None
+
     def close(self) -> None:
         """Close the engine."""
         for transport in itertools.chain(self.senders, self.readers):
             transport.close()
         for s in self._respond_sockets:
             s.close()
-        if not self._cache_cleanup_task:
-            return
-        self._cache_cleanup_task.cancel()
-        self._cache_cleanup_task = None
+        assert self.loop is not None
+        asyncio.run_coroutine_threadsafe(self._async_stop_cleanup_task(), self.loop).result()
 
 
 class AsyncListener(asyncio.Protocol, QuietLogger):
