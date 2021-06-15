@@ -8,10 +8,11 @@ The default is HTTP and HAP; use --find to search for all available services in 
 import argparse
 import asyncio
 import logging
-from typing import cast
+from typing import Any, Optional, cast
 
 from zeroconf import IPVersion, ServiceStateChange
-from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf, AsyncZeroconfServiceTypes
+from zeroconf.aio import (AsyncServiceBrowser, AsyncZeroconf,
+                          AsyncZeroconfServiceTypes)
 
 
 def async_on_service_state_change(
@@ -44,12 +45,12 @@ async def async_display_service_info(zeroconf: AsyncZeroconf, service_type: str,
 
 
 class AsyncRunner:
-    def __init__(self, args):
+    def __init__(self, args: Any) -> None:
         self.args = args
-        self.aiobrowser = None
-        self.aiozc = None
+        self.aiobrowser: Optional[AsyncServiceBrowser] = None
+        self.aiozc: Optional[AsyncZeroconf] = None
 
-    async def async_run(self):
+    async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)
 
         services = ["_http._tcp.local.", "_hap._tcp.local."]
@@ -63,7 +64,9 @@ class AsyncRunner:
         while True:
             await asyncio.sleep(1)
 
-    async def async_close(self):
+    async def async_close(self) -> None:
+        assert self.aiozc is not None
+        assert self.aiobrowser is not None
         await self.aiobrowser.async_cancel()
         await self.aiozc.async_close()
 
