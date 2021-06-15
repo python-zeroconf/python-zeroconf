@@ -476,16 +476,15 @@ class Zeroconf(QuietLogger):
         self.registry.remove(info)
         self._broadcast_service(info, _UNREGISTER_TIME, 0)
 
-    def generate_unregister_all_services(self) -> None:
+    def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
         """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
         service_infos = self.registry.get_service_infos()
         if not service_infos:
-            return
+            return None
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
         for info in service_infos:
             self._add_broadcast_answer(out, info, 0)
-        for service_info in service_infos:
-            self.registry.remove(service_info)
+        self.registry.remove(service_infos)
         return out
 
     def unregister_all_services(self) -> None:

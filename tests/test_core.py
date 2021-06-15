@@ -339,4 +339,10 @@ def test_goodbye_all_services():
     assert out2 is not None
     second_packet = out.packets()
     assert second_packet == first_packet
+
+    # Verify the registery is empty
+    out3 = zc.generate_unregister_all_services()
+    assert out3 is None
+    assert zc.registry.get_service_infos() == []
+
     zc.close()

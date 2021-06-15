@@ -1239,3 +1239,22 @@ def test_service_browser_is_aware_of_port_changes():
     browser.cancel()
 
     zc.close()
+
+
+def test_changing_name_updates_serviceinfo_key():
+    """Verify a name change will adjust the underlying key value."""
+    type_ = "_homeassistant._tcp.local."
+    name = "MyTestHome"
+    info_service = ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {'path': '/~paulsm/'},
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    assert info_service.key == "mytesthome._homeassistant._tcp.local."
+    info_service.name = "YourTestHome._homeassistant._tcp.local."
+    assert info_service.key == "yourtesthome._homeassistant._tcp.local."
