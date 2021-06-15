@@ -76,6 +76,25 @@ class _QueryResponse:
         self._ucast: _RecordSetType = {RecordSetKeys.Answers: set(), RecordSetKeys.Additionals: set()}
         self._mcast: _RecordSetType = {RecordSetKeys.Answers: set(), RecordSetKeys.Additionals: set()}
 
+    def add_qu_question_response(
+        self,
+        answers: Set[DNSRecord],
+        additionals: Set[DNSRecord],
+    ) -> None:
+        """Generate a response to a multicast QU query."""
+        self._add_qu_question_response_to_target(answers, RecordSetKeys.Answers)
+        self._add_qu_question_response_to_target(additionals, RecordSetKeys.Additionals)
+
+    def _add_qu_question_response_to_target(self, target: Set[DNSRecord], answer_type: RecordSetKeys) -> None:
+        """Add part of the QU response."""
+        for record in target:
+            if self._is_probe:
+                self._ucast[answer_type].add(record)
+            if not self._has_mcast_within_one_quarter_ttl(record):
+                self._mcast[answer_type].add(record)
+            elif not self._is_probe:
+                self._ucast[answer_type].add(record)
+
     def add_ucast_question_response(self, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
         """Generate a response to a unicast query."""
         self._ucast[RecordSetKeys.Answers].update(answers)
@@ -119,7 +138,22 @@ class _QueryResponse:
             out.add_answer_at_time(answer, 0)
         for additional in rrset[RecordSetKeys.Additionals]:
             out.add_additional_answer(additional)
+
         return out
+
+    def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord) -> bool:
+        """Check to see if a record has been mcasted recently.
+
+        https://datatracker.ietf.org/doc/html/rfc6762#section-5.4
+        When receiving a question with the unicast-response bit set, a
+        responder SHOULD usually respond with a unicast packet directed back
+        to the querier.  However, if the responder has not multicast that
+        record recently (within one quarter of its TTL), then the responder
+        SHOULD instead multicast the response so as to keep all the peer
+        caches up to date
+        """
+        maybe_entry = self._cache.get(record)
+        return bool(maybe_entry and maybe_entry.is_recent(self._now))
 
     def _suppress_mcasts_from_last_second(self, records: Set[DNSRecord]) -> None:
         """Remove any records that were already sent in the last second."""
@@ -226,11 +260,14 @@ class QueryHandler:
 
         for question in msg.questions:
             all_answers = self._answer_any_question(msg, question)
-            if ucast_source:
-                query_res.add_ucast_question_response(*all_answers)
-            # We always multicast as well even if its a unicast
-            # source as long as we haven't done it recently (75% of ttl)
-            query_res.add_mcast_question_response(*all_answers)
+            if not ucast_source and question.unicast:
+                query_res.add_qu_question_response(*all_answers)
+            else:
+                if ucast_source:
+                    query_res.add_ucast_question_response(*all_answers)
+                # We always multicast as well even if its a unicast
+                # source as long as we haven't done it recently (75% of ttl)
+                query_res.add_mcast_question_response(*all_answers)
 
         return query_res.outgoing_unicast(), query_res.outgoing_multicast()
 
