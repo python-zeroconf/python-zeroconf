@@ -101,18 +101,16 @@ class ServiceRegistry:
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
-        lower_name = info.name.lower()
-        if lower_name in self._services:
+        if info.key in self._services:
             raise ServiceNameAlreadyRegistered
 
-        self._services[lower_name] = info
-        self.types.setdefault(info.type.lower(), []).append(lower_name)
-        self.servers.setdefault(info.server.lower(), []).append(lower_name)
+        self._services[info.key] = info
+        self.types.setdefault(info.type.lower(), []).append(info.key)
+        self.servers.setdefault(info.server_key, []).append(info.key)
 
     def _remove(self, info: ServiceInfo) -> None:
         """Remove a service under the lock."""
-        lower_name = info.name.lower()
-        old_service_info = self._services[lower_name]
-        self.types[old_service_info.type.lower()].remove(lower_name)
-        self.servers[old_service_info.server.lower()].remove(lower_name)
-        del self._services[lower_name]
+        old_service_info = self._services[info.key]
+        self.types[old_service_info.type.lower()].remove(info.key)
+        self.servers[old_service_info.server_key].remove(info.key)
+        del self._services[info.key]
