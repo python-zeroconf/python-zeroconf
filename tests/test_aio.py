@@ -5,6 +5,7 @@
 """Unit tests for aio.py."""
 
 import asyncio
+import logging
 import socket
 import threading
 import unittest.mock
@@ -20,8 +21,19 @@ from zeroconf._utils.time import current_time_millis
 
 from . import _clear_cache
 
+log = logging.getLogger('zeroconf')
+original_logging_level = logging.NOTSET
 
-from . import _clear_cache
+
+def setup_module():
+    global original_logging_level
+    original_logging_level = log.level
+    log.setLevel(logging.DEBUG)
+
+
+def teardown_module():
+    if original_logging_level != logging.NOTSET:
+        log.setLevel(original_logging_level)
 
 
 @pytest.fixture(autouse=True)
