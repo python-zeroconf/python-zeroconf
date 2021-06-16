@@ -96,9 +96,9 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT)[
-            1
-        ]
+        multicast_out = zc.query_handler.response(
+            [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
+        )[1]
         _process_outgoing_packet(multicast_out)
 
         # The additonals should all be suppresed since they are all in the answers section
@@ -134,7 +134,9 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
         _process_outgoing_packet(
-            zc.query_handler.response(r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT)[1]
+            zc.query_handler.response(
+                [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
+            )[1]
         )
         assert nbr_answers == 4 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
@@ -231,7 +233,7 @@ def test_ptr_optimization():
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is None
@@ -243,7 +245,7 @@ def test_ptr_optimization():
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
     )
     assert multicast_out.id == query.id
     assert unicast_out is None
@@ -285,7 +287,9 @@ def test_any_query_for_ptr():
     question = r.DNSQuestion(type_, const._TYPE_ANY, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out = zc.query_handler.response(r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT)
+    _, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
     assert multicast_out.answers[0][0].name == type_
     assert multicast_out.answers[0][0].alias == registration_name
     # unregister
@@ -309,7 +313,9 @@ def test_aaaa_query():
     question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out = zc.query_handler.response(r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT)
+    _, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
     assert multicast_out.answers[0][0].address == ipv6_address
     # unregister
     zc.registry.remove(info)
@@ -336,7 +342,9 @@ def test_unicast_response():
     # query
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
-    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    unicast_out, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", 1234
+    )
     for out in (unicast_out, multicast_out):
         assert out.id == query.id
         has_srv = has_txt = has_a = False
@@ -412,7 +420,7 @@ def test_qu_response():
     query.add_question(question)
 
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     assert multicast_out is None
     _validate_complete_response(query, unicast_out)
@@ -425,7 +433,7 @@ def test_qu_response():
     assert question.unicast is True
     query.add_question(question)
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     _validate_complete_response(query, multicast_out)
@@ -438,7 +446,7 @@ def test_qu_response():
     query.add_question(question)
     query.add_authorative_answer(info2.dns_pointer())
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     _validate_complete_response(query, unicast_out)
     _validate_complete_response(query, multicast_out)
@@ -451,7 +459,7 @@ def test_qu_response():
     assert question.unicast is True
     query.add_question(question)
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     assert multicast_out is None
     _validate_complete_response(query, unicast_out)
@@ -480,7 +488,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -491,7 +499,7 @@ def test_known_answer_supression():
     generated.add_answer_at_time(info.dns_pointer(), now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     # If the answer is suppressed, the additional should be suppresed as well
@@ -503,7 +511,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -515,7 +523,7 @@ def test_known_answer_supression():
         generated.add_answer_at_time(dns_address, now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert not multicast_out or not multicast_out.answers
@@ -526,7 +534,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -537,7 +545,7 @@ def test_known_answer_supression():
     generated.add_answer_at_time(info.dns_service(), now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     # If the answer is suppressed, the additional should be suppresed as well
@@ -549,7 +557,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -560,7 +568,7 @@ def test_known_answer_supression():
     generated.add_answer_at_time(info.dns_text(), now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert not multicast_out or not multicast_out.answers
@@ -654,7 +662,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -684,7 +692,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     )
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert not multicast_out or not multicast_out.answers
