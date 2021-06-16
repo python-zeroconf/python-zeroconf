@@ -196,13 +196,9 @@ def new_socket(  # pylint: disable=too-many-branches
     # versions of Python have SO_REUSEPORT available.
     # Catch OSError and socket.error for kernel versions <3.9 because lacking
     # SO_REUSEPORT support.
-    try:
-        reuseport = socket.SO_REUSEPORT
-    except AttributeError:
-        pass
-    else:
+    if hasattr(socket, 'SO_REUSEPORT'):
         try:
-            s.setsockopt(socket.SOL_SOCKET, reuseport, 1)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=no-member
         except OSError as err:
             if err.errno != errno.ENOPROTOOPT:
                 raise
