@@ -473,21 +473,96 @@ def test_tc_bit_defers():
     expected_deferred.append(next_packet)
     zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
     assert zc._deferred["1.2.3.4"] == expected_deferred
+    assert "1.2.3.4" in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
     zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
     assert zc._deferred["1.2.3.4"] == expected_deferred
+    assert "1.2.3.4" in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
     zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
     assert zc._deferred["1.2.3.4"] == expected_deferred
+    assert "1.2.3.4" in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
     zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
     assert "1.2.3.4" not in zc._deferred
+    assert "1.2.3.4" not in zc._timers
+
+    # unregister
+    zc.unregister_service(info)
+    zc.close()
+
+
+def test_tc_bit_defers_last_response_missing():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_knownservice._tcp.local."
+    name = "knownname"
+    name2 = "knownname2"
+    name3 = "knownname3"
+
+    registration_name = "%s.%s" % (name, type_)
+    registration2_name = "%s.%s" % (name2, type_)
+    registration3_name = "%s.%s" % (name3, type_)
+
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    server_name2 = "ash-3.local."
+    server_name3 = "ash-4.local."
+
+    info = r.ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info2 = r.ServiceInfo(
+        type_, registration2_name, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info3 = r.ServiceInfo(
+        type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.register_service(info)
+    zc.register_service(info2)
+    zc.register_service(info3)
+
+    now = r.current_time_millis()
+    _clear_cache(zc)
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    for _ in range(300):
+        # Add so many answers we end up with another packet
+        generated.add_answer_at_time(info.dns_pointer(), now)
+    generated.add_answer_at_time(info2.dns_pointer(), now)
+    generated.add_answer_at_time(info3.dns_pointer(), now)
+    packets = generated.packets()
+    assert len(packets) == 4
+    expected_deferred = []
+
+    next_packet = r.DNSIncoming(packets.pop(0))
+    expected_deferred.append(next_packet)
+    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
+    assert zc._deferred["1.2.3.4"] == expected_deferred
+    assert "1.2.3.4" in zc._timers
+
+    next_packet = r.DNSIncoming(packets.pop(0))
+    expected_deferred.append(next_packet)
+    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
+    assert zc._deferred["1.2.3.4"] == expected_deferred
+    assert "1.2.3.4" in zc._timers
+
+    next_packet = r.DNSIncoming(packets.pop(0))
+    expected_deferred.append(next_packet)
+    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
+    assert zc._deferred["1.2.3.4"] == expected_deferred
+    assert "1.2.3.4" in zc._timers
+
+    time.sleep(0.600)
+    assert "1.2.3.4" not in zc._deferred
+    assert "1.2.3.4" not in zc._timers
 
     # unregister
     zc.unregister_service(info)

@@ -304,6 +304,7 @@ class Zeroconf(QuietLogger):
         self._loop_thread: Optional[threading.Thread] = None
 
         self._deferred: Dict[str, List[DNSIncoming]] = {}
+        self._timers: Dict[str, asyncio.TimerHandle] = {}
 
         self.start()
 
@@ -563,6 +564,9 @@ class Zeroconf(QuietLogger):
     def handle_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
+        if addr in self._timers:
+            self._timers.pop(addr).cancel()
+
         if msg and msg.truncated:
             queue = self._deferred.setdefault(addr, [])
             # If we get the same packet on another iterface we ignore it
@@ -571,7 +575,7 @@ class Zeroconf(QuietLogger):
             queue.append(msg)
             delay = random.randint(400, 500) / 1000
             assert self.loop is not None
-            self.loop.call_later(delay, self.handle_query, None, addr, port)
+            self._timers[addr] = self.loop.call_later(delay, self.handle_query, None, addr, port)
             return
 
         packets = self._deferred.pop(addr, [])
