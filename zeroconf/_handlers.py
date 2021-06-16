@@ -68,15 +68,14 @@ class _QueryResponse:
         self._ucast_source = ucast_source
         self._now = current_time_millis()
         self._cache = cache
-        self._additionals = {}
-        self._all_answers: _AnswerWithAdditionalsType = {}
+        self._additionals: _AnswerWithAdditionalsType = {}
         self._ucast: Set[DNSRecord] = set()
         self._mcast: Set[DNSRecord] = set()
 
     def add_qu_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast QU query."""
         for record, additionals in answers.items():
-            self._all_answers[record] = additionals
+            self._additionals[record] = additionals
             if self._is_probe:
                 self._ucast.add(record)
             if not self._has_mcast_within_one_quarter_ttl(record):
@@ -86,12 +85,12 @@ class _QueryResponse:
 
     def add_ucast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a unicast query."""
-        self._all_answers.update(answers)
+        self._additionals.update(answers)
         self._ucast.update(answers.keys())
 
     def add_mcast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast query."""
-        self._all_answers.update(answers)
+        self._additionals.update(answers)
         self._mcast.update(answers.keys())
 
     def outgoing_unicast(self) -> Optional[DNSOutgoing]:
@@ -127,7 +126,7 @@ class _QueryResponse:
         return out
 
     def _additionals_from_answers_rrset(self, rrset: Set[DNSRecord]) -> Set[DNSRecord]:
-        return set().union(*[self._all_answers[record] for record in rrset])
+        return set().union(*[self._additionals[record] for record in rrset])
 
     def _suppress_known_answers(self, rrset: Set[DNSRecord]) -> None:
         """Remove any records suppressed by known answers."""
