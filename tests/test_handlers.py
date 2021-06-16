@@ -230,7 +230,7 @@ def test_ptr_optimization():
     zc.register_service(info)
 
     # Verify we won't respond for 1s with the same multicast
-    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
         [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
@@ -242,7 +242,7 @@ def test_ptr_optimization():
     _clear_cache(zc)
 
     # Verify we will now respond
-    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
         [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
@@ -340,7 +340,7 @@ def test_unicast_response():
     _clear_cache(zc)
 
     # query
-    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
         [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", 1234
@@ -413,7 +413,7 @@ def test_qu_response():
         assert has_srv and has_txt and has_a
 
     # With QU should respond to only unicast when the answer has been recently multicast
-    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
     assert question.unicast is True
@@ -427,7 +427,7 @@ def test_qu_response():
 
     _clear_cache(zc)
     # With QU should respond to only multicast since the response hasn't been seen since 75% of the ttl
-    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
     assert question.unicast is True
@@ -439,7 +439,7 @@ def test_qu_response():
     _validate_complete_response(query, multicast_out)
 
     # With QU set and an authorative answer (probe) should respond to both unitcast and multicast since the response hasn't been seen since 75% of the ttl
-    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
     assert question.unicast is True
@@ -453,7 +453,7 @@ def test_qu_response():
 
     _inject_response(zc, r.DNSIncoming(multicast_out.packets()[0]))
     # With the cache repopulated; should respond to only unicast when the answer has been recently multicast
-    query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
     assert question.unicast is True
@@ -700,4 +700,69 @@ def test_known_answer_supression_service_type_enumeration_query():
     # unregister
     zc.registry.remove(info)
     zc.registry.remove(info2)
+    zc.close()
+
+
+def test_qu_response_only_sends_additionals_if_sends_answer():
+    """Test that a QU response does not send additionals unless it sends the answer as well."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # service definition
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    # register
+    zc.registry.add(info)
+
+    ptr_record = info.dns_pointer()
+
+    # Add the PTR record to the cache
+    zc.cache.add(ptr_record)
+
+    # Add the A record to the cache with 50% ttl remaining
+    a_record = info.dns_addresses()[0]
+    a_record._set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
+    zc.cache.add(a_record)
+
+    # With QU should respond to only unicast when the answer has been recently multicast
+    # even if the additional has not been recently multicast
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unique = True  # Set the QU bit
+    assert question.unicast is True
+    query.add_question(question)
+
+    unicast_out, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    )
+    assert multicast_out is None
+    assert a_record in unicast_out.additionals
+    assert unicast_out.answers[0][0] == ptr_record
+
+    # Remove the 50% A record and add a 100% A record
+    zc.cache.remove(a_record)
+    a_record = info.dns_addresses()[0]
+    zc.cache.add(a_record)
+    # With QU should respond to only unicast when the answer has been recently multicast
+    # even if the additional has not been recently multicast
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unique = True  # Set the QU bit
+    assert question.unicast is True
+    query.add_question(question)
+
+    unicast_out, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    )
+    assert multicast_out is None
+    assert a_record in unicast_out.additionals
+    assert unicast_out.answers[0][0] == ptr_record
+
+    # unregister
+    zc.registry.remove(info)
     zc.close()

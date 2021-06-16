@@ -23,7 +23,7 @@
 import enum
 import socket
 import struct
-from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._exceptions import AbstractMethodException, IncomingDecodeError, NamePartTooLongException
 from ._logger import QuietLogger, log
@@ -197,8 +197,11 @@ class DNSRecord(DNSEntry):
     def reset_ttl(self, other: 'DNSRecord') -> None:
         """Sets this record's TTL and created time to that of
         another record."""
-        self.created = other.created
-        self.ttl = other.ttl
+        self._set_created_ttl(other.created, other.ttl)
+
+    def _set_created_ttl(self, created: float, ttl: Union[float, int]) -> None:
+        self.created = created
+        self.ttl = ttl
         self._expiration_time = None
         self._stale_time = None
         self._recent_time = None
