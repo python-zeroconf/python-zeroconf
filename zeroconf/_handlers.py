@@ -58,13 +58,10 @@ _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
 
-    def __init__(
-        self, cache: DNSCache, msg: DNSIncoming, ucast_source: bool, known_answers: DNSRRSet
-    ) -> None:
+    def __init__(self, cache: DNSCache, msg: DNSIncoming, ucast_source: bool) -> None:
         """Build a query response."""
         self._msg = msg
         self._is_probe = msg.num_authorities > 0
-        self._known_answers = known_answers
         self._ucast_source = ucast_source
         self._now = current_time_millis()
         self._cache = cache
@@ -112,7 +109,6 @@ class _QueryResponse:
         self, answers_rrset: Set[DNSRecord], multicast: bool
     ) -> Optional[DNSOutgoing]:
         """Add answers and additionals to a DNSOutgoing."""
-        self._suppress_known_answers(answers_rrset)
         # Find additionals and suppress any additionals that are already in answers
         additionals_rrset = self._additionals_from_answers_rrset(answers_rrset) - answers_rrset
         if not answers_rrset:
@@ -128,10 +124,6 @@ class _QueryResponse:
     def _additionals_from_answers_rrset(self, rrset: Set[DNSRecord]) -> Set[DNSRecord]:
         additionals: Set[DNSRecord] = set()
         return additionals.union(*[self._additionals[record] for record in rrset])
-
-    def _suppress_known_answers(self, rrset: Set[DNSRecord]) -> None:
-        """Remove any records suppressed by known answers."""
-        rrset -= set(record for record in rrset if self._known_answers.suppresses(record))
 
     def _suppress_mcasts_from_last_second(self, rrset: Set[DNSRecord]) -> None:
         """Remove any records that were already sent in the last second."""
@@ -168,39 +160,52 @@ class QueryHandler:
         self.registry = registry
         self.cache = cache
 
-    def _add_service_type_enumeration_query_answers(self, answer_set: _AnswerWithAdditionalsType) -> None:
+    def _add_service_type_enumeration_query_answers(
+        self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+    ) -> None:
         """Provide an answer to a service type enumeration query.
 
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
         """
         for stype in self.registry.get_types():
-            answer_set[
-                DNSPointer(_SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype)
-            ] = set()
+            dns_pointer = DNSPointer(
+                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype
+            )
+            if not known_answers.suppresses(dns_pointer):
+                answer_set[dns_pointer] = set()
 
-    def _add_pointer_answers(self, name: str, answer_set: _AnswerWithAdditionalsType) -> None:
+    def _add_pointer_answers(
+        self, name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+    ) -> None:
         """Answer PTR/ANY question."""
         for service in self.registry.get_infos_type(name):
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
-            answer_set[service.dns_pointer()] = set(
-                [service.dns_service(), service.dns_text(), *service.dns_addresses()]
-            )
+            dns_pointer = service.dns_pointer()
+            if not known_answers.suppresses(dns_pointer):
+                answer_set[dns_pointer] = set(
+                    [service.dns_service(), service.dns_text(), *service.dns_addresses()]
+                )
 
-    def _add_address_answers(self, name: str, answer_set: _AnswerWithAdditionalsType, type_: int) -> None:
+    def _add_address_answers(
+        self, name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, type_: int
+    ) -> None:
         """Answer A/AAAA/ANY question."""
         for service in self.registry.get_infos_server(name):
             for dns_address in service.dns_addresses(version=_TYPE_TO_IP_VERSION[type_]):
-                answer_set[dns_address] = set()
+                if not known_answers.suppresses(dns_address):
+                    answer_set[dns_address] = set()
 
-    def _answer_question(self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType) -> None:
+    def _answer_question(
+        self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+    ) -> None:
         type_ = question.type
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
-            self._add_pointer_answers(question.name, answer_set)
+            self._add_pointer_answers(question.name, answer_set, known_answers)
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
-            self._add_address_answers(question.name, answer_set, type_)
+            self._add_address_answers(question.name, answer_set, known_answers, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
             service = self.registry.get_info_name(question.name)  # type: ignore
@@ -208,15 +213,21 @@ class QueryHandler:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     # Add recommended additional answers according to
                     # https://tools.ietf.org/html/rfc6763#section-12.2.
-                    answer_set[service.dns_service()] = set(service.dns_addresses())
+                    dns_service = service.dns_service()
+                    if not known_answers.suppresses(dns_service):
+                        answer_set[dns_service] = set(service.dns_addresses())
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
-                    answer_set[service.dns_text()] = set()
+                    dns_text = service.dns_text()
+                    if not known_answers.suppresses(dns_text):
+                        answer_set[dns_text] = set()
 
-    def _answer_any_question(self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType) -> None:
+    def _answer_any_question(
+        self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+    ) -> None:
         if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
-            self._add_service_type_enumeration_query_answers(answer_set)
+            self._add_service_type_enumeration_query_answers(answer_set, known_answers)
 
-        return self._answer_question(question, answer_set)
+        return self._answer_question(question, answer_set, known_answers)
 
     def response(  # pylint: disable=unused-argument
         self, msgs: List[DNSIncoming], addr: Optional[str], port: int
@@ -224,11 +235,11 @@ class QueryHandler:
         """Deal with incoming query packets. Provides a response if possible."""
         ucast_source = port != _MDNS_PORT
         known_answers = DNSRRSet(itertools.chain(*[msg.answers for msg in msgs]))
-        query_res = _QueryResponse(self.cache, msgs[0], ucast_source, known_answers)
+        query_res = _QueryResponse(self.cache, msgs[0], ucast_source)
 
         for question in itertools.chain(*[msg.questions for msg in msgs]):
             answer_set: _AnswerWithAdditionalsType = {}
-            self._answer_any_question(question, answer_set)
+            self._answer_any_question(question, answer_set, known_answers)
             if not ucast_source and question.unicast:
                 query_res.add_qu_question_response(answer_set)
             else:
