@@ -389,3 +389,30 @@ def test_get_service_info_failure_path():
     zc = Zeroconf(interfaces=['127.0.0.1'])
     assert zc.get_service_info("_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10) is None
     zc.close()
+
+
+def test_sending_unicast():
+    """Test sending unicast response."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    entry = r.DNSText(
+        "didnotcrashincoming._crash._tcp.local.",
+        const._TYPE_TXT,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        500,
+        b'path=/~paulsm/',
+    )
+    generated.add_answer_at_time(entry, 0)
+    zc.send(generated, "2001:db8::1", const._MDNS_PORT)  # https://www.iana.org/go/rfc3849
+    time.sleep(0.2)
+    assert zc.cache.get(entry) is None
+
+    zc.send(generated, "198.51.100.0", const._MDNS_PORT)  # Documentation (TEST-NET-2)
+    time.sleep(0.2)
+    assert zc.cache.get(entry) is None
+
+    zc.send(generated)
+    time.sleep(0.2)
+    assert zc.cache.get(entry) is not None
+
+    zc.close()
