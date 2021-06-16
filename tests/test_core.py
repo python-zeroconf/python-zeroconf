@@ -468,30 +468,31 @@ def test_tc_bit_defers():
     packets = generated.packets()
     assert len(packets) == 4
     expected_deferred = []
+    source_ip = '203.0.113.13'
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert zc._deferred["1.2.3.4"] == expected_deferred
-    assert "1.2.3.4" in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert zc._deferred["1.2.3.4"] == expected_deferred
-    assert "1.2.3.4" in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert zc._deferred["1.2.3.4"] == expected_deferred
-    assert "1.2.3.4" in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert "1.2.3.4" not in zc._deferred
-    assert "1.2.3.4" not in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert source_ip not in zc._deferred
+    assert source_ip not in zc._timers
 
     # unregister
     zc.unregister_service(info)
@@ -529,6 +530,7 @@ def test_tc_bit_defers_last_response_missing():
 
     now = r.current_time_millis()
     _clear_cache(zc)
+    source_ip = '203.0.113.12'
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
@@ -544,29 +546,29 @@ def test_tc_bit_defers_last_response_missing():
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert zc._deferred["1.2.3.4"] == expected_deferred
-    assert "1.2.3.4" in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert zc._deferred["1.2.3.4"] == expected_deferred
-    assert "1.2.3.4" in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
     # Send the same packet again to similar multi interfaces
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert zc._deferred["1.2.3.4"] == expected_deferred
-    assert "1.2.3.4" in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
-    assert zc._deferred["1.2.3.4"] == expected_deferred
-    assert "1.2.3.4" in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
 
     time.sleep(1)
-    assert "1.2.3.4" not in zc._deferred
-    assert "1.2.3.4" not in zc._timers
+    assert source_ip not in zc._deferred
+    assert source_ip not in zc._timers
 
     # unregister
     zc.unregister_service(info)
