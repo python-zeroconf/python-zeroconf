@@ -64,6 +64,8 @@ class DNSEntry:
 
     """A DNS entry"""
 
+    __slots__ = ('key', 'name', 'type', 'class_', 'unique')
+
     def __init__(self, name: str, type_: int, class_: int) -> None:
         self.key = name.lower()
         self.name = name
@@ -980,11 +982,20 @@ class DNSRRSet:
         self._records = records
         self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
 
+    def _build_lookup(self):
+        # Build the hash table so we can lookup the record independent of the ttl
+        self._lookup = {record: record for record in self._records}
+
+    def __contains__(self, record: DNSRecord) -> bool:
+        """Check to see if a like record in the rrset independent of the ttl."""
+        if self._lookup is None:
+            self._build_lookup()
+        return bool(record in self._lookup)
+
     def suppresses(self, record: DNSRecord) -> bool:
         """Returns true if any answer in the rrset can suffice for the
         information held in this record."""
         if self._lookup is None:
-            # Build the hash table so we can lookup the record independent of the ttl
-            self._lookup = {record: record for record in self._records}
+            self._build_lookup()
         other = self._lookup.get(record)
         return bool(other and other.ttl > (record.ttl / 2))

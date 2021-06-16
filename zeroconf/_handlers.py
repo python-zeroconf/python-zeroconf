@@ -311,6 +311,7 @@ class RecordManager:
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
         now = current_time_millis()
+        rrset_answers = DNSRRSet(msg.answers)
         for record in msg.answers:
 
             updated = True
@@ -323,7 +324,7 @@ class RecordManager:
                 for entry in self.cache.get_all_by_details(record.name, record.type, record.class_):
                     if entry == record:
                         updated = False
-                    if record.created - entry.created > 1000 and entry not in msg.answers:
+                    if record.created - entry.created > 1000 and entry not in rrset_answers:
                         removes.append(entry)
 
             expired = record.is_expired(now)
