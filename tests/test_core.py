@@ -603,5 +603,5 @@ def test_tc_bit_defers_last_response_missing():
     assert source_ip not in zc._timers
 
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
