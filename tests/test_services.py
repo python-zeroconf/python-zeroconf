@@ -1275,3 +1275,27 @@ def test_servicebrowser_uses_non_strict_names():
     with pytest.raises(r.BadTypeInNameException):
         browser = ServiceBrowser(zc, ["tivo-videostream._tcp.local."], [on_service_state_change])
     zc.close()
+
+
+def test_servicelisteners_raise_not_implemented():
+    """Verify service listeners raise when one of the methods is not implemented."""
+
+    class MyPartialListener(r.ServiceListener):
+        """A listener that does not implement anything."""
+
+    zc = r.Zeroconf(interfaces=['127.0.0.1'])
+
+    with pytest.raises(NotImplementedError):
+        MyPartialListener().add_service(
+            zc, "_tivo-videostream._tcp.local.", "Tivo1._tivo-videostream._tcp.local."
+        )
+    with pytest.raises(NotImplementedError):
+        MyPartialListener().remove_service(
+            zc, "_tivo-videostream._tcp.local.", "Tivo1._tivo-videostream._tcp.local."
+        )
+    with pytest.raises(NotImplementedError):
+        MyPartialListener().update_service(
+            zc, "_tivo-videostream._tcp.local.", "Tivo1._tivo-videostream._tcp.local."
+        )
+
+    zc.close()
