@@ -481,6 +481,9 @@ def test_tc_bit_defers():
     zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
+    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)

@@ -570,8 +570,9 @@ class Zeroconf(QuietLogger):
 
         deferred = self._deferred.setdefault(addr, [])
         # If we get the same packet on another iterface we ignore it
-        if deferred and deferred[-1].data == msg.data:
-            return
+        for incoming in reversed(deferred):
+            if incoming.data == msg.data:
+                return
         deferred.append(msg)
         delay = random.randint(400, 500) / 1000
         assert self.loop is not None
@@ -586,6 +587,8 @@ class Zeroconf(QuietLogger):
         packets = self._deferred.pop(addr, [])
         if msg:
             packets.append(msg)
+        log.debug("respond_query: %s,%s: packets=%s", addr, port, packets)
+
         unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
         if unicast_out and unicast_out.answers:
             self.async_send(unicast_out, addr, port)
