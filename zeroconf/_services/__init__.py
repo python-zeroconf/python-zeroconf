@@ -168,8 +168,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         assert handlers or listener, 'You need to specify at least one handler'
         self.types = set(type_ if isinstance(type_, list) else [type_])  # type: Set[str]
         for check_type_ in self.types:
-            if not check_type_.endswith(service_type_name(check_type_, strict=False)):
-                raise BadTypeInNameException
+            # Will generate BadTypeInNameException on a bad name
+            service_type_name(check_type_, strict=False)
         self.zc = zc
         self.addr = addr
         self.port = port
