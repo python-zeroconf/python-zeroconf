@@ -146,9 +146,9 @@ class DNSRecord(DNSEntry):
         super().__init__(name, type_, class_)
         self.ttl = ttl
         self.created = current_time_millis()
-        self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
-        self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
-        self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
+        self._expiration_time: Optional[float] = None
+        self._stale_time: Optional[float] = None
+        self._recent_time: Optional[float] = None
 
     def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
         """Abstract method"""
@@ -157,10 +157,7 @@ class DNSRecord(DNSEntry):
     def suppressed_by(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
-        for record in msg.answers:
-            if self.suppressed_by_answer(record):
-                return True
-        return False
+        return any(self.suppressed_by_answer(record) for record in msg.answers)
 
     def suppressed_by_answer(self, other: 'DNSRecord') -> bool:
         """Returns true if another record has same name, type and class,
@@ -175,18 +172,26 @@ class DNSRecord(DNSEntry):
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: float) -> Union[int, float]:
         """Returns the remaining TTL in seconds."""
+        if self._expiration_time is None:
+            self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         return max(0, millis_to_seconds(self._expiration_time - now))
 
     def is_expired(self, now: float) -> bool:
         """Returns true if this record has expired."""
+        if self._expiration_time is None:
+            self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         return self._expiration_time <= now
 
     def is_stale(self, now: float) -> bool:
         """Returns true if this record is at least half way expired."""
+        if self._stale_time is None:
+            self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
         return self._stale_time <= now
 
     def is_recent(self, now: float) -> bool:
         """Returns true if the record more than one quarter of its TTL remaining."""
+        if self._recent_time is None:
+            self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
         return self._recent_time > now
 
     def reset_ttl(self, other: 'DNSRecord') -> None:
@@ -194,9 +199,9 @@ class DNSRecord(DNSEntry):
         another record."""
         self.created = other.created
         self.ttl = other.ttl
-        self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
-        self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
-        self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
+        self._expiration_time = None
+        self._stale_time = None
+        self._recent_time = None
 
     def write(self, out: 'DNSOutgoing') -> None:  # pylint: disable=no-self-use
         """Abstract method"""
