@@ -987,4 +987,4 @@ class DNSRRSet:
             # Build the hash table so we can lookup the record independent of the ttl
             self._lookup = {record: record for record in self._records}
         other = self._lookup.get(record)
-        return other and other.ttl > (record.ttl / 2)
+        return bool(other and other.ttl > (record.ttl / 2))
