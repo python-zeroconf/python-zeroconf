@@ -560,7 +560,7 @@ def test_tc_bit_defers_last_response_missing():
     assert zc._deferred["1.2.3.4"] == expected_deferred
     assert "1.2.3.4" in zc._timers
 
-    time.sleep(0.600)
+    time.sleep(1)
     assert "1.2.3.4" not in zc._deferred
     assert "1.2.3.4" not in zc._timers
 
