@@ -157,10 +157,7 @@ class DNSRecord(DNSEntry):
     def suppressed_by(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
-        for record in msg.answers:
-            if self.suppressed_by_answer(record):
-                return True
-        return False
+        return any(self.suppressed_by_answer(record) for record in msg.answers)
 
     def suppressed_by_answer(self, other: 'DNSRecord') -> bool:
         """Returns true if another record has same name, type and class,
@@ -175,6 +172,8 @@ class DNSRecord(DNSEntry):
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: float) -> Union[int, float]:
         """Returns the remaining TTL in seconds."""
+        if self._expiration_time is None:
+            self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         return max(0, millis_to_seconds(self._expiration_time - now))
 
     def is_expired(self, now: float) -> bool:
