@@ -308,9 +308,16 @@ def test_invalid_packets_ignored_and_does_not_cause_loop_exception():
     parsed = r.DNSIncoming(packet)
     assert parsed.valid is False
 
+    # Invalid Packet
     mock_out = unittest.mock.Mock()
     mock_out.packets = lambda: [packet]
     zc.send(mock_out)
+
+    # Invalid oversized packet
+    mock_out = unittest.mock.Mock()
+    mock_out.packets = lambda: [packet * 1000]
+    zc.send(mock_out)
+
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     entry = r.DNSText(
         "didnotcrashincoming._crash._tcp.local.",
