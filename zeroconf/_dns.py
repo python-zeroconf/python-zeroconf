@@ -23,7 +23,7 @@
 import enum
 import socket
 import struct
-from typing import Any, Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union, cast
 
 from ._exceptions import AbstractMethodException, IncomingDecodeError, NamePartTooLongException
 from ._logger import QuietLogger, log
