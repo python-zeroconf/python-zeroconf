@@ -23,7 +23,7 @@
 import enum
 import socket
 import struct
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._exceptions import AbstractMethodException, IncomingDecodeError, NamePartTooLongException
 from ._logger import QuietLogger, log
@@ -146,9 +146,9 @@ class DNSRecord(DNSEntry):
         super().__init__(name, type_, class_)
         self.ttl = ttl
         self.created = current_time_millis()
-        self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
-        self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
-        self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
+        self._expiration_time: Optional[float] = None
+        self._stale_time: Optional[float] = None
+        self._recent_time: Optional[float] = None
 
     def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
         """Abstract method"""
@@ -179,14 +179,20 @@ class DNSRecord(DNSEntry):
 
     def is_expired(self, now: float) -> bool:
         """Returns true if this record has expired."""
+        if self._expiration_time is None:
+            self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
         return self._expiration_time <= now
 
     def is_stale(self, now: float) -> bool:
         """Returns true if this record is at least half way expired."""
+        if self._stale_time is None:
+            self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
         return self._stale_time <= now
 
     def is_recent(self, now: float) -> bool:
         """Returns true if the record more than one quarter of its TTL remaining."""
+        if self._recent_time is None:
+            self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
         return self._recent_time > now
 
     def reset_ttl(self, other: 'DNSRecord') -> None:
@@ -194,9 +200,9 @@ class DNSRecord(DNSEntry):
         another record."""
         self.created = other.created
         self.ttl = other.ttl
-        self._expiration_time = self.get_expiration_time(_EXPIRE_FULL_TIME_PERCENT)
-        self._stale_time = self.get_expiration_time(_EXPIRE_STALE_TIME_PERCENT)
-        self._recent_time = self.get_expiration_time(_RECENT_TIME_PERCENT)
+        self._expiration_time = None
+        self._stale_time = None
+        self._recent_time = None
 
     def write(self, out: 'DNSOutgoing') -> None:  # pylint: disable=no-self-use
         """Abstract method"""
@@ -965,3 +971,18 @@ class DNSOutgoing(DNSMessage):
                 break
         self.state = self.State.finished
         return self.packets_data
+
+
+class DNSRRSet:
+    def __init__(self, records: Iterable[DNSRecord]) -> None:
+        """Create an RRset from records."""
+        self._records = records
+        self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
+
+    def suppresses(self, record: DNSRecord) -> bool:
+        """Returns true if any answer in the rrset can suffice for the
+        information held in this record."""
+        if self._lookup is None:
+            self._lookup = {record: record for record in self._records}
+        other = self._lookup.get(record)
+        return other and other.ttl > (record.ttl / 2)
