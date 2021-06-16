@@ -113,11 +113,11 @@ class _QueryResponse:
         self, answers_rrset: Set[DNSRecord], multicast: bool
     ) -> Optional[DNSOutgoing]:
         """Add answers and additionals to a DNSOutgoing."""
-        if not answers_rrset:
-            return None
         self._suppress_known_answers(answers_rrset)
         # Find additionals and suppress any additionals that are already in answers
         additionals_rrset = self._additionals_from_answers_rrset(answers_rrset) - answers_rrset
+        if not answers_rrset:
+            return None
 
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=self._msg.id)
         for answer in answers_rrset:
@@ -127,7 +127,7 @@ class _QueryResponse:
         return out
 
     def _additionals_from_answers_rrset(self, rrset: Set[DNSRecord]) -> Set[DNSRecord]:
-        return set(itertools.chain(self._all_answers[record] for record in rrset))
+        return set().union(*[self._all_answers[record] for record in rrset])
 
     def _suppress_known_answers(self, rrset: Set[DNSRecord]) -> None:
         """Remove any records suppressed by known answers."""
@@ -187,7 +187,7 @@ class QueryHandler:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
             answer_set[service.dns_pointer()] = set(
-                service.dns_service(), service.dns_text(), *service.dns_addresses()
+                [service.dns_service(), service.dns_text(), *service.dns_addresses()]
             )
 
     def _add_address_answers(self, name: str, answer_set: _AnswerWithAdditionalsType, type_: int) -> None:
