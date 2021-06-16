@@ -15,6 +15,7 @@ from typing import Dict, cast  # noqa # used in type hints
 
 import zeroconf as r
 from zeroconf import DNSIncoming, const, current_time_millis
+from zeroconf._dns import DNSRRSet
 from zeroconf import (
     DNSHinfo,
     DNSText,
@@ -900,6 +901,8 @@ def test_dns_record_hashablity_does_not_consider_ttl():
     assert len(record_set) == 1
 
     record3_dupe = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b'same')
+    assert record2 == record3_dupe
+    assert record2.__hash__() == record3_dupe.__hash__()
 
     record_set.add(record3_dupe)
     assert len(record_set) == 1
@@ -941,6 +944,8 @@ def test_dns_hinfo_record_hashablity():
     assert len(record_set) == 2
 
     hinfo2_dupe = r.DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu2', 'os')
+    assert hinfo2 == hinfo2_dupe
+    assert hinfo2.__hash__() == hinfo2_dupe.__hash__()
 
     record_set.add(hinfo2_dupe)
     assert len(record_set) == 2
@@ -958,6 +963,8 @@ def test_dns_pointer_record_hashablity():
     assert len(record_set) == 2
 
     ptr2_dupe = r.DNSPointer('irrelevant', const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, '456')
+    assert ptr2 == ptr2
+    assert ptr2.__hash__() == ptr2_dupe.__hash__()
 
     record_set.add(ptr2_dupe)
     assert len(record_set) == 2
@@ -965,26 +972,6 @@ def test_dns_pointer_record_hashablity():
 
 def test_dns_text_record_hashablity():
     """Test DNSText are hashable."""
-    text1 = r.DNSText('irrelevant', 0, 0, 0, b'12345678901')
-    text2 = r.DNSText('irrelevant', 1, 0, 0, b'12345678901')
-    text3 = r.DNSText('irrelevant', 0, 1, 0, b'12345678901')
-    text4 = r.DNSText('irrelevant', 0, 0, 1, b'12345678901')
-    text5 = r.DNSText('irrelevant', 0, 0, 0, b'ABCDEFGHIJK')
-
-    record_set = set([text1, text2, text3, text4, text5])
-    assert len(record_set) == 5
-
-    record_set.add(text1)
-    assert len(record_set) == 5
-
-    text1_dupe = r.DNSText('irrelevant', 0, 0, 0, b'12345678901')
-
-    record_set.add(text1_dupe)
-    assert len(record_set) == 5
-
-
-def test_dns_text_record_hashablity():
-    """Test DNSText are hashable."""
     text1 = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'12345678901')
     text2 = r.DNSText('irrelevant', 1, 0, const._DNS_OTHER_TTL, b'12345678901')
     text3 = r.DNSText('irrelevant', 0, 1, const._DNS_OTHER_TTL, b'12345678901')
@@ -998,46 +985,8 @@ def test_dns_text_record_hashablity():
     assert len(record_set) == 4
 
     text1_dupe = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'12345678901')
-
-    record_set.add(text1_dupe)
-    assert len(record_set) == 4
-
-
-def test_dns_text_record_hashablity():
-    """Test DNSText are hashable."""
-    text1 = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'12345678901')
-    text2 = r.DNSText('irrelevant', 1, 0, const._DNS_OTHER_TTL, b'12345678901')
-    text3 = r.DNSText('irrelevant', 0, 1, const._DNS_OTHER_TTL, b'12345678901')
-    text4 = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'ABCDEFGHIJK')
-
-    record_set = set([text1, text2, text3, text4])
-
-    assert len(record_set) == 4
-
-    record_set.add(text1)
-    assert len(record_set) == 4
-
-    text1_dupe = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'12345678901')
-
-    record_set.add(text1_dupe)
-    assert len(record_set) == 4
-
-
-def test_dns_text_record_hashablity():
-    """Test DNSText are hashable."""
-    text1 = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'12345678901')
-    text2 = r.DNSText('irrelevant', 1, 0, const._DNS_OTHER_TTL, b'12345678901')
-    text3 = r.DNSText('irrelevant', 0, 1, const._DNS_OTHER_TTL, b'12345678901')
-    text4 = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'ABCDEFGHIJK')
-
-    record_set = set([text1, text2, text3, text4])
-
-    assert len(record_set) == 4
-
-    record_set.add(text1)
-    assert len(record_set) == 4
-
-    text1_dupe = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'12345678901')
+    assert text1 == text1_dupe
+    assert text1.__hash__() == text1_dupe.__hash__()
 
     record_set.add(text1_dupe)
     assert len(record_set) == 4
@@ -1060,6 +1009,35 @@ def test_dns_service_record_hashablity():
     srv1_dupe = r.DNSService(
         'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, 'a'
     )
+    assert srv1 == srv1_dupe
+    assert srv1.__hash__() == srv1_dupe.__hash__()
 
     record_set.add(srv1_dupe)
     assert len(record_set) == 4
+
+
+def test_rrset_does_not_consider_ttl():
+    """Test DNSRRSet does not consider the ttl in the hash."""
+
+    longarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 100, b'same')
+    shortarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 10, b'same')
+    longaaaarec = r.DNSAddress('irrelevant', const._TYPE_AAAA, const._CLASS_IN, 100, b'same')
+    shortaaaarec = r.DNSAddress('irrelevant', const._TYPE_AAAA, const._CLASS_IN, 10, b'same')
+
+    rrset = DNSRRSet([longarec, shortaaaarec])
+
+    assert rrset.suppresses(longarec)
+    assert rrset.suppresses(shortarec)
+    assert not rrset.suppresses(longaaaarec)
+    assert rrset.suppresses(shortaaaarec)
+
+    verylongarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 1000, b'same')
+    longarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 100, b'same')
+    mediumarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 60, b'same')
+    shortarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 10, b'same')
+
+    rrset2 = DNSRRSet([mediumarec])
+    assert not rrset2.suppresses(verylongarec)
+    assert rrset2.suppresses(longarec)
+    assert rrset2.suppresses(mediumarec)
+    assert rrset2.suppresses(shortarec)
