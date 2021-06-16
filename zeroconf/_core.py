@@ -74,6 +74,7 @@ from .const import (
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
+
 class NotifyListener:
     """Receive notifications Zeroconf.notify_all is called."""
 
