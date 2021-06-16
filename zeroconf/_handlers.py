@@ -177,24 +177,24 @@ class QueryHandler:
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
         """
         for stype in self.registry.get_types():
-            answer_set.setdefault(
-                DNSPointer(_SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype), set()
-            )
+            answer_set[
+                DNSPointer(_SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype)
+            ] = set()
 
     def _add_pointer_answers(self, name: str, answer_set: _AnswerWithAdditionalsType) -> None:
         """Answer PTR/ANY question."""
         for service in self.registry.get_infos_type(name):
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
-            answer_set.add_answer_with_additonals(
-                service.dns_pointer(), [service.dns_service(), service.dns_text(), *service.dns_addresses()]
+            answer_set[service.dns_pointer()] = set(
+                service.dns_service(), service.dns_text(), *service.dns_addresses()
             )
 
     def _add_address_answers(self, name: str, answer_set: _AnswerWithAdditionalsType, type_: int) -> None:
         """Answer A/AAAA/ANY question."""
         for service in self.registry.get_infos_server(name):
             for dns_address in service.dns_addresses(version=_TYPE_TO_IP_VERSION[type_]):
-                answer_set.setdefault(dns_address, set())
+                answer_set[dns_address] = set()
 
     def _answer_question(self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType) -> None:
         type_ = question.type
@@ -211,9 +211,9 @@ class QueryHandler:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     # Add recommended additional answers according to
                     # https://tools.ietf.org/html/rfc6763#section-12.2.
-                    answer_set.setdefault(service.dns_service(), set()).update(service.dns_addresses())
+                    answer_set[service.dns_service()] = set(service.dns_addresses())
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
-                    answer_set.setdefault(service.dns_text(), set())
+                    answer_set[service.dns_text()] = set()
 
     def _answer_any_question(
         self,
