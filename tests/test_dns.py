@@ -378,15 +378,15 @@ class PacketGeneration(unittest.TestCase):
         parsed1 = r.DNSIncoming(packets[0])
         assert len(parsed1.questions) == 30
         assert len(parsed1.answers) == 88
-        assert parsed1.flags & const._FLAGS_TC == const._FLAGS_TC
+        assert parsed1.truncated
         parsed2 = r.DNSIncoming(packets[1])
         assert len(parsed2.questions) == 0
         assert len(parsed2.answers) == 101
-        assert parsed2.flags & const._FLAGS_TC == const._FLAGS_TC
+        assert parsed2.truncated
         parsed3 = r.DNSIncoming(packets[2])
         assert len(parsed3.questions) == 0
         assert len(parsed3.answers) == 11
-        assert parsed3.flags & const._FLAGS_TC == 0
+        assert not parsed3.truncated
 
     def test_massive_probe_packet_split(self):
         """Test probe with many authorative answers."""
@@ -419,15 +419,15 @@ class PacketGeneration(unittest.TestCase):
         assert parsed1.questions[0].unicast is True
         assert len(parsed1.questions) == 30
         assert parsed1.num_authorities == 88
-        assert parsed1.flags & const._FLAGS_TC == const._FLAGS_TC
+        assert parsed1.truncated
         parsed2 = r.DNSIncoming(packets[1])
         assert len(parsed2.questions) == 0
         assert parsed2.num_authorities == 101
-        assert parsed2.flags & const._FLAGS_TC == const._FLAGS_TC
+        assert parsed2.truncated
         parsed3 = r.DNSIncoming(packets[2])
         assert len(parsed3.questions) == 0
         assert parsed3.num_authorities == 11
-        assert parsed3.flags & const._FLAGS_TC == 0
+        assert not parsed3.truncated
 
     def test_only_one_answer_can_by_large(self):
         """Test that only the first answer in each packet can be large.
@@ -823,15 +823,15 @@ def test_tc_bit_in_query_packet():
     assert len(packets) == 3
 
     first_packet = r.DNSIncoming(packets[0])
-    assert first_packet.flags & const._FLAGS_TC == const._FLAGS_TC
+    assert first_packet.truncated
     assert first_packet.valid is True
 
     second_packet = r.DNSIncoming(packets[1])
-    assert second_packet.flags & const._FLAGS_TC == const._FLAGS_TC
+    assert second_packet.truncated
     assert second_packet.valid is True
 
     third_packet = r.DNSIncoming(packets[2])
-    assert third_packet.flags & const._FLAGS_TC == 0
+    assert not third_packet.truncated
     assert third_packet.valid is True
 
 
@@ -855,15 +855,15 @@ def test_tc_bit_not_set_in_answer_packet():
     assert len(packets) == 3
 
     first_packet = r.DNSIncoming(packets[0])
-    assert first_packet.flags & const._FLAGS_TC == 0
+    assert not first_packet.truncated
     assert first_packet.valid is True
 
     second_packet = r.DNSIncoming(packets[1])
-    assert second_packet.flags & const._FLAGS_TC == 0
+    assert not second_packet.truncated
     assert second_packet.valid is True
 
     third_packet = r.DNSIncoming(packets[2])
-    assert third_packet.flags & const._FLAGS_TC == 0
+    assert not third_packet.truncated
     assert third_packet.valid is True
 
 

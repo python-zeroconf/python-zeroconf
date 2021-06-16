@@ -395,6 +395,11 @@ class DNSMessage:
         """Returns true if this is a response."""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
+    @property
+    def truncated(self) -> bool:
+        """Returns true if this is a truncated."""
+        return (self.flags & _FLAGS_TC) == _FLAGS_TC
+
 
 class DNSIncoming(DNSMessage, QuietLogger):
 
@@ -428,6 +433,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
             [
                 'id=%s' % self.id,
                 'flags=%s' % self.flags,
+                'truncated=%s' % self.truncated,
                 'n_q=%s' % self.num_questions,
                 'n_ans=%s' % self.num_answers,
                 'n_auth=%s' % self.num_authorities,
