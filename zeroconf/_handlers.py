@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._cache import DNSCache
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
@@ -126,7 +126,8 @@ class _QueryResponse:
         return out
 
     def _additionals_from_answers_rrset(self, rrset: Set[DNSRecord]) -> Set[DNSRecord]:
-        return set().union(*[self._additionals[record] for record in rrset])
+        additionals: Set[DNSRecord] = set()
+        return additionals.union(*[self._additionals[record] for record in rrset])
 
     def _suppress_known_answers(self, rrset: Set[DNSRecord]) -> None:
         """Remove any records suppressed by known answers."""
@@ -167,10 +168,7 @@ class QueryHandler:
         self.registry = registry
         self.cache = cache
 
-    def _answer_service_type_enumeration_query(
-        self,
-        answer_set: _AnswerWithAdditionalsType,
-    ) -> Set[DNSRecord]:
+    def _add_service_type_enumeration_query_answers(self, answer_set: _AnswerWithAdditionalsType) -> None:
         """Provide an answer to a service type enumeration query.
 
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
@@ -214,13 +212,9 @@ class QueryHandler:
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
                     answer_set[service.dns_text()] = set()
 
-    def _answer_any_question(
-        self,
-        question: DNSQuestion,
-        answer_set: DNSRRSet,
-    ) -> None:
+    def _answer_any_question(self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType) -> None:
         if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
-            self._answer_service_type_enumeration_query(answer_set)
+            self._add_service_type_enumeration_query_answers(answer_set)
 
         return self._answer_question(question, answer_set)
 
