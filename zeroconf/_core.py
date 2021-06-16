@@ -564,9 +564,6 @@ class Zeroconf(QuietLogger):
     def handle_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        if addr in self._timers:
-            self._timers.pop(addr).cancel()
-
         if msg and msg.truncated:
             queue = self._deferred.setdefault(addr, [])
             # If we get the same packet on another iterface we ignore it
@@ -575,14 +572,16 @@ class Zeroconf(QuietLogger):
             queue.append(msg)
             delay = random.randint(400, 500) / 1000
             assert self.loop is not None
+            if addr in self._timers:
+                self._timers.pop(addr).cancel()
             self._timers[addr] = self.loop.call_later(delay, self.handle_query, None, addr, port)
             return
 
+        if addr in self._timers:
+            self._timers.pop(addr).cancel()
         packets = self._deferred.pop(addr, [])
         if msg:
             packets.append(msg)
-        if not packets:
-            return
 
         unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
         if unicast_out and unicast_out.answers:

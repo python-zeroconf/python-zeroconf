@@ -553,6 +553,10 @@ def test_tc_bit_defers_last_response_missing():
     zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
     assert zc._deferred["1.2.3.4"] == expected_deferred
     assert "1.2.3.4" in zc._timers
+    # Send the same packet again to similar multi interfaces
+    zc.handle_query(next_packet, "1.2.3.4", const._MDNS_PORT)
+    assert zc._deferred["1.2.3.4"] == expected_deferred
+    assert "1.2.3.4" in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
