@@ -806,10 +806,12 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     question.unique = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
+
     question = r.DNSQuestion(info2.type, const._TYPE_PTR, const._CLASS_IN)
     question.unique = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
+    zc.cache.add(info2.dns_pointer())  # Add 100% TTL for info2 to the cache
 
     unicast_out, multicast_out = zc.query_handler.response(
         [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
