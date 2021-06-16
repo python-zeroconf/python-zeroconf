@@ -261,9 +261,9 @@ class QueryHandler:
             msgs = [msgs]
         ucast_source = port != _MDNS_PORT
         query_res = _QueryResponse(self.cache, msgs[0], ucast_source)
-        answers_rrset = DNSRRSet(itertools.chain([msg.answers for msg in msgs]))
+        answers_rrset = DNSRRSet(itertools.chain(*[msg.answers for msg in msgs]))
 
-        for question in itertools.chain([msg.questions for msg in msgs]):
+        for question in itertools.chain(*[msg.questions for msg in msgs]):
             all_answers = self._answer_any_question(answers_rrset, question)
             if not ucast_source and question.unicast:
                 query_res.add_qu_question_response(*all_answers)
