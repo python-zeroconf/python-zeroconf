@@ -72,6 +72,7 @@ from .const import (
     _UNREGISTER_TIME,
 )
 
+_TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
 class NotifyListener:
     """Receive notifications Zeroconf.notify_all is called."""
@@ -574,7 +575,7 @@ class Zeroconf(QuietLogger):
             if incoming.data == msg.data:
                 return
         deferred.append(msg)
-        delay = random.randint(400, 500) / 1000
+        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
         assert self.loop is not None
         if addr in self._timers:
             self._timers.pop(addr).cancel()
@@ -587,13 +588,11 @@ class Zeroconf(QuietLogger):
         packets = self._deferred.pop(addr, [])
         if msg:
             packets.append(msg)
-        if len(packets) > 1:
-            log.debug("respond multi packet: %s,%s: packets=%s", addr, port, packets)
 
         unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
-        if unicast_out and unicast_out.answers:
+        if unicast_out:
             self.async_send(unicast_out, addr, port)
-        if multicast_out and multicast_out.answers:
+        if multicast_out:
             self.async_send(multicast_out, None, _MDNS_PORT)
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:

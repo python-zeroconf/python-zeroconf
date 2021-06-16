@@ -254,11 +254,9 @@ class QueryHandler:
         return self._answer_question(answers_rrset, question)
 
     def response(  # pylint: disable=unused-argument
-        self, msgs: Union[DNSIncoming, List[DNSIncoming]], addr: Optional[str], port: int
+        self, msgs: List[DNSIncoming], addr: Optional[str], port: int
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
         """Deal with incoming query packets. Provides a response if possible."""
-        if not isinstance(msgs, list):
-            msgs = [msgs]
         ucast_source = port != _MDNS_PORT
         query_res = _QueryResponse(self.cache, msgs[0], ucast_source)
         answers_rrset = DNSRRSet(itertools.chain(*[msg.answers for msg in msgs]))
