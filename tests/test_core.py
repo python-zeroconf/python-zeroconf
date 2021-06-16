@@ -427,7 +427,7 @@ def test_sending_unicast():
 
 def test_tc_bit_defers():
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_tcbitdefer._tcp.local."
     name = "knownname"
     name2 = "knownname2"
     name3 = "knownname3"
@@ -500,7 +500,7 @@ def test_tc_bit_defers():
 
 def test_tc_bit_defers_last_response_missing():
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_knowndefer._tcp.local."
     name = "knownname"
     name2 = "knownname2"
     name3 = "knownname3"

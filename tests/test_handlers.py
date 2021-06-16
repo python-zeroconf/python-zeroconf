@@ -271,7 +271,7 @@ def test_ptr_optimization():
 def test_any_query_for_ptr():
     """Test that queries for ANY will return PTR records."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_anyptr._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
@@ -296,7 +296,7 @@ def test_any_query_for_ptr():
 def test_aaaa_query():
     """Test that queries for AAAA records work."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_knownaaaservice._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
@@ -463,7 +463,7 @@ def test_qu_response():
 
 def test_known_answer_supression():
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_knownanswersv8._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
@@ -573,7 +573,7 @@ def test_known_answer_supression():
 
 def test_multi_packet_known_answer_supression():
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_handlermultis._tcp.local."
     name = "knownname"
     name2 = "knownname2"
     name3 = "knownname3"
@@ -625,7 +625,7 @@ def test_multi_packet_known_answer_supression():
 
 def test_known_answer_supression_service_type_enumeration_query():
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_otherknown._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
@@ -635,7 +635,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     )
     zc.register_service(info)
 
-    type_2 = "_knownservice2._tcp.local."
+    type_2 = "_otherknown2._tcp.local."
     name = "knownname"
     registration_name2 = "%s.%s" % (name, type_2)
     desc = {'path': '/~paulsm/'}
