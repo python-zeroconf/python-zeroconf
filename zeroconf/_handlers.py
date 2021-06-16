@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 from ._cache import DNSCache
 from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
