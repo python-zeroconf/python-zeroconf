@@ -450,9 +450,9 @@ def test_tc_bit_defers():
     info3 = r.ServiceInfo(
         type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
-    zc.register_service(info2)
-    zc.register_service(info3)
+    zc.registry.add(info)
+    zc.registry.add(info2)
+    zc.registry.add(info3)
 
     now = r.current_time_millis()
     _clear_cache(zc)
@@ -527,9 +527,9 @@ def test_tc_bit_defers_last_response_missing():
     info3 = r.ServiceInfo(
         type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
-    zc.register_service(info2)
-    zc.register_service(info3)
+    zc.registry.add(info)
+    zc.registry.add(info2)
+    zc.registry.add(info3)
 
     now = r.current_time_millis()
     _clear_cache(zc)
@@ -551,25 +551,37 @@ def test_tc_bit_defers_last_response_missing():
     expected_deferred.append(next_packet)
     zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
-    assert source_ip in zc._timers
+    timer1 = zc._timers[source_ip]
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
     zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
-    assert source_ip in zc._timers
+    timer2 = zc._timers[source_ip]
+    assert timer1.cancelled()
+    assert timer2 != timer1
+
     # Send the same packet again to similar multi interfaces
     zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
+    timer3 = zc._timers[source_ip]
+    assert not timer3.cancelled()
+    assert timer3 == timer2
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
     zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
+    timer4 = zc._timers[source_ip]
+    assert timer3.cancelled()
+    assert timer4 != timer3
 
-    time.sleep(1)
+    for _ in range(30):
+        time.sleep(0.1)
+        if source_ip not in zc._timers:
+            break
     assert source_ip not in zc._deferred
     assert source_ip not in zc._timers
 
