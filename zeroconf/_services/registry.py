@@ -106,6 +106,8 @@ class ServiceRegistry:
     def _remove(self, infos: List[ServiceInfo]) -> None:
         """Remove a services under the lock."""
         for info in infos:
+            if info.key not in self._services:
+                continue
             old_service_info = self._services[info.key]
             self.types[old_service_info.type.lower()].remove(info.key)
             self.servers[old_service_info.server_key].remove(info.key)

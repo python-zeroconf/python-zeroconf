@@ -28,6 +28,29 @@ class TestServiceRegistry(unittest.TestCase):
         registry.remove(info)
         registry.add(info)
 
+    def test_unregister_multiple_times(self):
+        """Verify we can unregister a service multiple times.
+
+        In production unregister_service and unregister_all_services
+        may happen at the same time during shutdown. We want to treat
+        this as non-fatal since its expected to happen and it is unlikely
+        that the callers know about each other.
+        """
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        registration_name = "%s.%s" % (name, type_)
+
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        )
+
+        registry = r.ServiceRegistry()
+        registry.add(info)
+        self.assertRaises(r.ServiceNameAlreadyRegistered, registry.add, info)
+        registry.remove(info)
+        registry.remove(info)
+
     def test_lookups(self):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
