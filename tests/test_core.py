@@ -558,7 +558,8 @@ def test_tc_bit_defers_last_response_missing():
     zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     timer2 = zc._timers[source_ip]
-    assert timer1.cancelled()
+    if sys.version_info >= (3, 7):
+        assert timer1.cancelled()
     assert timer2 != timer1
 
     # Send the same packet again to similar multi interfaces
@@ -566,7 +567,8 @@ def test_tc_bit_defers_last_response_missing():
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
     timer3 = zc._timers[source_ip]
-    assert not timer3.cancelled()
+    if sys.version_info >= (3, 7):
+        assert not timer3.cancelled()
     assert timer3 == timer2
 
     next_packet = r.DNSIncoming(packets.pop(0))
@@ -575,7 +577,8 @@ def test_tc_bit_defers_last_response_missing():
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
     timer4 = zc._timers[source_ip]
-    assert timer3.cancelled()
+    if sys.version_info >= (3, 7):
+        assert timer3.cancelled()
     assert timer4 != timer3
 
     for _ in range(30):
