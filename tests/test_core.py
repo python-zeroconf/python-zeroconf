@@ -594,7 +594,7 @@ def test_tc_bit_defers_last_response_missing():
         assert timer3.cancelled()
     assert timer4 != timer3
 
-    for _ in range(7):
+    for _ in range(8):
         time.sleep(0.1)
         if source_ip not in zc._timers:
             break
