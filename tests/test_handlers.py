@@ -96,9 +96,9 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT)[
-            1
-        ]
+        multicast_out = zc.query_handler.response(
+            [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
+        )[1]
         _process_outgoing_packet(multicast_out)
 
         # The additonals should all be suppresed since they are all in the answers section
@@ -134,7 +134,9 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
         _process_outgoing_packet(
-            zc.query_handler.response(r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT)[1]
+            zc.query_handler.response(
+                [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
+            )[1]
         )
         assert nbr_answers == 4 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
@@ -231,7 +233,7 @@ def test_ptr_optimization():
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is None
@@ -243,7 +245,7 @@ def test_ptr_optimization():
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), None, const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
     )
     assert multicast_out.id == query.id
     assert unicast_out is None
@@ -271,49 +273,52 @@ def test_ptr_optimization():
 def test_any_query_for_ptr():
     """Test that queries for ANY will return PTR records."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_anyptr._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
-    zc.register_service(info)
+    zc.registry.add(info)
 
     _clear_cache(zc)
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_ANY, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out = zc.query_handler.response(r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT)
+    _, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
     assert multicast_out.answers[0][0].name == type_
     assert multicast_out.answers[0][0].alias == registration_name
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
 
 
 def test_aaaa_query():
     """Test that queries for AAAA records work."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_knownaaaservice._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
-    zc.register_service(info)
+    zc.registry.add(info)
 
-    _clear_cache(zc)
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out = zc.query_handler.response(r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT)
+    _, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
     assert multicast_out.answers[0][0].address == ipv6_address
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
 
 
@@ -331,13 +336,15 @@ def test_unicast_response():
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
     # register
-    zc.register_service(info)
+    zc.registry.add(info)
     _clear_cache(zc)
 
     # query
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
-    unicast_out, multicast_out = zc.query_handler.response(r.DNSIncoming(query.packets()[0]), "1.2.3.4", 1234)
+    unicast_out, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", 1234
+    )
     for out in (unicast_out, multicast_out):
         assert out.id == query.id
         has_srv = has_txt = has_a = False
@@ -356,7 +363,7 @@ def test_unicast_response():
         assert has_srv and has_txt and has_a
 
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
 
 
@@ -413,7 +420,7 @@ def test_qu_response():
     query.add_question(question)
 
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     assert multicast_out is None
     _validate_complete_response(query, unicast_out)
@@ -426,7 +433,7 @@ def test_qu_response():
     assert question.unicast is True
     query.add_question(question)
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     _validate_complete_response(query, multicast_out)
@@ -439,7 +446,7 @@ def test_qu_response():
     query.add_question(question)
     query.add_authorative_answer(info2.dns_pointer())
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     _validate_complete_response(query, unicast_out)
     _validate_complete_response(query, multicast_out)
@@ -452,7 +459,7 @@ def test_qu_response():
     assert question.unicast is True
     query.add_question(question)
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(query.packets()[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
     )
     assert multicast_out is None
     _validate_complete_response(query, unicast_out)
@@ -463,7 +470,7 @@ def test_qu_response():
 
 def test_known_answer_supression():
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_knownanswersv8._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
@@ -471,7 +478,7 @@ def test_known_answer_supression():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
+    zc.registry.add(info)
 
     now = current_time_millis()
     _clear_cache(zc)
@@ -481,7 +488,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -492,7 +499,7 @@ def test_known_answer_supression():
     generated.add_answer_at_time(info.dns_pointer(), now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     # If the answer is suppressed, the additional should be suppresed as well
@@ -504,7 +511,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -516,7 +523,7 @@ def test_known_answer_supression():
         generated.add_answer_at_time(dns_address, now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert not multicast_out or not multicast_out.answers
@@ -527,7 +534,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -538,7 +545,7 @@ def test_known_answer_supression():
     generated.add_answer_at_time(info.dns_service(), now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     # If the answer is suppressed, the additional should be suppresed as well
@@ -550,7 +557,7 @@ def test_known_answer_supression():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -561,19 +568,73 @@ def test_known_answer_supression():
     generated.add_answer_at_time(info.dns_text(), now)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert not multicast_out or not multicast_out.answers
 
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
+    zc.close()
+
+
+def test_multi_packet_known_answer_supression():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_handlermultis._tcp.local."
+    name = "knownname"
+    name2 = "knownname2"
+    name3 = "knownname3"
+
+    registration_name = "%s.%s" % (name, type_)
+    registration2_name = "%s.%s" % (name2, type_)
+    registration3_name = "%s.%s" % (name3, type_)
+
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    server_name2 = "ash-3.local."
+    server_name3 = "ash-4.local."
+
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info2 = ServiceInfo(
+        type_, registration2_name, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info3 = ServiceInfo(
+        type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.add(info)
+    zc.registry.add(info2)
+    zc.registry.add(info3)
+
+    now = current_time_millis()
+    _clear_cache(zc)
+    # Test PTR supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    for _ in range(1000):
+        # Add so many answers we end up with another packet
+        generated.add_answer_at_time(info.dns_pointer(), now)
+    generated.add_answer_at_time(info2.dns_pointer(), now)
+    generated.add_answer_at_time(info3.dns_pointer(), now)
+    packets = generated.packets()
+    assert len(packets) > 1
+    unicast_out, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is None
+    # unregister
+    zc.registry.remove(info)
+    zc.registry.remove(info2)
+    zc.registry.remove(info3)
     zc.close()
 
 
 def test_known_answer_supression_service_type_enumeration_query():
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    type_ = "_knownservice._tcp.local."
+    type_ = "_otherknown._tcp.local."
     name = "knownname"
     registration_name = "%s.%s" % (name, type_)
     desc = {'path': '/~paulsm/'}
@@ -581,17 +642,17 @@ def test_known_answer_supression_service_type_enumeration_query():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
+    zc.registry.add(info)
 
-    type_2 = "_knownservice2._tcp.local."
+    type_2 = "_otherknown2._tcp.local."
     name = "knownname"
     registration_name2 = "%s.%s" % (name, type_2)
     desc = {'path': '/~paulsm/'}
     server_name2 = "ash-3.local."
-    info = ServiceInfo(
+    info2 = ServiceInfo(
         type_2, registration_name2, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
+    zc.registry.add(info2)
     now = current_time_millis()
     _clear_cache(zc)
 
@@ -601,7 +662,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     generated.add_question(question)
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert multicast_out is not None and multicast_out.answers
@@ -631,11 +692,12 @@ def test_known_answer_supression_service_type_enumeration_query():
     )
     packets = generated.packets()
     unicast_out, multicast_out = zc.query_handler.response(
-        r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert unicast_out is None
     assert not multicast_out or not multicast_out.answers
 
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
+    zc.registry.remove(info2)
     zc.close()

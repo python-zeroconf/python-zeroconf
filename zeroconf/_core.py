@@ -24,6 +24,7 @@ import asyncio
 import contextlib
 import errno
 import itertools
+import random
 import socket
 import sys
 import threading
@@ -70,6 +71,8 @@ from .const import (
     _TYPE_PTR,
     _UNREGISTER_TIME,
 )
+
+_TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
 
 class NotifyListener:
@@ -301,6 +304,9 @@ class Zeroconf(QuietLogger):
         self.condition = threading.Condition()
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
+
+        self._deferred: Dict[str, List[DNSIncoming]] = {}
+        self._timers: Dict[str, asyncio.TimerHandle] = {}
 
         self.start()
 
@@ -557,13 +563,37 @@ class Zeroconf(QuietLogger):
         are held in the cache, and listeners are notified."""
         self.record_manager.updates_from_response(msg)
 
-    def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
+    def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        unicast_out, multicast_out = self.query_handler.response(msg, addr, port)
-        if unicast_out and unicast_out.answers:
+        if not msg.truncated:
+            self._respond_query(msg, addr, port)
+            return
+
+        deferred = self._deferred.setdefault(addr, [])
+        # If we get the same packet on another iterface we ignore it
+        for incoming in reversed(deferred):
+            if incoming.data == msg.data:
+                return
+        deferred.append(msg)
+        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
+        assert self.loop is not None
+        if addr in self._timers:
+            self._timers.pop(addr).cancel()
+        self._timers[addr] = self.loop.call_later(delay, self._respond_query, None, addr, port)
+
+    def _respond_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
+        """Respond to a query and reassemble any truncated deferred packets."""
+        if addr in self._timers:
+            self._timers.pop(addr).cancel()
+        packets = self._deferred.pop(addr, [])
+        if msg:
+            packets.append(msg)
+
+        unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
+        if unicast_out:
             self.async_send(unicast_out, addr, port)
-        if multicast_out and multicast_out.answers:
+        if multicast_out:
             self.async_send(multicast_out, None, _MDNS_PORT)
 
     def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
