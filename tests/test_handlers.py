@@ -278,7 +278,7 @@ def test_any_query_for_ptr():
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
-    zc.register_service(info)
+    zc.registry.add(info)
 
     _clear_cache(zc)
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -289,7 +289,7 @@ def test_any_query_for_ptr():
     assert multicast_out.answers[0][0].name == type_
     assert multicast_out.answers[0][0].alias == registration_name
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
 
 
@@ -303,9 +303,8 @@ def test_aaaa_query():
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
-    zc.register_service(info)
+    zc.registry.add(info)
 
-    _clear_cache(zc)
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
     generated.add_question(question)
@@ -313,7 +312,7 @@ def test_aaaa_query():
     _, multicast_out = zc.query_handler.response(r.DNSIncoming(packets[0]), "1.2.3.4", const._MDNS_PORT)
     assert multicast_out.answers[0][0].address == ipv6_address
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
 
 
@@ -331,7 +330,7 @@ def test_unicast_response():
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
     # register
-    zc.register_service(info)
+    zc.registry.add(info)
     _clear_cache(zc)
 
     # query
@@ -356,7 +355,7 @@ def test_unicast_response():
         assert has_srv and has_txt and has_a
 
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
 
 
@@ -471,7 +470,7 @@ def test_known_answer_supression():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
+    zc.registry.add(info)
 
     now = current_time_millis()
     _clear_cache(zc)
@@ -567,7 +566,7 @@ def test_known_answer_supression():
     assert not multicast_out or not multicast_out.answers
 
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
     zc.close()
 
 
@@ -596,9 +595,9 @@ def test_multi_packet_known_answer_supression():
     info3 = ServiceInfo(
         type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
-    zc.register_service(info2)
-    zc.register_service(info3)
+    zc.registry.add(info)
+    zc.registry.add(info2)
+    zc.registry.add(info3)
 
     now = current_time_millis()
     _clear_cache(zc)
@@ -619,7 +618,9 @@ def test_multi_packet_known_answer_supression():
     assert unicast_out is None
     assert multicast_out is None
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
+    zc.registry.remove(info2)
+    zc.registry.remove(info3)
     zc.close()
 
 
@@ -633,17 +634,17 @@ def test_known_answer_supression_service_type_enumeration_query():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
+    zc.registry.add(info)
 
     type_2 = "_otherknown2._tcp.local."
     name = "knownname"
     registration_name2 = "%s.%s" % (name, type_2)
     desc = {'path': '/~paulsm/'}
     server_name2 = "ash-3.local."
-    info = ServiceInfo(
+    info2 = ServiceInfo(
         type_2, registration_name2, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.register_service(info)
+    zc.registry.add(info2)
     now = current_time_millis()
     _clear_cache(zc)
 
@@ -689,5 +690,6 @@ def test_known_answer_supression_service_type_enumeration_query():
     assert not multicast_out or not multicast_out.answers
 
     # unregister
-    zc.unregister_service(info)
+    zc.registry.remove(info)
+    zc.registry.remove(info2)
     zc.close()
