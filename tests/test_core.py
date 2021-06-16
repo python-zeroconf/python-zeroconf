@@ -4,6 +4,7 @@
 
 """ Unit tests for zeroconf._core """
 
+import asyncio
 import itertools
 import logging
 import os
@@ -455,6 +456,12 @@ def test_tc_bit_defers():
     zc.registry.add(info2)
     zc.registry.add(info3)
 
+    def threadsafe_query(*args):
+        async def make_query():
+            zc.handle_query(*args)
+
+        asyncio.run_coroutine_threadsafe(make_query(), zc.loop).result()
+
     now = r.current_time_millis()
     _clear_cache(zc)
 
@@ -473,28 +480,28 @@ def test_tc_bit_defers():
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
-    assert zc._deferred[source_ip] == expected_deferred
-    assert source_ip in zc._timers
-
-    next_packet = r.DNSIncoming(packets.pop(0))
-    expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
+    assert zc._deferred[source_ip] == expected_deferred
+    assert source_ip in zc._timers
+
+    next_packet = r.DNSIncoming(packets.pop(0))
+    expected_deferred.append(next_packet)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert source_ip not in zc._deferred
     assert source_ip not in zc._timers
 
@@ -532,6 +539,12 @@ def test_tc_bit_defers_last_response_missing():
     zc.registry.add(info2)
     zc.registry.add(info3)
 
+    def threadsafe_query(*args):
+        async def make_query():
+            zc.handle_query(*args)
+
+        asyncio.run_coroutine_threadsafe(make_query(), zc.loop).result()
+
     now = r.current_time_millis()
     _clear_cache(zc)
     source_ip = '203.0.113.12'
@@ -550,13 +563,13 @@ def test_tc_bit_defers_last_response_missing():
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     timer1 = zc._timers[source_ip]
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     timer2 = zc._timers[source_ip]
     if sys.version_info >= (3, 7):
@@ -564,7 +577,7 @@ def test_tc_bit_defers_last_response_missing():
     assert timer2 != timer1
 
     # Send the same packet again to similar multi interfaces
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
     timer3 = zc._timers[source_ip]
@@ -574,7 +587,7 @@ def test_tc_bit_defers_last_response_missing():
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    zc.handle_query(next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(next_packet, source_ip, const._MDNS_PORT)
     assert zc._deferred[source_ip] == expected_deferred
     assert source_ip in zc._timers
     timer4 = zc._timers[source_ip]
@@ -582,7 +595,7 @@ def test_tc_bit_defers_last_response_missing():
         assert timer3.cancelled()
     assert timer4 != timer3
 
-    for _ in range(30):
+    for _ in range(7):
         time.sleep(0.1)
         if source_ip not in zc._timers:
             break
