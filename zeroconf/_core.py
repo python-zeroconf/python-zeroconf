@@ -577,21 +577,18 @@ class Zeroconf(QuietLogger):
         delay = random.randint(400, 500) / 1000
         assert self.loop is not None
         if addr in self._timers:
-            log.debug("cancel old timer: %s", addr)
             self._timers.pop(addr).cancel()
-        log.debug("Set timer: %s - %s", delay, addr)
         self._timers[addr] = self.loop.call_later(delay, self._respond_query, None, addr, port)
 
     def _respond_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
         """Respond to a query and reassemble any truncated deferred packets."""
-        log.debug("respond_query: %s,%s: msg=%s", addr, port, msg)
         if addr in self._timers:
-            log.debug("cancel final timer: %s", addr)
             self._timers.pop(addr).cancel()
         packets = self._deferred.pop(addr, [])
         if msg:
             packets.append(msg)
-        log.debug("respond_query: %s,%s: packets=%s", addr, port, packets)
+        if len(packets) > 1:
+            log.debug("respond multi packet: %s,%s: packets=%s", addr, port, packets)
 
         unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
         if unicast_out and unicast_out.answers:
