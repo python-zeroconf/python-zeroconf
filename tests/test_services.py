@@ -1332,3 +1332,48 @@ def test_serviceinfo_address_updates():
     )
     info_service.addresses = [socket.inet_aton("10.0.1.3")]
     assert info_service.addresses == [socket.inet_aton("10.0.1.3")]
+
+
+def test_serviceinfo_accepts_bytes_or_string_dict():
+    """Verify a bytes or string dict can be passed to ServiceInfo."""
+    type_ = "_homeassistant._tcp.local."
+    name = "MyTestHome"
+    addresses = [socket.inet_aton("10.0.1.2")]
+    server_name = "ash-2.local."
+    info_service = ServiceInfo(
+        type_, '%s.%s' % (name, type_), 80, 0, 0, {b'path': b'/~paulsm/'}, server_name, addresses=addresses
+    )
+    assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
+    info_service = ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {'path': '/~paulsm/'},
+        server_name,
+        addresses=addresses,
+    )
+    assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
+    info_service = ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {b'path': '/~paulsm/'},
+        server_name,
+        addresses=addresses,
+    )
+    assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
+    info_service = ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {'path': b'/~paulsm/'},
+        server_name,
+        addresses=addresses,
+    )
+    assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
