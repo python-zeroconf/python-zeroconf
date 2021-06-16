@@ -15,6 +15,7 @@ from typing import Dict, cast  # noqa # used in type hints
 
 import zeroconf as r
 from zeroconf import DNSIncoming, const, current_time_millis
+from zeroconf._dns import DNSRRSet
 from zeroconf import (
     DNSHinfo,
     DNSText,
@@ -1013,3 +1014,30 @@ def test_dns_service_record_hashablity():
 
     record_set.add(srv1_dupe)
     assert len(record_set) == 4
+
+
+def test_rrset_does_not_consider_ttl():
+    """Test DNSRRSet does not consider the ttl in the hash."""
+
+    longarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 100, b'same')
+    shortarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 10, b'same')
+    longaaaarec = r.DNSAddress('irrelevant', const._TYPE_AAAA, const._CLASS_IN, 100, b'same')
+    shortaaaarec = r.DNSAddress('irrelevant', const._TYPE_AAAA, const._CLASS_IN, 10, b'same')
+
+    rrset = DNSRRSet([longarec, shortaaaarec])
+
+    assert rrset.suppresses(longarec)
+    assert rrset.suppresses(shortarec)
+    assert not rrset.suppresses(longaaaarec)
+    assert rrset.suppresses(shortaaaarec)
+
+    verylongarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 1000, b'same')
+    longarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 100, b'same')
+    mediumarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 60, b'same')
+    shortarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 10, b'same')
+
+    rrset2 = DNSRRSet([mediumarec])
+    assert not rrset2.suppresses(verylongarec)
+    assert rrset2.suppresses(longarec)
+    assert rrset2.suppresses(mediumarec)
+    assert rrset2.suppresses(shortarec)

@@ -973,6 +973,8 @@ class DNSOutgoing(DNSMessage):
 
 
 class DNSRRSet:
+    """A set of dns records independent of the ttl."""
+
     def __init__(self, records: Iterable[DNSRecord]) -> None:
         """Create an RRset from records."""
         self._records = records
@@ -982,6 +984,7 @@ class DNSRRSet:
         """Returns true if any answer in the rrset can suffice for the
         information held in this record."""
         if self._lookup is None:
+            # Build the hash table so we can lookup the record independent of the ttl
             self._lookup = {record: record for record in self._records}
         other = self._lookup.get(record)
         return other and other.ttl > (record.ttl / 2)
