@@ -25,6 +25,7 @@ import contextlib
 import errno
 import itertools
 import socket
+import random
 import sys
 import threading
 from types import TracebackType  # noqa # used in type hints
@@ -557,10 +558,22 @@ class Zeroconf(QuietLogger):
         are held in the cache, and listeners are notified."""
         self.record_manager.updates_from_response(msg)
 
-    def handle_query(self, msg: DNSIncoming, addr: Optional[str], port: int) -> None:
+    def handle_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        unicast_out, multicast_out = self.query_handler.response(msg, addr, port)
+        if msg and msg.truncated:
+            self._deferred.setdefault(addr, []).append(msg)
+            delay = random.randint(400, 500) / 1000
+            self.loop.call_later(delay, self.handle_query, None, addr, port)
+            return
+
+        packets = self._deferred.pop(addr, [])
+        if msg:
+            packets.append(msg)
+        if not packets:
+            return
+
+        unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
         if unicast_out and unicast_out.answers:
             self.async_send(unicast_out, addr, port)
         if multicast_out and multicast_out.answers:
