@@ -60,7 +60,6 @@ class Exceptions(unittest.TestCase):
             '_x-._tcp.local.',
             '_22._udp.local.',
             '_2-2._tcp.local.',
-            '_1234567890-abcde._udp.local.',
             '\x00._x._udp.local.',
         )
         for name in bad_names_to_try:

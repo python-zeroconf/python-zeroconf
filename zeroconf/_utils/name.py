@@ -74,6 +74,9 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
     :param type_: Type, SubType or service name to validate
     :return: fully qualified service name (eg: _http._tcp.local.)
     """
+    if len(type_) > 256:
+        # https://datatracker.ietf.org/doc/html/rfc6763#section-7.2
+        raise BadTypeInNameException("Full name (%s) must be > 256 bytes" % type_)
 
     if type_.endswith((_TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)):
         remaining = type_[: -len(_TCP_PROTOCOL_LOCAL_TRAILER)].split('.')
