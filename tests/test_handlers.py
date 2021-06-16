@@ -571,6 +571,58 @@ def test_known_answer_supression():
     zc.close()
 
 
+def test_multi_packet_known_answer_supression():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_knownservice._tcp.local."
+    name = "knownname"
+    name2 = "knownname2"
+    name3 = "knownname3"
+
+    registration_name = "%s.%s" % (name, type_)
+    registration2_name = "%s.%s" % (name2, type_)
+    registration3_name = "%s.%s" % (name3, type_)
+
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    server_name2 = "ash-3.local."
+    server_name3 = "ash-4.local."
+
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info2 = ServiceInfo(
+        type_, registration2_name, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info3 = ServiceInfo(
+        type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.register_service(info)
+    zc.register_service(info2)
+    zc.register_service(info3)
+
+    now = current_time_millis()
+    _clear_cache(zc)
+    # Test PTR supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    for _ in range(1000):
+        # Add so many answers we end up with another packet
+        generated.add_answer_at_time(info.dns_pointer(), now)
+    generated.add_answer_at_time(info2.dns_pointer(), now)
+    generated.add_answer_at_time(info3.dns_pointer(), now)
+    packets = generated.packets()
+    assert len(packets) > 1
+    unicast_out, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is None
+    # unregister
+    zc.unregister_service(info)
+    zc.close()
+
+
 def test_known_answer_supression_service_type_enumeration_query():
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_knownservice._tcp.local."
