@@ -823,7 +823,6 @@ class DNSOutgoing(DNSMessage):
         else:
             self._write_int(record.get_remaining_ttl(now))
         index = len(self.data)
-
         self.write_short(0)  # Will get replaced with the actual size
         record.write(self)
         # Adjust size for the short we will write before this record
@@ -842,9 +841,7 @@ class DNSOutgoing(DNSMessage):
             return True
 
         log.debug("Reached data limit (size=%d) > (limit=%d) - rolling back", self.size, len_limit)
-
-        while len(self.data) > start_data_length:
-            self.data.pop()
+        del self.data[start_data_length:]
         self.size = start_size
 
         rollback_names = [name for name, idx in self.names.items() if idx >= start_size]
