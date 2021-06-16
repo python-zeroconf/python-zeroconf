@@ -588,7 +588,17 @@ def test_tc_bit_defers_last_response_missing():
             break
 
     if source_ip in zc._deferred:
-        pprint.pprint(["source_ip", source_ip, zc._deferred, len(zc._deferred[source_ip]), zc._timers])
+        pprint.pprint(
+            [
+                "source_ip",
+                source_ip,
+                zc._deferred,
+                len(zc._deferred[source_ip]),
+                zc._timers,
+                'now',
+                time.monotonic(),
+            ]
+        )
     assert source_ip not in zc._deferred
     assert source_ip not in zc._timers
 
