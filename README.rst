@@ -219,6 +219,49 @@ Changelog
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
+* Check if SO_REUSEPORT exists instead of using an exception catch (#682) @bdraco
+
+* Use DNSRRSet for known answer suppression (#680) @bdraco
+
+  DNSRRSet uses hash table lookups under the hood which
+  is much faster than the linear searches used by
+  DNSRecord.suppressed_by
+
+* Add DNSRRSet class for quick hashtable lookups of records (#678) @bdraco
+
+  This class will be used to do fast checks to see
+  if records should be suppressed by a set of answers.
+
+* Allow unregistering a service multiple times (#679) @bdraco
+
+* Remove unreachable BadTypeInNameException check in _ServiceBrowser (#677) @bdraco
+
+* Update async_browser.py example to use AsyncZeroconfServiceTypes (#665) @bdraco
+
+* Add an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.aio (#658) @bdraco
+
+* Remove all calls to the executor in AsyncZeroconf (#653) @bdraco
+
+* Set __all__ in zeroconf.aio to ensure private functions do now show in the docs (#652) @bdraco
+
+* Ensure interface_index_to_ip6_address skips ipv4 adapters (#651) @bdraco
+
+* Add async_unregister_all_services to AsyncZeroconf (#649) @bdraco
+
+* Ensure services are removed from the registry when calling unregister_all_services (#644) @bdraco
+
+  There was a race condition where a query could be answered for a service
+  in the registry while goodbye packets which could result a fresh record
+  being broadcast after the goodbye if a query came in at just the right
+  time. To avoid this, we now remove the services from the registry right
+  after we generate the goodbye packet
+
+* Use ServiceInfo.key/ServiceInfo.server_key instead of lowering in ServiceRegistry (#647) @bdraco
+
+* Ensure the ServiceInfo.key gets updated when the name is changed externally (#645) @bdraco
+
+* Ensure AsyncZeroconf.async_close can be called multiple times like Zeroconf.close (#638) @bdraco
+
 * Ensure eventloop shutdown is threadsafe (#636) @bdraco
 
 * Return early in the shutdown/close process (#632) @bdraco
