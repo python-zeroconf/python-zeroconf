@@ -22,15 +22,24 @@
 import asyncio
 import contextlib
 from types import TracebackType  # noqa # used in type hints
-from typing import Awaitable, Callable, Dict, List, Optional, Type, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from ._core import NotifyListener, Zeroconf
 from ._exceptions import NonUniqueNameException
 from ._services import ServiceInfo, _ServiceBrowserBase, instance_name_from_service_info
+from ._services.types import ZeroconfServiceTypes
 from ._utils.aio import wait_condition_or_timeout
 from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
 from ._utils.time import current_time_millis, millis_to_seconds
-from .const import _BROWSER_TIME, _CHECK_TIME, _LISTENER_TIME, _MDNS_PORT, _REGISTER_TIME, _UNREGISTER_TIME
+from .const import (
+    _BROWSER_TIME,
+    _CHECK_TIME,
+    _LISTENER_TIME,
+    _MDNS_PORT,
+    _REGISTER_TIME,
+    _SERVICE_TYPE_ENUMERATION_NAME,
+    _UNREGISTER_TIME,
+)
 
 
 __all__ = [
@@ -38,6 +47,7 @@ __all__ = [
     "AsyncServiceInfo",
     "AsyncServiceBrowser",
     "AsyncServiceListener",
+    "AsyncZeroconfServiceTypes",
 ]
 
 
@@ -137,6 +147,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
     async def async_run(self) -> None:
         """Run the browser task."""
         self.run()
+        await self.aiozc.zeroconf.async_wait_for_start()
         while True:
             timeout = self._seconds_to_wait()
             if timeout:
@@ -162,6 +173,45 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
                 name=name_type[0],
                 state_change=state_change,
             )
+
+
+class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
+    """An async version of ZeroconfServiceTypes."""
+
+    @classmethod
+    async def async_find(
+        cls,
+        aiozc: Optional['AsyncZeroconf'] = None,
+        timeout: Union[int, float] = 5,
+        interfaces: InterfacesType = InterfaceChoice.All,
+        ip_version: Optional[IPVersion] = None,
+    ) -> Tuple[str, ...]:
+        """
+        Return all of the advertised services on any local networks.
+
+        :param aiozc: AsyncZeroconf() instance.  Pass in if already have an
+                instance running or if non-default interfaces are needed
+        :param timeout: seconds to wait for any responses
+        :param interfaces: interfaces to listen on.
+        :param ip_version: IP protocol version to use.
+        :return: tuple of service type strings
+        """
+        local_zc = aiozc or AsyncZeroconf(interfaces=interfaces, ip_version=ip_version)
+        listener = cls()
+        async_browser = AsyncServiceBrowser(
+            local_zc, _SERVICE_TYPE_ENUMERATION_NAME, listener=listener  # type: ignore
+        )
+
+        # wait for responses
+        await asyncio.sleep(timeout)
+
+        await async_browser.async_cancel()
+
+        # close down anything we opened
+        if aiozc is None:
+            await local_zc.async_close()
+
+        return tuple(sorted(listener.found_services))
 
 
 class AsyncZeroconf:
