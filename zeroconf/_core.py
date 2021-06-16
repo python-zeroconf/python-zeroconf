@@ -24,8 +24,8 @@ import asyncio
 import contextlib
 import errno
 import itertools
-import socket
 import random
+import socket
 import sys
 import threading
 from types import TracebackType  # noqa # used in type hints
