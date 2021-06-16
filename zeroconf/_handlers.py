@@ -199,6 +199,10 @@ class QueryHandler:
     def _answer_question(
         self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
     ) -> None:
+        if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
+            self._add_service_type_enumeration_query_answers(answer_set, known_answers)
+            return
+
         type_ = question.type
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
@@ -221,14 +225,6 @@ class QueryHandler:
                     if not known_answers.suppresses(dns_text):
                         answer_set[dns_text] = set()
 
-    def _answer_any_question(
-        self, question: DNSQuestion, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
-    ) -> None:
-        if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
-            self._add_service_type_enumeration_query_answers(answer_set, known_answers)
-
-        return self._answer_question(question, answer_set, known_answers)
-
     def response(  # pylint: disable=unused-argument
         self, msgs: List[DNSIncoming], addr: Optional[str], port: int
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
@@ -239,7 +235,7 @@ class QueryHandler:
 
         for question in itertools.chain(*[msg.questions for msg in msgs]):
             answer_set: _AnswerWithAdditionalsType = {}
-            self._answer_any_question(question, answer_set, known_answers)
+            self._answer_question(question, answer_set, known_answers)
             if not ucast_source and question.unicast:
                 query_res.add_qu_question_response(answer_set)
             else:
