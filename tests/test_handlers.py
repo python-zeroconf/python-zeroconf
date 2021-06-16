@@ -727,6 +727,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     # Add the A record to the cache with 50% ttl remaining
     a_record = info.dns_addresses()[0]
     a_record._set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
+    assert not a_record.is_recent(current_time_millis())
     zc.cache.add(a_record)
 
     # With QU should respond to only unicast when the answer has been recently multicast
@@ -747,6 +748,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     # Remove the 50% A record and add a 100% A record
     zc.cache.remove(a_record)
     a_record = info.dns_addresses()[0]
+    assert a_record.is_recent(current_time_millis())
     zc.cache.add(a_record)
     # With QU should respond to only unicast when the answer has been recently multicast
     # even if the additional has not been recently multicast
@@ -762,6 +764,32 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     assert multicast_out is None
     assert a_record in unicast_out.additionals
     assert unicast_out.answers[0][0] == ptr_record
+
+    # Remove the 100% PTR record and add a 50% PTR record
+    zc.cache.remove(ptr_record)
+    ptr_record._set_created_ttl(current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl)
+    assert not ptr_record.is_recent(current_time_millis())
+    zc.cache.add(ptr_record)
+    # With QU should respond to unicast and also multicast the record since it has less
+    # than 75% of its ttl remaining
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unique = True  # Set the QU bit
+    assert question.unicast is True
+    query.add_question(question)
+
+    unicast_out, multicast_out = zc.query_handler.response(
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    )
+    assert multicast_out.answers[0][0] == ptr_record
+    assert a_record in multicast_out.additionals
+    assert info.dns_text() in multicast_out.additionals
+    assert info.dns_service() in multicast_out.additionals
+
+    assert unicast_out.answers[0][0] == ptr_record
+    assert a_record in unicast_out.additionals
+    assert info.dns_text() in unicast_out.additionals
+    assert info.dns_service() in unicast_out.additionals
 
     # unregister
     zc.registry.remove(info)
