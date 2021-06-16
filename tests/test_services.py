@@ -1299,3 +1299,36 @@ def test_servicelisteners_raise_not_implemented():
         )
 
     zc.close()
+
+
+def test_serviceinfo_address_updates():
+    """Verify adding/removing/setting addresses on ServiceInfo."""
+    type_ = "_homeassistant._tcp.local."
+    name = "MyTestHome"
+
+    # Verify addresses and parsed_addresses are mutually exclusive
+    with pytest.raises(TypeError):
+        info_service = ServiceInfo(
+            type_,
+            '%s.%s' % (name, type_),
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+            parsed_addresses=["10.0.1.2"],
+        )
+
+    info_service = ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {'path': '/~paulsm/'},
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    info_service.addresses = [socket.inet_aton("10.0.1.3")]
+    assert info_service.addresses == [socket.inet_aton("10.0.1.3")]
