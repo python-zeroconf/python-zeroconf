@@ -200,6 +200,7 @@ class DNSRecord(DNSEntry):
         self._set_created_ttl(other.created, other.ttl)
 
     def _set_created_ttl(self, created: float, ttl: Union[float, int]) -> None:
+        """Set the created and ttl of a record."""
         self.created = created
         self.ttl = ttl
         self._expiration_time = None
