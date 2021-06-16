@@ -35,10 +35,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.register_service(info)
-        # Ensure we do not clear the cache until after the last broadcast is processed
-        time.sleep(0.2)
-        _clear_cache(zeroconf_registrar)
+        zeroconf_registrar.registry.add(info)
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
             assert type_ in service_types
@@ -70,10 +67,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_pton(socket.AF_INET6, addr)],
         )
-        zeroconf_registrar.register_service(info)
-        # Ensure we do not clear the cache until after the last broadcast is processed
-        time.sleep(0.2)
-        _clear_cache(zeroconf_registrar)
+        zeroconf_registrar.registry.add(info)
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
             assert type_ in service_types
@@ -104,10 +98,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.register_service(info)
-        # Ensure we do not clear the cache until after the last broadcast is processed
-        time.sleep(0.2)
-        _clear_cache(zeroconf_registrar)
+        zeroconf_registrar.registry.add(info)
         try:
             service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=0.5)
             assert type_ in service_types
@@ -138,10 +129,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.register_service(info)
-        # Ensure we do not clear the cache until after the last broadcast is processed
-        time.sleep(0.2)
-        _clear_cache(zeroconf_registrar)
+        zeroconf_registrar.registry.add(info)
         try:
             service_types = ZeroconfServiceTypes.find(interfaces=['127.0.0.1'], timeout=0.5)
             assert discovery_type in service_types
