@@ -343,7 +343,7 @@ def test_unicast_response():
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
     unicast_out, multicast_out = zc.query_handler.response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", 1234
+        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", 1234
     )
     for out in (unicast_out, multicast_out):
         assert out.id == query.id
