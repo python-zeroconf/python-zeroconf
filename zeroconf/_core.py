@@ -561,28 +561,31 @@ class Zeroconf(QuietLogger):
         are held in the cache, and listeners are notified."""
         self.record_manager.updates_from_response(msg)
 
-    def handle_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
+    def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        if msg and msg.truncated:
-            queue = self._deferred.setdefault(addr, [])
-            # If we get the same packet on another iterface we ignore it
-            if queue and queue[-1].data == msg.data:
-                return
-            queue.append(msg)
-            delay = random.randint(400, 500) / 1000
-            assert self.loop is not None
-            if addr in self._timers:
-                self._timers.pop(addr).cancel()
-            self._timers[addr] = self.loop.call_later(delay, self.handle_query, None, addr, port)
+        if not msg.truncated:
+            self._respond_query(msg, addr, port)
             return
 
+        deferred = self._deferred.setdefault(addr, [])
+        # If we get the same packet on another iterface we ignore it
+        if deferred and deferred[-1].data == msg.data:
+            return
+        deferred.append(msg)
+        delay = random.randint(400, 500) / 1000
+        assert self.loop is not None
+        if addr in self._timers:
+            self._timers.pop(addr).cancel()
+        self._timers[addr] = self.loop.call_later(delay, self._respond_query, None, addr, port)
+
+    def _respond_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
+        """Respond to a query and reassemble any truncated deferred packets."""
         if addr in self._timers:
             self._timers.pop(addr).cancel()
         packets = self._deferred.pop(addr, [])
         if msg:
             packets.append(msg)
-
         unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
         if unicast_out and unicast_out.answers:
             self.async_send(unicast_out, addr, port)
