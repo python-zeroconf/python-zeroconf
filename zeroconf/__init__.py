@@ -28,8 +28,6 @@ from ._dns import (  # noqa # import needed for backwards compat
     DNSAddress,
     DNSEntry,
     DNSHinfo,
-    DNSIncoming,
-    DNSOutgoing,
     DNSPointer,
     DNSQuestion,
     DNSRecord,
@@ -46,6 +44,7 @@ from ._exceptions import (  # noqa # import needed for backwards compat
     NonUniqueNameException,
     ServiceNameAlreadyRegistered,
 )
+from ._protocol import DNSIncoming, DNSOutgoing  # noqa # import needed for backwards compat
 from ._services import (  # noqa # import needed for backwards compat
     instance_name_from_service_info,
     Signal,
@@ -81,6 +80,7 @@ __license__ = 'LGPL'
 
 __all__ = [
     "__version__",
+    "DNSOutgoing",
     "Zeroconf",
     "ServiceInfo",
     "ServiceBrowser",

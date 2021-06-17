@@ -24,8 +24,9 @@ import itertools
 from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 from ._cache import DNSCache
-from ._dns import DNSAddress, DNSIncoming, DNSOutgoing, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
+from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
 from ._logger import log
+from ._protocol import DNSIncoming, DNSOutgoing
 from ._services import RecordUpdateListener
 from ._services.registry import ServiceRegistry
 from ._utils.net import IPVersion
