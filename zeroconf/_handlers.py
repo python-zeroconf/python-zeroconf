@@ -298,7 +298,8 @@ class RecordManager:
                     if entry == record:
                         updated = False
                     if record.created - entry.created > 1000 and entry not in msg.answers:
-                        removes.append(entry)
+                        # Expire in 1s
+                        entry.set_created_ttl(now, 1)
 
             expired = record.is_expired(now)
             maybe_entry = self.cache.get(record)
