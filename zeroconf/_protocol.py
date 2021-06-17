@@ -24,10 +24,12 @@ import enum
 import struct
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, cast
 
+
 from ._dns import DNSAddress, DNSHinfo, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from ._exceptions import IncomingDecodeError, NamePartTooLongException
 from ._logger import QuietLogger, log
 from ._utils.struct import int2byte
+from ._utils.time import current_time_millis
 from .const import (
     _CLASS_UNIQUE,
     _DNS_PACKET_HEADER_LEN,
@@ -90,6 +92,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.num_authorities = 0
         self.num_additionals = 0
         self.valid = False
+        self.now = current_time_millis()
 
         try:
             self.read_header()
@@ -166,11 +169,11 @@ class DNSIncoming(DNSMessage, QuietLogger):
             type_, class_, ttl, length = self.unpack(b'!HHiH')
             rec: Optional[DNSRecord] = None
             if type_ == _TYPE_A:
-                rec = DNSAddress(domain, type_, class_, ttl, self.read_string(4))
+                rec = DNSAddress(domain, type_, class_, ttl, self.read_string(4), self.now)
             elif type_ in (_TYPE_CNAME, _TYPE_PTR):
-                rec = DNSPointer(domain, type_, class_, ttl, self.read_name())
+                rec = DNSPointer(domain, type_, class_, ttl, self.read_name(), self.now)
             elif type_ == _TYPE_TXT:
-                rec = DNSText(domain, type_, class_, ttl, self.read_string(length))
+                rec = DNSText(domain, type_, class_, ttl, self.read_string(length), self.now)
             elif type_ == _TYPE_SRV:
                 rec = DNSService(
                     domain,
@@ -181,6 +184,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
                     self.read_unsigned_short(),
                     self.read_unsigned_short(),
                     self.read_name(),
+                    self.now,
                 )
             elif type_ == _TYPE_HINFO:
                 rec = DNSHinfo(
@@ -190,9 +194,10 @@ class DNSIncoming(DNSMessage, QuietLogger):
                     ttl,
                     self.read_character_string().decode('utf-8'),
                     self.read_character_string().decode('utf-8'),
+                    self.now,
                 )
             elif type_ == _TYPE_AAAA:
-                rec = DNSAddress(domain, type_, class_, ttl, self.read_string(16))
+                rec = DNSAddress(domain, type_, class_, ttl, self.read_string(16), self.now)
             else:
                 # Try to ignore types we don't know about
                 # Skip the payload for the resource record so the next

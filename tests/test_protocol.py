@@ -720,3 +720,29 @@ def test_qu_packet_parser():
     parsed = DNSIncoming(qu_packet)
     assert parsed.questions[0].unicast is True
     assert ",QU," in str(parsed.questions[0])
+
+
+def test_records_same_packet_share_fate():
+    """Test records in the same packet all have the same created time."""
+    out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
+    type_ = "_hap._tcp.local."
+    out.add_question(r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN))
+
+    for i in range(30):
+        out.add_answer_at_time(
+            DNSText(
+                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_OTHER_TTL,
+                b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
+                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            ),
+            0,
+        )
+
+    for packet in out.packets():
+        dnsin = DNSIncoming(packet)
+        first_time = dnsin.answers[0].created
+        for answer in dnsin.answers:
+            assert answer.created == first_time

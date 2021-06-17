@@ -369,7 +369,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         At this point the cache will have the new records.
         """
-        # Cannot use .update here since PyPy can fail with
+        # Cannot use .update here since can fail with
         # RuntimeError: dictionary changed size during iteration
         # for threaded ServiceBrowsers
         while self._pending_handlers:
@@ -722,7 +722,10 @@ class ServiceInfo(RecordUpdateListener):
                 self._set_text(record.text)
 
     def dns_addresses(
-        self, override_ttl: Optional[int] = None, version: IPVersion = IPVersion.All
+        self,
+        override_ttl: Optional[int] = None,
+        version: IPVersion = IPVersion.All,
+        created: Optional[float] = None,
     ) -> List[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
         return [
@@ -732,11 +735,12 @@ class ServiceInfo(RecordUpdateListener):
                 _CLASS_IN | _CLASS_UNIQUE,
                 override_ttl if override_ttl is not None else self.host_ttl,
                 address,
+                created,
             )
             for address in self.addresses_by_version(version)
         ]
 
-    def dns_pointer(self, override_ttl: Optional[int] = None) -> DNSPointer:
+    def dns_pointer(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSPointer:
         """Return DNSPointer from ServiceInfo."""
         return DNSPointer(
             self.type,
@@ -744,9 +748,10 @@ class ServiceInfo(RecordUpdateListener):
             _CLASS_IN,
             override_ttl if override_ttl is not None else self.other_ttl,
             self.name,
+            created,
         )
 
-    def dns_service(self, override_ttl: Optional[int] = None) -> DNSService:
+    def dns_service(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSService:
         """Return DNSService from ServiceInfo."""
         return DNSService(
             self.name,
@@ -757,9 +762,10 @@ class ServiceInfo(RecordUpdateListener):
             self.weight,
             cast(int, self.port),
             self.server,
+            created,
         )
 
-    def dns_text(self, override_ttl: Optional[int] = None) -> DNSText:
+    def dns_text(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSText:
         """Return DNSText from ServiceInfo."""
         return DNSText(
             self.name,
@@ -767,6 +773,7 @@ class ServiceInfo(RecordUpdateListener):
             _CLASS_IN | _CLASS_UNIQUE,
             override_ttl if override_ttl is not None else self.other_ttl,
             self.text,
+            created,
         )
 
     def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSRecord]:

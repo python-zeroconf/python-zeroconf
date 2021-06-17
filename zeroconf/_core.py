@@ -465,19 +465,20 @@ class Zeroconf(QuietLogger):
         #
         # _CLASS_UNIQUE is the "QU" bit
         out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN | _CLASS_UNIQUE))
-        out.add_authorative_answer(info.dns_pointer())
+        out.add_authorative_answer(info.dns_pointer(created=current_time_millis()))
         return out
 
     def _add_broadcast_answer(  # pylint: disable=no-self-use
         self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]
     ) -> None:
         """Add answers to broadcast a service."""
+        now = current_time_millis()
         other_ttl = info.other_ttl if override_ttl is None else override_ttl
         host_ttl = info.host_ttl if override_ttl is None else override_ttl
-        out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl), 0)
-        out.add_answer_at_time(info.dns_service(override_ttl=host_ttl), 0)
-        out.add_answer_at_time(info.dns_text(override_ttl=other_ttl), 0)
-        for dns_address in info.dns_addresses(override_ttl=host_ttl):
+        out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl, created=now), 0)
+        out.add_answer_at_time(info.dns_service(override_ttl=host_ttl, created=now), 0)
+        out.add_answer_at_time(info.dns_text(override_ttl=other_ttl, created=now), 0)
+        for dns_address in info.dns_addresses(override_ttl=host_ttl, created=now):
             out.add_answer_at_time(dns_address, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
