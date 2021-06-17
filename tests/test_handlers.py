@@ -415,7 +415,7 @@ def test_qu_response():
     # With QU should respond to only unicast when the answer has been recently multicast
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
 
@@ -429,7 +429,7 @@ def test_qu_response():
     # With QU should respond to only multicast since the response hasn't been seen since 75% of the ttl
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
     unicast_out, multicast_out = zc.query_handler.response(
@@ -441,7 +441,7 @@ def test_qu_response():
     # With QU set and an authorative answer (probe) should respond to both unitcast and multicast since the response hasn't been seen since 75% of the ttl
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
     query.add_authorative_answer(info2.dns_pointer())
@@ -455,7 +455,7 @@ def test_qu_response():
     # With the cache repopulated; should respond to only unicast when the answer has been recently multicast
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
     unicast_out, multicast_out = zc.query_handler.response(
@@ -743,7 +743,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     # even if the additional has not been recently multicast
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
 
@@ -763,7 +763,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     # even if the additional has not been recently multicast
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
 
@@ -783,7 +783,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     # than 75% of its ttl remaining
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
 
@@ -803,12 +803,12 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     # than 75% of its ttl remaining
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
 
     question = r.DNSQuestion(info2.type, const._TYPE_PTR, const._CLASS_IN)
-    question.unique = True  # Set the QU bit
+    question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
     zc.cache.add(info2.dns_pointer())  # Add 100% TTL for info2 to the cache
