@@ -32,7 +32,7 @@ if log.level == logging.NOTSET:
 
 
 class QuietLogger:
-    _seen_logs = {}  # type: Dict[str, Union[int, tuple]]
+    _seen_logs: Dict[str, Union[int, tuple]] = {}
 
     @classmethod
     def log_exception_warning(cls, *logger_data: Any) -> None:
