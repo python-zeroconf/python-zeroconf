@@ -17,7 +17,7 @@ import unittest.mock
 from typing import cast
 
 import zeroconf as r
-from zeroconf import _core, const, ServiceBrowser, Zeroconf
+from zeroconf import _core, const, ServiceBrowser, Zeroconf, current_time_millis
 
 from . import has_working_ipv6, _clear_cache, _inject_response
 
@@ -241,7 +241,7 @@ class Framework(unittest.TestCase):
             # service removed
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
             dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
-            assert dns_text is None
+            assert dns_text.is_expired(current_time_millis() + 1000)
 
         finally:
             zeroconf.close()

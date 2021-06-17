@@ -735,7 +735,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Add the A record to the cache with 50% ttl remaining
     a_record = info.dns_addresses()[0]
-    a_record._set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
+    a_record.set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
     assert not a_record.is_recent(current_time_millis())
     zc.cache.add(a_record)
 
@@ -776,7 +776,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Remove the 100% PTR record and add a 50% PTR record
     zc.cache.remove(ptr_record)
-    ptr_record._set_created_ttl(current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl)
+    ptr_record.set_created_ttl(current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl)
     assert not ptr_record.is_recent(current_time_millis())
     zc.cache.add(ptr_record)
     # With QU should respond to only multicast since the has less
