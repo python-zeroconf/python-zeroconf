@@ -99,7 +99,7 @@ class ServiceListener:
 
 class Signal:
     def __init__(self) -> None:
-        self._handlers = []  # type: List[Callable[..., None]]
+        self._handlers: List[Callable[..., None]] = []
 
     def fire(self, **kwargs: Any) -> None:
         for h in list(self._handlers):
@@ -233,7 +233,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
     ) -> None:
         """Creates a browser for a specific type"""
         assert handlers or listener, 'You need to specify at least one handler'
-        self.types = set(type_ if isinstance(type_, list) else [type_])  # type: Set[str]
+        self.types: Set[str] = set(type_ if isinstance(type_, list) else [type_])
         for check_type_ in self.types:
             # Will generate BadTypeInNameException on a bad name
             service_type_name(check_type_, strict=False)
@@ -245,9 +245,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         current_time = current_time_millis()
         self._next_time = {check_type_: current_time for check_type_ in self.types}
         self._delay = {check_type_: delay for check_type_ in self.types}
-        self._pending_handlers = OrderedDict()  # type: OrderedDict[Tuple[str, str], ServiceStateChange]
-        self._handlers_to_call = OrderedDict()  # type: OrderedDict[Tuple[str, str], ServiceStateChange]
-
+        self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
+        self._handlers_to_call: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
 
         self.done = False
@@ -552,13 +551,13 @@ class ServiceInfo(RecordUpdateListener):
         self.port = port
         self.weight = weight
         self.priority = priority
-        if server:
-            self.server = server
-        else:
-            self.server = name
+        self.server = server if server else name
         self.server_key = self.server.lower()
-        self._properties = {}  # type: Dict
-        self._set_properties(properties)
+        self._properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
+        if isinstance(properties, bytes):
+            self._set_text(properties)
+        else:
+            self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
 
@@ -618,33 +617,33 @@ class ServiceInfo(RecordUpdateListener):
             for addr in result
         ]
 
-    def _set_properties(self, properties: Union[bytes, Dict]) -> None:
+    def _set_properties(self, properties: Dict) -> None:
         """Sets properties and text of this info from a dictionary"""
-        if isinstance(properties, dict):
-            self._properties = properties
-            list_ = []
-            result = b''
-            for key, value in properties.items():
-                if isinstance(key, str):
-                    key = key.encode('utf-8')
+        self._properties = properties
+        list_ = []
+        result = b''
+        for key, value in properties.items():
+            if isinstance(key, str):
+                key = key.encode('utf-8')
 
-                record = key
-                if value is not None:
-                    if not isinstance(value, bytes):
-                        value = str(value).encode('utf-8')
-                    record += b'=' + value
-                list_.append(record)
-            for item in list_:
-                result = b''.join((result, int2byte(len(item)), item))
-            self.text = result
-        else:
-            self.text = properties
+            record = key
+            if value is not None:
+                if not isinstance(value, bytes):
+                    value = str(value).encode('utf-8')
+                record += b'=' + value
+            list_.append(record)
+        for item in list_:
+            result = b''.join((result, int2byte(len(item)), item))
+        self.text = result
 
     def _set_text(self, text: bytes) -> None:
         """Sets properties and text given a text field"""
         self.text = text
-        result = {}  # type: Dict
         end = len(text)
+        if end == 0:
+            self._properties = {}
+            return
+        result: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
         index = 0
         strs = []
         while index < end:
