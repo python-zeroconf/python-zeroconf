@@ -135,7 +135,7 @@ def normalize_interface_choice(
     :param ip_address: IP version to use (ignored if `choice` is a list).
     :returns: List of IP addresses (for IPv4) and indexes (for IPv6).
     """
-    result = []  # type: List[Union[str, Tuple[Tuple[str, int, int], int]]]
+    result: List[Union[str, Tuple[Tuple[str, int, int], int]]] = []
     if choice is InterfaceChoice.Default:
         if ip_version != IPVersion.V4Only:
             # IPv6 multicast uses interface 0 to mean the default
