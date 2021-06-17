@@ -19,7 +19,7 @@ from .. import _clear_cache, has_working_ipv6
 class ServiceTypesQuery(unittest.TestCase):
     def test_integration_with_listener(self):
 
-        type_ = "_test-srvc-type._tcp.local."
+        type_ = "_test-listen-type._tcp.local."
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
 
@@ -50,7 +50,7 @@ class ServiceTypesQuery(unittest.TestCase):
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_v6_records(self):
 
-        type_ = "_test-srvc-type._tcp.local."
+        type_ = "_test-listenv6rec-type._tcp.local."
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
@@ -82,7 +82,7 @@ class ServiceTypesQuery(unittest.TestCase):
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_ipv6(self):
 
-        type_ = "_test-srvc-type._tcp.local."
+        type_ = "_test-listenv6ip-type._tcp.local."
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
 
@@ -111,7 +111,7 @@ class ServiceTypesQuery(unittest.TestCase):
 
     def test_integration_with_subtype_and_listener(self):
         subtype_ = "_subtype._sub"
-        type_ = "_type._tcp.local."
+        type_ = "_listen._tcp.local."
         name = "xxxyyy"
         # Note: discovery returns only DNS-SD type not subtype
         discovery_type = "%s.%s" % (subtype_, type_)
