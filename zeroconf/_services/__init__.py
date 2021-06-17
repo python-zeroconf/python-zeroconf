@@ -369,8 +369,15 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         At this point the cache will have the new records.
         """
-        self._handlers_to_call.update(self._pending_handlers)
-        self._pending_handlers.clear()
+        # Cannot use .update here since PyPy can fail with
+        # RuntimeError: dictionary changed size during iteration
+        # for threaded ServiceBrowsers
+        while self._pending_handlers:
+            try:
+                (name_type, state_change) = self._pending_handlers.popitem(False)
+            except KeyError:
+                return
+            self._handlers_to_call[name_type] = state_change
 
     def cancel(self) -> None:
         """Cancel the browser."""
