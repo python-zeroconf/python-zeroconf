@@ -124,6 +124,11 @@ class DNSQuestion(DNSEntry):
         """
         return self.unique
 
+    @unicast.setter
+    def unicast(self, value: bool) -> None:
+        """Sets the QU bit (not QM)."""
+        self.unique = value
+
     def __repr__(self) -> str:
         """String representation"""
         return "%s[question,%s,%s,%s]" % (
