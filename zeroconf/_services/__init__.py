@@ -27,8 +27,9 @@ import warnings
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
-from .._dns import DNSAddress, DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
+from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
+from .._protocol import DNSOutgoing
 from .._utils.name import service_type_name
 from .._utils.net import (
     IPVersion,
