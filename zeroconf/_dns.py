@@ -810,6 +810,10 @@ class DNSOutgoing(DNSMessage):
         else:
             self.write_short(record.class_)
 
+    def _write_ttl(self, record: DNSRecord, now: float) -> None:
+        """Write out the record ttl."""
+        self._write_int(record.ttl if now == 0 else record.get_remaining_ttl(now))
+
     def _write_record(self, record: DNSRecord, now: float) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
         the packet.  Returns True on success, or False if we did not
@@ -818,10 +822,7 @@ class DNSOutgoing(DNSMessage):
         self.write_name(record.name)
         self.write_short(record.type)
         self._write_record_class(record)
-        if now == 0:
-            self._write_int(record.ttl)
-        else:
-            self._write_int(record.get_remaining_ttl(now))
+        self._write_ttl(record, now)
         index = len(self.data)
         self.write_short(0)  # Will get replaced with the actual size
         record.write(self)
