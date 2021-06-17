@@ -16,7 +16,7 @@ from typing import List
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSAddress, const
+from zeroconf import DNSAddress, DNSPointer, DNSQuestion, const, current_time_millis
 import zeroconf._services as s
 from zeroconf import Zeroconf
 from zeroconf._services import (
@@ -1377,3 +1377,26 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
         addresses=addresses,
     )
     assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
+
+
+def test_group_queries_with_known_answers():
+    questions_with_known_answers: s._QuestionWithKnownAnswers = {}
+    now = current_time_millis()
+    for i in range(120):
+        name = f"_hap{i}._tcp._local."
+        questions_with_known_answers[DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)] = set(
+            DNSPointer(
+                name,
+                const._TYPE_PTR,
+                const._CLASS_IN,
+                4500,
+                f"zoo{counter}.{name}",
+            )
+            for counter in range(i)
+        )
+    outs = s.group_queries_with_known_answers(now, True, questions_with_known_answers)
+    for out in outs:
+        packets = out.packets()
+        # If we generate multiple packets there must
+        # only be one question
+        assert len(packets) == 1 or len(out.questions) == 1

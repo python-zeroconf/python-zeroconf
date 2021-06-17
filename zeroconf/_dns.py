@@ -34,6 +34,7 @@ from .const import (
     _CLASSES,
     _CLASS_MASK,
     _CLASS_UNIQUE,
+    _DNS_PACKET_HEADER_LEN,
     _EXPIRE_FULL_TIME_PERCENT,
     _EXPIRE_STALE_TIME_PERCENT,
     _FLAGS_QR_MASK,
@@ -54,6 +55,12 @@ from .const import (
     _TYPE_TXT,
 )
 
+_LEN_BYTE = 1
+_LEN_SHORT = 2
+_LEN_INT = 4
+
+_BASE_MAX_SIZE = _LEN_SHORT + _LEN_SHORT + _LEN_INT + _LEN_SHORT  # type  # class  # ttl  # length
+_NAME_COMPRESSION_MIN_SIZE = _LEN_BYTE * 2
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -70,6 +77,15 @@ class DNSEntry:
         self.type = type_
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
+
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the base record in the packet."""
+        return _BASE_MAX_SIZE + self._name_max_size()
+
+    def _name_max_size(self):
+        """Maximum size of the name in the packet."""
+        return len(self.name.encode('utf-8')) + _LEN_SHORT
 
     def _entry_tuple(self) -> Tuple[str, int, int]:
         """Entry Tuple for DNSEntry."""
@@ -117,6 +133,14 @@ class DNSQuestion(DNSEntry):
             and (self.type == rec.type or self.type == _TYPE_ANY)
             and self.name == rec.name
         )
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.class_, self.type))
+
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the question in the packet."""
+        return len(self.name.encode('utf-8')) + _LEN_BYTE + _LEN_SHORT + _LEN_SHORT  # type  # class
 
     @property
     def unicast(self) -> bool:
@@ -225,6 +249,11 @@ class DNSAddress(DNSRecord):
         super().__init__(name, type_, class_, ttl)
         self.address = address
 
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the record in the packet."""
+        return super().max_size + len(self.address)
+
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
         out.write_string(self.address)
@@ -260,6 +289,17 @@ class DNSHinfo(DNSRecord):
         self.cpu = cpu
         self.os = os
 
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the record in the packet."""
+        return (
+            super().max_size
+            + len(self.cpu.encode('utf-8'))
+            + _LEN_BYTE
+            + len(self.os.encode('utf-8'))
+            + _LEN_BYTE
+        )
+
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
         out.write_character_string(self.cpu.encode('utf-8'))
@@ -291,6 +331,21 @@ class DNSPointer(DNSRecord):
         super().__init__(name, type_, class_, ttl)
         self.alias = alias
 
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the record in the packet."""
+        return super().max_size + len(self.alias.encode('utf-8')) + _LEN_BYTE
+
+    @property
+    def max_size_compressed(self) -> int:
+        """Maximum size of the record in the packet assuming the name has been compressed."""
+        return (
+            _BASE_MAX_SIZE
+            + _NAME_COMPRESSION_MIN_SIZE
+            + (len(self.alias) - len(self.name))
+            + _NAME_COMPRESSION_MIN_SIZE
+        )
+
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
         out.write_name(self.alias)
@@ -316,6 +371,11 @@ class DNSText(DNSRecord):
         assert isinstance(text, (bytes, type(None)))
         super().__init__(name, type_, class_, ttl)
         self.text = text
+
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the record in the packet."""
+        return super().max_size + len(self.text)
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -356,6 +416,18 @@ class DNSService(DNSRecord):
         self.weight = weight
         self.port = port
         self.server = server
+
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the record in the packet."""
+        return (
+            super().max_size
+            + _LEN_SHORT  # priority
+            + _LEN_SHORT  # weight
+            + _LEN_SHORT  # port
+            + len(self.server.encode('utf-8'))
+            + 1  # server
+        )
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -590,7 +662,7 @@ class DNSOutgoing(DNSMessage):
         # these 3 are per-packet -- see also _reset_for_next_packet()
         self.names: Dict[str, int] = {}
         self.data: List[bytes] = []
-        self.size: int = 12
+        self.size: int = _DNS_PACKET_HEADER_LEN
         self.allow_long: bool = True
 
         self.state = self.State.init
@@ -603,7 +675,7 @@ class DNSOutgoing(DNSMessage):
     def _reset_for_next_packet(self) -> None:
         self.names = {}
         self.data = []
-        self.size = 12
+        self.size = _DNS_PACKET_HEADER_LEN
         self.allow_long = True
 
     def __repr__(self) -> str:

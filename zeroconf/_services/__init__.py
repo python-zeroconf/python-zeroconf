@@ -44,9 +44,11 @@ from ..const import (
     _CLASS_UNIQUE,
     _DNS_HOST_TTL,
     _DNS_OTHER_TTL,
+    _DNS_PACKET_HEADER_LEN,
     _EXPIRE_REFRESH_TIME_PERCENT,
     _FLAGS_QR_QUERY,
     _LISTENER_TIME,
+    _MAX_MSG_TYPICAL,
     _MDNS_ADDR,
     _MDNS_ADDR6,
     _MDNS_PORT,
@@ -61,6 +63,9 @@ from ..const import (
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
     from .._core import Zeroconf  # pylint: disable=cyclic-import
+
+
+_QuestionWithKnownAnswers = Dict[DNSRecord, Set[DNSRecord]]
 
 
 @enum.unique
@@ -149,6 +154,67 @@ class RecordUpdateListener:
 
         At this point the cache will have the new records.
         """
+
+
+class _DNSOutgoingBucket:
+    """A DNSOutgoing bucket."""
+
+    def __init__(self, now, multicast):
+        """Create a bucke to wrap a DNSOutgoing."""
+        self.now = now
+        self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=multicast)
+        self.bytes = 0
+
+    def add(self, max_compressed_size, question, answers):
+        """Add a new set of questions and known answers to the outgoing."""
+        self.out.add_question(question)
+        for answer in answers:
+            self.out.add_answer_at_time(answer, self.now)
+        self.bytes += max_compressed_size
+
+
+def group_queries_with_known_answers(
+    now: float, multicast: bool, question_with_known_answers: _QuestionWithKnownAnswers
+) -> List[DNSOutgoing]:
+    """Aggregate queries so that as many known answers as possible fit in the same packet
+    without having known answers spill over into the next packet unless the
+    question and known answers are always going to exceed the packet size.
+
+    Some responders do not implement multi-packet known answer suppression
+    so we try to keep all the known answers in the same packet as the
+    questions.
+    """
+    # This is the maximum size the query + known answers can be with name compression.
+    # The actual size of the query + known answers may be a bit smaller since other
+    # parts may be shared when the final DNSOutgoing packets are constructed. The
+    # goal of this algorithm is to quickly bucket the query + known answers without
+    # the overhead of actually constructing the packets.
+    query_by_size = {
+        question: (question.max_size + sum([answer.max_size_compressed for answer in known_answers]))
+        for question, known_answers in question_with_known_answers.items()
+    }
+    max_bucket_size = _MAX_MSG_TYPICAL - _DNS_PACKET_HEADER_LEN
+    query_buckets = []
+    for question in sorted(
+        query_by_size,
+        key=query_by_size.get,
+        reverse=True,
+    ):
+        max_compressed_size = query_by_size[question]
+        answers = question_with_known_answers[question]
+        for query_bucket in query_buckets:
+            if query_bucket.bytes + max_compressed_size <= max_bucket_size:
+                query_bucket.add(max_compressed_size, question, answers)
+                break
+        else:
+            # If a single question and known answers won't fit in a packet
+            # we will end up generating multiple packets, but there will never
+            # be multiple questions
+            query_bucket = _DNSOutgoingBucket(now, multicast)
+            query_bucket.add(max_compressed_size, question, answers)
+            query_buckets.append(query_bucket)
+
+    return [query_bucket.out for query_bucket in query_buckets]
 
 
 class _ServiceBrowserBase(RecordUpdateListener):
@@ -317,29 +383,25 @@ class _ServiceBrowserBase(RecordUpdateListener):
         questions = [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types]
         self.zc.add_listener(self, questions)
 
-    def generate_ready_queries(self) -> Optional[DNSOutgoing]:
+    def generate_ready_queries(self) -> List[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
-        out = None
         now = current_time_millis()
 
         if min(self._next_time.values()) > now:
-            return out
+            return []
+
+        questions_with_known_answers: _QuestionWithKnownAnswers = {}
 
         for type_, due in self._next_time.items():
             if due > now:
                 continue
-
-            if out is None:
-                out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=self.multicast)
-            out.add_question(DNSQuestion(type_, _TYPE_PTR, _CLASS_IN))
-
-            for record in self._services[type_].values():
-                if not record.is_stale(now):
-                    out.add_answer_at_time(record, now)
-
+            questions_with_known_answers[DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)] = set(
+                record for record in self._services[type_].values() if not record.is_stale(now)
+            )
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
-        return out
+
+        return group_queries_with_known_answers(now, self.multicast, questions_with_known_answers)
 
     def _seconds_to_wait(self) -> Optional[float]:
         """Returns the number of seconds to wait for the next event."""
@@ -406,8 +468,8 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             if self.zc.done or self.done:
                 return
 
-            out = self.generate_ready_queries()
-            if out:
+            outs = self.generate_ready_queries()
+            for out in outs:
                 self.zc.send(out, addr=self.addr, port=self.port)
 
             if not self._handlers_to_call:
