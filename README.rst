@@ -201,6 +201,12 @@ Changelog
 
 * TRAFFIC REDUCTION: Avoid including additionals when the answer is suppressed by known-answer supression (#614) @bdraco
 
+* TRAFFIC REDUCTION: Implement multi-packet known answer supression (#687) @bdraco
+
+  Implements datatracker.ietf.org/doc/html/rfc6762#section-7.2
+
+* TRAFFIC REDUCTION: Efficiently bucket queries with known answers (#698) @bdraco
+
 * MAJOR BUG: Ensure matching PTR queries are returned with the ANY query (#618) @bdraco
 
 * MAJOR BUG: Fix lookup of uppercase names in registry (#597) @bdraco
@@ -218,6 +224,16 @@ Changelog
   The above query will now see a response
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
+
+* Abstract DNSOutgoing ttl write into _write_ttl (#695) @bdraco
+
+* Rollback data in one call instead of poping one byte at a time in DNS Outgoing (#696) @bdraco
+
+* Suppress additionals when answer is suppressed (#690) @bdraco
+
+* Move setting DNS created and ttl into its own function (#692) @bdraco
+
+* Add truncated property to DNSMessage to lookup the TC bit (#686) @bdraco
 
 * Check if SO_REUSEPORT exists instead of using an exception catch (#682) @bdraco
 
