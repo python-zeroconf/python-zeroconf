@@ -37,7 +37,7 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 
 * isn't tied to Bonjour or Avahi
 * doesn't use D-Bus
-* doesn't force you to use particular event loop or Twisted
+* doesn't force you to use particular event loop or Twisted (asyncio is used under the hood but not required)
 * is pip-installable
 * has PyPI distribution
 
@@ -59,8 +59,14 @@ This project's versions follow the following pattern: MAJOR.MINOR.PATCH.
 Status
 ------
 
-There are some people using this package. I don't actively use it and as such
-any help I can offer with regard to any issues is very limited.
+This project is actively maintained.
+
+Traffic Reduction
+-----------------
+
+Before version 0.32, most traffic reduction techniques described in https://datatracker.ietf.org/doc/html/rfc6762#section-7
+where not implemented which could lead to excessive network traffic.  It is highly recommended that version 0.32 or later
+is used if this is a concern.
 
 IPv6 support
 ------------
