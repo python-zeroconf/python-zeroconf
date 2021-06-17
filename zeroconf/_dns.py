@@ -139,10 +139,12 @@ class DNSRecord(DNSEntry):
     """A DNS record - like a DNS entry, but has a TTL"""
 
     # TODO: Switch to just int ttl
-    def __init__(self, name: str, type_: int, class_: int, ttl: Union[float, int]) -> None:
+    def __init__(
+        self, name: str, type_: int, class_: int, ttl: Union[float, int], created: Optional[float] = None
+    ) -> None:
         super().__init__(name, type_, class_)
         self.ttl = ttl
-        self.created = current_time_millis()
+        self.created = created or current_time_millis()
         self._expiration_time: Optional[float] = None
         self._stale_time: Optional[float] = None
         self._recent_time: Optional[float] = None
@@ -218,8 +220,10 @@ class DNSAddress(DNSRecord):
 
     """A DNS address record"""
 
-    def __init__(self, name: str, type_: int, class_: int, ttl: int, address: bytes) -> None:
-        super().__init__(name, type_, class_, ttl)
+    def __init__(
+        self, name: str, type_: int, class_: int, ttl: int, address: bytes, created: Optional[float] = None
+    ) -> None:
+        super().__init__(name, type_, class_, ttl, created)
         self.address = address
 
     def write(self, out: 'DNSOutgoing') -> None:
@@ -252,8 +256,10 @@ class DNSHinfo(DNSRecord):
 
     """A DNS host information record"""
 
-    def __init__(self, name: str, type_: int, class_: int, ttl: int, cpu: str, os: str) -> None:
-        super().__init__(name, type_, class_, ttl)
+    def __init__(
+        self, name: str, type_: int, class_: int, ttl: int, cpu: str, os: str, created: Optional[float] = None
+    ) -> None:
+        super().__init__(name, type_, class_, ttl, created)
         self.cpu = cpu
         self.os = os
 
@@ -284,8 +290,10 @@ class DNSPointer(DNSRecord):
 
     """A DNS pointer record"""
 
-    def __init__(self, name: str, type_: int, class_: int, ttl: int, alias: str) -> None:
-        super().__init__(name, type_, class_, ttl)
+    def __init__(
+        self, name: str, type_: int, class_: int, ttl: int, alias: str, created: Optional[float] = None
+    ) -> None:
+        super().__init__(name, type_, class_, ttl, created)
         self.alias = alias
 
     @property
@@ -319,9 +327,11 @@ class DNSText(DNSRecord):
 
     """A DNS text record"""
 
-    def __init__(self, name: str, type_: int, class_: int, ttl: int, text: bytes) -> None:
+    def __init__(
+        self, name: str, type_: int, class_: int, ttl: int, text: bytes, created: Optional[float] = None
+    ) -> None:
         assert isinstance(text, (bytes, type(None)))
-        super().__init__(name, type_, class_, ttl)
+        super().__init__(name, type_, class_, ttl, created)
         self.text = text
 
     def write(self, out: 'DNSOutgoing') -> None:
@@ -357,8 +367,9 @@ class DNSService(DNSRecord):
         weight: int,
         port: int,
         server: str,
+        created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_, ttl)
+        super().__init__(name, type_, class_, ttl, created)
         self.priority = priority
         self.weight = weight
         self.port = port
