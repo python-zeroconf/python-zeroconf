@@ -231,6 +231,34 @@ Changelog
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
+* Cleanup typing in zero._core and document ignores (#714) @bdraco
+
+* Cleanup typing in zeroconf._logger (#715) @bdraco
+
+* Cleanup typing in zeroconf._utils.net (#713) @bdraco
+
+* Cleanup typing in zeroconf._services (#711) @bdraco
+
+* Cleanup typing in zeroconf._services.registry (#712) @bdraco
+
+* Add setter for DNSQuestion to easily make a QU question (#710) @bdraco
+
+* Set stale unique records to expire 1s in the future instead of instant removal (#706) @bdraco
+
+  tools.ietf.org/html/rfc6762#section-10.2
+  Queriers receiving a Multicast DNS response with a TTL of zero SHOULD
+  NOT immediately delete the record from the cache, but instead record
+  a TTL of 1 and then delete the record one second later.  In the case
+  of multiple Multicast DNS responders on the network described in
+  Section 6.6 above, if one of the responders shuts down and
+  incorrectly sends goodbye packets for its records, it gives the other
+  cooperating responders one second to send out their own response to
+  "rescue" the records before they expire and are deleted.
+
+* Fix thread safety in _ServiceBrowser.update_records_complete (#708) @bdraco
+
+* Split DNSOutgoing/DNSIncoming/DNSMessage into zeroconf._protocol (#705) @bdraco
+
 * Abstract DNSOutgoing ttl write into _write_ttl (#695) @bdraco
 
 * Rollback data in one call instead of poping one byte at a time in DNS Outgoing (#696) @bdraco
