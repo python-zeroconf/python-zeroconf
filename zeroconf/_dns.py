@@ -78,15 +78,6 @@ class DNSEntry:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
-    @property
-    def max_size(self) -> int:
-        """Maximum size of the base record in the packet."""
-        return _BASE_MAX_SIZE + self._name_max_size()
-
-    def _name_max_size(self) -> int:
-        """Maximum size of the name in the packet."""
-        return len(self.name.encode('utf-8')) + _LEN_SHORT
-
     def _entry_tuple(self) -> Tuple[str, int, int]:
         """Entry Tuple for DNSEntry."""
         return (self.key, self.type, self.class_)
@@ -314,11 +305,6 @@ class DNSPointer(DNSRecord):
     def __init__(self, name: str, type_: int, class_: int, ttl: int, alias: str) -> None:
         super().__init__(name, type_, class_, ttl)
         self.alias = alias
-
-    @property
-    def max_size(self) -> int:
-        """Maximum size of the record in the packet."""
-        return super().max_size + len(self.alias.encode('utf-8')) + _LEN_BYTE
 
     @property
     def max_size_compressed(self) -> int:
