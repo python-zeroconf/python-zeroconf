@@ -246,14 +246,14 @@ class QueryHandler:
         ucast_source = port != _MDNS_PORT
         known_answers = DNSRRSet(itertools.chain(*[msg.answers for msg in msgs]))
         query_res = _QueryResponse(self.cache, msgs[0], ucast_source)
-        now = current_time_millis()
 
-        for question in itertools.chain(*[msg.questions for msg in msgs]):
-            answer_set: _AnswerWithAdditionalsType = {}
-            self._answer_question(question, answer_set, known_answers, now)
-            if not ucast_source and question.unicast:
-                query_res.add_qu_question_response(answer_set)
-            else:
+        for msg in msgs:
+            for question in msg.questions:
+                answer_set: _AnswerWithAdditionalsType = {}
+                self._answer_question(question, answer_set, known_answers, msg.now)
+                if not ucast_source and question.unicast:
+                    query_res.add_qu_question_response(answer_set)
+                    continue
                 if ucast_source:
                     query_res.add_ucast_question_response(answer_set)
                 # We always multicast as well even if its a unicast
@@ -298,7 +298,7 @@ class RecordManager:
         address_adds: List[DNSAddress] = []
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
-        now = current_time_millis()
+        now = msg.now
         for record in msg.answers:
 
             updated = True
