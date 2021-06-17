@@ -1379,7 +1379,7 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
     assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
 
 
-def test_group_queries_with_known_answers():
+def test_group_ptr_queries_with_known_answers():
     questions_with_known_answers: s._QuestionWithKnownAnswers = {}
     now = current_time_millis()
     for i in range(120):
@@ -1394,7 +1394,7 @@ def test_group_queries_with_known_answers():
             )
             for counter in range(i)
         )
-    outs = s.group_queries_with_known_answers(now, True, questions_with_known_answers)
+    outs = s._group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
     for out in outs:
         packets = out.packets()
         # If we generate multiple packets there must

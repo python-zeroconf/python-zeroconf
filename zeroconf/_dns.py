@@ -83,7 +83,7 @@ class DNSEntry:
         """Maximum size of the base record in the packet."""
         return _BASE_MAX_SIZE + self._name_max_size()
 
-    def _name_max_size(self):
+    def _name_max_size(self) -> int:
         """Maximum size of the name in the packet."""
         return len(self.name.encode('utf-8')) + _LEN_SHORT
 
@@ -249,11 +249,6 @@ class DNSAddress(DNSRecord):
         super().__init__(name, type_, class_, ttl)
         self.address = address
 
-    @property
-    def max_size(self) -> int:
-        """Maximum size of the record in the packet."""
-        return super().max_size + len(self.address)
-
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
         out.write_string(self.address)
@@ -288,17 +283,6 @@ class DNSHinfo(DNSRecord):
         super().__init__(name, type_, class_, ttl)
         self.cpu = cpu
         self.os = os
-
-    @property
-    def max_size(self) -> int:
-        """Maximum size of the record in the packet."""
-        return (
-            super().max_size
-            + len(self.cpu.encode('utf-8'))
-            + _LEN_BYTE
-            + len(self.os.encode('utf-8'))
-            + _LEN_BYTE
-        )
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -372,11 +356,6 @@ class DNSText(DNSRecord):
         super().__init__(name, type_, class_, ttl)
         self.text = text
 
-    @property
-    def max_size(self) -> int:
-        """Maximum size of the record in the packet."""
-        return super().max_size + len(self.text)
-
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
         out.write_string(self.text)
@@ -416,18 +395,6 @@ class DNSService(DNSRecord):
         self.weight = weight
         self.port = port
         self.server = server
-
-    @property
-    def max_size(self) -> int:
-        """Maximum size of the record in the packet."""
-        return (
-            super().max_size
-            + _LEN_SHORT  # priority
-            + _LEN_SHORT  # weight
-            + _LEN_SHORT  # port
-            + len(self.server.encode('utf-8'))
-            + 1  # server
-        )
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""

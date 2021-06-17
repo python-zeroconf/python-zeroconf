@@ -65,7 +65,7 @@ if TYPE_CHECKING:
     from .._core import Zeroconf  # pylint: disable=cyclic-import
 
 
-_QuestionWithKnownAnswers = Dict[DNSRecord, Set[DNSRecord]]
+_QuestionWithKnownAnswers = Dict[DNSQuestion, Set[DNSPointer]]
 
 
 @enum.unique
@@ -156,16 +156,16 @@ class RecordUpdateListener:
         """
 
 
-class _DNSOutgoingBucket:
+class _DNSPointerOutgoingBucket:
     """A DNSOutgoing bucket."""
 
-    def __init__(self, now, multicast):
+    def __init__(self, now: float, multicast: bool) -> None:
         """Create a bucke to wrap a DNSOutgoing."""
         self.now = now
         self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=multicast)
         self.bytes = 0
 
-    def add(self, max_compressed_size, question, answers):
+    def add(self, max_compressed_size: int, question: DNSQuestion, answers: Set[DNSPointer]) -> None:
         """Add a new set of questions and known answers to the outgoing."""
         self.out.add_question(question)
         for answer in answers:
@@ -173,7 +173,7 @@ class _DNSOutgoingBucket:
         self.bytes += max_compressed_size
 
 
-def group_queries_with_known_answers(
+def _group_ptr_queries_with_known_answers(
     now: float, multicast: bool, question_with_known_answers: _QuestionWithKnownAnswers
 ) -> List[DNSOutgoing]:
     """Aggregate queries so that as many known answers as possible fit in the same packet
@@ -189,15 +189,15 @@ def group_queries_with_known_answers(
     # parts may be shared when the final DNSOutgoing packets are constructed. The
     # goal of this algorithm is to quickly bucket the query + known answers without
     # the overhead of actually constructing the packets.
-    query_by_size = {
+    query_by_size: Dict[DNSQuestion, int] = {
         question: (question.max_size + sum([answer.max_size_compressed for answer in known_answers]))
         for question, known_answers in question_with_known_answers.items()
     }
     max_bucket_size = _MAX_MSG_TYPICAL - _DNS_PACKET_HEADER_LEN
-    query_buckets = []
+    query_buckets: List[_DNSPointerOutgoingBucket] = []
     for question in sorted(
         query_by_size,
-        key=query_by_size.get,
+        key=query_by_size.get,  # type: ignore
         reverse=True,
     ):
         max_compressed_size = query_by_size[question]
@@ -210,7 +210,7 @@ def group_queries_with_known_answers(
             # If a single question and known answers won't fit in a packet
             # we will end up generating multiple packets, but there will never
             # be multiple questions
-            query_bucket = _DNSOutgoingBucket(now, multicast)
+            query_bucket = _DNSPointerOutgoingBucket(now, multicast)
             query_bucket.add(max_compressed_size, question, answers)
             query_buckets.append(query_bucket)
 
@@ -240,9 +240,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.addr = addr
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
-        self._services = {
-            check_type_: {} for check_type_ in self.types
-        }  # type: Dict[str, Dict[str, DNSRecord]]
+        self._services: Dict[str, Dict[str, DNSPointer]] = {check_type_: {} for check_type_ in self.types}
         current_time = current_time_millis()
         self._next_time = {check_type_: current_time for check_type_ in self.types}
         self._delay = {check_type_: delay for check_type_ in self.types}
@@ -401,7 +399,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
-        return group_queries_with_known_answers(now, self.multicast, questions_with_known_answers)
+        return _group_ptr_queries_with_known_answers(now, self.multicast, questions_with_known_answers)
 
     def _seconds_to_wait(self) -> Optional[float]:
         """Returns the number of seconds to wait for the next event."""
