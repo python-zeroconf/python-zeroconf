@@ -40,9 +40,9 @@ class ServiceRegistry:
         self,
     ) -> None:
         """Create the ServiceRegistry class."""
-        self._services = {}  # type: Dict[str, ServiceInfo]
-        self.types = {}  # type: Dict[str, List]
-        self.servers = {}  # type: Dict[str, List]
+        self._services: Dict[str, ServiceInfo] = {}
+        self.types: Dict[str, List] = {}
+        self.servers: Dict[str, List] = {}
         self._lock = threading.Lock()  # add and remove services thread safe
 
     def add(self, info: ServiceInfo) -> None:
