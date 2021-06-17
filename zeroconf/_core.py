@@ -190,7 +190,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
-        self.data = None  # type: Optional[bytes]
+        self.data: Optional[bytes] = None
         self.transport: Optional[asyncio.DatagramTransport] = None
         super().__init__()
 
@@ -199,8 +199,10 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     ) -> None:
         assert self.transport is not None
         if len(addrs) == 2:
+            # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
         elif len(addrs) == 4:
+            # https://github.com/python/mypy/issues/1178
             addr, port, _flow, _scope = addrs  # type: ignore
         else:
             return
