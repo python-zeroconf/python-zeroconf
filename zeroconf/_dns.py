@@ -34,6 +34,7 @@ from .const import (
     _CLASSES,
     _CLASS_MASK,
     _CLASS_UNIQUE,
+    _DNS_PACKET_HEADER_LEN,
     _EXPIRE_FULL_TIME_PERCENT,
     _EXPIRE_STALE_TIME_PERCENT,
     _FLAGS_QR_MASK,
@@ -54,6 +55,12 @@ from .const import (
     _TYPE_TXT,
 )
 
+_LEN_BYTE = 1
+_LEN_SHORT = 2
+_LEN_INT = 4
+
+_BASE_MAX_SIZE = _LEN_SHORT + _LEN_SHORT + _LEN_INT + _LEN_SHORT  # type  # class  # ttl  # length
+_NAME_COMPRESSION_MIN_SIZE = _LEN_BYTE * 2
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -117,6 +124,14 @@ class DNSQuestion(DNSEntry):
             and (self.type == rec.type or self.type == _TYPE_ANY)
             and self.name == rec.name
         )
+
+    def __hash__(self) -> int:
+        return hash((self.name, self.class_, self.type))
+
+    @property
+    def max_size(self) -> int:
+        """Maximum size of the question in the packet."""
+        return len(self.name.encode('utf-8')) + _LEN_BYTE + _LEN_SHORT + _LEN_SHORT  # type  # class
 
     @property
     def unicast(self) -> bool:
@@ -290,6 +305,16 @@ class DNSPointer(DNSRecord):
     def __init__(self, name: str, type_: int, class_: int, ttl: int, alias: str) -> None:
         super().__init__(name, type_, class_, ttl)
         self.alias = alias
+
+    @property
+    def max_size_compressed(self) -> int:
+        """Maximum size of the record in the packet assuming the name has been compressed."""
+        return (
+            _BASE_MAX_SIZE
+            + _NAME_COMPRESSION_MIN_SIZE
+            + (len(self.alias) - len(self.name))
+            + _NAME_COMPRESSION_MIN_SIZE
+        )
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -590,7 +615,7 @@ class DNSOutgoing(DNSMessage):
         # these 3 are per-packet -- see also _reset_for_next_packet()
         self.names: Dict[str, int] = {}
         self.data: List[bytes] = []
-        self.size: int = 12
+        self.size: int = _DNS_PACKET_HEADER_LEN
         self.allow_long: bool = True
 
         self.state = self.State.init
@@ -603,7 +628,7 @@ class DNSOutgoing(DNSMessage):
     def _reset_for_next_packet(self) -> None:
         self.names = {}
         self.data = []
-        self.size = 12
+        self.size = _DNS_PACKET_HEADER_LEN
         self.allow_long = True
 
     def __repr__(self) -> str:

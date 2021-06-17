@@ -159,8 +159,8 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
                     if not self._handlers_to_call:
                         await wait_condition_or_timeout(self.aiozc.condition, timeout)
 
-            out = self.generate_ready_queries()
-            if out:
+            outs = self.generate_ready_queries()
+            for out in outs:
                 self.aiozc.zeroconf.async_send(out, addr=self.addr, port=self.port)
 
             if not self._handlers_to_call:
