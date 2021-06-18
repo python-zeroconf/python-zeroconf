@@ -27,8 +27,11 @@ from ._utils.time import current_time_millis
 from .const import _TYPE_PTR
 
 
-def _remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
-    """Forgiving remove of a cache key.
+_DNSRecordCacheType = Dict[str, Dict[DNSRecord, DNSRecord]]
+
+
+def _remove_key(cache: _DNSRecordCacheType, key: str, entry: DNSRecord) -> None:
+    """Remove a key from a DNSRecord cache
 
     This function must be run in from event loop.
     """
@@ -41,8 +44,8 @@ class DNSCache:
     """A cache of DNS entries."""
 
     def __init__(self) -> None:
-        self.cache: Dict[str, Dict[DNSRecord, DNSRecord]] = {}
-        self.service_cache: Dict[str, Dict[DNSRecord, DNSRecord]] = {}
+        self.cache: _DNSRecordCacheType = {}
+        self.service_cache: _DNSRecordCacheType = {}
 
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
