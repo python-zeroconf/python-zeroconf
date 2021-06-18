@@ -960,8 +960,7 @@ async def test_multiple_a_addresses():
     host = "multahost.local."
     record1 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'a')
     record2 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'b')
-    cache.add(record1)
-    cache.add(record2)
+    cache.async_add_records([record1, record2])
 
     # New kwarg way
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
