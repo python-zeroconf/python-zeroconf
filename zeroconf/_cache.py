@@ -55,8 +55,12 @@ class DNSCache:
 
         This function must be run in from event loop.
         """
-        # Insert last in list, get will return newest entry
-        # iteration will result in last update winning
+        # Previously storage of records was implemented as a list
+        # instead a dict. Since DNSRecords are now hashable, the implementation
+        # uses a dict to ensure that adding a new record to the cache
+        # replaces any existing records that are __eq__ to each other which
+        # removes the risk that accessing the cache from the wrong
+        # direction would return the old incorrect entry.
         self.cache.setdefault(entry.key, {})[entry] = entry
         if isinstance(entry, DNSService):
             self.service_cache.setdefault(entry.server, {})[entry] = entry
@@ -87,7 +91,10 @@ class DNSCache:
             self._async_remove(entry)
 
     def async_expire(self, now: float) -> Iterable[DNSRecord]:
-        """Purge expired entries from the cache."""
+        """Purge expired entries from the cache.
+        
+        This function must be run in from event loop.       
+        """
         for name in self.names():
             for record in self.entries_with_name(name):
                 if record.is_expired(now):
