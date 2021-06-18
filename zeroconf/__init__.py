@@ -81,7 +81,6 @@ __license__ = 'LGPL'
 
 __all__ = [
     "__version__",
-    "DNSCache",
     "generate_service_query",
     "Zeroconf",
     "ServiceInfo",
