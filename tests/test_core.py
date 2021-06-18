@@ -51,7 +51,7 @@ async def test_reaper():
     zeroconf.cache.async_add(record_with_10s_ttl)
     zeroconf.cache.async_add(record_with_1s_ttl)
     entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-    await asyncio.sleep(1.2)
+    await asyncio.sleep(2)
     entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
     await aiozc.async_close()
     assert entries != original_entries
