@@ -5,9 +5,9 @@
 import argparse
 import asyncio
 import logging
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
-from zeroconf import IPVersion, ServiceStateChange, generate_service_query
+from zeroconf import IPVersion, generate_service_query
 from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf
 
 HOMESHARING_SERVICE: str = "_appletv-v2._tcp.local."
@@ -33,39 +33,9 @@ ALL_SERVICES = [
 log = logging.getLogger(__name__)
 
 
-def async_on_service_state_change(
-    zeroconf: AsyncZeroconf, service_type: str, name: str, state_change: ServiceStateChange
-) -> None:
-    print("Service %s of type %s state changed: %s" % (name, service_type, state_change))
-    if state_change is not ServiceStateChange.Added:
-        return
-    asyncio.ensure_future(async_display_service_info(zeroconf, service_type, name))
-
-
-async def async_display_service_info(zeroconf: AsyncZeroconf, service_type: str, name: str) -> None:
-    info = await zeroconf.async_get_service_info(service_type, name)
-    print("Info from zeroconf.get_service_info: %r" % (info))
-    if info:
-        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
-        print("  Name: %s" % name)
-        print("  Addresses: %s" % ", ".join(addresses))
-        print("  Weight: %d, priority: %d" % (info.weight, info.priority))
-        print("  Server: %s" % (info.server,))
-        if info.properties:
-            print("  Properties are:")
-            for key, value in info.properties.items():
-                print("    %s: %s" % (key, value))
-        else:
-            print("  No properties")
-    else:
-        print("  No info")
-    print('\n')
-
-
 class AsyncAppleScanner:
     def __init__(self, args: Any) -> None:
         self.args = args
-        self.aiobrowser: Optional[AsyncServiceBrowser] = None
         self.aiozc: Optional[AsyncZeroconf] = None
 
     async def async_run(self) -> None:
@@ -83,14 +53,13 @@ class AsyncAppleScanner:
 
         while True:
             await self.aiozc.async_wait(1000)
+            # Dump the cache
             import pprint
 
             pprint.pprint(self.aiozc.zeroconf.cache.cache)
 
     async def async_close(self) -> None:
         assert self.aiozc is not None
-        assert self.aiobrowser is not None
-        await self.aiobrowser.async_cancel()
         await self.aiozc.async_close()
 
 
