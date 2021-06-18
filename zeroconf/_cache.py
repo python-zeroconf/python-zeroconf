@@ -101,16 +101,14 @@ class DNSCache:
         self.async_remove_records(expired)
         return expired
 
-    def async_get(self, entry: DNSEntry) -> Optional[DNSRecord]:
-        """Gets an entry by key.  Will return None if there is no
+    def async_get_unique(self, entry: _UniqueRecordsType) -> Optional[DNSRecord]:
+        """Gets a unique entry by key.  Will return None if there is no
         matching entry.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
-        if isinstance(entry, _UNIQUE_RECORD_TYPES):
-            return self._lookup_unique_entry_threadsafe(entry)
-        return self._async_get(entry)
+        return self._lookup_unique_entry_threadsafe(entry)
 
     def async_get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details.

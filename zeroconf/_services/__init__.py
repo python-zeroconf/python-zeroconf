@@ -340,7 +340,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             return
 
         # If its expired or already exists in the cache it cannot be updated.
-        if expired or self.zc.cache.async_get(record):
+        if expired or self.zc.cache.async_get_unique(record):
             return
 
         if isinstance(record, DNSAddress):
