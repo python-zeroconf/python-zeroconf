@@ -182,7 +182,7 @@ class DNSCache:
 
         Use get_all_by_details instead.
         """
-        return self.get(DNSEntry(name, type_, class_))
+        return self._get_threadsafe(DNSEntry(name, type_, class_))
 
     def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
