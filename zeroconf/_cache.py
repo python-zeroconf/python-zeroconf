@@ -27,8 +27,7 @@ from ._utils.time import current_time_millis
 from .const import _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
-
-
+_UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
 _DNSRecordCacheType = Dict[str, Dict[DNSRecord, DNSRecord]]
 
 
@@ -139,7 +138,7 @@ class DNSCache:
         """
         return self.service_cache.get(name.lower(), {})
 
-    def _async_get(self, entry: DNSEntry):
+    def _async_get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Search a dict of entries by making a copy of it first.
 
         This function is not threadsafe and must be called from
@@ -154,13 +153,11 @@ class DNSCache:
     # event loop, however they all make copies so they significantly
     # inefficent
 
-    def _lookup_unique_entry_threadsafe(
-        self, entry: Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
-    ) -> Optional[Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]]:
+    def _lookup_unique_entry_threadsafe(self, entry: _UniqueRecordsType) -> Optional[DNSRecord]:
         """Lookup a unique entry threadsafe."""
         return self.cache.get(entry.key, {}).get(entry)
 
-    def _get_threadsafe(self, entry: DNSEntry):
+    def _get_threadsafe(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Search a dict of entries by making a copy of it first."""
         for cached_entry in reversed(list(self.cache.get(entry.key, []))):
             if entry.__eq__(cached_entry):
