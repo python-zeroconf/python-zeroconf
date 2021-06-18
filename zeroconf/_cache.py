@@ -21,7 +21,6 @@
 """
 
 import itertools
-
 from typing import Dict, Iterable, List, Optional, Union, cast
 
 from ._dns import DNSAddress, DNSEntry, DNSHinfo, DNSPointer, DNSRecord, DNSService, DNSText
