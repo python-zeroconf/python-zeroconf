@@ -857,6 +857,8 @@ class TestServiceBrowser(unittest.TestCase):
             # service A updated
             service_updated_event.clear()
             service_address = '10.0.1.3'
+            # Verify we match on uppercase
+            service_server = service_server.upper()
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
@@ -960,8 +962,7 @@ async def test_multiple_a_addresses():
     host = "multahost.local."
     record1 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'a')
     record2 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'b')
-    cache.add(record1)
-    cache.add(record2)
+    cache.async_add_records([record1, record2])
 
     # New kwarg way
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)

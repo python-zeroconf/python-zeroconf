@@ -49,10 +49,10 @@ class DNSCache:
         self.cache: _DNSRecordCacheType = {}
         self.service_cache: _DNSRecordCacheType = {}
 
-    # Functions prefixed with  are NOT threadsafe and must
+    # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
-    def add(self, entry: DNSRecord) -> None:
+    def _async_add(self, entry: DNSRecord) -> None:
         """Adds an entry.
 
         This function must be run in from event loop.
@@ -67,15 +67,15 @@ class DNSCache:
         if isinstance(entry, DNSService):
             self.service_cache.setdefault(entry.server, {})[entry] = entry
 
-    def add_records(self, entries: Iterable[DNSRecord]) -> None:
+    def async_add_records(self, entries: Iterable[DNSRecord]) -> None:
         """Add multiple records.
 
         This function must be run in from event loop.
         """
         for entry in entries:
-            self.add(entry)
+            self._async_add(entry)
 
-    def remove(self, entry: DNSRecord) -> None:
+    def _async_remove(self, entry: DNSRecord) -> None:
         """Removes an entry.
 
         This function must be run in from event loop.
@@ -84,15 +84,15 @@ class DNSCache:
             _remove_key(self.service_cache, entry.server, entry)
         _remove_key(self.cache, entry.key, entry)
 
-    def remove_records(self, entries: Iterable[DNSRecord]) -> None:
+    def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
         """Remove multiple records.
 
         This function must be run in from event loop.
         """
         for entry in entries:
-            self.remove(entry)
+            self._async_remove(entry)
 
-    def expire(self, now: float) -> Iterable[DNSRecord]:
+    def async_expire(self, now: float) -> Iterable[DNSRecord]:
         """Purge expired entries from the cache.
 
         This function must be run in from event loop.
@@ -100,7 +100,7 @@ class DNSCache:
         for name in self.names():
             for record in self.entries_with_name(name):
                 if record.is_expired(now):
-                    self.remove(record)
+                    self._async_remove(record)
                     yield record
 
     def async_get(self, entry: DNSEntry) -> Optional[DNSRecord]:
@@ -195,11 +195,11 @@ class DNSCache:
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
-        return list(self.service_cache.get(server, {}))
+        return list(self.service_cache.get(server.lower(), []))
 
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        return list(self.cache.get(name.lower(), {}))
+        return list(self.cache.get(name.lower(), []))
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
