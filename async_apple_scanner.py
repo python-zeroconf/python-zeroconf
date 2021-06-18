@@ -70,7 +70,7 @@ class AsyncAppleScanner:
 
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)
-
+        await self.aiozc.zeroconf.async_wait_for_start()
         target = self.args.target or None
         multicast = not target
         include_known_answers = not target
