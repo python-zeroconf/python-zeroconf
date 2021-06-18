@@ -7,8 +7,8 @@ import asyncio
 import logging
 from typing import Any, Optional
 
-from zeroconf import IPVersion, generate_service_query
-from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf
+from zeroconf import IPVersion, current_time_millis, generate_service_query
+from zeroconf.aio import AsyncZeroconf
 
 HOMESHARING_SERVICE: str = "_appletv-v2._tcp.local."
 DEVICE_SERVICE: str = "_touch-able._tcp.local."
@@ -30,6 +30,8 @@ ALL_SERVICES = [
     DEVICE_INFO_SERVICE,
 ]
 
+_QUERY_INTERVAL_MS = 60000
+
 log = logging.getLogger(__name__)
 
 
@@ -41,9 +43,23 @@ class AsyncAppleScanner:
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)
         await self.aiozc.zeroconf.async_wait_for_start()
+        last_asked = 0
+        while True:
+            now = current_time_millis()
+            if now - last_asked > _QUERY_INTERVAL_MS:
+                last_asked = now
+                self.send_query()
+            await self.aiozc.async_wait(_QUERY_INTERVAL_MS / 6)  # unblocks on new data
+            # Dump the cache -- for example only, Install an AsyncServiceListener instead
+            # which will need to replay the existing cache just like new ServiceBrowsers do
+            import pprint
+
+            pprint.pprint(self.aiozc.zeroconf.cache.cache)
+
+    def send_query(self) -> None:
         target = self.args.target or None
         multicast = not target
-        include_known_answers = not target
+        include_known_answers = True
         outgoings = generate_service_query(
             self.aiozc.zeroconf, ALL_SERVICES, multicast, include_known_answers
         )
@@ -51,14 +67,6 @@ class AsyncAppleScanner:
             log.debug("Sending %s to %s", outgoing, target)
             # This needs to be sent periodically
             self.aiozc.zeroconf.async_send(outgoing, target)
-
-        while True:
-            await self.aiozc.async_wait(1000)
-            # Dump the cache -- for example only, Install an AsyncServiceListener instead
-            # which will need to replay the existing cache just like new ServiceBrowsers do
-            import pprint
-
-            pprint.pprint(self.aiozc.zeroconf.cache.cache)
 
     async def async_close(self) -> None:
         assert self.aiozc is not None
