@@ -44,6 +44,9 @@ class DNSCache:
         self.cache: Dict[str, Dict[DNSRecord, DNSRecord]] = {}
         self.service_cache: Dict[str, Dict[DNSRecord, DNSRecord]] = {}
 
+    # Functions prefixed with async_ are NOT threadsafe and must
+    # be run in the event loop.
+
     def async_add(self, entry: DNSRecord) -> None:
         """Adds an entry.
 
@@ -80,6 +83,18 @@ class DNSCache:
         for entry in entries:
             self.async_remove(entry)
 
+    def async_expire(self, now: float) -> Iterable[DNSRecord]:
+        """Purge expired entries from the cache."""
+        for name in self.names():
+            for record in self.entries_with_name(name):
+                if record.is_expired(now):
+                    self.async_remove(record)
+                    yield record
+
+    # The below functions are threadsafe and do not need to be run in the
+    # event loop, however they all make copies so they significantly
+    # inefficent
+
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
@@ -99,11 +114,11 @@ class DNSCache:
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
-        return self.service_cache.get(server, {}).copy()
+        return list(self.service_cache.get(server, {}))
 
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        return self.cache.get(name.lower(), {}).copy()
+        return list(self.cache.get(name.lower(), {}))
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
@@ -119,11 +134,3 @@ class DNSCache:
     def names(self) -> List[str]:
         """Return a copy of the list of current cache names."""
         return list(self.cache)
-
-    def expire(self, now: float) -> Iterable[DNSRecord]:
-        """Purge expired entries from the cache."""
-        for name in self.names():
-            for record in self.entries_with_name(name):
-                if record.is_expired(now):
-                    self.remove(record)
-                    yield record

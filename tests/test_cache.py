@@ -31,8 +31,8 @@ class TestDNSCache(unittest.TestCase):
         record1 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
-        cache.add(record1)
-        cache.add(record2)
+        cache.async_add(record1)
+        cache.async_add(record2)
         entry = r.DNSEntry('a', const._TYPE_SOA, const._CLASS_IN)
         cached_record = cache.get(entry)
         assert cached_record == record2
@@ -41,23 +41,41 @@ class TestDNSCache(unittest.TestCase):
         record1 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
-        cache.add(record1)
-        cache.add(record2)
+        cache.async_add(record1)
+        cache.async_add(record2)
         assert 'a' in cache.cache
-        cache.remove(record1)
-        cache.remove(record2)
+        cache.async_remove(record1)
+        cache.async_remove(record2)
         assert 'a' not in cache.cache
 
-    def test_cache_empty_multiple_calls_does_not_throw(self):
+    def test_cache_empty_multiple_calls(self):
         record1 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
-        cache.add(record1)
-        cache.add(record2)
+        cache.async_add(record1)
+        cache.async_add(record2)
         assert 'a' in cache.cache
-        cache.remove(record1)
-        cache.remove(record2)
-        # Ensure multiple removes does not throw
-        cache.remove(record1)
-        cache.remove(record2)
+        cache.async_remove(record1)
+        cache.async_remove(record2)
         assert 'a' not in cache.cache
+
+
+# These functions have been seen in other projects so
+# we try to maintain a stable API for all the threadsafe getters
+class TestDNSCacheAPI(unittest.TestCase):
+    def test_get(self):
+        record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
+        cache = r.DNSCache()
+        cache.async_add(record1)
+        cache.async_add(record2)
+        assert cache.get(record1) == record1
+        assert cache.get(record2) == record2
+
+    def test_get_by_details(self):
+        record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
+        cache = r.DNSCache()
+        cache.async_add(record1)
+        cache.async_add(record2)
+        assert cache.get_by_details('a', const._TYPE_A, const._CLASS_IN) == record2

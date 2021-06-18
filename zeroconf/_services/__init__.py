@@ -777,12 +777,10 @@ class ServiceInfo(RecordUpdateListener):
 
     def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSRecord]:
         """Get the address records from the cache."""
-        address_records = []
-        cached_a_record = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
-        if cached_a_record:
-            address_records.append(cached_a_record)
-        address_records.extend(zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
-        return address_records
+        return [
+            *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
+            *zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN),
+        ]
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache."""
@@ -844,7 +842,7 @@ class ServiceInfo(RecordUpdateListener):
         out = DNSOutgoing(_FLAGS_QR_QUERY)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_SRV, _CLASS_IN)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_TXT, _CLASS_IN)
-        out.add_question_or_one_cache(zc.cache, now, self.server, _TYPE_A, _CLASS_IN)
+        out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_A, _CLASS_IN)
         out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_AAAA, _CLASS_IN)
         return out
 
