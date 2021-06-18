@@ -220,7 +220,7 @@ def _group_ptr_queries_with_known_answers(
 
 def generate_service_query(
     zc: 'Zeroconf', types_: List[str], multicast: bool = True, include_known_answers: bool = True
-):
+) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
     now = current_time_millis()
@@ -236,7 +236,7 @@ def generate_service_query(
                 if not record.is_stale(now)
             )
         else:
-            known_answers = set()
+            known_answers = cast(Set[DNSRecord], set())
 
         questions_with_known_answers[question] = known_answers
 
