@@ -218,6 +218,29 @@ def _group_ptr_queries_with_known_answers(
     return [query_bucket.out for query_bucket in query_buckets]
 
 
+def generate_service_query(
+    zc: 'Zeroconf', types_: List[str], multicast: bool = True, include_known_answers: bool = True
+):
+    """Generate a service query for sending with zeroconf.send."""
+    questions_with_known_answers: _QuestionWithKnownAnswers = {}
+    now = current_time_millis()
+    for type_ in types_:
+        service_type_name(type_, strict=False)
+        question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
+        if include_known_answers:
+            known_answers = set(
+                record
+                for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+                if not record.is_stale(now)
+            )
+        else:
+            known_answers = set()
+
+        questions_with_known_answers[question] = known_answers
+
+    return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
+
+
 class _ServiceBrowserBase(RecordUpdateListener):
     """Base class for ServiceBrowser."""
 

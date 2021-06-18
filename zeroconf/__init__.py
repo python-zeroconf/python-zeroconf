@@ -46,6 +46,7 @@ from ._exceptions import (  # noqa # import needed for backwards compat
 )
 from ._protocol import DNSIncoming, DNSOutgoing  # noqa # import needed for backwards compat
 from ._services import (  # noqa # import needed for backwards compat
+    generate_service_query,
     instance_name_from_service_info,
     Signal,
     SignalRegistrationInterface,
