@@ -20,6 +20,8 @@
     USA
 """
 
+import itertools
+
 from typing import Dict, Iterable, List, Optional, Union, cast
 
 from ._dns import DNSAddress, DNSEntry, DNSHinfo, DNSPointer, DNSRecord, DNSService, DNSText
@@ -91,16 +93,14 @@ class DNSCache:
         for entry in entries:
             self._async_remove(entry)
 
-    def async_expire(self, now: float) -> Iterable[DNSRecord]:
+    def async_expire(self, now: float) -> List[DNSRecord]:
         """Purge expired entries from the cache.
 
         This function must be run in from event loop.
         """
-        for name in self.names():
-            for record in self.entries_with_name(name):
-                if record.is_expired(now):
-                    self._async_remove(record)
-                    yield record
+        expired = [record for record in itertools.chain(*self.cache.values()) if record.is_expired(now)]
+        self.async_remove_records(expired)
+        return expired
 
     def async_get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
@@ -144,7 +144,7 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        for cached_entry in reversed(self.cache.get(entry.key, [])):
+        for cached_entry in self.cache.get(entry.key, []):
             if entry.__eq__(cached_entry):
                 return cached_entry
         return None
