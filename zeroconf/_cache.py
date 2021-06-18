@@ -92,8 +92,8 @@ class DNSCache:
 
     def async_expire(self, now: float) -> Iterable[DNSRecord]:
         """Purge expired entries from the cache.
-        
-        This function must be run in from event loop.       
+
+        This function must be run in from event loop.
         """
         for name in self.names():
             for record in self.entries_with_name(name):

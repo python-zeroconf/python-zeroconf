@@ -36,6 +36,38 @@ class TestDNSCache(unittest.TestCase):
         cached_record = cache.get(entry)
         assert cached_record == record2
 
+    def test_adding_same_record_to_cache_different_ttls(self):
+        """We should always get back the last entry we added if there are different TTLs.
+
+        This ensures we only have one source of truth for TTLs as a record cannot
+        be both expired and not expired.
+        """
+        record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 10, b'a')
+        cache = r.DNSCache()
+        cache.add(record1)
+        cache.add(record2)
+        entry = r.DNSEntry(record2)
+        cached_record = cache.get(entry)
+        assert cached_record == record2
+
+    @unittest.skip('This bug in the implementation needs to be fixed.')
+    def test_adding_same_record_to_cache_different_ttls(self):
+        """Verify we only get one record back.
+
+        The last record added should replace the previous since two
+        records with different ttls are __eq__. This ensures we
+        only have one source of truth for TTLs as a record cannot
+        be both expired and not expired.
+        """
+        record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 10, b'a')
+        cache = r.DNSCache()
+        cache.add(record1)
+        cache.add(record2)
+        cached_records = cache.get_all_by_details('a', const._TYPE_A, const._CLASS_IN)
+        assert cached_records == [record2]
+
     def test_cache_empty_does_not_leak_memory_by_leaving_empty_list(self):
         record1 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
