@@ -49,11 +49,13 @@ class AsyncAppleScanner:
         )
         for outgoing in outgoings:
             log.debug("Sending %s to %s", outgoing, target)
+            # This needs to be sent periodically
             self.aiozc.zeroconf.async_send(outgoing, target)
 
         while True:
             await self.aiozc.async_wait(1000)
             # Dump the cache -- for example only, Install an AsyncServiceListener instead
+            # which will need to replay the existing cache just like new ServiceBrowsers do
             import pprint
 
             pprint.pprint(self.aiozc.zeroconf.cache.cache)
