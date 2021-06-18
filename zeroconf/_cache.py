@@ -38,9 +38,9 @@ class DNSCache:
         """Adds an entry"""
         # Insert last in list, get will return newest entry
         # iteration will result in last update winning
-        self.cache.setdefault(entry.key, []).append(entry)
+        self.cache.setdefault(entry.key, {})[entry] = entry
         if isinstance(entry, DNSService):
-            self.service_cache.setdefault(entry.server, []).append(entry)
+            self.service_cache.setdefault(entry.server, {})[entry] = entry
 
     def add_records(self, entries: Iterable[DNSRecord]) -> None:
         """Add multiple records."""
@@ -62,7 +62,7 @@ class DNSCache:
     def remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
         """Forgiving remove of a cache key."""
         try:
-            cache[key].remove(entry)
+            del cache[key][entry]
             if not cache[key]:
                 del cache[key]
         except (KeyError, ValueError):
@@ -87,11 +87,11 @@ class DNSCache:
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
-        return self.service_cache.get(server, [])[:]
+        return self.service_cache.get(server, {}).copy()
 
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        return self.cache.get(name.lower(), [])[:]
+        return self.cache.get(name.lower(), {}).copy()
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
