@@ -231,12 +231,12 @@ def generate_service_query(
             question.unicast = True
         if include_known_answers:
             known_answers = set(
-                record
+                cast(DNSPointer, record)
                 for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
                 if not record.is_stale(now)
             )
         else:
-            known_answers = cast(Set[DNSRecord], set())
+            known_answers = cast(Set[DNSPointer], set())
 
         questions_with_known_answers[question] = known_answers
 
