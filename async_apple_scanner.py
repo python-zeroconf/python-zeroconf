@@ -53,7 +53,7 @@ class AsyncAppleScanner:
 
         while True:
             await self.aiozc.async_wait(1000)
-            # Dump the cache
+            # Dump the cache -- for example only, Install an AsyncServiceListener instead
             import pprint
 
             pprint.pprint(self.aiozc.zeroconf.cache.cache)
