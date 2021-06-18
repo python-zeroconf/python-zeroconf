@@ -47,7 +47,7 @@ class DNSCache:
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
-    def async_add(self, entry: DNSRecord) -> None:
+    def _async_add(self, entry: DNSRecord) -> None:
         """Adds an entry.
 
         This function must be run in from event loop.
@@ -64,9 +64,9 @@ class DNSCache:
         This function must be run in from event loop.
         """
         for entry in entries:
-            self.async_add(entry)
+            self._async_add(entry)
 
-    def async_remove(self, entry: DNSRecord) -> None:
+    def _async_remove(self, entry: DNSRecord) -> None:
         """Removes an entry.
 
         This function must be run in from event loop.
@@ -81,14 +81,14 @@ class DNSCache:
         This function must be run in from event loop.
         """
         for entry in entries:
-            self.async_remove(entry)
+            self._async_remove(entry)
 
     def async_expire(self, now: float) -> Iterable[DNSRecord]:
         """Purge expired entries from the cache."""
         for name in self.names():
             for record in self.entries_with_name(name):
                 if record.is_expired(now):
-                    self.async_remove(record)
+                    self._async_remove(record)
                     yield record
 
     # The below functions are threadsafe and do not need to be run in the
@@ -104,7 +104,17 @@ class DNSCache:
         return None
 
     def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
-        """Gets the first matching entry by details. Returns None if no entries match."""
+        """Gets the first matching entry by details. Returns None if no entries match.
+
+        Calling this function is not recommended as it will only
+        return one record even if there are multiple entries.
+
+        For example if there are multiple A or AAAA addresses this
+        function will return the last one that was added to the cache
+        which may not be the one you expect.
+
+        Use get_all_by_details instead.
+        """
         return self.get(DNSEntry(name, type_, class_))
 
     def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
