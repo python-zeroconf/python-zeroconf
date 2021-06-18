@@ -227,6 +227,8 @@ def generate_service_query(
     for type_ in types_:
         service_type_name(type_, strict=False)
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
+        if not multicast:
+            question.unicast = True
         if include_known_answers:
             known_answers = set(
                 record

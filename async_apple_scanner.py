@@ -30,6 +30,8 @@ ALL_SERVICES = [
     DEVICE_INFO_SERVICE,
 ]
 
+log = logging.getLogger(__name__)
+
 
 def async_on_service_state_change(
     zeroconf: AsyncZeroconf, service_type: str, name: str, state_change: ServiceStateChange
@@ -76,6 +78,7 @@ class AsyncAppleScanner:
             self.aiozc.zeroconf, ALL_SERVICES, multicast, include_known_answers
         )
         for outgoing in outgoings:
+            log.debug("Sending %s to %s", outgoing, target)
             self.aiozc.zeroconf.async_send(outgoing, target)
 
         while True:
