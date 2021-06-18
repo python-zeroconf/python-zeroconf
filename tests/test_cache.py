@@ -45,13 +45,11 @@ class TestDNSCache(unittest.TestCase):
         record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 10, b'a')
         cache = r.DNSCache()
-        cache.add(record1)
-        cache.add(record2)
+        cache.async_add_records([record1, record2])
         entry = r.DNSEntry(record2)
         cached_record = cache.get(entry)
         assert cached_record == record2
 
-    @unittest.skip('This bug in the implementation needs to be fixed.')
     def test_adding_same_record_to_cache_different_ttls(self):
         """Verify we only get one record back.
 
@@ -63,8 +61,7 @@ class TestDNSCache(unittest.TestCase):
         record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 10, b'a')
         cache = r.DNSCache()
-        cache.add(record1)
-        cache.add(record2)
+        cache.async_add_records([record1, record2])
         cached_records = cache.get_all_by_details('a', const._TYPE_A, const._CLASS_IN)
         assert cached_records == [record2]
 
