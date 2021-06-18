@@ -316,7 +316,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         ):
             self._pending_handlers[key] = state_change
 
-    def _process_record_update(self, now: float, record: DNSRecord) -> None:
+    def _async_process_record_update(self, now: float, record: DNSRecord) -> None:
         """Process a single record update from a batch of updates."""
         expired = record.is_expired(now)
 
@@ -340,12 +340,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
             return
 
         # If its expired or already exists in the cache it cannot be updated.
-        if expired or self.zc.cache.get(record):
+        if expired or self.zc.cache.async_get(record):
             return
 
         if isinstance(record, DNSAddress):
             # Iterate through the DNSCache and callback any services that use this address
-            for service in self.zc.cache.entries_with_server(record.name):
+            for service in self.zc.cache.async_entries_with_server(record.name):
                 type_ = self._record_matching_type(service)
                 if type_:
                     self._enqueue_callback(ServiceStateChange.Updated, type_, service.name)
@@ -367,7 +367,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         This method will be run in the event loop.
         """
         for record in records:
-            self._process_record_update(now, record)
+            self._async_process_record_update(now, record)
 
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
