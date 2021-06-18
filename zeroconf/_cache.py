@@ -134,11 +134,11 @@ class DNSCache:
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
-        return list(self.service_cache.get(server, {}))
+        return list(self.service_cache.get(server.lower(), []))
 
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        return list(self.cache.get(name.lower(), {}))
+        return list(self.cache.get(name.lower(), []))
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
