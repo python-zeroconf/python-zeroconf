@@ -146,8 +146,8 @@ class AsyncEngine:
         """Periodic cache cleanup."""
         while not self.zc.done:
             now = current_time_millis()
-            self.zc.record_manager.updates(now, list(self.zc.cache.async_expire(now)))
-            self.zc.record_manager.updates_complete()
+            self.zc.record_manager.async_updates(now, list(self.zc.cache.async_expire(now)))
+            self.zc.record_manager.async_updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
 
     async def _async_close(self) -> None:
@@ -565,7 +565,7 @@ class Zeroconf(QuietLogger):
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
-        self.record_manager.updates_from_response(msg)
+        self.record_manager.async_updates_from_response(msg)
 
     def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
         """Deal with incoming query packets.  Provides a response if
@@ -594,7 +594,7 @@ class Zeroconf(QuietLogger):
         if msg:
             packets.append(msg)
 
-        unicast_out, multicast_out = self.query_handler.response(packets, addr, port)
+        unicast_out, multicast_out = self.query_handler.async_response(packets, addr, port)
         if unicast_out:
             self.async_send(unicast_out, addr, port)
         if multicast_out:

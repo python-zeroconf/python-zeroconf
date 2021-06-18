@@ -1241,7 +1241,7 @@ def test_service_browser_is_aware_of_port_changes():
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
     )
-    zc.wait(100)
+    time.sleep(0.1)
 
     assert callbacks == [('_hap._tcp.local.', ServiceStateChange.Added, 'xxxyyy._hap._tcp.local.')]
     assert zc.get_service_info(type_, registration_name).port == 80
@@ -1251,7 +1251,7 @@ def test_service_browser_is_aware_of_port_changes():
         zc,
         mock_incoming_msg([info.dns_service()]),
     )
-    zc.wait(100)
+    time.sleep(0.1)
 
     assert callbacks == [
         ('_hap._tcp.local.', ServiceStateChange.Added, 'xxxyyy._hap._tcp.local.'),
