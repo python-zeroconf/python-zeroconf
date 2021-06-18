@@ -40,24 +40,25 @@ def teardown_module():
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
 @pytest.mark.asyncio
-@unittest.mock.patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10)
 async def test_reaper():
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    zeroconf = aiozc.zeroconf
-    cache = zeroconf.cache
-    original_entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-    record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
-    record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
-    zeroconf.cache.async_add(record_with_10s_ttl)
-    zeroconf.cache.async_add(record_with_1s_ttl)
-    entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-    await asyncio.sleep(2)
-    entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
-    await aiozc.async_close()
-    assert entries != original_entries
-    assert entries_with_cache != original_entries
-    assert record_with_10s_ttl in entries
-    assert record_with_1s_ttl not in entries
+    with unittest.mock.patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10):
+        assert _core._CACHE_CLEANUP_INTERVAL == 10
+        aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+        zeroconf = aiozc.zeroconf
+        cache = zeroconf.cache
+        original_entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
+        record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
+        record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
+        zeroconf.cache.async_add(record_with_10s_ttl)
+        zeroconf.cache.async_add(record_with_1s_ttl)
+        entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
+        await asyncio.sleep(1.2)
+        entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
+        await aiozc.async_close()
+        assert entries != original_entries
+        assert entries_with_cache != original_entries
+        assert record_with_10s_ttl in entries
+        assert record_with_1s_ttl not in entries
 
 
 class Framework(unittest.TestCase):
