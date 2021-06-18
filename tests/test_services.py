@@ -857,6 +857,8 @@ class TestServiceBrowser(unittest.TestCase):
             # service A updated
             service_updated_event.clear()
             service_address = '10.0.1.3'
+            # Verify we match on uppercase
+            service_server = service_server.upper()
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
