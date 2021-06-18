@@ -135,17 +135,6 @@ class DNSCache:
         """
         return self.service_cache.get(name.lower(), {})
 
-    def _async_get(self, entry: DNSEntry) -> Optional[DNSRecord]:
-        """Search a dict of entries by making a copy of it first.
-
-        This function is not threadsafe and must be called from
-        the event loop.
-        """
-        for cached_entry in self.cache.get(entry.key, []):
-            if entry.__eq__(cached_entry):
-                return cached_entry
-        return None
-
     # The below functions are threadsafe and do not need to be run in the
     # event loop, however they all make copies so they significantly
     # inefficent
