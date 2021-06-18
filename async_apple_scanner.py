@@ -8,8 +8,7 @@ import logging
 from typing import Any, Optional, cast
 
 from zeroconf import IPVersion, ServiceStateChange, generate_service_query
-from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf, AsyncZeroconfServiceTypes
-from zeroconf.const import FLAGS_QR_QUERY
+from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf
 
 HOMESHARING_SERVICE: str = "_appletv-v2._tcp.local."
 DEVICE_SERVICE: str = "_touch-able._tcp.local."
@@ -83,7 +82,7 @@ class AsyncAppleScanner:
             await self.aiozc.async_wait(1000)
             import pprint
 
-            pprint.pprint(self.aiozc.zeroconf.cache)
+            pprint.pprint(self.aiozc.zeroconf.cache.cache)
 
     async def async_close(self) -> None:
         assert self.aiozc is not None
