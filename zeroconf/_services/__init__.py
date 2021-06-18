@@ -27,6 +27,7 @@ import warnings
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
+from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
@@ -340,7 +341,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             return
 
         # If its expired or already exists in the cache it cannot be updated.
-        if expired or self.zc.cache.async_get_unique(record):
+        if expired or self.zc.cache.async_get_unique(cast(_UniqueRecordsType, record)):
             return
 
         if isinstance(record, DNSAddress):
