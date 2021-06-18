@@ -23,7 +23,7 @@
 import itertools
 from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
-from ._cache import _UniqueRecordsType, DNSCache
+from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
 from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
