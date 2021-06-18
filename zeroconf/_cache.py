@@ -27,46 +27,58 @@ from ._utils.time import current_time_millis
 from .const import _TYPE_PTR
 
 
+def _remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
+    """Forgiving remove of a cache key.
+
+    This function must be run in from event loop.
+    """
+    del cache[key][entry]
+    if not cache[key]:
+        del cache[key]
+
+
 class DNSCache:
     """A cache of DNS entries."""
 
     def __init__(self) -> None:
-        self.cache: Dict[str, List[DNSRecord]] = {}
-        self.service_cache: Dict[str, List[DNSRecord]] = {}
+        self.cache: Dict[str, Dict[DNSRecord, DNSRecord]] = {}
+        self.service_cache: Dict[str, Dict[DNSRecord, DNSRecord]] = {}
 
-    def add(self, entry: DNSRecord) -> None:
-        """Adds an entry"""
+    def async_add(self, entry: DNSRecord) -> None:
+        """Adds an entry.
+
+        This function must be run in from event loop.
+        """
         # Insert last in list, get will return newest entry
         # iteration will result in last update winning
         self.cache.setdefault(entry.key, {})[entry] = entry
         if isinstance(entry, DNSService):
             self.service_cache.setdefault(entry.server, {})[entry] = entry
 
-    def add_records(self, entries: Iterable[DNSRecord]) -> None:
-        """Add multiple records."""
-        for entry in entries:
-            self.add(entry)
+    def async_add_records(self, entries: Iterable[DNSRecord]) -> None:
+        """Add multiple records.
 
-    def remove(self, entry: DNSRecord) -> None:
-        """Removes an entry."""
+        This function must be run in from event loop.
+        """
+        for entry in entries:
+            self.async_add(entry)
+
+    def async_remove(self, entry: DNSRecord) -> None:
+        """Removes an entry.
+
+        This function must be run in from event loop.
+        """
         if isinstance(entry, DNSService):
-            DNSCache.remove_key(self.service_cache, entry.server, entry)
-        DNSCache.remove_key(self.cache, entry.key, entry)
+            _remove_key(self.service_cache, entry.server, entry)
+        _remove_key(self.cache, entry.key, entry)
 
-    def remove_records(self, entries: Iterable[DNSRecord]) -> None:
-        """Remove multiple records."""
+    def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
+        """Remove multiple records.
+
+        This function must be run in from event loop.
+        """
         for entry in entries:
-            self.remove(entry)
-
-    @staticmethod
-    def remove_key(cache: dict, key: str, entry: DNSRecord) -> None:
-        """Forgiving remove of a cache key."""
-        try:
-            del cache[key][entry]
-            if not cache[key]:
-                del cache[key]
-        except (KeyError, ValueError):
-            pass
+            self.async_remove(entry)
 
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no

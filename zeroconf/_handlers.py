@@ -350,11 +350,11 @@ class RecordManager:
         # zc.get_service_info will see the cached value
         # but ONLY after all the record updates have been
         # processsed.
-        self.cache.add_records(itertools.chain(address_adds, other_adds))
+        self.cache.async_add_records(itertools.chain(address_adds, other_adds))
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
-        self.cache.remove_records(removes)
+        self.cache.async_remove_records(removes)
         self.updates_complete()
 
     def add_listener(
