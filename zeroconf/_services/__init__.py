@@ -134,7 +134,7 @@ class RecordUpdateListener:
         """
         raise RuntimeError("update_record is deprecated and will be removed in a future version.")
 
-    def update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
         """Update multiple records in one shot.
 
         All records that are received in a single packet are passed
@@ -146,14 +146,18 @@ class RecordUpdateListener:
         NotImplementedError in a future version.
 
         At this point the cache will not have the new records
+
+        This method will be run in the event loop.
         """
         for record in records:
             self.update_record(zc, now, record)
 
-    def update_records_complete(self) -> None:
+    def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
 
         At this point the cache will have the new records.
+
+        This method will be run in the event loop.
         """
 
 
@@ -378,20 +382,24 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if type_:
             self._enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
-    def update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache.
 
         Ensures that there is are no unecessary duplicates in the list.
+
+        This method will be run in the event loop.
         """
         for record in records:
             self._process_record_update(now, record)
 
-    def update_records_complete(self) -> None:
+    def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
 
         At this point the cache will have the new records.
+
+        This method will be run in the event loop.
         """
         # Cannot use .update here since can fail with
         # RuntimeError: dictionary changed size during iteration
@@ -702,26 +710,35 @@ class ServiceInfo(RecordUpdateListener):
 
         This method is deprecated and will be removed in a future version.
         update_records should be implemented instead.
+
+        This method will be run in the event loop.
         """
         if record is not None:
-            self.update_records(zc, now, [record])
+            self._process_records_threadsafe(zc, now, [record])
 
-    def update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
-        """Updates service information from a DNS record."""
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+        """Updates service information from a DNS record.
+
+        This method will be run in the event loop.
+        """
+        self._process_records_threadsafe(zc, now, records)
+
+    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+        """Thread safe record updating."""
         update_addresses = False
         for record in records:
             if isinstance(record, DNSService):
                 update_addresses = True
-            self._process_record(record, now)
+            self._process_record_threadsafe(record, now)
 
         # Only update addresses if the DNSService (.server) has changed
         if not update_addresses:
             return
 
         for record in self._get_address_records_from_cache(zc):
-            self._process_record(record, now)
+            self._process_record_threadsafe(record, now)
 
-    def _process_record(self, record: DNSRecord, now: float) -> None:
+    def _process_record_threadsafe(self, record: DNSRecord, now: float) -> None:
         if record.is_expired(now):
             return
 
@@ -802,15 +819,16 @@ class ServiceInfo(RecordUpdateListener):
 
     def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSRecord]:
         """Get the address records from the cache."""
-        address_records = []
-        cached_a_record = zc.cache.get_by_details(self.server, _TYPE_A, _CLASS_IN)
-        if cached_a_record:
-            address_records.append(cached_a_record)
-        address_records.extend(zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN))
-        return address_records
+        return [
+            *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
+            *zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN),
+        ]
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
-        """Populate the service info from the cache."""
+        """Populate the service info from the cache.
+
+        This method is designed to be threadsafe.
+        """
         now = current_time_millis()
         record_updates = []
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
@@ -823,7 +841,7 @@ class ServiceInfo(RecordUpdateListener):
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
             record_updates.append(cached_txt_record)
-        self.update_records(zc, now, record_updates)
+        self._process_records_threadsafe(zc, now, record_updates)
         return self._is_complete
 
     @property
@@ -869,7 +887,7 @@ class ServiceInfo(RecordUpdateListener):
         out = DNSOutgoing(_FLAGS_QR_QUERY)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_SRV, _CLASS_IN)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_TXT, _CLASS_IN)
-        out.add_question_or_one_cache(zc.cache, now, self.server, _TYPE_A, _CLASS_IN)
+        out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_A, _CLASS_IN)
         out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_AAAA, _CLASS_IN)
         return out
 

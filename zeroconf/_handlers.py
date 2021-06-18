@@ -239,10 +239,14 @@ class QueryHandler:
                     if not known_answers.suppresses(dns_text):
                         answer_set[dns_text] = set()
 
-    def response(  # pylint: disable=unused-argument
+    def async_response(  # pylint: disable=unused-argument
         self, msgs: List[DNSIncoming], addr: Optional[str], port: int
     ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
-        """Deal with incoming query packets. Provides a response if possible."""
+        """Deal with incoming query packets. Provides a response if possible.
+
+        This function must be run in the event loop as it is not
+        threadsafe.
+        """
         ucast_source = port != _MDNS_PORT
         known_answers = DNSRRSet(itertools.chain(*[msg.answers for msg in msgs]))
         query_res = _QueryResponse(self.cache, msgs[0], ucast_source)
@@ -272,28 +276,36 @@ class RecordManager:
         self.cache = zeroconf.cache
         self.listeners: List[RecordUpdateListener] = []
 
-    def updates(self, now: float, rec: List[DNSRecord]) -> None:
+    def async_updates(self, now: float, rec: List[DNSRecord]) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
         This method must be called before the cache is updated.
+
+        This method will be run in the event loop.
         """
         for listener in self.listeners:
-            listener.update_records(self.zc, now, rec)
+            listener.async_update_records(self.zc, now, rec)
 
-    def updates_complete(self) -> None:
+    def async_updates_complete(self) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
         This method must be called after the cache is updated.
+
+        This method will be run in the event loop.
         """
         for listener in self.listeners:
-            listener.update_records_complete()
+            listener.async_update_records_complete()
         self.zc.notify_all()
 
-    def updates_from_response(self, msg: DNSIncoming) -> None:
+    def async_updates_from_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
-        are held in the cache, and listeners are notified."""
+        are held in the cache, and listeners are notified.
+
+        This function must be run in the event loop as it is not
+        threadsafe.
+        """
         updates: List[DNSRecord] = []
         address_adds: List[DNSAddress] = []
         other_adds: List[DNSRecord] = []
@@ -334,7 +346,7 @@ class RecordManager:
         if not updates and not address_adds and not other_adds and not removes:
             return
 
-        self.updates(now, updates)
+        self.async_updates(now, updates)
         # The cache adds must be processed AFTER we trigger
         # the updates since we compare existing data
         # with the new data and updating the cache
@@ -355,7 +367,7 @@ class RecordManager:
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
         self.cache.remove_records(removes)
-        self.updates_complete()
+        self.async_updates_complete()
 
     def add_listener(
         self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
@@ -374,8 +386,8 @@ class RecordManager:
                     if single_question.answered_by(record) and not record.is_expired(now):
                         records.append(record)
             if records:
-                listener.update_records(self.zc, now, records)
-                listener.update_records_complete()
+                listener.async_update_records(self.zc, now, records)
+                listener.async_update_records_complete()
 
         self.zc.notify_all()
 
