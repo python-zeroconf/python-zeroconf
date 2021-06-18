@@ -24,6 +24,7 @@ from zeroconf._services import (
     ServiceInfo,
     ServiceStateChange,
 )
+from zeroconf.aio import AsyncZeroconf
 
 from . import has_working_ipv6, _clear_cache, _inject_response
 
@@ -945,6 +946,28 @@ def test_multiple_addresses():
             assert info.parsed_addresses() == [address_parsed, address_v6_parsed]
             assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed]
+
+
+# This test uses asyncio because it needs to access the cache directly
+# which is not threadsafe
+@pytest.mark.asyncio
+async def test_multiple_a_addresses():
+    type_ = "_http._tcp.local."
+    registration_name = "multiarec.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    cache = aiozc.zeroconf.cache
+    host = "multahost.local."
+    record1 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'a')
+    record2 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'b')
+    cache.add(record1)
+    cache.add(record2)
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    info.load_from_cache(aiozc.zeroconf)
+    assert set(info.addresses) == set([b'a', b'b'])
+    await aiozc.async_close()
 
 
 def test_backoff():
