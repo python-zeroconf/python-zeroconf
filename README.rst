@@ -154,24 +154,30 @@ Changelog
   Python version eariler then 3.6 were likely broken with zeroconf
   already, however the version is now explictly checked.
 
-* BREAKING CHANGE: RecordUpdateListener now uses update_records instead of update_record (#419) @bdraco
+* BREAKING CHANGE: RecordUpdateListener now uses async_update_records instead of update_record (#419, #726) @bdraco
 
   This allows the listener to receive all the records that have
   been updated in a single transaction such as a packet or
   cache expiry.
 
-  update_record has been deprecated in favor of update_records
+  update_record has been deprecated in favor of async_update_records
   A compatibility shim exists to ensure classes that use
   RecordUpdateListener as a base class continue to have
   update_record called, however they should be updated
   as soon as possible.
 
-  A new method update_records_complete is now called on each
+  A new method async_update_records_complete is now called on each
   listener when all listeners have completed processing updates
   and the cache has been updated. This allows ServiceBrowsers
   to delay calling handlers until they are sure the cache
   has been updated as its a common pattern to call for
   ServiceInfo when a ServiceBrowser handler fires.
+
+  The async_ prefix was choosen to make it clear that these
+  functions run in the eventloop and should never do blocking
+  I/O. Before 0.32+ these functions ran in a select() loop and
+  should not have been doing any blocking I/O, but it was not
+  clear to implementors that I/O would block the loop.
 
 * BREAKING CHANGE: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
 
@@ -230,6 +236,10 @@ Changelog
   The above query will now see a response
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
+
+* Fix ServiceInfo with multiple A records (#725) @bdraco
+
+* Synchronize time for fate sharing (#718) @bdraco
 
 * Cleanup typing in zero._core and document ignores (#714) @bdraco
 
