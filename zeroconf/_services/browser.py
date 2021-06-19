@@ -23,17 +23,17 @@
 import threading
 import warnings
 from collections import OrderedDict
-from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord
 from .._protocol import DNSOutgoing
 from .._services import (
-    ServiceStateChange,
+    RecordUpdateListener,
     ServiceListener,
+    ServiceStateChange,
     Signal,
     SignalRegistrationInterface,
-    RecordUpdateListener,
 )
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
