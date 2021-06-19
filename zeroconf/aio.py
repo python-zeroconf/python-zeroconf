@@ -82,7 +82,6 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
     ) -> None:
-        self.aiozc = aiozc
         super().__init__(aiozc.zeroconf, type_, handlers, listener, addr, port, delay)  # type: ignore
         self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
 
