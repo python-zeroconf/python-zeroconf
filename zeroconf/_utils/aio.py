@@ -22,7 +22,7 @@
 
 import asyncio
 import contextlib
-from typing import Optional, cast
+from typing import Optional, Set, cast
 
 
 # Switch to asyncio.wait_for once https://bugs.python.org/issue39032 is fixed
@@ -52,6 +52,25 @@ async def wait_condition_or_timeout(condition: asyncio.Condition, timeout: float
             condition_wait.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await condition_wait
+
+
+async def _get_all_tasks(loop: asyncio.AbstractEventLoop) -> None:
+    """Return all tasks running."""
+    return asyncio.Task.all_tasks(loop)
+
+
+async def _wait_for_loop_tasks(loop: asyncio.AbstractEventLoop, wait_tasks: Set[asyncio.Task]) -> None:
+    """Wait for the event loop thread we started to shutdown."""
+    await asyncio.wait(wait_tasks, timeout=1)
+
+
+def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """Wait for pending tasks and stop an event loop."""
+    pending_tasks = asyncio.run_coroutine_threadsafe(_get_all_tasks(loop), loop).result()
+    wait_tasks = [task for task in pending_tasks if not task.done()]
+    if wait_tasks:
+        asyncio.run_coroutine_threadsafe(_wait_for_loop_tasks(wait_tasks), loop).result()
+    loop.call_soon_threadsafe(loop.stop)
 
 
 # Remove the call to _get_running_loop once we drop python 3.6 support

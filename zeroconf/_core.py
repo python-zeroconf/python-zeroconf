@@ -45,7 +45,7 @@ from ._services import (
     instance_name_from_service_info,
 )
 from ._services.registry import ServiceRegistry
-from ._utils.aio import get_running_loop
+from ._utils.aio import get_running_loop, shutdown_loop, wait_condition_or_timeout
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,
@@ -74,14 +74,6 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
-
-
-class NotifyListener:
-    """Receive notifications Zeroconf.notify_all is called."""
-
-    def notify_all(self) -> None:
-        """Called when Zeroconf.notify_all is called."""
-        raise NotImplementedError()
 
 
 class AsyncEngine:
@@ -297,7 +289,6 @@ class Zeroconf(QuietLogger):
 
         self.engine = AsyncEngine(self, listen_socket, respond_sockets)
 
-        self._notify_listeners: List[NotifyListener] = []
         self.browsers: Dict[ServiceListener, ServiceBrowser] = {}
         self.registry = ServiceRegistry()
         self.cache = DNSCache()
@@ -305,6 +296,7 @@ class Zeroconf(QuietLogger):
         self.record_manager = RecordManager(self)
 
         self.condition = threading.Condition()
+        self.async_condition: Optional[asyncio.Condition] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
 
@@ -317,6 +309,7 @@ class Zeroconf(QuietLogger):
         """Start Zeroconf."""
         self.loop = get_running_loop()
         if self.loop:
+            self.async_condition = asyncio.Condition()
             self.engine.setup(self.loop, None)
             return
         self._start_thread()
@@ -328,6 +321,7 @@ class Zeroconf(QuietLogger):
         def _run_loop() -> None:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
+            self.async_condition = asyncio.Condition()
             self.engine.setup(self.loop, loop_thread_ready)
             self.loop.run_forever()
 
@@ -353,22 +347,25 @@ class Zeroconf(QuietLogger):
         with self.condition:
             self.condition.wait(millis_to_seconds(timeout))
 
+    async def async_wait(self, timeout: float) -> None:
+        """Calling task waits for a given number of milliseconds or until notified."""
+        async with self.async_condition:
+            await wait_condition_or_timeout(self.async_condition, millis_to_seconds(timeout))
+
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
-        with self.condition:
-            self.condition.notify_all()
-            for listener in self._notify_listeners:
-                listener.notify_all()
+        self.loop.call_soon_threadsafe(self.async_notify_all)
 
     def async_notify_all(self) -> None:
-        """Notifies all waiting threads and notify listeners."""
+        """Schedule an async_notify_all."""
+        asyncio.ensure_future(self._async_notify_all())
+
+    async def _async_notify_all(self) -> None:
+        """Notify all async listeners."""
         with self.condition:
             self.condition.notify_all()
-            for listener in self._notify_listeners:
-                if hasattr(listener, "async_notify_all"):
-                    listener.async_notify_all()
-                else:
-                    listener.notify_all()
+            async with self.async_condition:
+                self.async_condition.notify_all()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
@@ -378,15 +375,6 @@ class Zeroconf(QuietLogger):
         if info.request(self, timeout):
             return info
         return None
-
-    def add_notify_listener(self, listener: NotifyListener) -> None:
-        """Adds a listener to receive notify_all events."""
-        self._notify_listeners.append(listener)
-
-    def remove_notify_listener(self, listener: NotifyListener) -> None:
-        """Removes a listener from the set that is currently listening."""
-        with contextlib.suppress(ValueError):
-            self._notify_listeners.remove(listener)
 
     def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
@@ -666,8 +654,9 @@ class Zeroconf(QuietLogger):
         if not self._loop_thread:
             return
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.loop.stop)
+        shutdown_loop(self.loop)
         self._loop_thread.join()
+        self._loop_thread = None
 
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
