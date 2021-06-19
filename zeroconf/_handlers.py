@@ -312,20 +312,10 @@ class RecordManager:
         removes: List[DNSRecord] = []
         now = msg.now
         for record in msg.answers:
-
-            updated = True
-
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                # rfc6762#section-10.2 para 2
-                # Since unique is set, all old records with that name, rrtype,
-                # and rrclass that were received more than one second ago are declared
-                # invalid, and marked to expire from the cache in one second.
-                for entry in self.cache.async_get_all_by_details(record.name, record.type, record.class_):
-                    if entry == record:
-                        updated = False
-                    if record.created - entry.created > 1000 and entry not in msg.answers:
-                        # Expire in 1s
-                        entry.set_created_ttl(now, 1)
+                updated = self._async_process_unique(record, msg.answers, now)
+            else:
+                updated = True
 
             expired = record.is_expired(now)
             maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
@@ -368,6 +358,20 @@ class RecordManager:
         # because the data was not yet populated.
         self.cache.async_remove_records(removes)
         self.async_updates_complete()
+
+    def _async_process_unique(self, record: DNSRecord, answers: List[DNSRecord], now: float) -> bool:
+        # rfc6762#section-10.2 para 2
+        # Since unique is set, all old records with that name, rrtype,
+        # and rrclass that were received more than one second ago are declared
+        # invalid, and marked to expire from the cache in one second.
+        updated = True
+        for entry in self.cache.async_get_all_by_details(record.name, record.type, record.class_):
+            if entry == record:
+                updated = False
+            if record.created - entry.created > 1000 and entry not in answers:
+                # Expire in 1s
+                entry.set_created_ttl(now, 1)
+        return updated
 
     def add_listener(
         self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]

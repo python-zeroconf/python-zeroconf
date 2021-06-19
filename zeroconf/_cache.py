@@ -23,7 +23,16 @@
 import itertools
 from typing import Dict, Iterable, List, Optional, Union, cast
 
-from ._dns import DNSAddress, DNSEntry, DNSHinfo, DNSPointer, DNSRecord, DNSService, DNSText
+from ._dns import (
+    DNSAddress,
+    DNSEntry,
+    DNSHinfo,
+    DNSPointer,
+    DNSRecord,
+    DNSService,
+    DNSText,
+    dns_entry_matches,
+)
 from ._utils.time import current_time_millis
 from .const import _TYPE_PTR
 
@@ -116,8 +125,8 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        match_entry = DNSEntry(name, type_, class_)
-        return [entry for entry in self.cache.get(match_entry.key, []) if match_entry.__eq__(entry)]
+        key = name.lower()
+        return [entry for entry in self.cache.get(key, []) if dns_entry_matches(entry, key, type_, class_)]
 
     def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
         """Returns a dict of entries whose key matches the name.
@@ -143,19 +152,15 @@ class DNSCache:
         """Lookup a unique entry threadsafe."""
         return self.cache.get(entry.key, {}).get(entry)
 
-    def _get_threadsafe(self, entry: DNSEntry) -> Optional[DNSRecord]:
-        """Search a dict of entries by making a copy of it first."""
-        for cached_entry in reversed(list(self.cache.get(entry.key, []))):
-            if entry.__eq__(cached_entry):
-                return cached_entry
-        return None
-
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
         if isinstance(entry, _UNIQUE_RECORD_TYPES):
             return self._lookup_unique_entry_threadsafe(entry)
-        return self._get_threadsafe(entry)
+        for cached_entry in reversed(list(self.cache.get(entry.key, []))):
+            if entry.__eq__(cached_entry):
+                return cached_entry
+        return None
 
     def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
         """Gets the first matching entry by details. Returns None if no entries match.
@@ -169,12 +174,17 @@ class DNSCache:
 
         Use get_all_by_details instead.
         """
-        return self._get_threadsafe(DNSEntry(name, type_, class_))
+        key = name.lower()
+        for cached_entry in reversed(list(self.cache.get(key, []))):
+            if dns_entry_matches(cached_entry, key, type_, class_):
+                return cached_entry
 
     def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
-        match_entry = DNSEntry(name, type_, class_)
-        return [entry for entry in list(self.cache.get(match_entry.key, [])) if match_entry.__eq__(entry)]
+        key = name.lower()
+        return [
+            entry for entry in list(self.cache.get(key, [])) if dns_entry_matches(entry, key, type_, class_)
+        ]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
