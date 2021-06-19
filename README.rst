@@ -254,11 +254,70 @@ you can likely not be concerned with the breaking changes below:
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
+* Relocate service browser tests to tests/services/test_browser.py (#745) @bdraco
+
+* Relocate ServiceInfo to zeroconf._services.info (#741) @bdraco
+
+* Run question answer callbacks from add_listener in the event loop (#740) @bdraco
+
+  Calling async_update_records and async_update_records_complete should always
+  happen in the event loop to ensure implementers do not need to worry about
+  thread safety
+
+* Remove second level caching from ServiceBrowsers (#737) @bdraco
+
+  The ServiceBrowser had its own cache of the last time it
+  saw a service which was reimplementing the DNSCache and
+  presenting a source of truth problem that lead to unexpected
+  queries when the two disagreed.
+
+* Breakout ServiceBrowser handler from listener creation (#736) @bdraco
+
+  Add coverage for the handler from listener
+
+* Add fast cache lookup functions (#732) @bdraco
+
+  The majority of our lookups happen in the event loop so there is no need
+  for them to be threadsafe. Now that the codebase is more clear about what
+  needs to be threadsafe and what does not need to be threadsafe we can use
+  the much faster non-threadsafe versions in the places where we are calling
+  from the event loop.
+
+* Switch to using DNSRRSet in RecordManager (#735) @bdraco
+
+  DNSRRSet is able to do O(1) lookups of records assuming
+  there are no collisions.
+
+* Fix server cache to be case-insensitive (#731) @bdraco
+
+  If the server name had uppercase chars and any of the
+  matching records were lowercase, the server would not be
+  found
+
 * Fix cache handling of records with different TTLs (#729) @bdraco
+
+  There should only be one unique record in the cache at
+  a time as having multiple unique records will different
+  TTLs in the cache can result in unexpected behavior since
+  some functions returned all matching records and some
+  fetched from the right side of the list to return the
+  newest record. Intead we now store the records in a dict
+  to ensure that the newest record always replaces the same
+  unique record and we never have a source of truth problem
+  determining the TTL of a record from the cache.
 
 * Rename handlers and internals to make it clear what is threadsafe (#726) @bdraco
 
+  It was too easy to get confused about what was threadsafe and
+  what was not threadsafe which lead to unexpected failures.
+  Rename functions to make it clear what will be run in the event
+  loop and what is expected to be threadsafe
+
 * Fix ServiceInfo with multiple A records (#725) @bdraco
+
+  If there were multiple A records for the host, ServiceInfo
+  would always return the last one that was in the incoming
+  packet which was usually not the one that was wanted.
 
 * Synchronize time for fate sharing (#718) @bdraco
 
