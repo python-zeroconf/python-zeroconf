@@ -409,7 +409,7 @@ async def test_service_info_async_request() -> None:
     # Generating the race condition is almost impossible
     # without patching since its a TOCTOU race
     with unittest.mock.patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
-        await aiosinfo.async_request(aiozc, 3000)
+        await aiosinfo.async_request(aiozc.zeroconf, 3000)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
 

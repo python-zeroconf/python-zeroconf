@@ -20,6 +20,7 @@
     USA
 """
 
+import asyncio
 import socket
 from typing import Dict, List, Optional, TYPE_CHECKING, Union, cast
 
@@ -396,6 +397,13 @@ class ServiceInfo(RecordUpdateListener):
         """Returns true if the service could be discovered on the
         network, and updates this object with details discovered.
         """
+        assert zc.loop is not None
+        return asyncio.run_coroutine_threadsafe(self.async_request(zc, timeout), zc.loop).result()
+
+    async def async_request(self, zc: 'Zeroconf', timeout: float) -> bool:
+        """Returns true if the service could be discovered on the
+        network, and updates this object with details discovered.
+        """
         if self.load_from_cache(zc):
             return True
 
@@ -403,9 +411,8 @@ class ServiceInfo(RecordUpdateListener):
         delay = _LISTENER_TIME
         next_ = now
         last = now + timeout
+        await zc.async_wait_for_start()
         try:
-            # Do not set a question on the listener to preload from cache
-            # since we just checked it above in load_from_cache
             zc.add_listener(self, None)
             while not self._is_complete:
                 if last <= now:
@@ -413,12 +420,12 @@ class ServiceInfo(RecordUpdateListener):
                 if next_ <= now:
                     out = self.generate_request_query(zc, now)
                     if not out.questions:
-                        return True
-                    zc.send(out)
+                        return self.load_from_cache(zc)
+                    zc.async_send(out)
                     next_ = now + delay
                     delay *= 2
 
-                zc.wait(min(next_, last) - now)
+                await zc.async_wait(min(next_, last) - now)
                 now = current_time_millis()
         finally:
             zc.remove_listener(self)

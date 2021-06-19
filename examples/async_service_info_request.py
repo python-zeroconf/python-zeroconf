@@ -28,7 +28,7 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
             if not name.endswith(HAP_TYPE):
                 continue
             infos.append(AsyncServiceInfo(HAP_TYPE, name))
-        tasks = [info.async_request(aiozc, 3000) for info in infos]
+        tasks = [info.async_request(aiozc.zeroconf, 3000) for info in infos]
         await asyncio.gather(*tasks)
         for info in infos:
             print("Info for %s" % (info.name))
