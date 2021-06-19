@@ -31,11 +31,10 @@ from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.types import ZeroconfServiceTypes
 from ._utils.aio import wait_condition_or_timeout
 from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
-from ._utils.time import current_time_millis, millis_to_seconds
+from ._utils.time import millis_to_seconds
 from .const import (
     _BROWSER_TIME,
     _CHECK_TIME,
-    _LISTENER_TIME,
     _MDNS_PORT,
     _REGISTER_TIME,
     _SERVICE_TYPE_ENUMERATION_NAME,
