@@ -247,6 +247,31 @@ def generate_service_query(
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
 
+def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[..., None]:
+    """Generate a service_state_changed handlers from a listener."""
+
+    def on_change(
+        zeroconf: 'Zeroconf', service_type: str, name: str, state_change: ServiceStateChange
+    ) -> None:
+        assert listener is not None
+        args = (zeroconf, service_type, name)
+        if state_change is ServiceStateChange.Added:
+            listener.add_service(*args)
+        elif state_change is ServiceStateChange.Removed:
+            listener.remove_service(*args)
+        elif state_change is ServiceStateChange.Updated:
+            if hasattr(listener, 'update_service'):
+                listener.update_service(*args)
+            else:
+                warnings.warn(
+                    "%r has no update_service method. Provide one (it can be empty if you "
+                    "don't care about the updates), it'll become mandatory." % (listener,),
+                    FutureWarning,
+                )
+
+    return on_change
+
+
 class _ServiceBrowserBase(RecordUpdateListener):
     """Base class for ServiceBrowser."""
 
