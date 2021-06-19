@@ -22,14 +22,13 @@
 import asyncio
 import contextlib
 from types import TracebackType  # noqa # used in type hints
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._core import Zeroconf
 from ._exceptions import NonUniqueNameException
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.types import ZeroconfServiceTypes
-from ._utils.aio import wait_condition_or_timeout
 from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
 from ._utils.time import millis_to_seconds
 from .const import (
@@ -83,46 +82,13 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
     ) -> None:
-        self.aiozc = aiozc
         super().__init__(aiozc.zeroconf, type_, handlers, listener, addr, port, delay)  # type: ignore
-        self._browser_task = asyncio.ensure_future(self.async_run())
+        self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
 
     async def async_cancel(self) -> None:
         """Cancel the browser."""
-        self.cancel()
-        self._browser_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await self._browser_task
-
-    async def async_run(self) -> None:
-        """Run the browser task."""
-        await self.aiozc.zeroconf.async_wait_for_start()
-        assert self.aiozc.zeroconf.async_condition is not None
-        while True:
-            timeout = self._seconds_to_wait()
-            if timeout:
-                async with self.aiozc.zeroconf.async_condition:
-                    # We must check again while holding the condition
-                    # in case the other thread has added to _handlers_to_call
-                    # between when we checked above when we were not
-                    # holding the condition
-                    if not self._handlers_to_call:
-                        await wait_condition_or_timeout(self.aiozc.zeroconf.async_condition, timeout)
-
-            outs = self.generate_ready_queries()
-            for out in outs:
-                self.aiozc.zeroconf.async_send(out, addr=self.addr, port=self.port)
-
-            if not self._handlers_to_call:
-                continue
-
-            (name_type, state_change) = self._handlers_to_call.popitem(False)
-            self._service_state_changed.fire(
-                zeroconf=self.aiozc,
-                service_type=name_type[1],
-                name=name_type[0],
-                state_change=state_change,
-            )
+        await self._async_cancel_browser()
+        super().cancel()
 
 
 class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
@@ -202,7 +168,6 @@ class AsyncZeroconf:
             ip_version=ip_version,
             apple_p2p=apple_p2p,
         )
-        self.loop = asyncio.get_event_loop()
         self.async_browsers: Dict[AsyncServiceListener, AsyncServiceBrowser] = {}
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:

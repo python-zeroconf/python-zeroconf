@@ -291,7 +291,6 @@ class Zeroconf(QuietLogger):
         self.query_handler = QueryHandler(self.registry, self.cache)
         self.record_manager = RecordManager(self)
 
-        self.condition = threading.Condition()
         self.async_condition: Optional[asyncio.Condition] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
@@ -338,10 +337,9 @@ class Zeroconf(QuietLogger):
         return self.record_manager.listeners
 
     def wait(self, timeout: float) -> None:
-        """Calling thread waits for a given number of milliseconds or
-        until notified."""
-        with self.condition:
-            self.condition.wait(millis_to_seconds(timeout))
+        """Calling task waits for a given number of milliseconds or until notified."""
+        assert self.loop is not None
+        asyncio.run_coroutine_threadsafe(self.async_wait(timeout), self.loop).result()
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
@@ -361,10 +359,8 @@ class Zeroconf(QuietLogger):
     async def _async_notify_all(self) -> None:
         """Notify all async listeners."""
         assert self.async_condition is not None
-        with self.condition:
-            self.condition.notify_all()
-            async with self.async_condition:
-                self.async_condition.notify_all()
+        async with self.async_condition:
+            self.async_condition.notify_all()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular

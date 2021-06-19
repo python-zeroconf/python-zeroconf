@@ -82,7 +82,7 @@ class Names(unittest.TestCase):
         self.verify_name_change(zc, type_, name, server_count)
 
         # we are going to patch the zeroconf send to check packet sizes
-        old_send = zc.send
+        old_send = zc.async_send
 
         longest_packet_len = 0
         longest_packet = None  # type: Optional[r.DNSOutgoing]
@@ -97,7 +97,7 @@ class Names(unittest.TestCase):
                 old_send(out, addr=addr, port=port)
 
         # patch the zeroconf send
-        with unittest.mock.patch.object(zc, "send", send):
+        with unittest.mock.patch.object(zc, "async_send", send):
 
             # dummy service callback
             def on_service_state_change(zeroconf, service_type, state_change, name):

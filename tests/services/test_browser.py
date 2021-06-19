@@ -348,7 +348,7 @@ def test_backoff():
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
     # we are going to patch the zeroconf send to check query transmission
-    old_send = zeroconf_browser.send
+    old_send = zeroconf_browser.async_send
 
     time_offset = 0.0
     start_time = time.time() * 1000
@@ -366,7 +366,7 @@ def test_backoff():
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
-    with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch.object(
         _services_browser, "current_time_millis", current_time_millis
     ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10):
         # dummy service callback
@@ -432,7 +432,7 @@ def test_integration():
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
     # we are going to patch the zeroconf send to check packet sizes
-    old_send = zeroconf_browser.send
+    old_send = zeroconf_browser.async_send
 
     time_offset = 0.0
 
@@ -459,7 +459,7 @@ def test_integration():
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
-    with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch.object(
         _services_browser, "current_time_millis", current_time_millis
     ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
         service_added = Event()

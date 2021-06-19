@@ -410,7 +410,7 @@ class RecordManager:
             return
         listener.async_update_records(self.zc, now, records)
         listener.async_update_records_complete()
-        self.zc.notify_all()
+        self.zc.async_notify_all()
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
         """Removes a listener."""
