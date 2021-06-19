@@ -4,6 +4,7 @@
 
 """ Unit tests for zeroconf._handlers """
 
+import asyncio
 import logging
 import pytest
 import socket
@@ -884,5 +885,33 @@ async def test_cache_flush_bit():
     assert original_a_record.ttl == 1
     for record in new_records:
         assert zc.cache.async_get_unique(record) is not None
+
+    cached_records = [zc.cache.async_get_unique(record) for record in new_records]
+    for record in cached_records:
+        record.created = current_time_millis() - 1001
+
+    fresh_address = socket.inet_aton("4.4.4.4")
+    info.addresses = [fresh_address]
+    # Do the run within 1s to verify the two new records get marked as expired
+    out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA, multicast=True)
+    for answer in info.dns_addresses():
+        out.add_answer_at_time(answer, 0)
+    for packet in out.packets():
+        zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
+    for record in cached_records:
+        assert record.ttl == 1
+
+    for entry in zc.cache.async_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
+        if entry.address == fresh_address:
+            assert entry.ttl > 1
+        else:
+            assert entry.ttl == 1
+
+    # Wait for the ttl 1 records to expire
+    await asyncio.sleep(1.01)
+
+    loaded_info = r.ServiceInfo(type_, registration_name)
+    loaded_info.load_from_cache(zc)
+    assert loaded_info.addresses == info.addresses
 
     await aiozc.async_close()
