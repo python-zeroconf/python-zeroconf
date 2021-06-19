@@ -404,7 +404,7 @@ class RecordManager:
         records = []
         for question in questions:
             for record in self.cache.async_entries_with_name(question.name):
-                if record.is_expired(now) and question.answered_by(record):
+                if not record.is_expired(now) and question.answered_by(record):
                     records.append(record)
         if not records:
             return
