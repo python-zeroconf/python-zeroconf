@@ -313,13 +313,10 @@ class RecordManager:
         now = msg.now
         for record in msg.answers:
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                updated = self._async_process_unique(record, msg.answers, now)
-            else:
-                updated = True
+                self._async_process_unique(record, msg.answers, now)
 
-            expired = record.is_expired(now)
             maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
-            if not expired:
+            if not record.is_expired(now):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
@@ -327,8 +324,10 @@ class RecordManager:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
-                if updated:
+                if not maybe_entry:
                     updates.append(record)
+            # This is likely a goodbye since the record is
+            # expired and exists in the cache
             elif maybe_entry is not None:
                 updates.append(record)
                 removes.append(record)
@@ -359,19 +358,15 @@ class RecordManager:
         self.cache.async_remove_records(removes)
         self.async_updates_complete()
 
-    def _async_process_unique(self, record: DNSRecord, answers: List[DNSRecord], now: float) -> bool:
+    def _async_process_unique(self, record: DNSRecord, answers: List[DNSRecord], now: float) -> None:
         # rfc6762#section-10.2 para 2
         # Since unique is set, all old records with that name, rrtype,
         # and rrclass that were received more than one second ago are declared
         # invalid, and marked to expire from the cache in one second.
-        updated = True
         for entry in self.cache.async_get_all_by_details(record.name, record.type, record.class_):
-            if entry == record:
-                updated = False
             if record.created - entry.created > 1000 and entry not in answers:
                 # Expire in 1s
                 entry.set_created_ttl(now, 1)
-        return updated
 
     def add_listener(
         self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
