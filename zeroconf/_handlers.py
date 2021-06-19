@@ -385,18 +385,31 @@ class RecordManager:
         answer the question(s)."""
         self.listeners.append(listener)
 
-        if question is not None:
-            now = current_time_millis()
-            records = []
-            questions = [question] if isinstance(question, DNSQuestion) else question
-            for single_question in questions:
-                for record in self.cache.entries_with_name(single_question.name):
-                    if single_question.answered_by(record) and not record.is_expired(now):
-                        records.append(record)
-            if records:
-                listener.async_update_records(self.zc, now, records)
-                listener.async_update_records_complete()
+        if question is None:
+            self.zc.notify_all()
+            return
 
+        questions = [question] if isinstance(question, DNSQuestion) else question
+        assert self.zc.loop is not None
+        self.zc.loop.call_soon_threadsafe(self._async_update_matching_records, listener, questions)
+
+    def _async_update_matching_records(
+        self, listener: RecordUpdateListener, questions: List[DNSQuestion]
+    ) -> None:
+        """Calls back any existing entries in the cache that answer the question.
+
+        This function must be run from the event loop.
+        """
+        now = current_time_millis()
+        records = []
+        for question in questions:
+            for record in self.cache.async_entries_with_name(question.name):
+                if not record.is_expired(now) and question.answered_by(record):
+                    records.append(record)
+        if not records:
+            return
+        listener.async_update_records(self.zc, now, records)
+        listener.async_update_records_complete()
         self.zc.notify_all()
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:

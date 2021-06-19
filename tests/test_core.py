@@ -278,6 +278,7 @@ async def test_notify_listeners():
     browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
     browser.cancel()
 
+    await asyncio.sleep(0)  # flush out any call_soon_threadsafe
     assert notify_called
     zc.remove_notify_listener(notify_listener)
 
@@ -285,7 +286,7 @@ async def test_notify_listeners():
     # start a browser
     browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
     browser.cancel()
-    await asyncio.sleep(0)
+    await asyncio.sleep(0)  # flush out any call_soon_threadsafe
 
     assert not notify_called
 
