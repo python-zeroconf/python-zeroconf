@@ -38,7 +38,7 @@ from .._services import (
     Signal,
     SignalRegistrationInterface,
 )
-from .._utils.aio import get_running_loop, wait_condition_or_timeout
+from .._utils.aio import get_best_available_queue, get_running_loop, wait_condition_or_timeout
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
@@ -420,7 +420,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     ) -> None:
         threading.Thread.__init__(self)
         super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
-        self.queue = queue.SimpleQueue()
+        self.queue = get_best_available_queue()
         self.daemon = True
         self.start()
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
