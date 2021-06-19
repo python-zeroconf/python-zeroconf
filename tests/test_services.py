@@ -17,7 +17,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import DNSAddress, DNSPointer, DNSQuestion, const, current_time_millis
-import zeroconf._services as s
+import zeroconf._services.browser as _services_browser
 from zeroconf import Zeroconf
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
@@ -985,7 +985,7 @@ def test_backoff():
 
     time_offset = 0.0
     start_time = time.time() * 1000
-    initial_query_interval = s._BROWSER_TIME / 1000
+    initial_query_interval = _services_browser._BROWSER_TIME / 1000
 
     def current_time_millis():
         """Current system time in milliseconds"""
@@ -1000,8 +1000,8 @@ def test_backoff():
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
     with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
-        s, "current_time_millis", current_time_millis
-    ), unittest.mock.patch.object(s, "_BROWSER_BACKOFF_LIMIT", 10):
+        _services_browser, "current_time_millis", current_time_millis
+    ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
@@ -1025,7 +1025,7 @@ def test_backoff():
                 if time_offset == expected_query_time:
                     assert got_query.is_set()
                     got_query.clear()
-                    if next_query_interval == s._BROWSER_BACKOFF_LIMIT:
+                    if next_query_interval == _services_browser._BROWSER_BACKOFF_LIMIT:
                         # Only need to test up to the point where we've seen a query
                         # after the backoff limit has been hit
                         break
@@ -1033,7 +1033,9 @@ def test_backoff():
                         next_query_interval = initial_query_interval
                         expected_query_time = initial_query_interval
                     else:
-                        next_query_interval = min(2 * next_query_interval, s._BROWSER_BACKOFF_LIMIT)
+                        next_query_interval = min(
+                            2 * next_query_interval, _services_browser._BROWSER_BACKOFF_LIMIT
+                        )
                         expected_query_time += next_query_interval
                 else:
                     assert not got_query.is_set()
@@ -1091,8 +1093,8 @@ def test_integration():
     # patch the zeroconf current_time_millis
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
     with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
-        s, "current_time_millis", current_time_millis
-    ), unittest.mock.patch.object(s, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
+        _services_browser, "current_time_millis", current_time_millis
+    ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
         service_added = Event()
         service_removed = Event()
 
@@ -1525,7 +1527,7 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
 
 
 def test_group_ptr_queries_with_known_answers():
-    questions_with_known_answers: s._QuestionWithKnownAnswers = {}
+    questions_with_known_answers: _services_browser._QuestionWithKnownAnswers = {}
     now = current_time_millis()
     for i in range(120):
         name = f"_hap{i}._tcp._local."
@@ -1539,7 +1541,7 @@ def test_group_ptr_queries_with_known_answers():
             )
             for counter in range(i)
         )
-    outs = s._group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
+    outs = _services_browser._group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
     for out in outs:
         packets = out.packets()
         # If we generate multiple packets there must
