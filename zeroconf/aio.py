@@ -202,7 +202,6 @@ class AsyncZeroconf:
             ip_version=ip_version,
             apple_p2p=apple_p2p,
         )
-        self.loop = asyncio.get_event_loop()
         self.async_browsers: Dict[AsyncServiceListener, AsyncServiceBrowser] = {}
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
