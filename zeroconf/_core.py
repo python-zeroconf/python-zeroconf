@@ -354,11 +354,21 @@ class Zeroconf(QuietLogger):
             self.condition.wait(millis_to_seconds(timeout))
 
     def notify_all(self) -> None:
-        """Notifies all waiting threads"""
+        """Notifies all waiting threads and notify listeners."""
         with self.condition:
             self.condition.notify_all()
             for listener in self._notify_listeners:
                 listener.notify_all()
+
+    def async_notify_all(self) -> None:
+        """Notifies all waiting threads and notify listeners."""
+        with self.condition:
+            self.condition.notify_all()
+            for listener in self._notify_listeners:
+                if hasattr(listener, "async_notify_all"):
+                    listener.async_notify_all()
+                else:
+                    listener.notify_all()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular

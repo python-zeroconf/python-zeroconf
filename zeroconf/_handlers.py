@@ -297,7 +297,7 @@ class RecordManager:
         """
         for listener in self.listeners:
             listener.async_update_records_complete()
-        self.zc.notify_all()
+        self.zc.async_notify_all()
 
     def async_updates_from_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers

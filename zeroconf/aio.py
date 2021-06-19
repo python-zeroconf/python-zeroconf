@@ -60,8 +60,12 @@ class AsyncNotifyListener(NotifyListener):
         self.loop = asyncio.get_event_loop()
 
     def notify_all(self) -> None:
-        """Schedule an async_notify_all."""
+        """Schedule an async_notify_all threadsafe."""
         self.loop.call_soon_threadsafe(asyncio.ensure_future, self._async_notify_all())
+
+    def async_notify_all(self) -> None:
+        """Schedule an async_notify_all."""
+        asyncio.ensure_future(self._async_notify_all())
 
     async def _async_notify_all(self) -> None:
         """Notify all async listeners."""
