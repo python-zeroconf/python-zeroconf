@@ -9,7 +9,7 @@ list of HomeKit devices on the network.
 import argparse
 import asyncio
 import logging
-from typing import cast
+from typing import Any, Optional, cast
 
 
 from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
@@ -48,6 +48,32 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
             print('\n')
 
 
+class AsyncRunner:
+    def __init__(self, args: Any) -> None:
+        self.args = args
+        self.threaded_browser: Optional[ServiceBrowser] = None
+        self.aiozc: Optional[AsyncZeroconf] = None
+
+    async def async_run(self) -> None:
+        self.aiozc = AsyncZeroconf(ip_version=ip_version)
+
+        def on_service_state_change(
+            zeroconf: Zeroconf, service_type: str, state_change: ServiceStateChange, name: str
+        ) -> None:
+            """Dummy handler."""
+
+        self.threaded_browser = ServiceBrowser(
+            self.aiozc.zeroconf, [HAP_TYPE], handlers=[on_service_state_change]
+        )
+        await async_watch_services(self.aiozc)
+
+    async def async_close(self) -> None:
+        assert self.aiozc is not None
+        assert self.threaded_browser is not None
+        self.threaded_browser.cancel()
+        await self.aiozc.async_close()
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
@@ -67,23 +93,10 @@ if __name__ == '__main__':
     else:
         ip_version = IPVersion.V4Only
 
-    aiozc = AsyncZeroconf(ip_version=ip_version)
-
-    def on_service_state_change(
-        zeroconf: Zeroconf, service_type: str, state_change: ServiceStateChange, name: str
-    ) -> None:
-        """Dummy handler."""
-
     print(f"Services with {HAP_TYPE} will be shown every 5s, press Ctrl-C to exit...")
-    # ServiceBrowser currently is only offered in sync context.
-    # ServiceInfo has an AsyncServiceInfo counterpart that can be used
-    # to fetch service info in parallel
-    browser = ServiceBrowser(aiozc.zeroconf, [HAP_TYPE], handlers=[on_service_state_change])
     loop = asyncio.get_event_loop()
+    runner = AsyncRunner(args)
     try:
-        loop.run_until_complete(async_watch_services(aiozc))
+        loop.run_until_complete(runner.async_run())
     except KeyboardInterrupt:
-        pass
-    finally:
-        browser.cancel()
-        loop.run_until_complete(aiozc.async_close())
+        loop.run_until_complete(runner.async_close())
