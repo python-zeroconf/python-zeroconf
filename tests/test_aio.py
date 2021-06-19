@@ -312,12 +312,12 @@ async def test_async_wait_unblocks_on_update() -> None:
     # Should unblock due to update from the
     # registration
     now = current_time_millis()
-    await aiozc.async_wait(50000)
+    await aiozc.zeroconf.async_wait(50000)
     assert current_time_millis() - now < 3000
     await task
 
     now = current_time_millis()
-    await aiozc.async_wait(50)
+    await aiozc.zeroconf.async_wait(50)
     assert current_time_millis() - now < 1000
 
     await aiozc.async_close()
@@ -481,7 +481,7 @@ async def test_async_service_browser() -> None:
     await task
     task = await aiozc.async_unregister_service(new_info)
     await task
-    await aiozc.async_wait(1)
+    await aiozc.zeroconf.async_wait(1)
     await aiozc.async_close()
 
     assert calls == [
