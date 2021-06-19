@@ -312,12 +312,12 @@ async def test_async_wait_unblocks_on_update() -> None:
     # Should unblock due to update from the
     # registration
     now = current_time_millis()
-    await aiozc.async_wait(50000)
+    await aiozc.zeroconf.async_wait(50000)
     assert current_time_millis() - now < 3000
     await task
 
     now = current_time_millis()
-    await aiozc.async_wait(50)
+    await aiozc.zeroconf.async_wait(50)
     assert current_time_millis() - now < 1000
 
     await aiozc.async_close()
@@ -409,7 +409,7 @@ async def test_service_info_async_request() -> None:
     # Generating the race condition is almost impossible
     # without patching since its a TOCTOU race
     with unittest.mock.patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
-        await aiosinfo.async_request(aiozc, 3000)
+        await aiosinfo.async_request(aiozc.zeroconf, 3000)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
 
@@ -481,7 +481,7 @@ async def test_async_service_browser() -> None:
     await task
     task = await aiozc.async_unregister_service(new_info)
     await task
-    await aiozc.async_wait(1)
+    await aiozc.zeroconf.async_wait(1)
     await aiozc.async_close()
 
     assert calls == [

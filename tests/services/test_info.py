@@ -216,7 +216,7 @@ class TestServiceInfo(unittest.TestCase):
             send_event.set()
 
         # patch the zeroconf send
-        with unittest.mock.patch.object(zc, "send", send):
+        with unittest.mock.patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records) -> r.DNSIncoming:
 
@@ -353,7 +353,7 @@ class TestServiceInfo(unittest.TestCase):
             send_event.set()
 
         # patch the zeroconf send
-        with unittest.mock.patch.object(zc, "send", send):
+        with unittest.mock.patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records) -> r.DNSIncoming:
 

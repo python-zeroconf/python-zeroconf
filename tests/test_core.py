@@ -249,50 +249,6 @@ class Framework(unittest.TestCase):
             zeroconf.close()
 
 
-# This test uses asyncio because it needs to verify the listeners
-# run in the event loop
-@pytest.mark.asyncio
-async def test_notify_listeners():
-    """Test adding and removing notify listeners."""
-    # instantiate a zeroconf instance
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    zc = aiozc.zeroconf
-    notify_called = 0
-
-    class TestNotifyListener(r.NotifyListener):
-        def notify_all(self):
-            nonlocal notify_called
-            notify_called += 1
-
-    with pytest.raises(NotImplementedError):
-        r.NotifyListener().notify_all()
-
-    notify_listener = TestNotifyListener()
-
-    zc.add_notify_listener(notify_listener)
-
-    def on_service_state_change(zeroconf, service_type, state_change, name):
-        """Dummy service callback."""
-
-    # start a browser
-    browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
-    browser.cancel()
-
-    await asyncio.sleep(0)  # flush out any call_soon_threadsafe
-    assert notify_called
-    zc.remove_notify_listener(notify_listener)
-
-    notify_called = 0
-    # start a browser
-    browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
-    browser.cancel()
-    await asyncio.sleep(0)  # flush out any call_soon_threadsafe
-
-    assert not notify_called
-
-    await aiozc.async_close()
-
-
 def test_generate_service_query_set_qu_bit():
     """Test generate_service_query sets the QU bit."""
 
