@@ -56,6 +56,7 @@ class AsyncRunner:
 
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)
+        assert self.aiozc is not None
 
         def on_service_state_change(
             zeroconf: Zeroconf, service_type: str, state_change: ServiceStateChange, name: str
