@@ -223,6 +223,31 @@ def _group_ptr_queries_with_known_answers(
     return [query_bucket.out for query_bucket in query_buckets]
 
 
+def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[..., None]:
+    """Generate a service_state_changed handlers from a listener."""
+
+    def on_change(
+        zeroconf: 'Zeroconf', service_type: str, name: str, state_change: ServiceStateChange
+    ) -> None:
+        assert listener is not None
+        args = (zeroconf, service_type, name)
+        if state_change is ServiceStateChange.Added:
+            listener.add_service(*args)
+        elif state_change is ServiceStateChange.Removed:
+            listener.remove_service(*args)
+        elif state_change is ServiceStateChange.Updated:
+            if hasattr(listener, 'update_service'):
+                listener.update_service(*args)
+            else:
+                warnings.warn(
+                    "%r has no update_service method. Provide one (it can be empty if you "
+                    "don't care about the updates), it'll become mandatory." % (listener,),
+                    FutureWarning,
+                )
+
+    return on_change
+
+
 class _ServiceBrowserBase(RecordUpdateListener):
     """Base class for ServiceBrowser."""
 
@@ -263,29 +288,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         handlers = cast(List[Callable[..., None]], handlers or [])
 
         if listener:
-
-            def on_change(
-                zeroconf: 'Zeroconf', service_type: str, name: str, state_change: ServiceStateChange
-            ) -> None:
-                assert listener is not None
-                args = (zeroconf, service_type, name)
-                if state_change is ServiceStateChange.Added:
-                    listener.add_service(*args)
-                elif state_change is ServiceStateChange.Removed:
-                    listener.remove_service(*args)
-                elif state_change is ServiceStateChange.Updated:
-                    if hasattr(listener, 'update_service'):
-                        listener.update_service(*args)
-                    else:
-                        warnings.warn(
-                            "%r has no update_service method. Provide one (it can be empty if you "
-                            "don't care about the updates), it'll become mandatory." % (listener,),
-                            FutureWarning,
-                        )
-                else:
-                    raise NotImplementedError(state_change)
-
-            handlers.append(on_change)
+            handlers.append(_service_state_changed_from_listener(listener))
 
         for h in handlers:
             self.service_state_changed.register_handler(h)
