@@ -908,7 +908,7 @@ async def test_cache_flush_bit():
             assert entry.ttl == 1
 
     # Wait for the ttl 1 records to expire
-    await asyncio.sleep(1.01)
+    await asyncio.sleep(1.1)
 
     loaded_info = r.ServiceInfo(type_, registration_name)
     loaded_info.load_from_cache(zc)
