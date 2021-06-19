@@ -300,7 +300,7 @@ class AsyncZeroconf:
         name and type, or None if no service matches by the timeout,
         which defaults to 3 seconds."""
         info = AsyncServiceInfo(type_, name)
-        if await info.async_request(self, timeout):
+        if await info.async_request(self.zeroconf, timeout):
             return info
         return None
 
