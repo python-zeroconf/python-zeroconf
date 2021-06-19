@@ -48,7 +48,7 @@ class AsyncAppleScanner:
             now = current_time_millis()
             if now - last_asked > _QUERY_INTERVAL_MS:
                 last_asked = now
-                self.send_query()
+                self.send_query(now)
             await self.aiozc.async_wait(_QUERY_INTERVAL_MS / 6)  # unblocks on new data
             # Dump the cache -- for example only, Install an AsyncServiceListener instead
             # which will need to replay the existing cache just like new ServiceBrowsers do
@@ -56,12 +56,12 @@ class AsyncAppleScanner:
 
             pprint.pprint(self.aiozc.zeroconf.cache.cache)
 
-    def send_query(self) -> None:
+    def send_query(self, now: float) -> None:
         target = self.args.target or None
         multicast = not target
         include_known_answers = True
         outgoings = generate_service_query(
-            self.aiozc.zeroconf, ALL_SERVICES, multicast, include_known_answers
+            self.aiozc.zeroconf, now, ALL_SERVICES, multicast, include_known_answers
         )
         for outgoing in outgoings:
             log.debug("Sending %s to %s", outgoing, target)
