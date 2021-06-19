@@ -388,11 +388,13 @@ class RecordManager:
         if question is None:
             self.zc.notify_all()
             return
-        
+
         questions = [question] if isinstance(question, DNSQuestion) else question
         self.zc.loop.call_soon_threadsafe(self._async_update_matching_records, listener, questions)
 
-    def _async_update_matching_records(self, listener: RecordUpdateListener, questions: List[DNSQuestion]) -> None:
+    def _async_update_matching_records(
+        self, listener: RecordUpdateListener, questions: List[DNSQuestion]
+    ) -> None:
         """Calls back any existing entries in the cache that answer the question.
 
         This function must be run from the event loop.
