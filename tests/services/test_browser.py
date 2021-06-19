@@ -366,7 +366,7 @@ def test_backoff():
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
-    with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch.object(
         _services_browser, "current_time_millis", current_time_millis
     ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10):
         # dummy service callback
@@ -459,7 +459,7 @@ def test_integration():
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
-    with unittest.mock.patch.object(zeroconf_browser, "send", send), unittest.mock.patch.object(
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch.object(
         _services_browser, "current_time_millis", current_time_millis
     ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
         service_added = Event()
