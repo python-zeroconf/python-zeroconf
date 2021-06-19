@@ -26,6 +26,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from ._core import Zeroconf
 from ._exceptions import NonUniqueNameException
+from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.types import ZeroconfServiceTypes
@@ -45,20 +46,8 @@ __all__ = [
     "AsyncZeroconf",
     "AsyncServiceInfo",
     "AsyncServiceBrowser",
-    "AsyncServiceListener",
     "AsyncZeroconfServiceTypes",
 ]
-
-
-class AsyncServiceListener:
-    def add_service(self, aiozc: 'AsyncZeroconf', type_: str, name: str) -> None:
-        raise NotImplementedError()
-
-    def remove_service(self, aiozc: 'AsyncZeroconf', type_: str, name: str) -> None:
-        raise NotImplementedError()
-
-    def update_service(self, aiozc: 'AsyncZeroconf', type_: str, name: str) -> None:
-        raise NotImplementedError()
 
 
 class AsyncServiceInfo(ServiceInfo):
@@ -74,15 +63,15 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
 
     def __init__(
         self,
-        aiozc: 'AsyncZeroconf',
+        zeroconf: 'Zeroconf',
         type_: Union[str, list],
-        handlers: Optional[Union[AsyncServiceListener, List[Callable[..., None]]]] = None,
-        listener: Optional[AsyncServiceListener] = None,
+        handlers: Optional[Union[ServiceListener, List[Callable[..., None]]]] = None,
+        listener: Optional[ServiceListener] = None,
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
     ) -> None:
-        super().__init__(aiozc.zeroconf, type_, handlers, listener, addr, port, delay)  # type: ignore
+        super().__init__(zeroconf, type_, handlers, listener, addr, port, delay)
         self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
 
     async def async_cancel(self) -> None:
@@ -115,7 +104,7 @@ class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
         local_zc = aiozc or AsyncZeroconf(interfaces=interfaces, ip_version=ip_version)
         listener = cls()
         async_browser = AsyncServiceBrowser(
-            local_zc, _SERVICE_TYPE_ENUMERATION_NAME, listener=listener  # type: ignore
+            local_zc.zeroconf, _SERVICE_TYPE_ENUMERATION_NAME, listener=listener
         )
 
         # wait for responses
@@ -168,7 +157,7 @@ class AsyncZeroconf:
             ip_version=ip_version,
             apple_p2p=apple_p2p,
         )
-        self.async_browsers: Dict[AsyncServiceListener, AsyncServiceBrowser] = {}
+        self.async_browsers: Dict[ServiceListener, AsyncServiceBrowser] = {}
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
         """Send a broadcasts to announce a service at intervals."""
@@ -269,14 +258,14 @@ class AsyncZeroconf:
             return info
         return None
 
-    async def async_add_service_listener(self, type_: str, listener: AsyncServiceListener) -> None:
+    async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
         will then have its add_service and remove_service methods called when
         services of that type become available and unavailable."""
         await self.async_remove_service_listener(listener)
-        self.async_browsers[listener] = AsyncServiceBrowser(self, type_, listener)
+        self.async_browsers[listener] = AsyncServiceBrowser(self.zeroconf, type_, listener)
 
-    async def async_remove_service_listener(self, listener: AsyncServiceListener) -> None:
+    async def async_remove_service_listener(self, listener: ServiceListener) -> None:
         """Removes a listener from the set that is currently listening."""
         if listener in self.async_browsers:
             await self.async_browsers[listener].async_cancel()

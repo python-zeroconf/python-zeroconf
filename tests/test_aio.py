@@ -12,7 +12,7 @@ import unittest.mock
 
 import pytest
 
-from zeroconf.aio import AsyncServiceInfo, AsyncServiceListener, AsyncZeroconf, AsyncZeroconfServiceTypes
+from zeroconf.aio import AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
 from zeroconf import Zeroconf
 from zeroconf.const import _LISTENER_TIME
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
@@ -433,16 +433,7 @@ async def test_async_service_browser() -> None:
 
     calls = []
 
-    with pytest.raises(NotImplementedError):
-        AsyncServiceListener().add_service(aiozc, "_type", "name._type")
-
-    with pytest.raises(NotImplementedError):
-        AsyncServiceListener().remove_service(aiozc, "_type", "name._type")
-
-    with pytest.raises(NotImplementedError):
-        AsyncServiceListener().update_service(aiozc, "_type", "name._type")
-
-    class MyListener(AsyncServiceListener):
+    class MyListener(ServiceListener):
         def add_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
