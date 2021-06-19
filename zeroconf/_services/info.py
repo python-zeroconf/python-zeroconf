@@ -21,7 +21,7 @@
 """
 
 import socket
-from typing import Dict, List, Optional, Union, TYPE_CHECKING, cast
+from typing import Dict, List, Optional, TYPE_CHECKING, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException

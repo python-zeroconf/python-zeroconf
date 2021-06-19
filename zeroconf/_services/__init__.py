@@ -28,7 +28,6 @@ from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tupl
 
 from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord
-from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds

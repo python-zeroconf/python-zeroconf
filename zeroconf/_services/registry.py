@@ -24,8 +24,8 @@ import threading
 from typing import Dict, List, Optional, Union
 
 
-from .._exceptions import ServiceNameAlreadyRegistered
 from .info import ServiceInfo
+from .._exceptions import ServiceNameAlreadyRegistered
 
 
 class ServiceRegistry:
