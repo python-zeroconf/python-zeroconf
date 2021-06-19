@@ -56,7 +56,9 @@ async def wait_condition_or_timeout(condition: asyncio.Condition, timeout: float
 
 async def _get_all_tasks(loop: asyncio.AbstractEventLoop) -> Set[asyncio.Task]:
     """Return all tasks running."""
-    return asyncio.Task.all_tasks(loop)
+    if hasattr(asyncio, 'all_tasks'):
+        return cast(Set[asyncio.Task], asyncio.all_tasks(loop))
+    return cast(Set[asyncio.Task], asyncio.Task.all_tasks(loop))
 
 
 async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
