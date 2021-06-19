@@ -422,3 +422,10 @@ class DNSRRSet:
             self._lookup = {record: record for record in self._records}
         other = self._lookup.get(record)
         return bool(other and other.ttl > (record.ttl / 2))
+
+    def __contains__(self, record: DNSRecord) -> bool:
+        """Returns true if the rrset contains the record."""
+        if self._lookup is None:
+            # Build the hash table so we can lookup the record independent of the ttl
+            self._lookup = {record: record for record in self._records}
+        return record in self._lookup

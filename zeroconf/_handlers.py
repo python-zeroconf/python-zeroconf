@@ -311,9 +311,10 @@ class RecordManager:
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
         now = msg.now
+        answers_rrset = DNSRRSet(msg.answers)
         for record in msg.answers:
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                self._async_process_unique(record, msg.answers, now)
+                self._async_process_unique(record, answers_rrset, now)
 
             maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
             if not record.is_expired(now):
@@ -331,10 +332,8 @@ class RecordManager:
                 updates.append(record)
                 removes.append(record)
 
-        if not updates and not address_adds and not other_adds and not removes:
-            return
-
-        self.async_updates(now, updates)
+        if updates:
+            self.async_updates(now, updates)
         # The cache adds must be processed AFTER we trigger
         # the updates since we compare existing data
         # with the new data and updating the cache
@@ -350,20 +349,23 @@ class RecordManager:
         # zc.get_service_info will see the cached value
         # but ONLY after all the record updates have been
         # processsed.
-        self.cache.async_add_records(itertools.chain(address_adds, other_adds))
+        if other_adds or address_adds:
+            self.cache.async_add_records(itertools.chain(address_adds, other_adds))
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
-        self.cache.async_remove_records(removes)
-        self.async_updates_complete()
+        if removes:
+            self.cache.async_remove_records(removes)
+        if updates:
+            self.async_updates_complete()
 
-    def _async_process_unique(self, record: DNSRecord, answers: List[DNSRecord], now: float) -> None:
+    def _async_process_unique(self, record: DNSRecord, answers_rrset: DNSRRSet, now: float) -> None:
         # rfc6762#section-10.2 para 2
         # Since unique is set, all old records with that name, rrtype,
         # and rrclass that were received more than one second ago are declared
         # invalid, and marked to expire from the cache in one second.
         for entry in self.cache.async_get_all_by_details(record.name, record.type, record.class_):
-            if record.created - entry.created > 1000 and entry not in answers:
+            if record.created - entry.created > 1000 and entry not in answers_rrset:
                 # Expire in 1s
                 entry.set_created_ttl(now, 1)
 
