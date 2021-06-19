@@ -46,14 +46,18 @@ from ._exceptions import (  # noqa # import needed for backwards compat
 )
 from ._protocol import DNSIncoming, DNSOutgoing  # noqa # import needed for backwards compat
 from ._services import (  # noqa # import needed for backwards compat
-    instance_name_from_service_info,
     Signal,
     SignalRegistrationInterface,
     RecordUpdateListener,
-    ServiceBrowser,
-    ServiceInfo,
     ServiceListener,
     ServiceStateChange,
+)
+from ._services.browser import (  # noqa # import needed for backwards compat
+    ServiceBrowser,
+)
+from ._services.info import (  # noqa # import needed for backwards compat
+    instance_name_from_service_info,
+    ServiceInfo,
 )
 from ._services.registry import ServiceRegistry  # noqa # import needed for backwards compat
 from ._services.types import ZeroconfServiceTypes
