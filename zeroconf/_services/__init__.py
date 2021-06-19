@@ -223,6 +223,31 @@ def _group_ptr_queries_with_known_answers(
     return [query_bucket.out for query_bucket in query_buckets]
 
 
+def generate_service_query(
+    zc: 'Zeroconf', types_: List[str], multicast: bool = True, include_known_answers: bool = True
+) -> List[DNSOutgoing]:
+    """Generate a service query for sending with zeroconf.send."""
+    questions_with_known_answers: _QuestionWithKnownAnswers = {}
+    now = current_time_millis()
+    for type_ in types_:
+        service_type_name(type_, strict=False)
+        question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
+        if not multicast:
+            question.unicast = True
+        if include_known_answers:
+            known_answers = set(
+                cast(DNSPointer, record)
+                for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+                if not record.is_stale(now)
+            )
+        else:
+            known_answers = cast(Set[DNSPointer], set())
+
+        questions_with_known_answers[question] = known_answers
+
+    return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
+
+
 class _ServiceBrowserBase(RecordUpdateListener):
     """Base class for ServiceBrowser."""
 
@@ -246,7 +271,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.addr = addr
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
-        self._services: Dict[str, Dict[str, DNSPointer]] = {check_type_: {} for check_type_ in self.types}
         current_time = current_time_millis()
         self._next_time = {check_type_: current_time for check_type_ in self.types}
         self._delay = {check_type_: delay for check_type_ in self.types}
@@ -324,17 +348,14 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if isinstance(record, DNSPointer):
             if record.name not in self.types:
                 return
-            service_key = record.alias.lower()
-            services_by_type = self._services[record.name]
-            old_record = services_by_type.get(service_key)
+            old_record = self.zc.cache.async_get_unique(
+                DNSPointer(record.name, _TYPE_PTR, _CLASS_IN, 0, record.alias)
+            )
             if old_record is None:
-                services_by_type[service_key] = record
                 self._enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
             elif expired:
-                del services_by_type[service_key]
                 self._enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
             else:
-                old_record.reset_ttl(record)
                 expires = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
                 if expires < self._next_time[record.name]:
                     self._next_time[record.name] = expires
@@ -404,18 +425,17 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if min(self._next_time.values()) > now:
             return []
 
-        questions_with_known_answers: _QuestionWithKnownAnswers = {}
+        ready_types = []
 
         for type_, due in self._next_time.items():
             if due > now:
                 continue
-            questions_with_known_answers[DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)] = set(
-                record for record in self._services[type_].values() if not record.is_stale(now)
-            )
+
+            ready_types.append(type_)
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
-        return _group_ptr_queries_with_known_answers(now, self.multicast, questions_with_known_answers)
+        return generate_service_query(self.zc, ready_types, self.multicast)
 
     def _seconds_to_wait(self) -> Optional[float]:
         """Returns the number of seconds to wait for the next event."""
