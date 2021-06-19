@@ -16,10 +16,8 @@ from typing import List
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSAddress, DNSPointer, DNSQuestion, const, current_time_millis
-import zeroconf._services.browser as _services_browser
+from zeroconf import DNSAddress, const
 from zeroconf import Zeroconf
-from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 from zeroconf.aio import AsyncZeroconf
@@ -434,113 +432,6 @@ class TestServiceInfo(unittest.TestCase):
                 helper_thread.join()
                 zc.remove_all_service_listeners()
                 zc.close()
-
-
-class TestServiceBrowserMultipleTypes(unittest.TestCase):
-    def test_update_record(self):
-
-        service_names = ['name2._type2._tcp.local.', 'name._type._tcp.local.', 'name._type._udp.local']
-        service_types = ['_type2._tcp.local.', '_type._tcp.local.', '_type._udp.local.']
-
-        service_added_count = 0
-        service_removed_count = 0
-        service_add_event = Event()
-        service_removed_event = Event()
-
-        class MyServiceListener(r.ServiceListener):
-            def add_service(self, zc, type_, name) -> None:
-                nonlocal service_added_count
-                service_added_count += 1
-                if service_added_count == 3:
-                    service_add_event.set()
-
-            def remove_service(self, zc, type_, name) -> None:
-                nonlocal service_removed_count
-                service_removed_count += 1
-                if service_removed_count == 3:
-                    service_removed_event.set()
-
-        def mock_incoming_msg(
-            service_state_change: r.ServiceStateChange, service_type: str, service_name: str, ttl: int
-        ) -> r.DNSIncoming:
-            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-            generated.add_answer_at_time(
-                r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name), 0
-            )
-            return r.DNSIncoming(generated.packets()[0])
-
-        zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
-        service_browser = r.ServiceBrowser(zeroconf, service_types, listener=MyServiceListener())
-
-        try:
-            wait_time = 3
-
-            # all three services added
-            _inject_response(
-                zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
-            )
-            _inject_response(
-                zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120),
-            )
-            zeroconf.wait(100)
-
-            called_with_refresh_time_check = False
-
-            def _mock_get_expiration_time(self, percent):
-                nonlocal called_with_refresh_time_check
-                if percent == const._EXPIRE_REFRESH_TIME_PERCENT:
-                    called_with_refresh_time_check = True
-                    return 0
-                return self.created + (percent * self.ttl * 10)
-
-            # Set an expire time that will force a refresh
-            with unittest.mock.patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
-                _inject_response(
-                    zeroconf,
-                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
-                )
-                # Add the last record after updating the first one
-                # to ensure the service_add_event only gets set
-                # after the update
-                _inject_response(
-                    zeroconf,
-                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120),
-                )
-                service_add_event.wait(wait_time)
-            assert called_with_refresh_time_check is True
-            assert service_added_count == 3
-            assert service_removed_count == 0
-
-            _inject_response(
-                zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Updated, service_types[0], service_names[0], 0),
-            )
-
-            # all three services removed
-            _inject_response(
-                zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[0], service_names[0], 0),
-            )
-            _inject_response(
-                zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[1], service_names[1], 0),
-            )
-            _inject_response(
-                zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[2], service_names[2], 0),
-            )
-            service_removed_event.wait(wait_time)
-            assert service_added_count == 3
-            assert service_removed_count == 3
-
-        finally:
-            assert len(zeroconf.listeners) == 1
-            service_browser.cancel()
-            assert len(zeroconf.listeners) == 0
-            zeroconf.remove_all_service_listeners()
-            zeroconf.close()
 
 
 class ListenerTest(unittest.TestCase):
