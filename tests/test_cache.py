@@ -131,11 +131,13 @@ class TestDNSCacheAPI(unittest.TestCase):
     def test_get(self):
         record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
+        record3 = r.DNSAddress('a', const._TYPE_AAAA, const._CLASS_IN, 1, b'ipv6')
         cache = r.DNSCache()
-        cache.async_add_records([record1, record2])
+        cache.async_add_records([record1, record2, record3])
         assert cache.get(record1) == record1
         assert cache.get(record2) == record2
         assert cache.get(r.DNSEntry('a', const._TYPE_A, const._CLASS_IN)) == record2
+        assert cache.get(r.DNSEntry('a', const._TYPE_AAAA, const._CLASS_IN)) == record3
         assert cache.get(r.DNSEntry('notthere', const._TYPE_A, const._CLASS_IN)) is None
 
     def test_get_by_details(self):
