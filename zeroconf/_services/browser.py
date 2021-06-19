@@ -429,7 +429,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         )
         assert self.zc.loop is not None
         if get_running_loop() == self.zc.loop:
-            self._browser_task = asyncio.ensure_future(self.async_browser_task())
+            self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
             return
         self._browser_task = cast(
             asyncio.Task,
