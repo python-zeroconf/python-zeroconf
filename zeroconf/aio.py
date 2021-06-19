@@ -66,38 +66,6 @@ class AsyncServiceListener:
 class AsyncServiceInfo(ServiceInfo):
     """An async version of ServiceInfo."""
 
-    async def async_request(self, aiozc: 'AsyncZeroconf', timeout: float) -> bool:
-        """Returns true if the service could be discovered on the
-        network, and updates this object with details discovered.
-        """
-        if self.load_from_cache(aiozc.zeroconf):
-            return True
-
-        now = current_time_millis()
-        delay = _LISTENER_TIME
-        next_ = now
-        last = now + timeout
-        await aiozc.zeroconf.async_wait_for_start()
-        try:
-            aiozc.zeroconf.add_listener(self, None)
-            while not self._is_complete:
-                if last <= now:
-                    return False
-                if next_ <= now:
-                    out = self.generate_request_query(aiozc.zeroconf, now)
-                    if not out.questions:
-                        return self.load_from_cache(aiozc.zeroconf)
-                    aiozc.zeroconf.async_send(out)
-                    next_ = now + delay
-                    delay *= 2
-
-                await aiozc.zeroconf.async_wait(min(next_, last) - now)
-                now = current_time_millis()
-        finally:
-            aiozc.zeroconf.remove_listener(self)
-
-        return True
-
 
 class AsyncServiceBrowser(_ServiceBrowserBase):
     """Used to browse for a service of a specific type.
