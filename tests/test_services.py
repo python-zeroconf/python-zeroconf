@@ -1271,7 +1271,7 @@ def test_service_browser_is_aware_of_port_changes():
 
 
 def test_service_browser_listeners_update_service():
-    """Test that the ServiceBrowser that implements update_service."""
+    """Test that the ServiceBrowser ServiceListener that implements update_service."""
 
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
@@ -1326,6 +1326,62 @@ def test_service_browser_listeners_update_service():
     assert callbacks == [
         ('add', type_, registration_name),
         ('update', type_, registration_name),
+    ]
+    browser.cancel()
+
+    zc.close()
+
+
+def test_service_browser_listeners_no_update_service():
+    """Test that the ServiceBrowser ServiceListener that does not implement update_service."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    callbacks = []
+
+    class MyServiceListener:
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+
+    def mock_incoming_msg(records) -> r.DNSIncoming:
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        for record in records:
+            generated.add_answer_at_time(record, 0)
+        return r.DNSIncoming(generated.packets()[0])
+
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
+    )
+    time.sleep(0.2)
+    info.port = 400
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_service()]),
+    )
+    time.sleep(0.2)
+
+    assert callbacks == [
+        ('add', type_, registration_name),
     ]
     browser.cancel()
 
