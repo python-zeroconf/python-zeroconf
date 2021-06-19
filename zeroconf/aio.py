@@ -24,7 +24,7 @@ import contextlib
 from types import TracebackType  # noqa # used in type hints
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
-from ._core import NotifyListener, Zeroconf
+from ._core import Zeroconf
 from ._exceptions import NonUniqueNameException
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import ServiceInfo, instance_name_from_service_info
@@ -50,24 +50,6 @@ __all__ = [
     "AsyncServiceListener",
     "AsyncZeroconfServiceTypes",
 ]
-
-
-class AsyncNotifyListener(NotifyListener):
-    """A NotifyListener that async code can use to wait for events."""
-
-    def __init__(self, aiozc: 'AsyncZeroconf') -> None:
-        """Create an event for async listeners to wait for."""
-        self.aiozc = aiozc
-        self.loop = asyncio.get_event_loop()
-
-    def notify_all(self) -> None:
-        """Schedule an async_notify_all."""
-        self.loop.call_soon_threadsafe(asyncio.ensure_future, self._async_notify_all())
-
-    async def _async_notify_all(self) -> None:
-        """Notify all async listeners."""
-        async with self.aiozc.condition:
-            self.aiozc.condition.notify_all()
 
 
 class AsyncServiceListener:
@@ -109,7 +91,7 @@ class AsyncServiceInfo(ServiceInfo):
                     next_ = now + delay
                     delay *= 2
 
-                await aiozc.async_wait(min(next_, last) - now)
+                await aiozc.zeroconf.async_wait(min(next_, last) - now)
                 now = current_time_millis()
         finally:
             aiozc.zeroconf.remove_listener(self)
@@ -148,16 +130,17 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
     async def async_run(self) -> None:
         """Run the browser task."""
         await self.aiozc.zeroconf.async_wait_for_start()
+        assert self.aiozc.zeroconf.async_condition is not None
         while True:
             timeout = self._seconds_to_wait()
             if timeout:
-                async with self.aiozc.condition:
+                async with self.aiozc.zeroconf.async_condition:
                     # We must check again while holding the condition
                     # in case the other thread has added to _handlers_to_call
                     # between when we checked above when we were not
                     # holding the condition
                     if not self._handlers_to_call:
-                        await wait_condition_or_timeout(self.aiozc.condition, timeout)
+                        await wait_condition_or_timeout(self.aiozc.zeroconf.async_condition, timeout)
 
             outs = self.generate_ready_queries()
             for out in outs:
@@ -253,10 +236,7 @@ class AsyncZeroconf:
             apple_p2p=apple_p2p,
         )
         self.loop = asyncio.get_event_loop()
-        self.async_notify = AsyncNotifyListener(self)
-        self.zeroconf.add_notify_listener(self.async_notify)
         self.async_browsers: Dict[AsyncServiceListener, AsyncServiceBrowser] = {}
-        self.condition = asyncio.Condition()
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
         """Send a broadcasts to announce a service at intervals."""
@@ -343,7 +323,6 @@ class AsyncZeroconf:
         with contextlib.suppress(asyncio.TimeoutError):
             await asyncio.wait_for(self.zeroconf.async_wait_for_start(), timeout=1)
         await self.async_remove_all_service_listeners()
-        self.zeroconf.remove_notify_listener(self.async_notify)
         await self.async_unregister_all_services()
         await self.zeroconf._async_close()  # pylint: disable=protected-access
 
@@ -357,11 +336,6 @@ class AsyncZeroconf:
         if await info.async_request(self, timeout):
             return info
         return None
-
-    async def async_wait(self, timeout: float) -> None:
-        """Calling task waits for a given number of milliseconds or until notified."""
-        async with self.condition:
-            await wait_condition_or_timeout(self.condition, millis_to_seconds(timeout))
 
     async def async_add_service_listener(self, type_: str, listener: AsyncServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
