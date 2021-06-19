@@ -29,7 +29,6 @@ from ._exceptions import NonUniqueNameException
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.types import ZeroconfServiceTypes
-from ._utils.aio import wait_condition_or_timeout
 from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
 from ._utils.time import millis_to_seconds
 from .const import (
@@ -85,7 +84,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
     ) -> None:
         self.aiozc = aiozc
         super().__init__(aiozc.zeroconf, type_, handlers, listener, addr, port, delay)  # type: ignore
-        self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_create_browser_task()))
+        self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
 
     async def async_cancel(self) -> None:
         """Cancel the browser."""

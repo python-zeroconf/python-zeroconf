@@ -631,16 +631,25 @@ def test_service_browser_listeners_update_service():
     class MyServiceListener(r.ServiceListener):
         def add_service(self, zc, type_, name) -> None:
             nonlocal callbacks
+            import pprint
+
+            pprint.pprint(["mylisten", "add", type_, name])
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:
             nonlocal callbacks
+            import pprint
+
+            pprint.pprint(["mylisten", "remove", type_, name])
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:
             nonlocal callbacks
+            import pprint
+
+            pprint.pprint(["mylisten", "update", type_, name])
             if name == registration_name:
                 callbacks.append(("update", type_, name))
 
