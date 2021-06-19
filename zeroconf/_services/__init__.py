@@ -21,44 +21,29 @@
 """
 
 import enum
-import socket
 import threading
 import warnings
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from .._cache import _UniqueRecordsType
-from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
+from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
 from .._utils.name import service_type_name
-from .._utils.net import (
-    IPVersion,
-    _encode_address,
-    _is_v6_address,
-)
-from .._utils.struct import int2byte
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
     _CLASS_IN,
-    _CLASS_UNIQUE,
-    _DNS_HOST_TTL,
-    _DNS_OTHER_TTL,
     _DNS_PACKET_HEADER_LEN,
     _EXPIRE_REFRESH_TIME_PERCENT,
     _FLAGS_QR_QUERY,
-    _LISTENER_TIME,
     _MAX_MSG_TYPICAL,
     _MDNS_ADDR,
     _MDNS_ADDR6,
     _MDNS_PORT,
-    _TYPE_A,
-    _TYPE_AAAA,
     _TYPE_PTR,
-    _TYPE_SRV,
-    _TYPE_TXT,
 )
 
 
@@ -75,16 +60,6 @@ class ServiceStateChange(enum.Enum):
     Added = 1
     Removed = 2
     Updated = 3
-
-
-def instance_name_from_service_info(info: "ServiceInfo") -> str:
-    """Calculate the instance name from the ServiceInfo."""
-    # This is kind of funky because of the subtype based tests
-    # need to make subtypes a first class citizen
-    service_name = service_type_name(info.name)
-    if not info.type.endswith(service_name):
-        raise BadTypeInNameException
-    return info.name[: -len(service_name) - 1]
 
 
 class ServiceListener:
