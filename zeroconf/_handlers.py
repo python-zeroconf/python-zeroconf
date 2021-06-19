@@ -311,10 +311,11 @@ class RecordManager:
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
         now = msg.now
-        answers_rrset = DNSRRSet(msg.answers)
+        unique_types: Set[Tuple[str, int, int]] = set()
+
         for record in msg.answers:
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                self._async_process_unique(record, answers_rrset, now)
+                unique_types.add((record.name, record.type, record.class_))
 
             maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
             if not record.is_expired(now):
@@ -331,6 +332,9 @@ class RecordManager:
             elif maybe_entry is not None:
                 updates.append(record)
                 removes.append(record)
+
+        if unique_types:
+            self._async_mark_unique_cached_records_older_than_1s_to_expire(unique_types, msg.answers, now)
 
         if updates:
             self.async_updates(now, updates)
@@ -359,15 +363,19 @@ class RecordManager:
         if updates:
             self.async_updates_complete()
 
-    def _async_process_unique(self, record: DNSRecord, answers_rrset: DNSRRSet, now: float) -> None:
+    def _async_mark_unique_cached_records_older_than_1s_to_expire(
+        self, unique_types: Set[Tuple[str, int, int]], answers: List[DNSRecord], now: float
+    ) -> None:
         # rfc6762#section-10.2 para 2
         # Since unique is set, all old records with that name, rrtype,
         # and rrclass that were received more than one second ago are declared
         # invalid, and marked to expire from the cache in one second.
-        for entry in self.cache.async_all_by_details(record.name, record.type, record.class_):
-            if record.created - entry.created > 1000 and entry != record and entry not in answers_rrset:
-                # Expire in 1s
-                entry.set_created_ttl(now, 1)
+        answers_rrset = DNSRRSet(answers)
+        for name, type_, class_ in unique_types:
+            for entry in self.cache.async_all_by_details(name, type_, class_):
+                if now - entry.created > 1000 and entry not in answers_rrset:
+                    # Expire in 1s
+                    entry.set_created_ttl(now, 1)
 
     def add_listener(
         self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
