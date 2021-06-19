@@ -138,6 +138,7 @@ class TestDNSCacheAPI(unittest.TestCase):
         assert cache.get(record1) == record1
         assert cache.get(record2) == record2
         assert cache.get(r.DNSEntry('a', const._TYPE_A, const._CLASS_IN)) == record2
+        assert cache.get(r.DNSEntry('notthere', const._TYPE_A, const._CLASS_IN)) is None
 
     def test_get_by_details(self):
         record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
