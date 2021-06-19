@@ -109,7 +109,11 @@ async def test_async_service_registration() -> None:
             calls.append(("update", type, name))
 
     listener = MyListener()
+    import pprint
+
+    pprint.pprint("here")
     aiozc.zeroconf.add_service_listener(type_, listener)
+    pprint.pprint("done add_service_listener")
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(

@@ -38,7 +38,7 @@ from .._services import (
     Signal,
     SignalRegistrationInterface,
 )
-from .._utils.aio import wait_condition_or_timeout
+from .._utils.aio import get_running_loop, wait_condition_or_timeout
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
@@ -428,10 +428,16 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             getattr(self, 'native_id', self.ident),
         )
         assert self.zc.loop is not None
+        if get_running_loop() == self.zc.loop:
+            self._browser_task = asyncio.ensure_future(self.async_browser_task())
+            return
         self._browser_task = cast(
             asyncio.Task,
             asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
         )
+        import pprint
+
+        pprint.pprint("Finished startup")
 
     async def _async_browser_task(self) -> asyncio.Task:
         return cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
@@ -440,9 +446,12 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         """Cancel the browser."""
         assert self.zc.loop is not None
         assert self.queue is not None
-        asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
-        super().cancel()
         self.queue.put(None)
+        if get_running_loop() == self.zc.loop:
+            asyncio.ensure_future(self._async_cancel_browser())
+        else:
+            asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
+        super().cancel()
         self.join()
 
     def run(self) -> None:
@@ -451,7 +460,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         while True:
             import pprint
 
-            pprint.pprint(["wait for event"])
+            pprint.pprint(["browser thread wait for event on the queue"])
             event = self.queue.get()
             import pprint
 
