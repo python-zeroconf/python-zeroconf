@@ -49,9 +49,11 @@ from ._services import (  # noqa # import needed for backwards compat
     Signal,
     SignalRegistrationInterface,
     RecordUpdateListener,
-    ServiceBrowser,
     ServiceListener,
     ServiceStateChange,
+)
+from ._services.browser import (  # noqa # import needed for backwards compat
+    ServiceBrowser,
 )
 from ._services.info import (  # noqa # import needed for backwards compat
     instance_name_from_service_info,
