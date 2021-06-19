@@ -333,10 +333,6 @@ class RecordManager:
                 updates.append(record)
                 removes.append(record)
 
-        import pprint
-
-        pprint.pprint(unique_types)
-
         if unique_types:
             self._async_mark_unique_cached_records_older_than_1s_to_expire(unique_types, msg.answers, now)
 
