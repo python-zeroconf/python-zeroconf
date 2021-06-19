@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-""" Unit tests for zeroconf._services. """
+""" Unit tests for zeroconf._services.browser. """
 
 import logging
 import socket
