@@ -23,8 +23,8 @@
 import asyncio
 import contextlib
 import threading
-import warnings
 import queue
+import warnings
 from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 

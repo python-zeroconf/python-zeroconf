@@ -82,7 +82,7 @@ class Names(unittest.TestCase):
         self.verify_name_change(zc, type_, name, server_count)
 
         # we are going to patch the zeroconf send to check packet sizes
-        old_send = zc.send
+        old_send = zc.async_send
 
         longest_packet_len = 0
         longest_packet = None  # type: Optional[r.DNSOutgoing]

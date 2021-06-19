@@ -348,7 +348,7 @@ def test_backoff():
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
     # we are going to patch the zeroconf send to check query transmission
-    old_send = zeroconf_browser.send
+    old_send = zeroconf_browser.async_send
 
     time_offset = 0.0
     start_time = time.time() * 1000
@@ -432,7 +432,7 @@ def test_integration():
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
     # we are going to patch the zeroconf send to check packet sizes
-    old_send = zeroconf_browser.send
+    old_send = zeroconf_browser.async_send
 
     time_offset = 0.0
 
