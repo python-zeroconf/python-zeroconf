@@ -59,7 +59,7 @@ class AsyncRunner:
             )
 
         print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
-        self.aiobrowser = AsyncServiceBrowser(self.aiozc, services, handlers=[async_on_service_state_change])
+        self.aiobrowser = AsyncServiceBrowser(self.aiozc.zeroconf, services, handlers=[async_on_service_state_change])
         while True:
             await asyncio.sleep(1)
 
