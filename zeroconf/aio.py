@@ -146,7 +146,6 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
 
     async def async_run(self) -> None:
         """Run the browser task."""
-        self.run()
         await self.aiozc.zeroconf.async_wait_for_start()
         while True:
             timeout = self._seconds_to_wait()

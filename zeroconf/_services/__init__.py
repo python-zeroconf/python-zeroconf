@@ -307,6 +307,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for h in handlers:
             self.service_state_changed.register_handler(h)
 
+        self.zc.add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
+
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
@@ -406,11 +408,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.done = True
         self.zc.remove_listener(self)
 
-    def run(self) -> None:
-        """Run the browser."""
-        questions = [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types]
-        self.zc.add_listener(self, questions)
-
     def generate_ready_queries(self) -> List[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
         now = current_time_millis()
@@ -480,7 +477,6 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
 
     def run(self) -> None:
         """Run the browser thread."""
-        super().run()
         while True:
             timeout = self._seconds_to_wait()
             if timeout:
