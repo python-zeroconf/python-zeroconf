@@ -243,8 +243,6 @@ def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[
                     "don't care about the updates), it'll become mandatory." % (listener,),
                     FutureWarning,
                 )
-        else:
-            raise NotImplementedError(state_change)
 
     return on_change
 
