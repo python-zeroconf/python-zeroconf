@@ -178,6 +178,7 @@ class DNSCache:
         for cached_entry in reversed(list(self.cache.get(key, []))):
             if dns_entry_matches(cached_entry, key, type_, class_):
                 return cached_entry
+        return None
 
     def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
