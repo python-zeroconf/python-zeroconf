@@ -22,7 +22,15 @@
 
 import asyncio
 import contextlib
+import queue
 from typing import Optional, Set, cast
+
+
+def get_best_available_queue() -> queue.Queue:
+    """Create the best available queue type."""
+    if hasattr(queue, "SimpleQueue"):
+        return queue.SimpleQueue()  # type: ignore  # pylint: disable=all
+    return queue.Queue()
 
 
 # Switch to asyncio.wait_for once https://bugs.python.org/issue39032 is fixed

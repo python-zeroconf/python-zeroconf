@@ -20,6 +20,9 @@
     USA
 """
 
+import asyncio
+import contextlib
+import queue
 import threading
 import warnings
 from collections import OrderedDict
@@ -35,6 +38,7 @@ from .._services import (
     Signal,
     SignalRegistrationInterface,
 )
+from .._utils.aio import get_best_available_queue, get_running_loop, wait_condition_or_timeout
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
@@ -180,6 +184,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for check_type_ in self.types:
             # Will generate BadTypeInNameException on a bad name
             service_type_name(check_type_, strict=False)
+        self._browser_task: Optional[asyncio.Task] = None
         self.zc = zc
         self.addr = addr
         self.port = port
@@ -190,7 +195,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._handlers_to_call: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
-
+        self.queue: Optional[queue.Queue] = None
         self.done = False
 
         if hasattr(handlers, 'add_service'):
@@ -341,6 +346,47 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         return millis_to_seconds(next_time - now)
 
+    async def async_browser_task(self) -> None:
+        """Run the browser task."""
+        await self.zc.async_wait_for_start()
+        assert self.zc.async_condition is not None
+        while True:
+            timeout = self._seconds_to_wait()
+            if timeout:
+                async with self.zc.async_condition:
+                    # We must check again while holding the condition
+                    # in case the other thread has added to _handlers_to_call
+                    # between when we checked above when we were not
+                    # holding the condition
+                    if not self._handlers_to_call:
+                        await wait_condition_or_timeout(self.zc.async_condition, timeout)
+
+            outs = self.generate_ready_queries()
+            for out in outs:
+                self.zc.async_send(out, addr=self.addr, port=self.port)
+
+            if not self._handlers_to_call:
+                continue
+
+            (name_type, state_change) = self._handlers_to_call.popitem(False)
+            if self.queue:
+                self.queue.put((name_type, state_change))
+                continue
+
+            self._service_state_changed.fire(
+                zeroconf=self.zc,
+                service_type=name_type[1],
+                name=name_type[0],
+                state_change=state_change,
+            )
+
+    async def _async_cancel_browser(self) -> None:
+        """Cancel the browser."""
+        assert self._browser_task is not None
+        self._browser_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self._browser_task
+
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     """Used to browse for a service of a specific type.
@@ -361,42 +407,45 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     ) -> None:
         threading.Thread.__init__(self)
         super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
+        self.queue = get_best_available_queue()
         self.daemon = True
         self.start()
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
             '-'.join([type_[:-7] for type_ in self.types]),
             getattr(self, 'native_id', self.ident),
         )
+        assert self.zc.loop is not None
+        if get_running_loop() == self.zc.loop:
+            self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+            return
+        self._browser_task = cast(
+            asyncio.Task,
+            asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
+        )
+
+    async def _async_browser_task(self) -> asyncio.Task:
+        return cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
 
     def cancel(self) -> None:
         """Cancel the browser."""
+        assert self.zc.loop is not None
+        assert self.queue is not None
+        self.queue.put(None)
+        if get_running_loop() == self.zc.loop:
+            asyncio.ensure_future(self._async_cancel_browser())
+        else:
+            asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
         super().cancel()
         self.join()
 
     def run(self) -> None:
         """Run the browser thread."""
+        assert self.queue is not None
         while True:
-            timeout = self._seconds_to_wait()
-            if timeout:
-                with self.zc.condition:
-                    # We must check again while holding the condition
-                    # in case the other thread has added to _handlers_to_call
-                    # between when we checked above when we were not
-                    # holding the condition
-                    if not self._handlers_to_call:
-                        self.zc.condition.wait(timeout)
-
-            if self.zc.done or self.done:
+            event = self.queue.get()
+            if event is None:
                 return
-
-            outs = self.generate_ready_queries()
-            for out in outs:
-                self.zc.send(out, addr=self.addr, port=self.port)
-
-            if not self._handlers_to_call:
-                continue
-
-            (name_type, state_change) = self._handlers_to_call.popitem(False)
+            name_type, state_change = event
             self._service_state_changed.fire(
                 zeroconf=self.zc,
                 service_type=name_type[1],
