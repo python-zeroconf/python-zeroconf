@@ -237,7 +237,7 @@ def generate_service_query(
         )
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
-  
+
 def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[..., None]:
     """Generate a service_state_changed handlers from a listener."""
 
