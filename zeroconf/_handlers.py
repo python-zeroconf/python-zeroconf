@@ -390,6 +390,7 @@ class RecordManager:
             return
 
         questions = [question] if isinstance(question, DNSQuestion) else question
+        assert self.zc.loop is not None
         self.zc.loop.call_soon_threadsafe(self._async_update_matching_records, listener, questions)
 
     def _async_update_matching_records(
