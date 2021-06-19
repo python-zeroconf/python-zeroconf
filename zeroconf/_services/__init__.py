@@ -223,27 +223,18 @@ def _group_ptr_queries_with_known_answers(
     return [query_bucket.out for query_bucket in query_buckets]
 
 
-def generate_service_query(
-    zc: 'Zeroconf', types_: List[str], multicast: bool = True, include_known_answers: bool = True
-) -> List[DNSOutgoing]:
+def generate_service_query(zc: 'Zeroconf', types_: List[str], multicast: bool = True) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
     now = current_time_millis()
     for type_ in types_:
         service_type_name(type_, strict=False)
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
-        if not multicast:
-            question.unicast = True
-        if include_known_answers:
-            known_answers = set(
-                cast(DNSPointer, record)
-                for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
-                if not record.is_stale(now)
-            )
-        else:
-            known_answers = cast(Set[DNSPointer], set())
-
-        questions_with_known_answers[question] = known_answers
+        questions_with_known_answers[question] = set(
+            cast(DNSPointer, record)
+            for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+            if not record.is_stale(now)
+        )
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
