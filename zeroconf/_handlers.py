@@ -373,7 +373,7 @@ class RecordManager:
         answers_rrset = DNSRRSet(answers)
         for name, type_, class_ in unique_types:
             for entry in self.cache.async_all_by_details(name, type_, class_):
-                if now - entry.created > 1000 and entry not in answers_rrset:
+                if (now - entry.created > 1000) and entry not in answers_rrset:
                     # Expire in 1s
                     entry.set_created_ttl(now, 1)
 
