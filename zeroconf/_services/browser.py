@@ -228,9 +228,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
     ) -> None:
         # Code to ensure we only do a single update message
         # Precedence is; Added, Remove, Update
-        import pprint
-
-        pprint.pprint(["_enqueue_callback", state_change, type_, name])
         key = (name, type_)
         if (
             state_change is ServiceStateChange.Added
@@ -308,9 +305,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
             except KeyError:
                 return
             self._handlers_to_call[name_type] = state_change
-        import pprint
-
-        pprint.pprint(["handlers to call is now", self._handlers_to_call])
 
     def cancel(self) -> None:
         """Cancel the browser."""
@@ -365,11 +359,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
                     # between when we checked above when we were not
                     # holding the condition
                     if not self._handlers_to_call:
-                        import pprint
-
-                        pprint.pprint(["Waiting until timeout", timeout])
                         await wait_condition_or_timeout(self.zc.async_condition, timeout)
-                        pprint.pprint(["Done Waiting until timeout", timeout])
 
             outs = self.generate_ready_queries()
             for out in outs:
@@ -379,9 +369,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 continue
 
             (name_type, state_change) = self._handlers_to_call.popitem(False)
-            import pprint
-
-            pprint.pprint(["incoming event", (name_type, state_change)])
             if self.queue:
                 self.queue.put((name_type, state_change))
                 continue
@@ -435,9 +422,6 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             asyncio.Task,
             asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
         )
-        import pprint
-
-        pprint.pprint("Finished startup")
 
     async def _async_browser_task(self) -> asyncio.Task:
         return cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
@@ -458,13 +442,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         """Run the browser thread."""
         assert self.queue is not None
         while True:
-            import pprint
-
-            pprint.pprint(["browser thread wait for event on the queue"])
             event = self.queue.get()
-            import pprint
-
-            pprint.pprint(["got event", event])
             if event is None:
                 return
             name_type, state_change = event

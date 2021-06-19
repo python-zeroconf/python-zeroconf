@@ -358,13 +358,9 @@ class Zeroconf(QuietLogger):
 
     async def _async_notify_all(self) -> None:
         """Notify all async listeners."""
-        import pprint
-
-        pprint.pprint("_async_notify_all running")
         assert self.async_condition is not None
         async with self.async_condition:
             self.async_condition.notify_all()
-        pprint.pprint("_async_notify_all finished")
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
