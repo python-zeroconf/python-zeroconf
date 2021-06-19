@@ -26,7 +26,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from ._core import Zeroconf
 from ._exceptions import NonUniqueNameException
-from ._services.services import ServiceListener
+from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.types import ZeroconfServiceTypes
