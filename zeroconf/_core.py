@@ -146,7 +146,7 @@ class AsyncEngine:
         """Periodic cache cleanup."""
         while not self.zc.done:
             now = current_time_millis()
-            self.zc.record_manager.async_updates(now, list(self.zc.cache.expire(now)))
+            self.zc.record_manager.async_updates(now, self.zc.cache.async_expire(now))
             self.zc.record_manager.async_updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
 

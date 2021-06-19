@@ -49,6 +49,10 @@ if TYPE_CHECKING:
     from ._protocol import DNSIncoming, DNSOutgoing  # pylint: disable=cyclic-import
 
 
+def dns_entry_matches(record: 'DNSEntry', key: str, type_: int, class_: int) -> bool:
+    return key == record.key and type_ == record.type and class_ == record.class_
+
+
 class DNSEntry:
 
     """A DNS entry"""
@@ -66,12 +70,7 @@ class DNSEntry:
 
     def __eq__(self, other: Any) -> bool:
         """Equality test on key (lowercase name), type, and class"""
-        return (
-            self.key == other.key
-            and self.type == other.type
-            and self.class_ == other.class_
-            and isinstance(other, DNSEntry)
-        )
+        return dns_entry_matches(other, self.key, self.type, self.class_) and isinstance(other, DNSEntry)
 
     @staticmethod
     def get_class_(class_: int) -> str:
@@ -423,3 +422,10 @@ class DNSRRSet:
             self._lookup = {record: record for record in self._records}
         other = self._lookup.get(record)
         return bool(other and other.ttl > (record.ttl / 2))
+
+    def __contains__(self, record: DNSRecord) -> bool:
+        """Returns true if the rrset contains the record."""
+        if self._lookup is None:
+            # Build the hash table so we can lookup the record independent of the ttl
+            self._lookup = {record: record for record in self._records}
+        return record in self._lookup

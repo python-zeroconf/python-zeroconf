@@ -515,6 +515,11 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             assert service_added_count == 3
             assert service_removed_count == 0
 
+            _inject_response(
+                zeroconf,
+                mock_incoming_msg(r.ServiceStateChange.Updated, service_types[0], service_names[0], 0),
+            )
+
             # all three services removed
             _inject_response(
                 zeroconf,
@@ -857,6 +862,8 @@ class TestServiceBrowser(unittest.TestCase):
             # service A updated
             service_updated_event.clear()
             service_address = '10.0.1.3'
+            # Verify we match on uppercase
+            service_server = service_server.upper()
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
@@ -960,8 +967,7 @@ async def test_multiple_a_addresses():
     host = "multahost.local."
     record1 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'a')
     record2 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'b')
-    cache.add(record1)
-    cache.add(record2)
+    cache.async_add_records([record1, record2])
 
     # New kwarg way
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
@@ -1259,6 +1265,124 @@ def test_service_browser_is_aware_of_port_changes():
         ('_hap._tcp.local.', ServiceStateChange.Updated, 'xxxyyy._hap._tcp.local.'),
     ]
     assert zc.get_service_info(type_, registration_name).port == 400
+    browser.cancel()
+
+    zc.close()
+
+
+def test_service_browser_listeners_update_service():
+    """Test that the ServiceBrowser ServiceListener that implements update_service."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    callbacks = []
+
+    class MyServiceListener(r.ServiceListener):
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+        def update_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("update", type_, name))
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+
+    def mock_incoming_msg(records) -> r.DNSIncoming:
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        for record in records:
+            generated.add_answer_at_time(record, 0)
+        return r.DNSIncoming(generated.packets()[0])
+
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
+    )
+    time.sleep(0.2)
+    info.port = 400
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_service()]),
+    )
+    time.sleep(0.2)
+
+    assert callbacks == [
+        ('add', type_, registration_name),
+        ('update', type_, registration_name),
+    ]
+    browser.cancel()
+
+    zc.close()
+
+
+def test_service_browser_listeners_no_update_service():
+    """Test that the ServiceBrowser ServiceListener that does not implement update_service."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    callbacks = []
+
+    class MyServiceListener:
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+
+    def mock_incoming_msg(records) -> r.DNSIncoming:
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        for record in records:
+            generated.add_answer_at_time(record, 0)
+        return r.DNSIncoming(generated.packets()[0])
+
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
+    )
+    time.sleep(0.2)
+    info.port = 400
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_service()]),
+    )
+    time.sleep(0.2)
+
+    assert callbacks == [
+        ('add', type_, registration_name),
+    ]
     browser.cancel()
 
     zc.close()

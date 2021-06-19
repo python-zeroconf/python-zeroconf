@@ -4,6 +4,7 @@
 
 """ Unit tests for zeroconf._handlers """
 
+import asyncio
 import logging
 import pytest
 import socket
@@ -14,6 +15,7 @@ import unittest.mock
 import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
+from zeroconf.aio import AsyncZeroconf
 
 from . import _clear_cache, _inject_response
 
@@ -703,10 +705,14 @@ def test_known_answer_supression_service_type_enumeration_query():
     zc.close()
 
 
-def test_qu_response_only_sends_additionals_if_sends_answer():
+# This test uses asyncio because it needs to access the cache directly
+# which is not threadsafe
+@pytest.mark.asyncio
+async def test_qu_response_only_sends_additionals_if_sends_answer():
     """Test that a QU response does not send additionals unless it sends the answer as well."""
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
 
     type_ = "_addtest1._tcp.local."
     name = "knownname"
@@ -731,13 +737,13 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     ptr_record = info.dns_pointer()
 
     # Add the PTR record to the cache
-    zc.cache.add(ptr_record)
+    zc.cache.async_add_records([ptr_record])
 
     # Add the A record to the cache with 50% ttl remaining
     a_record = info.dns_addresses()[0]
     a_record.set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
     assert not a_record.is_recent(current_time_millis())
-    zc.cache.add(a_record)
+    zc.cache.async_add_records([a_record])
 
     # With QU should respond to only unicast when the answer has been recently multicast
     # even if the additional has not been recently multicast
@@ -755,10 +761,10 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     assert unicast_out.answers[0][0] == ptr_record
 
     # Remove the 50% A record and add a 100% A record
-    zc.cache.remove(a_record)
+    zc.cache.async_remove_records([a_record])
     a_record = info.dns_addresses()[0]
     assert a_record.is_recent(current_time_millis())
-    zc.cache.add(a_record)
+    zc.cache.async_add_records([a_record])
     # With QU should respond to only unicast when the answer has been recently multicast
     # even if the additional has not been recently multicast
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -775,10 +781,10 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     assert unicast_out.answers[0][0] == ptr_record
 
     # Remove the 100% PTR record and add a 50% PTR record
-    zc.cache.remove(ptr_record)
+    zc.cache.async_remove_records([ptr_record])
     ptr_record.set_created_ttl(current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl)
     assert not ptr_record.is_recent(current_time_millis())
-    zc.cache.add(ptr_record)
+    zc.cache.async_add_records([ptr_record])
     # With QU should respond to only multicast since the has less
     # than 75% of its ttl remaining
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -811,7 +817,7 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
     question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
-    zc.cache.add(info2.dns_pointer())  # Add 100% TTL for info2 to the cache
+    zc.cache.async_add_records([info2.dns_pointer()])  # Add 100% TTL for info2 to the cache
 
     unicast_out, multicast_out = zc.query_handler.async_response(
         [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
@@ -828,4 +834,84 @@ def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # unregister
     zc.registry.remove(info)
-    zc.close()
+    await aiozc.async_close()
+
+
+# This test uses asyncio because it needs to access the cache directly
+# which is not threadsafe
+@pytest.mark.asyncio
+async def test_cache_flush_bit():
+    """Test that the cache flush bit sets the TTL to one for matching records."""
+    # instantiate a zeroconf instance
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
+
+    type_ = "_cacheflush._tcp.local."
+    name = "knownname"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    server_name = "server-uu1.local."
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    a_record = info.dns_addresses()[0]
+    zc.cache.async_add_records([info.dns_pointer(), a_record, info.dns_text(), info.dns_service()])
+
+    info.addresses = [socket.inet_aton("10.0.1.5"), socket.inet_aton("10.0.1.6")]
+    new_records = info.dns_addresses()
+    for new_record in new_records:
+        assert new_record.unique is True
+
+    original_a_record = zc.cache.async_get_unique(a_record)
+    # Do the run within 1s to verify the original record is not going to be expired
+    out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA, multicast=True)
+    for answer in new_records:
+        out.add_answer_at_time(answer, 0)
+    for packet in out.packets():
+        zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
+    assert zc.cache.async_get_unique(a_record) is original_a_record
+    assert original_a_record.ttl != 1
+    for record in new_records:
+        assert zc.cache.async_get_unique(record) is not None
+
+    original_a_record.created = current_time_millis() - 1001
+
+    # Do the run within 1s to verify the original record is not going to be expired
+    out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA, multicast=True)
+    for answer in new_records:
+        out.add_answer_at_time(answer, 0)
+    for packet in out.packets():
+        zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
+    assert original_a_record.ttl == 1
+    for record in new_records:
+        assert zc.cache.async_get_unique(record) is not None
+
+    cached_records = [zc.cache.async_get_unique(record) for record in new_records]
+    for record in cached_records:
+        record.created = current_time_millis() - 1001
+
+    fresh_address = socket.inet_aton("4.4.4.4")
+    info.addresses = [fresh_address]
+    # Do the run within 1s to verify the two new records get marked as expired
+    out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA, multicast=True)
+    for answer in info.dns_addresses():
+        out.add_answer_at_time(answer, 0)
+    for packet in out.packets():
+        zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
+    for record in cached_records:
+        assert record.ttl == 1
+
+    for entry in zc.cache.async_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
+        if entry.address == fresh_address:
+            assert entry.ttl > 1
+        else:
+            assert entry.ttl == 1
+
+    # Wait for the ttl 1 records to expire
+    await asyncio.sleep(1.01)
+
+    loaded_info = r.ServiceInfo(type_, registration_name)
+    loaded_info.load_from_cache(zc)
+    assert loaded_info.addresses == info.addresses
+
+    await aiozc.async_close()

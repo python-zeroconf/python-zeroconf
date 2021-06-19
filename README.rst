@@ -143,6 +143,10 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
+Documentation for breaking changes era on the side of the caution and likely
+overstates the risk on many of these. If you are not accessing zeroconf internals,
+you can likely not be concerned with the breaking changes below:
+
 * BREAKING CHANGE: zeroconf.asyncio has been renamed zeroconf.aio (#503) @bdraco
 
   The asyncio name could shadow system asyncio in some cases. If
@@ -201,6 +205,19 @@ Changelog
   These functions are not intended to be used by external
   callers and the API is not likely to be stable in the future
 
+* BREAKING CHANGE: Prefix cache functions that are non threadsafe with async_ (#724) @bdraco
+
+  Adding (`zc.cache.add` -> `zc.cache.async_add_records`), removing (`zc.cache.remove` ->
+  `zc.cache.async_remove_records`), and expiring the cache (`zc.cache.expire` ->
+  `zc.cache.async_expire`) the cache is not threadsafe and must be called from the
+  event loop (previously the Engine select loop before 0.32)
+
+  These functions should only be run from the event loop as they are NOT thread safe.
+
+  We never expect these functions will be called externally, however it was possible so this
+  is documented as a breaking change.  It is highly recommended that external callers do not
+  modify the cache directly.
+
 * TRAFFIC REDUCTION: Add support for handling QU questions (#621) @bdraco
 
   Implements RFC 6762 sec 5.4:
@@ -236,6 +253,10 @@ Changelog
   The above query will now see a response
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
+
+* Fix cache handling of records with different TTLs (#729) @bdraco
+
+* Rename handlers and internals to make it clear what is threadsafe (#726) @bdraco
 
 * Fix ServiceInfo with multiple A records (#725) @bdraco
 

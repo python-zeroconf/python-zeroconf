@@ -64,6 +64,4 @@ def has_working_ipv6():
 
 
 def _clear_cache(zc):
-    for name in zc.cache.names():
-        for record in zc.cache.entries_with_name(name):
-            zc.cache.remove(record)
+    zc.cache.cache.clear()

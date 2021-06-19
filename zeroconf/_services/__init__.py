@@ -27,6 +27,7 @@ import warnings
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
+from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
@@ -223,11 +224,10 @@ def _group_ptr_queries_with_known_answers(
 
 
 def generate_service_query(
-    zc: 'Zeroconf', types_: List[str], multicast: bool = True, include_known_answers: bool = True
+    zc: 'Zeroconf', now: float, types_: List[str], multicast: bool = True, include_known_answers: bool = True
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
-    now = current_time_millis()
     for type_ in types_:
         service_type_name(type_, strict=False)
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
@@ -270,7 +270,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.addr = addr
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
-        self._services: Dict[str, Dict[str, DNSPointer]] = {check_type_: {} for check_type_ in self.types}
         current_time = current_time_millis()
         self._next_time = {check_type_: current_time for check_type_ in self.types}
         self._delay = {check_type_: delay for check_type_ in self.types}
@@ -287,29 +286,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         handlers = cast(List[Callable[..., None]], handlers or [])
 
         if listener:
-
-            def on_change(
-                zeroconf: 'Zeroconf', service_type: str, name: str, state_change: ServiceStateChange
-            ) -> None:
-                assert listener is not None
-                args = (zeroconf, service_type, name)
-                if state_change is ServiceStateChange.Added:
-                    listener.add_service(*args)
-                elif state_change is ServiceStateChange.Removed:
-                    listener.remove_service(*args)
-                elif state_change is ServiceStateChange.Updated:
-                    if hasattr(listener, 'update_service'):
-                        listener.update_service(*args)
-                    else:
-                        warnings.warn(
-                            "%r has no update_service method. Provide one (it can be empty if you "
-                            "don't care about the updates), it'll become mandatory." % (listener,),
-                            FutureWarning,
-                        )
-                else:
-                    raise NotImplementedError(state_change)
-
-            handlers.append(on_change)
+            handlers.append(_service_state_changed_from_listener(listener))
 
         for h in handlers:
             self.service_state_changed.register_handler(h)
@@ -341,36 +318,33 @@ class _ServiceBrowserBase(RecordUpdateListener):
         ):
             self._pending_handlers[key] = state_change
 
-    def _process_record_update(self, now: float, record: DNSRecord) -> None:
+    def _async_process_record_update(self, now: float, record: DNSRecord) -> None:
         """Process a single record update from a batch of updates."""
         expired = record.is_expired(now)
 
         if isinstance(record, DNSPointer):
             if record.name not in self.types:
                 return
-            service_key = record.alias.lower()
-            services_by_type = self._services[record.name]
-            old_record = services_by_type.get(service_key)
+            old_record = self.zc.cache.async_get_unique(
+                DNSPointer(record.name, _TYPE_PTR, _CLASS_IN, 0, record.alias)
+            )
             if old_record is None:
-                services_by_type[service_key] = record
                 self._enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
             elif expired:
-                del services_by_type[service_key]
                 self._enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
             else:
-                old_record.reset_ttl(record)
                 expires = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
                 if expires < self._next_time[record.name]:
                     self._next_time[record.name] = expires
             return
 
         # If its expired or already exists in the cache it cannot be updated.
-        if expired or self.zc.cache.get(record):
+        if expired or self.zc.cache.async_get_unique(cast(_UniqueRecordsType, record)):
             return
 
         if isinstance(record, DNSAddress):
             # Iterate through the DNSCache and callback any services that use this address
-            for service in self.zc.cache.entries_with_server(record.name):
+            for service in self.zc.cache.async_entries_with_server(record.name):
                 type_ = self._record_matching_type(service)
                 if type_:
                     self._enqueue_callback(ServiceStateChange.Updated, type_, service.name)
@@ -392,7 +366,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         This method will be run in the event loop.
         """
         for record in records:
-            self._process_record_update(now, record)
+            self._async_process_record_update(now, record)
 
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
@@ -428,18 +402,17 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if min(self._next_time.values()) > now:
             return []
 
-        questions_with_known_answers: _QuestionWithKnownAnswers = {}
+        ready_types = []
 
         for type_, due in self._next_time.items():
             if due > now:
                 continue
-            questions_with_known_answers[DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)] = set(
-                record for record in self._services[type_].values() if not record.is_stale(now)
-            )
+
+            ready_types.append(type_)
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
-        return _group_ptr_queries_with_known_answers(now, self.multicast, questions_with_known_answers)
+        return generate_service_query(self.zc, now, ready_types, self.multicast)
 
     def _seconds_to_wait(self) -> Optional[float]:
         """Returns the number of seconds to wait for the next event."""

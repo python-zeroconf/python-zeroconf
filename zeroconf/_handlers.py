@@ -21,9 +21,9 @@
 """
 
 import itertools
-from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
-from ._cache import DNSCache
+from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
 from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
@@ -141,7 +141,7 @@ class _QueryResponse:
         SHOULD instead multicast the response so as to keep all the peer
         caches up to date
         """
-        maybe_entry = self._cache.get(record)
+        maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
         return bool(maybe_entry and maybe_entry.is_recent(self._now))
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
@@ -149,7 +149,7 @@ class _QueryResponse:
         Protect the network against excessive packet flooding
         https://datatracker.ietf.org/doc/html/rfc6762#section-14
         """
-        maybe_entry = self._cache.get(record)
+        maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
         return bool(maybe_entry and self._now - maybe_entry.created < 1000)
 
 
@@ -311,25 +311,14 @@ class RecordManager:
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
         now = msg.now
+        unique_types: Set[Tuple[str, int, int]] = set()
+
         for record in msg.answers:
-
-            updated = True
-
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                # rfc6762#section-10.2 para 2
-                # Since unique is set, all old records with that name, rrtype,
-                # and rrclass that were received more than one second ago are declared
-                # invalid, and marked to expire from the cache in one second.
-                for entry in self.cache.get_all_by_details(record.name, record.type, record.class_):
-                    if entry == record:
-                        updated = False
-                    if record.created - entry.created > 1000 and entry not in msg.answers:
-                        # Expire in 1s
-                        entry.set_created_ttl(now, 1)
+                unique_types.add((record.name, record.type, record.class_))
 
-            expired = record.is_expired(now)
-            maybe_entry = self.cache.get(record)
-            if not expired:
+            maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
+            if not record.is_expired(now):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
@@ -337,16 +326,18 @@ class RecordManager:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
-                if updated:
-                    updates.append(record)
+                updates.append(record)
+            # This is likely a goodbye since the record is
+            # expired and exists in the cache
             elif maybe_entry is not None:
                 updates.append(record)
                 removes.append(record)
 
-        if not updates and not address_adds and not other_adds and not removes:
-            return
+        if unique_types:
+            self._async_mark_unique_cached_records_older_than_1s_to_expire(unique_types, msg.answers, now)
 
-        self.async_updates(now, updates)
+        if updates:
+            self.async_updates(now, updates)
         # The cache adds must be processed AFTER we trigger
         # the updates since we compare existing data
         # with the new data and updating the cache
@@ -362,12 +353,29 @@ class RecordManager:
         # zc.get_service_info will see the cached value
         # but ONLY after all the record updates have been
         # processsed.
-        self.cache.add_records(itertools.chain(address_adds, other_adds))
+        if other_adds or address_adds:
+            self.cache.async_add_records(itertools.chain(address_adds, other_adds))
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
-        self.cache.remove_records(removes)
-        self.async_updates_complete()
+        if removes:
+            self.cache.async_remove_records(removes)
+        if updates:
+            self.async_updates_complete()
+
+    def _async_mark_unique_cached_records_older_than_1s_to_expire(
+        self, unique_types: Set[Tuple[str, int, int]], answers: List[DNSRecord], now: float
+    ) -> None:
+        # rfc6762#section-10.2 para 2
+        # Since unique is set, all old records with that name, rrtype,
+        # and rrclass that were received more than one second ago are declared
+        # invalid, and marked to expire from the cache in one second.
+        answers_rrset = DNSRRSet(answers)
+        for name, type_, class_ in unique_types:
+            for entry in self.cache.async_all_by_details(name, type_, class_):
+                if (now - entry.created > 1000) and entry not in answers_rrset:
+                    # Expire in 1s
+                    entry.set_created_ttl(now, 1)
 
     def add_listener(
         self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
