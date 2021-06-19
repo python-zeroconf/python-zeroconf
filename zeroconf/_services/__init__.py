@@ -223,19 +223,18 @@ def _group_ptr_queries_with_known_answers(
     return [query_bucket.out for query_bucket in query_buckets]
 
 
-def generate_service_query(zc: 'Zeroconf', types_: List[str], multicast: bool = True) -> List[DNSOutgoing]:
+def generate_service_query(
+    zc: 'Zeroconf', now: float, types_: List[str], multicast: bool = True
+) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
-    now = current_time_millis()
     for type_ in types_:
-        service_type_name(type_, strict=False)
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
         questions_with_known_answers[question] = set(
             cast(DNSPointer, record)
             for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             if not record.is_stale(now)
         )
-
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
 
@@ -426,7 +425,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
-        return generate_service_query(self.zc, ready_types, self.multicast)
+        return generate_service_query(self.zc, now, ready_types, self.multicast)
 
     def _seconds_to_wait(self) -> Optional[float]:
         """Returns the number of seconds to wait for the next event."""
