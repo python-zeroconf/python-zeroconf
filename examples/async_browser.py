@@ -10,8 +10,8 @@ import asyncio
 import logging
 from typing import Any, Optional, cast
 
-from zeroconf import IPVersion, ServiceStateChange
-from zeroconf.aio import AsyncServiceBrowser, AsyncZeroconf, AsyncZeroconfServiceTypes
+from zeroconf import IPVersion, ServiceStateChange, Zeroconf
+from zeroconf.aio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
 
 
 def async_on_service_state_change(
@@ -23,8 +23,9 @@ def async_on_service_state_change(
     asyncio.ensure_future(async_display_service_info(zeroconf, service_type, name))
 
 
-async def async_display_service_info(zeroconf: AsyncZeroconf, service_type: str, name: str) -> None:
-    info = await zeroconf.async_get_service_info(service_type, name)
+async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
+    info = AsyncServiceInfo(service_type, name)
+    await info.async_request(zeroconf, 3000)
     print("Info from zeroconf.get_service_info: %r" % (info))
     if info:
         addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
