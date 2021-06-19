@@ -324,8 +324,7 @@ class RecordManager:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
-                if not maybe_entry:
-                    updates.append(record)
+                updates.append(record)
             # This is likely a goodbye since the record is
             # expired and exists in the cache
             elif maybe_entry is not None:
