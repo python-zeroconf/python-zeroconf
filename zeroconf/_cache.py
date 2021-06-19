@@ -20,13 +20,24 @@
     USA
 """
 
-from typing import Dict, Iterable, List, Optional, cast
+import itertools
+from typing import Dict, Iterable, Iterator, List, Optional, Union, cast
 
-from ._dns import DNSEntry, DNSPointer, DNSRecord, DNSService
+from ._dns import (
+    DNSAddress,
+    DNSEntry,
+    DNSHinfo,
+    DNSPointer,
+    DNSRecord,
+    DNSService,
+    DNSText,
+    dns_entry_matches,
+)
 from ._utils.time import current_time_millis
 from .const import _TYPE_PTR
 
-
+_UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
+_UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
 _DNSRecordCacheType = Dict[str, Dict[DNSRecord, DNSRecord]]
 
 
@@ -90,16 +101,50 @@ class DNSCache:
         for entry in entries:
             self._async_remove(entry)
 
-    def async_expire(self, now: float) -> Iterable[DNSRecord]:
+    def async_expire(self, now: float) -> List[DNSRecord]:
         """Purge expired entries from the cache.
 
         This function must be run in from event loop.
         """
-        for name in self.names():
-            for record in self.entries_with_name(name):
-                if record.is_expired(now):
-                    self._async_remove(record)
-                    yield record
+        expired = [record for record in itertools.chain(*self.cache.values()) if record.is_expired(now)]
+        self.async_remove_records(expired)
+        return expired
+
+    def async_get_unique(self, entry: _UniqueRecordsType) -> Optional[DNSRecord]:
+        """Gets a unique entry by key.  Will return None if there is no
+        matching entry.
+
+        This function is not threadsafe and must be called from
+        the event loop.
+        """
+        return self.cache.get(entry.key, {}).get(entry)
+
+    def async_all_by_details(self, name: str, type_: int, class_: int) -> Iterator[DNSRecord]:
+        """Gets all matching entries by details.
+
+        This function is not threadsafe and must be called from
+        the event loop.
+        """
+        key = name.lower()
+        for entry in self.cache.get(key, []):
+            if dns_entry_matches(entry, key, type_, class_):
+                yield entry
+
+    def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
+        """Returns a dict of entries whose key matches the name.
+
+        This function is not threadsafe and must be called from
+        the event loop.
+        """
+        return self.cache.get(name.lower(), {})
+
+    def async_entries_with_server(self, name: str) -> Dict[DNSRecord, DNSRecord]:
+        """Returns a dict of entries whose key matches the server.
+
+        This function is not threadsafe and must be called from
+        the event loop.
+        """
+        return self.service_cache.get(name.lower(), {})
 
     # The below functions are threadsafe and do not need to be run in the
     # event loop, however they all make copies so they significantly
@@ -108,7 +153,9 @@ class DNSCache:
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
-        for cached_entry in reversed(self.entries_with_name(entry.key)):
+        if isinstance(entry, _UNIQUE_RECORD_TYPES):
+            return self.cache.get(entry.key, {}).get(entry)
+        for cached_entry in reversed(list(self.cache.get(entry.key, []))):
             if entry.__eq__(cached_entry):
                 return cached_entry
         return None
@@ -125,12 +172,18 @@ class DNSCache:
 
         Use get_all_by_details instead.
         """
-        return self.get(DNSEntry(name, type_, class_))
+        key = name.lower()
+        for cached_entry in reversed(list(self.cache.get(key, []))):
+            if dns_entry_matches(cached_entry, key, type_, class_):
+                return cached_entry
+        return None
 
     def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
-        match_entry = DNSEntry(name, type_, class_)
-        return [entry for entry in self.entries_with_name(name) if match_entry.__eq__(entry)]
+        key = name.lower()
+        return [
+            entry for entry in list(self.cache.get(key, [])) if dns_entry_matches(entry, key, type_, class_)
+        ]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""

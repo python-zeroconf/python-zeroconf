@@ -862,17 +862,17 @@ async def test_cache_flush_bit():
     for new_record in new_records:
         assert new_record.unique is True
 
-    original_a_record = zc.cache.get(a_record)
+    original_a_record = zc.cache.async_get_unique(a_record)
     # Do the run within 1s to verify the original record is not going to be expired
     out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA, multicast=True)
     for answer in new_records:
         out.add_answer_at_time(answer, 0)
     for packet in out.packets():
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
-    assert zc.cache.get(a_record) is original_a_record
+    assert zc.cache.async_get_unique(a_record) is original_a_record
     assert original_a_record.ttl != 1
     for record in new_records:
-        assert zc.cache.get(record) is not None
+        assert zc.cache.async_get_unique(record) is not None
 
     original_a_record.created = current_time_millis() - 1001
 
@@ -884,9 +884,9 @@ async def test_cache_flush_bit():
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
     assert original_a_record.ttl == 1
     for record in new_records:
-        assert zc.cache.get(record) is not None
+        assert zc.cache.async_get_unique(record) is not None
 
-    cached_records = [zc.cache.get(record) for record in new_records]
+    cached_records = [zc.cache.async_get_unique(record) for record in new_records]
     for record in cached_records:
         record.created = current_time_millis() - 1001
 
@@ -901,7 +901,7 @@ async def test_cache_flush_bit():
     for record in cached_records:
         assert record.ttl == 1
 
-    for entry in zc.cache.get_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
+    for entry in zc.cache.async_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
         if entry.address == fresh_address:
             assert entry.ttl > 1
         else:

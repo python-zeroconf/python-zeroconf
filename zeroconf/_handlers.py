@@ -21,9 +21,9 @@
 """
 
 import itertools
-from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
-from ._cache import DNSCache
+from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
 from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
@@ -141,7 +141,7 @@ class _QueryResponse:
         SHOULD instead multicast the response so as to keep all the peer
         caches up to date
         """
-        maybe_entry = self._cache.get(record)
+        maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
         return bool(maybe_entry and maybe_entry.is_recent(self._now))
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
@@ -149,7 +149,7 @@ class _QueryResponse:
         Protect the network against excessive packet flooding
         https://datatracker.ietf.org/doc/html/rfc6762#section-14
         """
-        maybe_entry = self._cache.get(record)
+        maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
         return bool(maybe_entry and self._now - maybe_entry.created < 1000)
 
 
@@ -317,7 +317,7 @@ class RecordManager:
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record.type, record.class_))
 
-            maybe_entry = self.cache.get(record)
+            maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
             if not record.is_expired(now):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
@@ -372,7 +372,7 @@ class RecordManager:
         # invalid, and marked to expire from the cache in one second.
         answers_rrset = DNSRRSet(answers)
         for name, type_, class_ in unique_types:
-            for entry in self.cache.get_all_by_details(name, type_, class_):
+            for entry in self.cache.async_all_by_details(name, type_, class_):
                 if (now - entry.created > 1000) and entry not in answers_rrset:
                     # Expire in 1s
                     entry.set_created_ttl(now, 1)

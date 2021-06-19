@@ -49,6 +49,10 @@ if TYPE_CHECKING:
     from ._protocol import DNSIncoming, DNSOutgoing  # pylint: disable=cyclic-import
 
 
+def dns_entry_matches(record: 'DNSEntry', key: str, type_: int, class_: int) -> bool:
+    return key == record.key and type_ == record.type and class_ == record.class_
+
+
 class DNSEntry:
 
     """A DNS entry"""
@@ -66,12 +70,7 @@ class DNSEntry:
 
     def __eq__(self, other: Any) -> bool:
         """Equality test on key (lowercase name), type, and class"""
-        return (
-            self.key == other.key
-            and self.type == other.type
-            and self.class_ == other.class_
-            and isinstance(other, DNSEntry)
-        )
+        return dns_entry_matches(other, self.key, self.type, self.class_) and isinstance(other, DNSEntry)
 
     @staticmethod
     def get_class_(class_: int) -> str:

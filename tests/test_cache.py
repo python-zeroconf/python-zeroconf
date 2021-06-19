@@ -84,16 +84,61 @@ class TestDNSCache(unittest.TestCase):
         assert 'a' not in cache.cache
 
 
+class TestDNSAsyncCacheAPI(unittest.TestCase):
+    def test_async_get_unique(self):
+        record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
+        cache = r.DNSCache()
+        cache.async_add_records([record1, record2])
+        assert cache.async_get_unique(record1) == record1
+        assert cache.async_get_unique(record2) == record2
+
+    def test_async_all_by_details(self):
+        record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
+        record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
+        cache = r.DNSCache()
+        cache.async_add_records([record1, record2])
+        assert set(cache.async_all_by_details('a', const._TYPE_A, const._CLASS_IN)) == set([record1, record2])
+
+    def test_async_entries_with_server(self):
+        record1 = r.DNSService(
+            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 85, 'ab'
+        )
+        record2 = r.DNSService(
+            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, 'ab'
+        )
+        cache = r.DNSCache()
+        cache.async_add_records([record1, record2])
+        assert set(cache.async_entries_with_server('ab')) == set([record1, record2])
+        assert set(cache.async_entries_with_server('AB')) == set([record1, record2])
+
+    def test_async_entries_with_name(self):
+        record1 = r.DNSService(
+            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 85, 'ab'
+        )
+        record2 = r.DNSService(
+            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, 'ab'
+        )
+        cache = r.DNSCache()
+        cache.async_add_records([record1, record2])
+        assert set(cache.async_entries_with_name('irrelevant')) == set([record1, record2])
+        assert set(cache.async_entries_with_name('Irrelevant')) == set([record1, record2])
+
+
 # These functions have been seen in other projects so
 # we try to maintain a stable API for all the threadsafe getters
 class TestDNSCacheAPI(unittest.TestCase):
     def test_get(self):
         record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
+        record3 = r.DNSAddress('a', const._TYPE_AAAA, const._CLASS_IN, 1, b'ipv6')
         cache = r.DNSCache()
-        cache.async_add_records([record1, record2])
+        cache.async_add_records([record1, record2, record3])
         assert cache.get(record1) == record1
         assert cache.get(record2) == record2
+        assert cache.get(r.DNSEntry('a', const._TYPE_A, const._CLASS_IN)) == record2
+        assert cache.get(r.DNSEntry('a', const._TYPE_AAAA, const._CLASS_IN)) == record3
+        assert cache.get(r.DNSEntry('notthere', const._TYPE_A, const._CLASS_IN)) is None
 
     def test_get_by_details(self):
         record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
