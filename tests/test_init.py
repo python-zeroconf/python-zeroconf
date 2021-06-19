@@ -97,7 +97,7 @@ class Names(unittest.TestCase):
                 old_send(out, addr=addr, port=port)
 
         # patch the zeroconf send
-        with unittest.mock.patch.object(zc, "send", send):
+        with unittest.mock.patch.object(zc, "async_send", send):
 
             # dummy service callback
             def on_service_state_change(zeroconf, service_type, state_change, name):
