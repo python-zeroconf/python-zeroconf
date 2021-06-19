@@ -345,11 +345,13 @@ class Zeroconf(QuietLogger):
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
+        assert self.async_condition is not None
         async with self.async_condition:
             await wait_condition_or_timeout(self.async_condition, millis_to_seconds(timeout))
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
+        assert self.loop is not None
         self.loop.call_soon_threadsafe(self.async_notify_all)
 
     def async_notify_all(self) -> None:
@@ -358,6 +360,7 @@ class Zeroconf(QuietLogger):
 
     async def _async_notify_all(self) -> None:
         """Notify all async listeners."""
+        assert self.async_condition is not None
         with self.condition:
             self.condition.notify_all()
             async with self.async_condition:
