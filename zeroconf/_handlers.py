@@ -365,7 +365,7 @@ class RecordManager:
         # and rrclass that were received more than one second ago are declared
         # invalid, and marked to expire from the cache in one second.
         for entry in self.cache.async_all_by_details(record.name, record.type, record.class_):
-            if record.created - entry.created > 1000 and entry not in answers_rrset:
+            if record.created - entry.created > 1000 and entry != record and entry not in answers_rrset:
                 # Expire in 1s
                 entry.set_created_ttl(now, 1)
 
