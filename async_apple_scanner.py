@@ -49,7 +49,7 @@ class AsyncAppleScanner:
             if now - last_asked > _QUERY_INTERVAL_MS:
                 last_asked = now
                 self.send_query(now)
-            await self.aiozc.async_wait(_QUERY_INTERVAL_MS / 6)  # unblocks on new data
+            await self.aiozc.zeroconf.async_wait(_QUERY_INTERVAL_MS / 6)  # unblocks on new data
             # Dump the cache -- for example only, Install an AsyncServiceListener instead
             # which will need to replay the existing cache just like new ServiceBrowsers do
             import pprint
