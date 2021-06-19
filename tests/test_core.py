@@ -249,10 +249,14 @@ class Framework(unittest.TestCase):
             zeroconf.close()
 
 
-def test_notify_listeners():
+# This test uses asyncio because it needs to verify the listeners
+# run in the event loop
+@pytest.mark.asyncio
+async def test_notify_listeners():
     """Test adding and removing notify listeners."""
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
     notify_called = 0
 
     class TestNotifyListener(r.NotifyListener):
@@ -274,6 +278,7 @@ def test_notify_listeners():
     browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
     browser.cancel()
 
+    await asyncio.sleep(0)  # flush out any call_soon_threadsafe
     assert notify_called
     zc.remove_notify_listener(notify_listener)
 
@@ -281,10 +286,11 @@ def test_notify_listeners():
     # start a browser
     browser = ServiceBrowser(zc, "_http._tcp.local.", [on_service_state_change])
     browser.cancel()
+    await asyncio.sleep(0)  # flush out any call_soon_threadsafe
 
     assert not notify_called
 
-    zc.close()
+    await aiozc.async_close()
 
 
 def test_generate_service_query_set_qu_bit():

@@ -37,13 +37,9 @@ from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
 from ._logger import QuietLogger, log
 from ._protocol import DNSIncoming, DNSOutgoing
-from ._services import (
-    RecordUpdateListener,
-    ServiceBrowser,
-    ServiceInfo,
-    ServiceListener,
-    instance_name_from_service_info,
-)
+from ._services import RecordUpdateListener, ServiceListener
+from ._services.browser import ServiceBrowser
+from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
 from ._utils.aio import get_running_loop
 from ._utils.name import service_type_name
