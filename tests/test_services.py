@@ -19,7 +19,8 @@ import zeroconf as r
 from zeroconf import DNSAddress, DNSPointer, DNSQuestion, const, current_time_millis
 import zeroconf._services as s
 from zeroconf import Zeroconf
-from zeroconf._services import ServiceBrowser, ServiceStateChange
+from zeroconf._services import ServiceStateChange
+from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 from zeroconf.aio import AsyncZeroconf
 
