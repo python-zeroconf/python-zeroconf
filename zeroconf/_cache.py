@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import Dict, Iterable, List, Optional, Union, cast
+from typing import Dict, Iterable, Iterator, List, Optional, Union, cast
 
 from ._dns import (
     DNSAddress,
@@ -117,16 +117,18 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self._lookup_unique_entry_threadsafe(entry)
+        return self.cache.get(entry.key, {}).get(entry)
 
-    def async_get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
+    def async_all_by_details(self, name: str, type_: int, class_: int) -> Iterator[DNSRecord]:
         """Gets all matching entries by details.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
         key = name.lower()
-        return [entry for entry in self.cache.get(key, []) if dns_entry_matches(entry, key, type_, class_)]
+        for entry in self.cache.get(key, []):
+            if dns_entry_matches(entry, key, type_, class_):
+                yield entry
 
     def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
         """Returns a dict of entries whose key matches the name.
@@ -148,15 +150,11 @@ class DNSCache:
     # event loop, however they all make copies so they significantly
     # inefficent
 
-    def _lookup_unique_entry_threadsafe(self, entry: _UniqueRecordsType) -> Optional[DNSRecord]:
-        """Lookup a unique entry threadsafe."""
-        return self.cache.get(entry.key, {}).get(entry)
-
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
         matching entry."""
         if isinstance(entry, _UNIQUE_RECORD_TYPES):
-            return self._lookup_unique_entry_threadsafe(entry)
+            return self.cache.get(entry.key, {}).get(entry)
         for cached_entry in reversed(list(self.cache.get(entry.key, []))):
             if entry.__eq__(cached_entry):
                 return cached_entry

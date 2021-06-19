@@ -93,14 +93,12 @@ class TestDNSAsyncCacheAPI(unittest.TestCase):
         assert cache.async_get_unique(record1) == record1
         assert cache.async_get_unique(record2) == record2
 
-    def test_async_get_all_by_details(self):
+    def test_async_all_by_details(self):
         record1 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'a')
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert set(cache.async_get_all_by_details('a', const._TYPE_A, const._CLASS_IN)) == set(
-            [record1, record2]
-        )
+        assert set(cache.async_all_by_details('a', const._TYPE_A, const._CLASS_IN)) == set([record1, record2])
 
     def test_async_entries_with_server(self):
         record1 = r.DNSService(
