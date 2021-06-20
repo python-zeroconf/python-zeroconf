@@ -21,7 +21,7 @@
 """
 
 import socket
-from typing import Any, Dict, Optional, Iterable, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Iterable, Optional, TYPE_CHECKING, Tuple, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address

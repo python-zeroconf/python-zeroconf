@@ -32,7 +32,7 @@ from types import TracebackType  # noqa # used in type hints
 from typing import Dict, List, Optional, Set, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
-from ._dns import DNSRecord, DNSQuestion
+from ._dns import DNSQuestion, DNSRecord
 from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
 from ._logger import QuietLogger, log

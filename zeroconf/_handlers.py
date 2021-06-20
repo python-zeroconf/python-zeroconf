@@ -256,7 +256,8 @@ class QueryHandler:
 
         for msg in msgs:
             for question in msg.questions:
-                self.question_history.add_question_at_time(question, msg.now, set(known_answers.lookup))
+                if not question.unicast:
+                    self.question_history.add_question_at_time(question, msg.now, set(known_answers.lookup))
                 answer_set: _AnswerWithAdditionalsType = {}
                 self._answer_question(question, answer_set, known_answers, msg.now)
                 if not ucast_source and question.unicast:
