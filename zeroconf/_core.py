@@ -41,7 +41,7 @@ from ._services import RecordUpdateListener, ServiceListener
 from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
-from ._utils.aio import get_running_loop, shutdown_loop
+from ._utils.aio import get_running_loop, shutdown_loop, wait_event_or_timeout
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,
@@ -345,7 +345,7 @@ class Zeroconf(QuietLogger):
         """Calling task waits for a given number of milliseconds or until notified."""
         assert self.notify_event is not None
         with contextlib.suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(self.notify_event.wait(), timeout=millis_to_seconds(timeout))
+            await wait_event_or_timeout(self.notify_event, timeout=millis_to_seconds(timeout))
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
