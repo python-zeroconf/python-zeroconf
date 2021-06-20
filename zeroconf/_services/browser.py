@@ -21,7 +21,6 @@
 """
 
 import asyncio
-import concurrent.futures
 import contextlib
 import queue
 import random
@@ -41,7 +40,7 @@ from .._services import (
     Signal,
     SignalRegistrationInterface,
 )
-from .._utils.aio import get_best_available_queue, get_running_loop
+from .._utils.aio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
@@ -392,7 +391,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._browser_task.cancel()
         browser_task = self._browser_task
         self._browser_task = None
-        await browser_task
+        with contextlib.suppress(asyncio.CancelledError):
+            await browser_task
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
@@ -417,35 +417,30 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         self.queue = get_best_available_queue()
         self.daemon = True
         assert self.zc.loop is not None
-        if get_running_loop() == self.zc.loop:
-            self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
-        else:
-            if not self.zc.loop.is_running():
-                raise RuntimeError("The event loop is not running")
-            self._browser_task = cast(
-                asyncio.Task,
-                asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
-            )
+        if not self.zc.loop.is_running():
+            raise RuntimeError("The event loop is not running")
+        self.zc.loop.call_soon_threadsafe(self._async_start_browser)
         self.start()
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
             '-'.join([type_[:-7] for type_ in self.types]),
             getattr(self, 'native_id', self.ident),
         )
 
-    async def _async_browser_task(self) -> asyncio.Task:
-        return cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+    def _async_start_browser(self) -> None:
+        """Start the browser from the event loop."""
+        self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+
+    def _async_cancel_browser_soon(self) -> None:
+        """Cancel the browser from the event loop."""
+        if self._browser_task:
+            asyncio.ensure_future(self._async_cancel_browser())
 
     def cancel(self) -> None:
         """Cancel the browser."""
         assert self.zc.loop is not None
         assert self.queue is not None
         self.queue.put(None)
-        if self._browser_task:
-            if get_running_loop() == self.zc.loop:
-                asyncio.ensure_future(self._async_cancel_browser())
-            elif self.zc.loop.is_running():
-                with contextlib.suppress(asyncio.CancelledError, concurrent.futures.CancelledError):
-                    asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
+        self.zc.loop.call_soon_threadsafe(self._async_cancel_browser_soon)
         super().cancel()
         self.join()
 
