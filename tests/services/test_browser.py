@@ -14,7 +14,7 @@ from threading import Event
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSPointer, DNSQuestion, const, current_time_millis
+from zeroconf import DNSPointer, DNSQuestion, const, current_time_millis, millis_to_seconds
 import zeroconf._services.browser as _services_browser
 from zeroconf import Zeroconf
 from zeroconf._services import ServiceStateChange
@@ -453,7 +453,11 @@ def test_backoff():
     # patch the backoff limit to prevent test running forever
     with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch.object(
         _services_browser, "current_time_millis", current_time_millis
-    ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10):
+    ), unittest.mock.patch.object(
+        _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
+    ), unittest.mock.patch.object(
+        _services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)
+    ):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
@@ -493,6 +497,44 @@ def test_backoff():
                     assert not got_query.is_set()
                 time_offset += initial_query_interval
 
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
+def test_first_query_delay():
+    """Verify the first query is delayed.
+
+    https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+    """
+    type_ = "_http._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_query_time = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_query_time
+        if first_query_time is None:
+            first_query_time = current_time_millis()
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        start_time = current_time_millis()
+        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert (
+                current_time_millis() - start_time > _services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[0]
+            )
         finally:
             browser.cancel()
             zeroconf_browser.close()
