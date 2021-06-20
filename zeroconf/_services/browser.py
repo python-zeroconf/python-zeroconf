@@ -40,7 +40,7 @@ from .._services import (
 )
 from .._utils.aio import get_best_available_queue, get_running_loop
 from .._utils.name import service_type_name
-from .._utils.time import current_time_millis, millis_to_seconds
+from .._utils.time import current_time_millis
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
