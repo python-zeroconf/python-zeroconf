@@ -398,6 +398,7 @@ class ServiceInfo(RecordUpdateListener):
         network, and updates this object with details discovered.
         """
         assert zc.loop is not None
+        assert self.zc.loop.is_running()
         return asyncio.run_coroutine_threadsafe(self.async_request(zc, timeout), zc.loop).result()
 
     async def async_request(self, zc: 'Zeroconf', timeout: float) -> bool:
