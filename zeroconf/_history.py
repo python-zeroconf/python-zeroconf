@@ -34,9 +34,17 @@ class QuestionHistory:
         self._history: Dict[DNSQuestion, Tuple[float, Set[DNSRecord]]] = {}
 
     def add_question_at_time(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> None:
+        """Remember a question with known answers."""
         self._history[question] = (now, known_answers)
 
     def suppresses(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> bool:
+        """Check to see if a question should be suppressed.
+
+        https://datatracker.ietf.org/doc/html/rfc6762#section-7.3
+        When multiple queriers on the network are querying
+        for the same resource records, there is no need for them to all be
+        repeatedly asking the same question.
+        """
         previous_question = self._history.get(question)
         # There was not previous question in the history
         if not previous_question:
@@ -52,6 +60,7 @@ class QuestionHistory:
         return True
 
     def async_expire(self, now: float) -> None:
+        """Expire the history of old questions."""
         removes = [
             question
             for question, now_known_answers in self._history.items()
