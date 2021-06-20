@@ -22,6 +22,7 @@
 
 import asyncio
 import contextlib
+import pprint
 import queue
 import threading
 import warnings
@@ -352,13 +353,17 @@ class _ServiceBrowserBase(RecordUpdateListener):
     async def async_browser_task(self) -> None:
         """Run the browser task."""
         await self.zc.async_wait_for_start()
+        pprint.pprint("start async_browser_task")
         while True:
             timeout = self._millis_to_wait(current_time_millis())
             if timeout:
+                pprint.pprint(["wait", timeout])
                 await self.zc.async_wait(timeout)
+                pprint.pprint(["done wait", timeout])
 
             outs = self.generate_ready_queries()
             for out in outs:
+                pprint.pprint(["send", out])
                 self.zc.async_send(out, addr=self.addr, port=self.port)
 
     async def _async_cancel_browser(self) -> None:
