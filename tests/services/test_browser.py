@@ -40,7 +40,7 @@ def teardown_module():
 
 
 def test_service_browser_cancel_multiple_times():
-    """Test we can cancel a ServiceBrowser multiple times."""
+    """Test we can cancel a ServiceBrowser multiple times before close."""
 
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
@@ -59,6 +59,28 @@ def test_service_browser_cancel_multiple_times():
     browser.cancel()
 
     zc.close()
+
+
+def test_service_browser_cancel_multiple_times_after_close():
+    """Test we can cancel a ServiceBrowser multiple times after close."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    zc.close()
+
+    browser.cancel()
+    browser.cancel()
+    browser.cancel()
 
 
 class TestServiceBrowser(unittest.TestCase):

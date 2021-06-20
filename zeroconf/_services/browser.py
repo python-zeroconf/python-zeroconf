@@ -408,6 +408,8 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         if get_running_loop() == self.zc.loop:
             self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
             return
+        if not self.zc.loop.is_running():
+            raise RuntimeError("The event loop is not running")
         self._browser_task = cast(
             asyncio.Task,
             asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
@@ -423,7 +425,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         self.queue.put(None)
         if get_running_loop() == self.zc.loop:
             asyncio.ensure_future(self._async_cancel_browser())
-        else:
+        elif self.zc.loop.is_running():
             asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
         super().cancel()
         self.join()
