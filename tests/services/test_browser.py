@@ -20,6 +20,7 @@ from zeroconf import Zeroconf
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
+from zeroconf.aio import AsyncZeroconf
 
 from .. import has_working_ipv6, _inject_response
 
@@ -903,3 +904,45 @@ def test_group_ptr_queries_with_known_answers():
         # If we generate multiple packets there must
         # only be one question
         assert len(packets) == 1 or len(out.questions) == 1
+
+
+# This test uses asyncio because it needs to access the cache directly
+# which is not threadsafe
+@pytest.mark.asyncio
+async def test_generate_service_query_suppress_duplicate_questions():
+    """Generate a service query for sending with zeroconf.send."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
+    now = current_time_millis()
+    name = "_hap._tcp.local."
+    question = r.DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)
+    answer = r.DNSPointer(
+        name,
+        const._TYPE_PTR,
+        const._CLASS_IN,
+        10000,
+        f'known-to-other.{name}',
+    )
+    other_known_answers = set([answer])
+    zc.question_history.add_question_at_time(question, now, other_known_answers)
+    assert zc.question_history.suppresses(question, now, other_known_answers)
+
+    # The known answer list is different, do not suppress
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    assert outs
+
+    zc.cache.async_add_records([answer])
+    # The known answer list contains all the asked questions in the history
+    # we should suppress
+
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    assert not outs
+
+    # We do not suppress once the question history expires
+    outs = _services_browser.generate_service_query(zc, now + 1000, [name], multicast=True)
+    assert outs
+
+    # We do not suppress QU queries ever
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=False)
+    assert outs
+    await aiozc.async_close()
