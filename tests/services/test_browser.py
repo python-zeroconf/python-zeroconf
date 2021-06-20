@@ -537,7 +537,6 @@ def test_integration():
             if not answer.ttl > expected_ttl / 2:
                 unexpected_ttl.set()
 
-        was_set = got_query.is_set()
         got_query.set()
         got_query.clear()
 
