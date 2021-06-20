@@ -57,6 +57,7 @@ from .const import (
     _CHECK_TIME,
     _CLASS_IN,
     _CLASS_UNIQUE,
+    _DUPLICATE_QUESTION_INTERVAL,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -71,7 +72,7 @@ from .const import (
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
-_DUPLICATE_QUESTION_INTERVAL = 999 # ms
+
 class QuestionHistory:
     def __init__(self) -> None:
         self._history: Dict[DNSQuestion, Tuple[float, Set[DNSRecord]]] = {}
