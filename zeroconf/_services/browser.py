@@ -38,9 +38,9 @@ from .._services import (
     Signal,
     SignalRegistrationInterface,
 )
-from .._utils.aio import get_best_available_queue, get_running_loop, wait_condition_or_timeout
+from .._utils.aio import get_best_available_queue, get_running_loop
 from .._utils.name import service_type_name
-from .._utils.time import current_time_millis, millis_to_seconds
+from .._utils.time import current_time_millis
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
@@ -181,8 +181,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self,
         zc: 'Zeroconf',
         type_: Union[str, list],
-        handlers: Optional[Union['ServiceListener', List[Callable[..., None]]]] = None,
-        listener: Optional['ServiceListener'] = None,
+        handlers: Optional[Union[ServiceListener, List[Callable[..., None]]]] = None,
+        listener: Optional[ServiceListener] = None,
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
@@ -202,7 +202,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._next_time = {check_type_: current_time for check_type_ in self.types}
         self._delay = {check_type_: delay for check_type_ in self.types}
         self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
-        self._handlers_to_call: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
         self.queue: Optional[queue.Queue] = None
         self.done = False
@@ -305,15 +304,30 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        # Cannot use .update here since can fail with
-        # RuntimeError: dictionary changed size during iteration
-        # for threaded ServiceBrowsers
         while self._pending_handlers:
-            try:
-                (name_type, state_change) = self._pending_handlers.popitem(False)
-            except KeyError:
-                return
-            self._handlers_to_call[name_type] = state_change
+            event = self._pending_handlers.popitem(False)
+            # If there is a queue running (ServiceBrowser)
+            # get fired in dedicated thread
+            if self.queue:
+                self.queue.put(event)
+            else:
+                self._fire_service_state_changed_event(event)
+
+    def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
+        """Fire a service state changed event.
+
+        When running with ServiceBrowser, this will happen in the dedicated
+        thread.
+
+        When running with AsyncServiceBrowser, this will happen in the event loop.
+        """
+        name_type, state_change = event
+        self._service_state_changed.fire(
+            zeroconf=self.zc,
+            service_type=name_type[1],
+            name=name_type[0],
+            state_change=state_change,
+        )
 
     def cancel(self) -> None:
         """Cancel the browser."""
@@ -323,8 +337,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def generate_ready_queries(self) -> List[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
         now = current_time_millis()
-
-        if min(self._next_time.values()) > now:
+        if self._millis_to_wait(current_time_millis()):
             return []
 
         ready_types = []
@@ -339,55 +352,24 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         return generate_service_query(self.zc, now, ready_types, self.multicast)
 
-    def _seconds_to_wait(self) -> Optional[float]:
-        """Returns the number of seconds to wait for the next event."""
-        # If there are handlers to call
-        # we want to process them right away
-        if self._handlers_to_call:
-            return None
-
+    def _millis_to_wait(self, now: float) -> Optional[float]:
+        """Returns the number of milliseconds to wait for the next event."""
         # Wait for the type has the smallest next time
         next_time = min(self._next_time.values())
-        now = current_time_millis()
-
-        if next_time <= now:
-            return None
-
-        return millis_to_seconds(next_time - now)
+        return None if next_time <= now else next_time - now
 
     async def async_browser_task(self) -> None:
         """Run the browser task."""
         await self.zc.async_wait_for_start()
         assert self.zc.async_condition is not None
         while True:
-            timeout = self._seconds_to_wait()
+            timeout = self._millis_to_wait(current_time_millis())
             if timeout:
-                async with self.zc.async_condition:
-                    # We must check again while holding the condition
-                    # in case the other thread has added to _handlers_to_call
-                    # between when we checked above when we were not
-                    # holding the condition
-                    if not self._handlers_to_call:
-                        await wait_condition_or_timeout(self.zc.async_condition, timeout)
+                await self.zc.async_wait(timeout)
 
             outs = self.generate_ready_queries()
             for out in outs:
                 self.zc.async_send(out, addr=self.addr, port=self.port)
-
-            if not self._handlers_to_call:
-                continue
-
-            (name_type, state_change) = self._handlers_to_call.popitem(False)
-            if self.queue:
-                self.queue.put((name_type, state_change))
-                continue
-
-            self._service_state_changed.fire(
-                zeroconf=self.zc,
-                service_type=name_type[1],
-                name=name_type[0],
-                state_change=state_change,
-            )
 
     async def _async_cancel_browser(self) -> None:
         """Cancel the browser."""
@@ -408,8 +390,8 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         self,
         zc: 'Zeroconf',
         type_: Union[str, list],
-        handlers: Optional[Union['ServiceListener', List[Callable[..., None]]]] = None,
-        listener: Optional['ServiceListener'] = None,
+        handlers: Optional[Union[ServiceListener, List[Callable[..., None]]]] = None,
+        listener: Optional[ServiceListener] = None,
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
@@ -454,10 +436,4 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             event = self.queue.get()
             if event is None:
                 return
-            name_type, state_change = event
-            self._service_state_changed.fire(
-                zeroconf=self.zc,
-                service_type=name_type[1],
-                name=name_type[0],
-                state_change=state_change,
-            )
+            self._fire_service_state_changed_event(event)

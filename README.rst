@@ -254,6 +254,28 @@ you can likely not be concerned with the breaking changes below:
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
+* Simplify ServiceBrowser callsbacks (#756) @bdraco
+
+* Revert: Fix thread safety in _ServiceBrowser.update_records_complete (#708) (#755) @bdraco
+
+- This guarding is no longer needed as the ServiceBrowser loop
+  now runs in the event loop and the thread safety guard is no
+  longer needed
+
+* Drop AsyncServiceListener (#754) @bdraco  (Never shipped)
+
+* Run ServiceBrowser queries in the event loop (#752) @bdraco
+
+* Remove unused argument from AsyncZeroconf (#751) @bdraco
+
+* Fix warning about Zeroconf._async_notify_all not being awaited in sync shutdown (#750) @bdraco
+
+* Update async_service_info_request example to ensure it runs in the right event loop (#749) @bdraco
+
+* Run ServiceInfo requests in the event loop (#748) @bdraco
+
+* Remove support for notify listeners (#733) @bdraco  (Never shipped)
+
 * Relocate service browser tests to tests/services/test_browser.py (#745) @bdraco
 
 * Relocate ServiceInfo to zeroconf._services.info (#741) @bdraco
