@@ -25,6 +25,9 @@ from typing import Dict, Set, Tuple
 from ._dns import DNSQuestion, DNSRecord
 from .const import _DUPLICATE_QUESTION_INTERVAL
 
+# The QuestionHistory is used to implement Duplicate Question Suppression
+# https://datatracker.ietf.org/doc/html/rfc6762#section-7.3
+
 
 class QuestionHistory:
     def __init__(self) -> None:
