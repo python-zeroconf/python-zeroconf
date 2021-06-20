@@ -31,6 +31,7 @@ from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Un
 
 from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord
+from .._logger import log
 from .._protocol import DNSOutgoing
 from .._services import (
     RecordUpdateListener,
@@ -139,6 +140,7 @@ def generate_service_query(
             if not record.is_stale(now)
         )
         if zc.question_history.suppresses(question, now, cast(Set[DNSRecord], known_answers)):
+            log.debug("Asking %s was suppressed by the question history", question)
             continue
         questions_with_known_answers[question] = known_answers
 
