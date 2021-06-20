@@ -354,6 +354,7 @@ class Zeroconf(QuietLogger):
 
     def async_notify_all(self) -> None:
         """Schedule an async_notify_all."""
+        assert self.notify_event is not None
         self.notify_event.set()
         self.notify_event.clear()
 
