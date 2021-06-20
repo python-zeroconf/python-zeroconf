@@ -296,18 +296,29 @@ class _ServiceBrowserBase(RecordUpdateListener):
         This method will be run in the event loop.
         """
         while self._pending_handlers:
-            (name_type, state_change) = self._pending_handlers.popitem(False)
-
+            event = self._pending_handlers.popitem(False)
+            # If there is a queue running (ServiceBrowser)
+            # get fired in dedicated thread
             if self.queue:
-                self.queue.put((name_type, state_change))
-                continue
+                self.queue.put(event)
+            else:
+                self._fire_event(event)
 
-            self._service_state_changed.fire(
-                zeroconf=self.zc,
-                service_type=name_type[1],
-                name=name_type[0],
-                state_change=state_change,
-            )
+    def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
+        """Fire a service state changed event.
+
+        When running with ServiceBrowser, this will happen in the dedicated
+        thread.
+
+        When running with AsyncServiceBrowser, this will happen in the event loop.
+        """
+        name_type, state_change = event
+        self._service_state_changed.fire(
+            zeroconf=self.zc,
+            service_type=name_type[1],
+            name=name_type[0],
+            state_change=state_change,
+        )
 
     def cancel(self) -> None:
         """Cancel the browser."""
@@ -416,10 +427,4 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             event = self.queue.get()
             if event is None:
                 return
-            name_type, state_change = event
-            self._service_state_changed.fire(
-                zeroconf=self.zc,
-                service_type=name_type[1],
-                name=name_type[0],
-                state_change=state_change,
-            )
+            self._fire_event(event)
