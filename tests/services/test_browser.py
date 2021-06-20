@@ -441,7 +441,6 @@ def test_integration():
         return time.time() * 1000 + time_offset * 1000
 
     expected_ttl = const._DNS_HOST_TTL
-
     nbr_answers = 0
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
@@ -454,6 +453,8 @@ def test_integration():
                 unexpected_ttl.set()
 
         got_query.set()
+        got_query.clear()
+
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
@@ -482,13 +483,13 @@ def test_integration():
             # is greater than half the original TTL
             sleep_count = 0
             test_iterations = 50
+
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
                 zeroconf_browser.notify_all()
                 sleep_count += 1
                 got_query.wait(0.1)
-                got_query.clear()
                 # Prevent the test running indefinitely in an error condition
                 assert sleep_count < test_iterations * 4
             assert not unexpected_ttl.is_set()
