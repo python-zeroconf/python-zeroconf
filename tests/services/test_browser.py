@@ -526,12 +526,10 @@ def test_integration():
         return time.time() * 1000 + time_offset * 1000
 
     expected_ttl = const._DNS_HOST_TTL
-    was_set = False
     nbr_answers = 0
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
-        nonlocal was_set
         pout = r.DNSIncoming(out.packets()[0])
         nonlocal nbr_answers
         for answer in pout.answers:
