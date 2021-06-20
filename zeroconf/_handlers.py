@@ -204,9 +204,15 @@ class QueryHandler:
     ) -> None:
         """Answer A/AAAA/ANY question."""
         for service in self.registry.get_infos_server(name):
-            for dns_address in service.dns_addresses(version=_TYPE_TO_IP_VERSION[type_], created=now):
-                if not known_answers.suppresses(dns_address):
-                    answer_set[dns_address] = set()
+            answers = set()
+            additionals = set()
+            for dns_address in service.dns_addresses(created=now):
+                if dns_address.type != type_:
+                    additionals.add(dns_address)
+                elif not known_answers.suppresses(dns_address):
+                    answers.add(dns_address)
+            for answer in answers:
+                answer_set[answer] = additionals
 
     def _answer_question(
         self,
