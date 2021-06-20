@@ -23,7 +23,7 @@
 import asyncio
 import contextlib
 import queue
-from typing import Optional, Set, cast
+from typing import List, Optional, Set, cast
 
 
 def get_best_available_queue() -> queue.Queue:
@@ -62,12 +62,13 @@ async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
             await event_wait
 
 
-async def _get_all_tasks(loop: asyncio.AbstractEventLoop) -> Set[asyncio.Task]:
+async def _get_all_tasks(loop: asyncio.AbstractEventLoop) -> List[asyncio.Task]:
     """Return all tasks running."""
     await asyncio.sleep(0)  # flush out any call_soon_threadsafe
+    # Make a copy of the tasks in case they change during iteration
     if hasattr(asyncio, 'all_tasks'):
-        return cast(Set[asyncio.Task], asyncio.all_tasks(loop))  # type: ignore  # pylint: disable=no-member
-    return cast(Set[asyncio.Task], asyncio.Task.all_tasks(loop))  # type: ignore  # pylint: disable=no-member
+        return list(asyncio.all_tasks(loop))  # type: ignore  # pylint: disable=no-member
+    return list(asyncio.Task.all_tasks(loop))  # type: ignore  # pylint: disable=no-member
 
 
 async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
@@ -77,7 +78,7 @@ async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
 
 def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
     """Wait for pending tasks and stop an event loop."""
-    pending_tasks = asyncio.run_coroutine_threadsafe(_get_all_tasks(loop), loop).result()
+    pending_tasks = set(asyncio.run_coroutine_threadsafe(_get_all_tasks(loop), loop).result())
     done_tasks = set(task for task in pending_tasks if not task.done())
     pending_tasks -= done_tasks
     if pending_tasks:

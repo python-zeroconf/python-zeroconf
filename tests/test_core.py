@@ -569,3 +569,22 @@ def test_tc_bit_defers_last_response_missing():
     # unregister
     zc.registry.remove(info)
     zc.close()
+
+
+@pytest.mark.asyncio
+async def test_open_close_twice_from_async() -> None:
+    """Test we can close twice from a coroutine when using Zeroconf.
+
+    Ideally callers switch to using AsyncZeroconf, however there will
+    be a peroid where they still call the sync wrapper that we want
+    to ensure will not deadlock on shutdown.
+
+    This test is expected to throw warnings about tasks being destroyed
+    since we force shutdown right away since we don't want to block
+    callers event loops and since they aren't using the AsyncZeroconf
+    version they won't yield with an await like async_close we don't
+    have much choice but to force things down.
+    """
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc.close()
+    zc.close()
