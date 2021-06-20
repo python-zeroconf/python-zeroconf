@@ -153,7 +153,7 @@ class Names(unittest.TestCase):
             # force receive on oversized packet
             zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
             zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
-            time.sleep(2.0)
+            time.sleep(0.3)
             zeroconf.log.debug(
                 'warn %d debug %d was %s',
                 mocked_log_warn.call_count,
@@ -162,8 +162,8 @@ class Names(unittest.TestCase):
             )
             assert mocked_log_debug.call_count > call_counts[0]
 
-            # close our zeroconf which will close the sockets
-            zc.close()
+        # close our zeroconf which will close the sockets
+        zc.close()
 
     def verify_name_change(self, zc, type_, name, number_hosts):
         desc = {'path': '/~paulsm/'}

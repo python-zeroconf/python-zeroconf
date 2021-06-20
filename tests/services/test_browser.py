@@ -511,12 +511,10 @@ def test_integration():
     expected_ttl = const._DNS_HOST_TTL
     was_set = False
     nbr_answers = 0
-    import pprint
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
         nonlocal was_set
-        pprint.pprint(["send called", out])
         pout = r.DNSIncoming(out.packets()[0])
         nonlocal nbr_answers
         for answer in pout.answers:
@@ -556,16 +554,13 @@ def test_integration():
             # is greater than half the original TTL
             sleep_count = 0
             test_iterations = 50
-            import pprint
 
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
-                pprint.pprint("about to notify")
                 zeroconf_browser.notify_all()
-                pprint.pprint("did notify")
                 sleep_count += 1
-                got_query.wait(0.5)
+                got_query.wait(0.1)
                 # Prevent the test running indefinitely in an error condition
                 assert sleep_count < test_iterations * 4
             assert not unexpected_ttl.is_set()
