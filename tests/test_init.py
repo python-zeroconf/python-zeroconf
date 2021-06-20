@@ -14,6 +14,8 @@ from typing import Optional  # noqa # used in type hints
 import zeroconf as r
 from zeroconf import ServiceBrowser, ServiceInfo, Zeroconf, const
 
+from . import _inject_response
+
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
 
@@ -153,7 +155,7 @@ class Names(unittest.TestCase):
             # force receive on oversized packet
             zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
             zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
-            time.sleep(2.0)
+            time.sleep(0.3)
             zeroconf.log.debug(
                 'warn %d debug %d was %s',
                 mocked_log_warn.call_count,
@@ -162,8 +164,8 @@ class Names(unittest.TestCase):
             )
             assert mocked_log_debug.call_count > call_counts[0]
 
-            # close our zeroconf which will close the sockets
-            zc.close()
+        # close our zeroconf which will close the sockets
+        zc.close()
 
     def verify_name_change(self, zc, type_, name, number_hosts):
         desc = {'path': '/~paulsm/'}
@@ -201,17 +203,11 @@ class Names(unittest.TestCase):
         assert info_service2.name.split('.')[0] == '%s-%d' % (name, number_hosts + 1)
 
     def generate_many_hosts(self, zc, type_, name, number_hosts):
-        records_per_server = 2
         block_size = 25
         number_hosts = int(((number_hosts - 1) / block_size + 1)) * block_size
         for i in range(1, number_hosts + 1):
             next_name = name if i == 1 else '%s-%d' % (name, i)
             self.generate_host(zc, next_name, type_)
-            if i % block_size == 0:
-                sleep_count = 0
-                while sleep_count < 40 and i * records_per_server > len(zc.cache.entries_with_name(type_)):
-                    sleep_count += 1
-                    time.sleep(0.05)
 
     @staticmethod
     def generate_host(zc, host_name, type_):
@@ -233,4 +229,4 @@ class Names(unittest.TestCase):
             ),
             0,
         )
-        zc.send(out)
+        _inject_response(zc, r.DNSIncoming(out.packets()[0]))
