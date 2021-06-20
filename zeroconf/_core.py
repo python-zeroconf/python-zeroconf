@@ -85,8 +85,8 @@ class QuestionHistory:
         if not previous_question:
             return False
         than, previous_known_answers = previous_question
-        # The last question was older than 1s
-        if now - than > 1000:
+        # The last question was older than 999ms
+        if now - than > 999:
             return False
         # The last question has more known answers than
         # we knew so we have to ask
