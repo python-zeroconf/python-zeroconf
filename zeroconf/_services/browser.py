@@ -21,6 +21,7 @@
 """
 
 import asyncio
+import concurrent.futures
 import contextlib
 import pprint
 import queue
@@ -372,11 +373,11 @@ class _ServiceBrowserBase(RecordUpdateListener):
         assert self._browser_task is not None
         pprint.pprint("self._browser_task is not None")
         self._browser_task.cancel()
-        pprint.pprint("_async_cancel_browser did self._browser_task.cancel()")
-        with contextlib.suppress(asyncio.CancelledError):
-            await self._browser_task
-        pprint.pprint("_async_cancel_browser finished")
+        browser_task = self._browser_task
         self._browser_task = None
+        pprint.pprint("_async_cancel_browser did self._browser_task.cancel()")
+        await browser_task
+        pprint.pprint("_async_cancel_browser finished")
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
@@ -428,7 +429,8 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             if get_running_loop() == self.zc.loop:
                 asyncio.ensure_future(self._async_cancel_browser())
             elif self.zc.loop.is_running():
-                asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
+                with contextlib.suppress(asyncio.CancelledError, concurrent.futures.CancelledError):
+                    asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
         super().cancel()
         self.join()
 

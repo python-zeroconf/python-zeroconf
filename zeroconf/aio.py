@@ -76,7 +76,8 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
 
     async def async_cancel(self) -> None:
         """Cancel the browser."""
-        await self._async_cancel_browser()
+        with contextlib.suppress(asyncio.CancelledError):
+            await self._async_cancel_browser()
         super().cancel()
 
 
