@@ -204,13 +204,13 @@ class QueryHandler:
     ) -> None:
         """Answer A/AAAA/ANY question."""
         for service in self.registry.get_infos_server(name):
-            answers = set()
-            additionals = set()
+            answers: List[DNSAddress] = []
+            additionals: Set[DNSRecord] = set()
             for dns_address in service.dns_addresses(created=now):
                 if dns_address.type != type_:
                     additionals.add(dns_address)
                 elif not known_answers.suppresses(dns_address):
-                    answers.add(dns_address)
+                    answers.append(dns_address)
             for answer in answers:
                 answer_set[answer] = additionals
 
