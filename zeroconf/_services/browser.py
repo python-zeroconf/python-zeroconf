@@ -363,6 +363,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 pprint.pprint(["done wait", timeout])
 
             outs = self.generate_ready_queries()
+            if not outs:
+                pprint.pprint(["query suppressed"])
             for out in outs:
                 pprint.pprint(["send", out])
                 self.zc.async_send(out, addr=self.addr, port=self.port)
