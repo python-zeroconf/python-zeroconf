@@ -376,6 +376,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         with contextlib.suppress(asyncio.CancelledError):
             await self._browser_task
         pprint.pprint("_async_cancel_browser finished")
+        self._browser_task = None
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
@@ -423,10 +424,11 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         assert self.zc.loop is not None
         assert self.queue is not None
         self.queue.put(None)
-        if get_running_loop() == self.zc.loop:
-            asyncio.ensure_future(self._async_cancel_browser())
-        elif self.zc.loop.is_running():
-            asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
+        if self._browser_task:
+            if get_running_loop() == self.zc.loop:
+                asyncio.ensure_future(self._async_cancel_browser())
+            elif self.zc.loop.is_running():
+                asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
         super().cancel()
         self.join()
 
