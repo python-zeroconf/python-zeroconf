@@ -25,6 +25,7 @@ from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Un
 
 from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
+from ._history import QuestionHistory
 from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
 from ._services import RecordUpdateListener
@@ -50,7 +51,7 @@ _TYPE_TO_IP_VERSION = {_TYPE_A: IPVersion.V4Only, _TYPE_AAAA: IPVersion.V6Only, 
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
-    from ._core import QuestionHistory, Zeroconf  # pylint: disable=cyclic-import
+    from ._core import Zeroconf  # pylint: disable=cyclic-import
 
 
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
@@ -156,9 +157,7 @@ class _QueryResponse:
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    def __init__(
-        self, registry: ServiceRegistry, cache: DNSCache, question_history: 'QuestionHistory'
-    ) -> None:
+    def __init__(self, registry: ServiceRegistry, cache: DNSCache, question_history: QuestionHistory) -> None:
         """Init the query handler."""
         self.registry = registry
         self.cache = cache

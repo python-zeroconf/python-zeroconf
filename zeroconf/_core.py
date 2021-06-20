@@ -35,6 +35,7 @@ from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSRecord
 from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
+from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol import DNSIncoming, DNSOutgoing
 from ._services import RecordUpdateListener, ServiceListener
@@ -57,7 +58,6 @@ from .const import (
     _CHECK_TIME,
     _CLASS_IN,
     _CLASS_UNIQUE,
-    _DUPLICATE_QUESTION_INTERVAL,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -71,38 +71,6 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
-
-
-class QuestionHistory:
-    def __init__(self) -> None:
-        self._history: Dict[DNSQuestion, Tuple[float, Set[DNSRecord]]] = {}
-
-    def add_question_at_time(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> None:
-        self._history[question] = (now, known_answers)
-
-    def suppresses(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> bool:
-        previous_question = self._history.get(question)
-        # There was not previous question in the history
-        if not previous_question:
-            return False
-        than, previous_known_answers = previous_question
-        # The last question was older than 999ms
-        if now - than > _DUPLICATE_QUESTION_INTERVAL:
-            return False
-        # The last question has more known answers than
-        # we knew so we have to ask
-        if previous_known_answers - known_answers:
-            return False
-        return True
-
-    def async_expire(self, now: float) -> None:
-        removes = [
-            question
-            for question, now_known_answers in self._history.items()
-            if now - now_known_answers[0] > _DUPLICATE_QUESTION_INTERVAL
-        ]
-        for question in removes:
-            del self._history[question]
 
 
 class AsyncEngine:
