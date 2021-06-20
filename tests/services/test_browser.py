@@ -426,7 +426,8 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             zeroconf.close()
 
 
-def test_backoff():
+@unittest.mock.patch("zeroconf._core.QuestionHistory.suppresses", return_value=False)
+def test_backoff(suppresses_mock):
     got_query = Event()
 
     type_ = "_http._tcp.local."
