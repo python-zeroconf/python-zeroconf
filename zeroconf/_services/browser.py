@@ -139,7 +139,7 @@ def generate_service_query(
             for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             if not record.is_stale(now)
         )
-        if zc.question_history.suppresses(question, now, cast(Set[DNSRecord], known_answers)):
+        if multicast and zc.question_history.suppresses(question, now, cast(Set[DNSRecord], known_answers)):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
         questions_with_known_answers[question] = known_answers
