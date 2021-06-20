@@ -344,8 +344,7 @@ class Zeroconf(QuietLogger):
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         assert self.notify_event is not None
-        with contextlib.suppress(asyncio.TimeoutError):
-            await wait_event_or_timeout(self.notify_event, timeout=millis_to_seconds(timeout))
+        await wait_event_or_timeout(self.notify_event, timeout=millis_to_seconds(timeout))
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
