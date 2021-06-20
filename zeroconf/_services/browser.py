@@ -24,6 +24,7 @@ import asyncio
 import concurrent.futures
 import contextlib
 import queue
+import random
 import threading
 import warnings
 from collections import OrderedDict
@@ -41,7 +42,7 @@ from .._services import (
 )
 from .._utils.aio import get_best_available_queue, get_running_loop
 from .._utils.name import service_type_name
-from .._utils.time import current_time_millis
+from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
@@ -56,6 +57,8 @@ from ..const import (
     _TYPE_PTR,
 )
 
+# https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+_FIRST_QUERY_DELAY_RANDOM_INTERVAL = (20, 120)  # ms
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -190,13 +193,14 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.addr = addr
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
-        current_time = current_time_millis()
-        self._next_time = {check_type_: current_time for check_type_ in self.types}
-        self._delay = {check_type_: delay for check_type_ in self.types}
+        self._next_time: Dict[str, float] = {}
+        self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self.types}
         self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
         self.queue: Optional[queue.Queue] = None
         self.done = False
+
+        self._generate_first_next_time()
 
         if hasattr(handlers, 'add_service'):
             listener = cast('ServiceListener', handlers)
@@ -211,6 +215,20 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self.service_state_changed.register_handler(h)
 
         self.zc.add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
+
+    def _generate_first_next_time(self) -> None:
+        """Generate the initial next query times.
+
+        https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+        To avoid accidental synchronization when, for some reason, multiple
+        clients begin querying at exactly the same moment (e.g., because of
+        some common external trigger event), a Multicast DNS querier SHOULD
+        also delay the first query of the series by a randomly chosen amount
+        in the range 20-120 ms.
+        """
+        delay = millis_to_seconds(random.randint(*_FIRST_QUERY_DELAY_RANDOM_INTERVAL))
+        next_time = current_time_millis() + delay
+        self._next_time = {check_type_: next_time for check_type_ in self.types}
 
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
