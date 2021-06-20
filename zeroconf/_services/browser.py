@@ -21,7 +21,6 @@
 """
 
 import asyncio
-import concurrent.futures
 import contextlib
 import queue
 import random
@@ -40,7 +39,7 @@ from .._services import (
     Signal,
     SignalRegistrationInterface,
 )
-from .._utils.aio import get_best_available_queue, get_running_loop
+from .._utils.aio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
