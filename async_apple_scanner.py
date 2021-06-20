@@ -61,7 +61,7 @@ class AsyncAppleScanner:
         multicast = not target
         include_known_answers = True
         outgoings = generate_service_query(
-            self.aiozc.zeroconf, now, ALL_SERVICES, multicast, include_known_answers
+            self.aiozc.zeroconf, now, ALL_SERVICES, False, include_known_answers
         )
         for outgoing in outgoings:
             log.debug("Sending %s to %s", outgoing, target)
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     version_group.add_argument('--v6-only', action='store_true')
     args = parser.parse_args()
 
-    if args.debug:
+    if True or args.debug:
         logging.getLogger('zeroconf').setLevel(logging.DEBUG)
     if args.v6:
         ip_version = IPVersion.All
