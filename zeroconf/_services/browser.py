@@ -302,7 +302,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             if self.queue:
                 self.queue.put(event)
             else:
-                self._fire_event(event)
+                self._fire_service_state_changed_event(event)
 
     def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
         """Fire a service state changed event.
@@ -427,4 +427,4 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             event = self.queue.get()
             if event is None:
                 return
-            self._fire_event(event)
+            self._fire_service_state_changed_event(event)
