@@ -83,6 +83,23 @@ def test_service_browser_cancel_multiple_times_after_close():
     browser.cancel()
 
 
+def test_service_browser_started_after_zeroconf_closed():
+    """Test starting a ServiceBrowser after close raises RuntimeError."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+    zc.close()
+
+    with pytest.raises(RuntimeError):
+        browser = r.ServiceBrowser(zc, type_, None, listener)
+
+
 def test_multiple_instances_running_close():
     """Test we can shutdown multiple instances."""
 
