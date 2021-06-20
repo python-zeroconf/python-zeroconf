@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
@@ -50,7 +50,7 @@ _TYPE_TO_IP_VERSION = {_TYPE_A: IPVersion.V4Only, _TYPE_AAAA: IPVersion.V6Only, 
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
-    from ._core import Zeroconf  # pylint: disable=cyclic-import
+    from ._core import QuestionHistory, Zeroconf  # pylint: disable=cyclic-import
 
 
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
@@ -156,10 +156,13 @@ class _QueryResponse:
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    def __init__(self, registry: ServiceRegistry, cache: DNSCache) -> None:
+    def __init__(
+        self, registry: ServiceRegistry, cache: DNSCache, question_history: 'QuestionHistory'
+    ) -> None:
         """Init the query handler."""
         self.registry = registry
         self.cache = cache
+        self.question_history = question_history
 
     def _add_service_type_enumeration_query_answers(
         self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
@@ -253,6 +256,7 @@ class QueryHandler:
 
         for msg in msgs:
             for question in msg.questions:
+                self.question_history.add_question_at_time(question, msg.now, set(known_answers.lookup))
                 answer_set: _AnswerWithAdditionalsType = {}
                 self._answer_question(question, answer_set, known_answers, msg.now)
                 if not ucast_source and question.unicast:
@@ -364,7 +368,7 @@ class RecordManager:
             self.async_updates_complete()
 
     def _async_mark_unique_cached_records_older_than_1s_to_expire(
-        self, unique_types: Set[Tuple[str, int, int]], answers: List[DNSRecord], now: float
+        self, unique_types: Set[Tuple[str, int, int]], answers: Iterable[DNSRecord], now: float
     ) -> None:
         # rfc6762#section-10.2 para 2
         # Since unique is set, all old records with that name, rrtype,

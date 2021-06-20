@@ -29,10 +29,10 @@ import socket
 import sys
 import threading
 from types import TracebackType  # noqa # used in type hints
-from typing import Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Dict, List, Optional, Set, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
-from ._dns import DNSQuestion
+from ._dns import DNSRecord, DNSQuestion
 from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
 from ._logger import QuietLogger, log
@@ -70,6 +70,38 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
+
+
+class QuestionHistory:
+    def __init__(self) -> None:
+        self._history: Dict[DNSQuestion, Tuple[float, Set[DNSRecord]]] = {}
+
+    def add_question_at_time(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> None:
+        self._history[question] = (now, known_answers)
+
+    def suppresses(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> bool:
+        previous_question = self._history.get(question)
+        # There was not previous question in the history
+        if not previous_question:
+            return False
+        than, previous_known_answers = previous_question
+        # The last question was older than 1s
+        if now - than > 1000:
+            return False
+        # The last question has more known answers than
+        # we knew so we have to ask
+        if previous_known_answers - known_answers:
+            return False
+        return True
+
+    def async_expire(self, now: float) -> None:
+        removes = [
+            question
+            for question, now_known_answers in self._history.items()
+            if now - now_known_answers[0] > 1000
+        ]
+        for question in removes:
+            del self._history[question]
 
 
 class AsyncEngine:
@@ -134,6 +166,7 @@ class AsyncEngine:
         """Periodic cache cleanup."""
         while not self.zc.done:
             now = current_time_millis()
+            self.zc.question_history.async_expire(now)
             self.zc.record_manager.async_updates(now, self.zc.cache.async_expire(now))
             self.zc.record_manager.async_updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
@@ -288,7 +321,8 @@ class Zeroconf(QuietLogger):
         self.browsers: Dict[ServiceListener, ServiceBrowser] = {}
         self.registry = ServiceRegistry()
         self.cache = DNSCache()
-        self.query_handler = QueryHandler(self.registry, self.cache)
+        self.question_history = QuestionHistory()
+        self.query_handler = QueryHandler(self.registry, self.cache, self.question_history)
         self.record_manager = RecordManager(self)
 
         self.notify_event: Optional[asyncio.Event] = None

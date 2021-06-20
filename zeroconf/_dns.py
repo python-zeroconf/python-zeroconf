@@ -21,7 +21,7 @@
 """
 
 import socket
-from typing import Any, Dict, Iterable, Optional, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Optional, Iterable, TYPE_CHECKING, Tuple, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
@@ -414,18 +414,19 @@ class DNSRRSet:
         self._records = records
         self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
 
-    def suppresses(self, record: DNSRecord) -> bool:
-        """Returns true if any answer in the rrset can suffice for the
-        information held in this record."""
+    @property
+    def lookup(self) -> Dict[DNSRecord, DNSRecord]:
         if self._lookup is None:
             # Build the hash table so we can lookup the record independent of the ttl
             self._lookup = {record: record for record in self._records}
-        other = self._lookup.get(record)
+        return self._lookup
+
+    def suppresses(self, record: DNSRecord) -> bool:
+        """Returns true if any answer in the rrset can suffice for the
+        information held in this record."""
+        other = self.lookup.get(record)
         return bool(other and other.ttl > (record.ttl / 2))
 
     def __contains__(self, record: DNSRecord) -> bool:
         """Returns true if the rrset contains the record."""
-        if self._lookup is None:
-            # Build the hash table so we can lookup the record independent of the ttl
-            self._lookup = {record: record for record in self._records}
-        return record in self._lookup
+        return record in self.lookup
