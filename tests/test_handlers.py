@@ -11,6 +11,7 @@ import socket
 import time
 import unittest
 import unittest.mock
+from typing import List
 
 import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, current_time_millis
@@ -914,4 +915,48 @@ async def test_cache_flush_bit():
     loaded_info.load_from_cache(zc)
     assert loaded_info.addresses == info.addresses
 
+    await aiozc.async_close()
+
+
+# This test uses asyncio because it needs to access the cache directly
+# which is not threadsafe
+@pytest.mark.asyncio
+async def test_record_update_manager_add_listener_callsback_existing_records():
+    """Test that the RecordUpdateManager will callback existing records."""
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc: Zeroconf = aiozc.zeroconf
+    updated = []
+
+    class MyListener(r.RecordUpdateListener):
+        """A RecordUpdateListener that does not implement update_records."""
+
+        def async_update_records(self, zc: 'Zeroconf', now: float, records: List[r.DNSRecord]) -> None:
+            """Update multiple records in one shot."""
+            updated.extend(records)
+
+    type_ = "_cacheflush._tcp.local."
+    name = "knownname"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    server_name = "server-uu1.local."
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    a_record = info.dns_addresses()[0]
+    ptr_record = info.dns_pointer()
+    zc.cache.async_add_records([ptr_record, a_record, info.dns_text(), info.dns_service()])
+
+    listener = MyListener()
+
+    zc.add_listener(
+        listener,
+        [
+            r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN),
+            r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN),
+        ],
+    )
+    await asyncio.sleep(0)  # flush out the call_soon_threadsafe
+
+    assert set(updated) == set([ptr_record, a_record])
     await aiozc.async_close()

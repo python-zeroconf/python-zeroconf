@@ -386,7 +386,6 @@ class RecordManager:
         self.listeners.append(listener)
 
         if question is None:
-            self.zc.notify_all()
             return
 
         questions = [question] if isinstance(question, DNSQuestion) else question
@@ -406,6 +405,7 @@ class RecordManager:
             for record in self.cache.async_entries_with_name(question.name):
                 if not record.is_expired(now) and question.answered_by(record):
                     records.append(record)
+
         if not records:
             return
         listener.async_update_records(self.zc, now, records)
