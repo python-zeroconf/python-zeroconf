@@ -275,3 +275,18 @@ def test_servicelisteners_raise_not_implemented():
         )
 
     zc.close()
+
+
+def test_signal_registration_interface():
+    """Test adding and removing from the SignalRegistrationInterface."""
+
+    interface = r.SignalRegistrationInterface([])
+
+    def dummy():
+        pass
+
+    interface.register_handler(dummy)
+    interface.unregister_handler(dummy)
+
+    with pytest.raises(ValueError):
+        interface.unregister_handler(dummy)

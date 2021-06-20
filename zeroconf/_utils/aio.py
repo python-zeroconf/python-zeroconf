@@ -34,8 +34,8 @@ def get_best_available_queue() -> queue.Queue:
 
 
 # Switch to asyncio.wait_for once https://bugs.python.org/issue39032 is fixed
-async def wait_condition_or_timeout(condition: asyncio.Condition, timeout: float) -> None:
-    """Wait for a condition or timeout."""
+async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
+    """Wait for an event or timeout."""
     loop = asyncio.get_event_loop()
     future = loop.create_future()
 
@@ -44,22 +44,22 @@ async def wait_condition_or_timeout(condition: asyncio.Condition, timeout: float
             future.set_result(None)
 
     timer_handle = loop.call_later(timeout, _handle_timeout)
-    condition_wait = loop.create_task(condition.wait())
+    event_wait = loop.create_task(event.wait())
 
     def _handle_wait_complete(_: asyncio.Task) -> None:
         if not future.done():
             future.set_result(None)
 
-    condition_wait.add_done_callback(_handle_wait_complete)
+    event_wait.add_done_callback(_handle_wait_complete)
 
     try:
         await future
     finally:
         timer_handle.cancel()
-        if not condition_wait.done():
-            condition_wait.cancel()
+        if not event_wait.done():
+            event_wait.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await condition_wait
+            await event_wait
 
 
 async def _get_all_tasks(loop: asyncio.AbstractEventLoop) -> Set[asyncio.Task]:

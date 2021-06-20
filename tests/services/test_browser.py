@@ -39,6 +39,91 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
+def test_service_browser_cancel_multiple_times():
+    """Test we can cancel a ServiceBrowser multiple times before close."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    browser.cancel()
+    browser.cancel()
+    browser.cancel()
+
+    zc.close()
+
+
+def test_service_browser_cancel_multiple_times_after_close():
+    """Test we can cancel a ServiceBrowser multiple times after close."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    zc.close()
+
+    browser.cancel()
+    browser.cancel()
+    browser.cancel()
+
+
+def test_service_browser_started_after_zeroconf_closed():
+    """Test starting a ServiceBrowser after close raises RuntimeError."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+    zc.close()
+
+    with pytest.raises(RuntimeError):
+        browser = r.ServiceBrowser(zc, type_, None, listener)
+
+
+def test_multiple_instances_running_close():
+    """Test we can shutdown multiple instances."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc2 = Zeroconf(interfaces=['127.0.0.1'])
+    zc3 = Zeroconf(interfaces=['127.0.0.1'])
+
+    assert zc.loop != zc2.loop
+    assert zc.loop != zc3.loop
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    zc2.add_service_listener("zca._hap._tcp.local.", listener)
+
+    zc.close()
+    zc2.remove_service_listener(listener)
+    zc2.close()
+    zc3.close()
+
+
 class TestServiceBrowser(unittest.TestCase):
     def test_update_record(self):
         enable_ipv6 = has_working_ipv6() and not os.environ.get('SKIP_IPV6')
@@ -441,7 +526,6 @@ def test_integration():
         return time.time() * 1000 + time_offset * 1000
 
     expected_ttl = const._DNS_HOST_TTL
-
     nbr_answers = 0
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
@@ -454,6 +538,8 @@ def test_integration():
                 unexpected_ttl.set()
 
         got_query.set()
+        got_query.clear()
+
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
@@ -482,13 +568,13 @@ def test_integration():
             # is greater than half the original TTL
             sleep_count = 0
             test_iterations = 50
+
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
                 zeroconf_browser.notify_all()
                 sleep_count += 1
-                got_query.wait(0.1)
-                got_query.clear()
+                got_query.wait(0.5)
                 # Prevent the test running indefinitely in an error condition
                 assert sleep_count < test_iterations * 4
             assert not unexpected_ttl.is_set()
