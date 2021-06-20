@@ -65,3 +65,4 @@ def has_working_ipv6():
 
 def _clear_cache(zc):
     zc.cache.cache.clear()
+    zc.question_history._history.clear()

@@ -960,3 +960,53 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
 
     assert set(updated) == set([ptr_record, a_record])
     await aiozc.async_close()
+
+
+def test_questions_query_handler_populates_the_question_history_from_qm_questions():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    now = current_time_millis()
+    _clear_cache(zc)
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
+    question.unicast = False
+    known_answer = r.DNSPointer(
+        "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
+    )
+    generated.add_question(question)
+    generated.add_answer_at_time(known_answer, 0)
+    now = r.current_time_millis()
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is None
+    assert zc.question_history.suppresses(question, now, set([known_answer]))
+
+    zc.close()
+
+
+def test_questions_query_handler_does_not_put_qu_questions_in_history():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    now = current_time_millis()
+    _clear_cache(zc)
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
+    question.unicast = True
+    known_answer = r.DNSPointer(
+        "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
+    )
+    generated.add_question(question)
+    generated.add_answer_at_time(known_answer, 0)
+    now = r.current_time_millis()
+    packets = generated.packets()
+    unicast_out, multicast_out = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
+    assert unicast_out is None
+    assert multicast_out is None
+    assert not zc.question_history.suppresses(question, now, set([known_answer]))
+
+    zc.close()

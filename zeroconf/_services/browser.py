@@ -31,6 +31,7 @@ from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Un
 
 from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord
+from .._logger import log
 from .._protocol import DNSOutgoing
 from .._services import (
     RecordUpdateListener,
@@ -135,11 +136,16 @@ def generate_service_query(
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
     for type_ in types_:
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
-        questions_with_known_answers[question] = set(
+        known_answers = set(
             cast(DNSPointer, record)
             for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             if not record.is_stale(now)
         )
+        if multicast and zc.question_history.suppresses(question, now, cast(Set[DNSRecord], known_answers)):
+            log.debug("Asking %s was suppressed by the question history", question)
+            continue
+        questions_with_known_answers[question] = known_answers
+
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
 
