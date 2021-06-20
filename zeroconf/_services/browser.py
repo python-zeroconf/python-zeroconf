@@ -352,7 +352,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
     async def async_browser_task(self) -> None:
         """Run the browser task."""
         await self.zc.async_wait_for_start()
-        assert self.zc.async_condition is not None
         while True:
             timeout = self._millis_to_wait(current_time_millis())
             if timeout:

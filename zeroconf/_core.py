@@ -41,7 +41,7 @@ from ._services import RecordUpdateListener, ServiceListener
 from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
-from ._utils.aio import get_running_loop, shutdown_loop, wait_condition_or_timeout
+from ._utils.aio import get_running_loop, shutdown_loop
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,
@@ -291,7 +291,7 @@ class Zeroconf(QuietLogger):
         self.query_handler = QueryHandler(self.registry, self.cache)
         self.record_manager = RecordManager(self)
 
-        self.async_condition: Optional[asyncio.Condition] = None
+        self.notify_event: Optional[asyncio.Event] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
 
@@ -304,7 +304,7 @@ class Zeroconf(QuietLogger):
         """Start Zeroconf."""
         self.loop = get_running_loop()
         if self.loop:
-            self.async_condition = asyncio.Condition()
+            self.notify_event = asyncio.Event()
             self.engine.setup(self.loop, None)
             return
         self._start_thread()
@@ -316,7 +316,7 @@ class Zeroconf(QuietLogger):
         def _run_loop() -> None:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
-            self.async_condition = asyncio.Condition()
+            self.notify_event = asyncio.Event()
             self.engine.setup(self.loop, loop_thread_ready)
             self.loop.run_forever()
 
@@ -343,9 +343,9 @@ class Zeroconf(QuietLogger):
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
-        assert self.async_condition is not None
-        async with self.async_condition:
-            await wait_condition_or_timeout(self.async_condition, millis_to_seconds(timeout))
+        assert self.notify_event is not None
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(self.notify_event.wait(), timeout=millis_to_seconds(timeout))
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
@@ -354,13 +354,8 @@ class Zeroconf(QuietLogger):
 
     def async_notify_all(self) -> None:
         """Schedule an async_notify_all."""
-        asyncio.ensure_future(self._async_notify_all())
-
-    async def _async_notify_all(self) -> None:
-        """Notify all async listeners."""
-        assert self.async_condition is not None
-        async with self.async_condition:
-            self.async_condition.notify_all()
+        self.notify_event.set()
+        self.notify_event.clear()
 
     def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
