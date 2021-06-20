@@ -39,6 +39,28 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
+def test_service_browser_cancel_multiple_times():
+    """Test we can cancel a ServiceBrowser multiple times."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    browser.cancel()
+    browser.cancel()
+    browser.cancel()
+
+    zc.close()
+
+
 class TestServiceBrowser(unittest.TestCase):
     def test_update_record(self):
         enable_ipv6 = has_working_ipv6() and not os.environ.get('SKIP_IPV6')
