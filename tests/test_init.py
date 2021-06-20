@@ -12,7 +12,7 @@ import unittest.mock
 from typing import Optional  # noqa # used in type hints
 
 import zeroconf as r
-from zeroconf import ServiceBrowser, ServiceInfo, Zeroconf, const
+from zeroconf import DNSOutgoing, ServiceBrowser, ServiceInfo, Zeroconf, const
 
 from . import _inject_response
 
@@ -69,8 +69,7 @@ class Names(unittest.TestCase):
         generated.add_question(question)
         r.DNSIncoming(generated.packets()[0])
 
-    def test_lots_of_names(self):
-
+    def test_verify_name_change_with_lots_of_names(self):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=['127.0.0.1'])
 
@@ -83,64 +82,21 @@ class Names(unittest.TestCase):
         # verify that name changing works
         self.verify_name_change(zc, type_, name, server_count)
 
-        # we are going to patch the zeroconf send to check packet sizes
-        old_send = zc.async_send
+        zc.close()
 
-        longest_packet_len = 0
-        longest_packet = None  # type: Optional[r.DNSOutgoing]
+    def test_large_packet_exception_log_handling(self):
+        """Verify we downgrade debug after warning."""
 
-        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-            """Sends an outgoing packet."""
-            for packet in out.packets():
-                nonlocal longest_packet_len, longest_packet
-                if longest_packet_len < len(packet):
-                    longest_packet_len = len(packet)
-                    longest_packet = out
-                old_send(out, addr=addr, port=port)
+        # instantiate a zeroconf instance
+        zc = Zeroconf(interfaces=['127.0.0.1'])
 
-        # patch the zeroconf send
-        with unittest.mock.patch.object(zc, "async_send", send):
-
-            # dummy service callback
-            def on_service_state_change(zeroconf, service_type, state_change, name):
-                pass
-
-            # start a browser
-            browser = ServiceBrowser(zc, type_, [on_service_state_change])
-
-            # wait until the browse request packet has maxed out in size
-            sleep_count = 0
-            # we will never get to this large of a packet given the application-layer
-            # splitting of packets, but we still want to track the longest_packet_len
-            # for the debug message below
-            while sleep_count < 100 and longest_packet_len < const._MAX_MSG_ABSOLUTE - 100:
-                sleep_count += 1
-                time.sleep(0.1)
-
-            browser.cancel()
-            time.sleep(0.5)
-
-            import zeroconf
-
-            zeroconf.log.debug('sleep_count %d, sized %d', sleep_count, longest_packet_len)
-
-            # now the browser has sent at least one request, verify the size
-            assert longest_packet_len <= const._MAX_MSG_TYPICAL
-            assert longest_packet_len >= const._MAX_MSG_TYPICAL - 100
-
-            # mock zeroconf's logger warning() and debug()
-            from unittest.mock import patch
-
-            patch_warn = patch('zeroconf._logger.log.warning')
-            patch_debug = patch('zeroconf._logger.log.debug')
-            mocked_log_warn = patch_warn.start()
-            mocked_log_debug = patch_debug.start()
-
+        with unittest.mock.patch('zeroconf._logger.log.warning') as mocked_log_warn, unittest.mock.patch(
+            'zeroconf._logger.log.debug'
+        ) as mocked_log_debug:
             # now that we have a long packet in our possession, let's verify the
             # exception handling.
-            out = longest_packet
-            assert out is not None
-            out.data.append(b'\0' * 1000)
+            out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
+            out.data.append(b'\0' * 10000)
 
             # mock the zeroconf logger and check for the correct logging backoff
             call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
@@ -156,7 +112,7 @@ class Names(unittest.TestCase):
             zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
             zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
             time.sleep(0.3)
-            zeroconf.log.debug(
+            r.log.debug(
                 'warn %d debug %d was %s',
                 mocked_log_warn.call_count,
                 mocked_log_debug.call_count,
