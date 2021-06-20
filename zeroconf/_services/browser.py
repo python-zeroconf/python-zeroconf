@@ -368,14 +368,14 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     async def _async_cancel_browser(self) -> None:
         """Cancel the browser."""
-        pprint("_async_cancel_browser")
+        pprint.pprint("_async_cancel_browser")
         assert self._browser_task is not None
-        pprint("self._browser_task is not None")
+        pprint.pprint("self._browser_task is not None")
         self._browser_task.cancel()
-        pprint("_async_cancel_browser did self._browser_task.cancel()")
+        pprint.pprint("_async_cancel_browser did self._browser_task.cancel()")
         with contextlib.suppress(asyncio.CancelledError):
             await self._browser_task
-        pprint("_async_cancel_browser finished")
+        pprint.pprint("_async_cancel_browser finished")
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
