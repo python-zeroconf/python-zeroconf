@@ -509,13 +509,13 @@ def test_integration():
         return time.time() * 1000 + time_offset * 1000
 
     expected_ttl = const._DNS_HOST_TTL
-
+    was_set = False
     nbr_answers = 0
+    import pprint
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
-        import pprint
-
+        nonlocal was_set
         pprint.pprint(["send called", out])
         pout = r.DNSIncoming(out.packets()[0])
         nonlocal nbr_answers
@@ -524,6 +524,7 @@ def test_integration():
             if not answer.ttl > expected_ttl / 2:
                 unexpected_ttl.set()
 
+        was_set = got_query.is_set()
         got_query.set()
         old_send(out, addr=addr, port=port)
 
@@ -563,6 +564,7 @@ def test_integration():
                 pprint.pprint("did notify")
                 sleep_count += 1
                 assert got_query.wait(0.5)
+                assert was_set is False
                 got_query.clear()
                 # Prevent the test running indefinitely in an error condition
                 assert sleep_count < test_iterations * 4
