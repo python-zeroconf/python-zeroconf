@@ -395,13 +395,13 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         assert self.zc.loop is not None
         if get_running_loop() == self.zc.loop:
             self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
-            return
-        if not self.zc.loop.is_running():
-            raise RuntimeError("The event loop is not running")
-        self._browser_task = cast(
-            asyncio.Task,
-            asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
-        )
+        else:
+            if not self.zc.loop.is_running():
+                raise RuntimeError("The event loop is not running")
+            self._browser_task = cast(
+                asyncio.Task,
+                asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
+            )
         self.start()
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
             '-'.join([type_[:-7] for type_ in self.types]),
