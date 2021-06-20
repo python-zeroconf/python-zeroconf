@@ -216,7 +216,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         self.zc.add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
 
-    def _generate_first_next_time(self):
+    def _generate_first_next_time(self) -> None:
         """Generate the initial next query times.
 
         https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
