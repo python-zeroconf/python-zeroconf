@@ -23,7 +23,7 @@
 import asyncio
 import contextlib
 import queue
-from typing import Optional, List, Set, cast
+from typing import List, Optional, Set, cast
 
 
 def get_best_available_queue() -> queue.Queue:
