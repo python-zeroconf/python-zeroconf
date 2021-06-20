@@ -71,7 +71,7 @@ from .const import (
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
-
+_DUPLICATE_QUESTION_INTERVAL = 999 # ms
 class QuestionHistory:
     def __init__(self) -> None:
         self._history: Dict[DNSQuestion, Tuple[float, Set[DNSRecord]]] = {}
@@ -86,7 +86,7 @@ class QuestionHistory:
             return False
         than, previous_known_answers = previous_question
         # The last question was older than 999ms
-        if now - than > 999:
+        if now - than > _DUPLICATE_QUESTION_INTERVAL:
             return False
         # The last question has more known answers than
         # we knew so we have to ask
@@ -98,7 +98,7 @@ class QuestionHistory:
         removes = [
             question
             for question, now_known_answers in self._history.items()
-            if now - now_known_answers[0] > 1000
+            if now - now_known_answers[0] > _DUPLICATE_QUESTION_INTERVAL
         ]
         for question in removes:
             del self._history[question]
