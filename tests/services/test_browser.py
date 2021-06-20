@@ -39,6 +39,74 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
+def test_service_browser_cancel_multiple_times():
+    """Test we can cancel a ServiceBrowser multiple times before close."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    browser.cancel()
+    browser.cancel()
+    browser.cancel()
+
+    zc.close()
+
+
+def test_service_browser_cancel_multiple_times_after_close():
+    """Test we can cancel a ServiceBrowser multiple times after close."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    zc.close()
+
+    browser.cancel()
+    browser.cancel()
+    browser.cancel()
+
+
+def test_multiple_instances_running_close():
+    """Test we can shutdown multiple instances."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc2 = Zeroconf(interfaces=['127.0.0.1'])
+    zc3 = Zeroconf(interfaces=['127.0.0.1'])
+
+    assert zc.loop != zc2.loop
+    assert zc.loop != zc3.loop
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    zc2.add_service_listener("zca._hap._tcp.local.", listener)
+
+    zc.close()
+    zc2.remove_service_listener(listener)
+    zc2.close()
+    zc3.close()
+
+
 class TestServiceBrowser(unittest.TestCase):
     def test_update_record(self):
         enable_ipv6 = has_working_ipv6() and not os.environ.get('SKIP_IPV6')
