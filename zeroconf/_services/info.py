@@ -27,7 +27,7 @@ from typing import Dict, List, Optional, TYPE_CHECKING, Union, cast
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
-from .._services import RecordUpdateListener
+from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.aio import get_running_loop
 from .._utils.name import service_type_name
 from .._utils.net import (
@@ -258,22 +258,22 @@ class ServiceInfo(RecordUpdateListener):
         This method will be run in the event loop.
         """
         if record is not None:
-            self._process_records_threadsafe(zc, now, [record])
+            self._process_records_threadsafe(zc, now, [RecordUpdate(record, None)])
 
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Updates service information from a DNS record.
 
         This method will be run in the event loop.
         """
         self._process_records_threadsafe(zc, now, records)
 
-    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Thread safe record updating."""
         update_addresses = False
-        for record in records:
-            if isinstance(record, DNSService):
+        for record_update in records:
+            if isinstance(record_update[0], DNSService):
                 update_addresses = True
-            self._process_record_threadsafe(record, now)
+            self._process_record_threadsafe(record_update[0], now)
 
         # Only update addresses if the DNSService (.server) has changed
         if not update_addresses:
@@ -374,17 +374,18 @@ class ServiceInfo(RecordUpdateListener):
         This method is designed to be threadsafe.
         """
         now = current_time_millis()
-        record_updates = []
+        record_updates: List[RecordUpdate] = []
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
             # If there is a srv record, A and AAAA will already
             # be called and we do not want to do it twice
-            record_updates.append(cached_srv_record)
+            record_updates.append(RecordUpdate(cached_srv_record, None))
         else:
-            record_updates.extend(self._get_address_records_from_cache(zc))
+            for record in self._get_address_records_from_cache(zc):
+                record_updates.append(RecordUpdate(record, None))
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
-            record_updates.append(cached_txt_record)
+            record_updates.append(RecordUpdate(cached_txt_record, None))
         self._process_records_threadsafe(zc, now, record_updates)
         return self._is_complete
 

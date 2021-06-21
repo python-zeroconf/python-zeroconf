@@ -38,10 +38,11 @@ from ._handlers import QueryHandler, RecordManager
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol import DNSIncoming, DNSOutgoing
-from ._services import RecordUpdateListener, ServiceListener
+from ._services import ServiceListener
 from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
+from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.aio import get_running_loop, shutdown_loop, wait_event_or_timeout
 from ._utils.name import service_type_name
 from ._utils.net import (
@@ -136,7 +137,9 @@ class AsyncEngine:
         while not self.zc.done:
             now = current_time_millis()
             self.zc.question_history.async_expire(now)
-            self.zc.record_manager.async_updates(now, self.zc.cache.async_expire(now))
+            self.zc.record_manager.async_updates(
+                now, [RecordUpdate(record, None) for record in self.zc.cache.async_expire(now)]
+            )
             self.zc.record_manager.async_updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
 

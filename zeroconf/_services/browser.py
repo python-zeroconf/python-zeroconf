@@ -29,17 +29,16 @@ import warnings
 from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
-from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
 from .._protocol import DNSOutgoing
 from .._services import (
-    RecordUpdateListener,
     ServiceListener,
     ServiceStateChange,
     Signal,
     SignalRegistrationInterface,
 )
+from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.aio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
@@ -294,16 +293,15 @@ class _ServiceBrowserBase(RecordUpdateListener):
         ):
             self._pending_handlers[key] = state_change
 
-    def _async_process_record_update(self, now: float, record: DNSRecord) -> None:
+    def _async_process_record_update(
+        self, now: float, record: DNSRecord, old_record: Optional[DNSRecord]
+    ) -> None:
         """Process a single record update from a batch of updates."""
         expired = record.is_expired(now)
 
         if isinstance(record, DNSPointer):
             if record.name not in self.types:
                 return
-            old_record = self.zc.cache.async_get_unique(
-                DNSPointer(record.name, _TYPE_PTR, _CLASS_IN, 0, record.alias)
-            )
             if old_record is None:
                 self._enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
             elif expired:
@@ -315,7 +313,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             return
 
         # If its expired or already exists in the cache it cannot be updated.
-        if expired or self.zc.cache.async_get_unique(cast(_UniqueRecordsType, record)):
+        if expired or old_record:
             return
 
         if isinstance(record, DNSAddress):
@@ -332,7 +330,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if type_:
             self._enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache.
@@ -342,7 +340,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         This method will be run in the event loop.
         """
         for record in records:
-            self._async_process_record_update(now, record)
+            self._async_process_record_update(now, record[0], record[1])
 
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
