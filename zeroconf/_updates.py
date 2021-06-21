@@ -20,7 +20,7 @@
     USA
 """
 
-from typing import List, Optional, NamedTuple, TYPE_CHECKING
+from typing import List, NamedTuple, Optional, TYPE_CHECKING
 
 
 from ._dns import DNSRecord
