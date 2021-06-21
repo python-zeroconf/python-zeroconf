@@ -12,7 +12,7 @@ import unittest.mock
 
 import pytest
 
-from zeroconf.aio import AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
+from zeroconf.aio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
 from zeroconf import Zeroconf
 from zeroconf.const import _LISTENER_TIME
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
@@ -607,3 +607,53 @@ async def test_guard_against_running_serviceinfo_request_event_loop() -> None:
     service_info = AsyncServiceInfo("_hap._tcp.local.", "doesnotmatter._hap._tcp.local.")
     with pytest.raises(RuntimeError):
         service_info.request(aiozc.zeroconf, 3000)
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_service_browser_instantiation_generates_add_events_from_cache():
+    """Test that the ServiceBrowser will generate Add events with the existing cache when starting."""
+
+    # instantiate a zeroconf instance
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
+    type_ = "_hap._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    callbacks = []
+
+    class MyServiceListener(ServiceListener):
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+        def update_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("update", type_, name))
+
+    listener = MyServiceListener()
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    zc.cache.async_add_records(
+        [info.dns_pointer(), info.dns_service(), *info.dns_addresses(), info.dns_text()]
+    )
+
+    browser = AsyncServiceBrowser(zc, type_, None, listener)
+
+    await asyncio.sleep(0)
+
+    assert callbacks == [
+        ('add', type_, registration_name),
+    ]
+    await browser.async_cancel()
+
+    await aiozc.async_close()

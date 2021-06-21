@@ -1015,10 +1015,9 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
 
     assert set([record.new for record in updated]) == set([ptr_record, a_record])
 
-    # This behavior is probably wrong but should not be
-    # changed in this commit because the goal is to refactor
-    # only and not change how it functions
-    assert set([record.old for record in updated]) == set([ptr_record, a_record])
+    # The old records should be None so we trigger Add events
+    # in service browsers instead of Update events
+    assert set([record.old for record in updated]) == set([None])
 
     await aiozc.async_close()
 
