@@ -604,3 +604,28 @@ async def test_open_close_twice_from_async() -> None:
     zc = Zeroconf(interfaces=['127.0.0.1'])
     zc.close()
     zc.close()
+    await asyncio.sleep(0)
+
+
+@pytest.mark.asyncio
+async def test_multiple_sync_instances_stared_from_async_close():
+    """Test we can shutdown multiple sync instances from async."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc2 = Zeroconf(interfaces=['127.0.0.1'])
+
+    assert zc.loop == zc2.loop
+
+    zc.close()
+    assert zc.loop.is_running()
+    zc2.close()
+    assert zc2.loop.is_running()
+
+    zc3 = Zeroconf(interfaces=['127.0.0.1'])
+    assert zc3.loop == zc2.loop
+
+    zc3.close()
+    assert zc3.loop.is_running()
+
+    await asyncio.sleep(0)

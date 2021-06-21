@@ -6,10 +6,25 @@
 
 import asyncio
 import contextlib
+import unittest.mock
 
 import pytest
 
 from zeroconf._utils import aio as aioutils
+
+
+@pytest.mark.asyncio
+async def test_async_get_all_tasks() -> None:
+    """Test we can get all tasks in the event loop.
+
+    We make sure we handle RuntimeError here as
+    this is not thread safe under PyPy
+    """
+    await aioutils._async_get_all_tasks(aioutils.get_running_loop())
+    if not hasattr(asyncio, 'all_tasks'):
+        return
+    with unittest.mock.patch("zeroconf._utils.aio.asyncio.all_tasks", side_effect=RuntimeError):
+        await aioutils._async_get_all_tasks(aioutils.get_running_loop())
 
 
 @pytest.mark.asyncio
