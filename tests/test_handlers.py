@@ -986,7 +986,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     class MyListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: 'Zeroconf', now: float, records: List[r.DNSRecord]) -> None:
+        def async_update_records(self, zc: 'Zeroconf', now: float, records: List[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
@@ -1013,7 +1013,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     )
     await asyncio.sleep(0)  # flush out the call_soon_threadsafe
 
-    assert set(updated) == set([ptr_record, a_record])
+    assert set([record.new for record in updated]) == set([ptr_record, a_record])
     await aiozc.async_close()
 
 

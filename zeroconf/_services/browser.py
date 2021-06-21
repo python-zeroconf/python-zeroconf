@@ -30,16 +30,15 @@ from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
-from .._handlers import RecordUpdate
 from .._logger import log
 from .._protocol import DNSOutgoing
 from .._services import (
-    RecordUpdateListener,
     ServiceListener,
     ServiceStateChange,
     Signal,
     SignalRegistrationInterface,
 )
+from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.aio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds

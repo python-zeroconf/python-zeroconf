@@ -26,9 +26,8 @@ from typing import Dict, List, Optional, TYPE_CHECKING, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
-from .._handlers import RecordUpdate
 from .._protocol import DNSOutgoing
-from .._services import RecordUpdateListener
+from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.aio import get_running_loop
 from .._utils.name import service_type_name
 from .._utils.net import (

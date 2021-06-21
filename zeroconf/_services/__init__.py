@@ -23,8 +23,6 @@
 import enum
 from typing import Any, Callable, List, TYPE_CHECKING
 
-from .._dns import DNSRecord
-from .._handlers import RecordUpdate
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -73,44 +71,3 @@ class SignalRegistrationInterface:
     def unregister_handler(self, handler: Callable[..., None]) -> 'SignalRegistrationInterface':
         self._handlers.remove(handler)
         return self
-
-
-class RecordUpdateListener:
-    def update_record(  # pylint: disable=no-self-use
-        self, zc: 'Zeroconf', now: float, record: DNSRecord
-    ) -> None:
-        """Update a single record.
-
-        This method is deprecated and will be removed in a future version.
-        update_records should be implemented instead.
-        """
-        raise RuntimeError("update_record is deprecated and will be removed in a future version.")
-
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
-        """Update multiple records in one shot.
-
-        All records that are received in a single packet are passed
-        to update_records.
-
-        This implementation is a compatiblity shim to ensure older code
-        that uses RecordUpdateListener as a base class will continue to
-        get calls to update_record. This method will raise
-        NotImplementedError in a future version.
-
-        At this point the cache will not have the new records
-
-        Records are passed as a list of RecordUpdate.  This
-        allows consumers of async_update_records to avoid cache lookups.
-
-        This method will be run in the event loop.
-        """
-        for record in records:
-            self.update_record(zc, now, record[0])
-
-    def async_update_records_complete(self) -> None:
-        """Called when a record update has completed for all handlers.
-
-        At this point the cache will have the new records.
-
-        This method will be run in the event loop.
-        """

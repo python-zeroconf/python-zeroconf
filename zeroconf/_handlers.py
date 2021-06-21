@@ -28,8 +28,8 @@ from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
 from ._history import QuestionHistory
 from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
-from ._services import RecordUpdateListener
 from ._services.registry import ServiceRegistry
+from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.net import IPVersion
 from ._utils.time import current_time_millis
 from .const import (
@@ -55,11 +55,6 @@ if TYPE_CHECKING:
 
 
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
-
-
-class RecordUpdate(NamedTuple):
-    new: DNSRecord
-    old: Optional[DNSRecord]
 
 
 class _QueryResponse:
