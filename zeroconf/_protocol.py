@@ -93,7 +93,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.num_additionals = 0
         self.valid = False
         self.now = current_time_millis()
-        self._utf_cache: Dict[Tuple(int, int), str] = {}
+        self._utf_cache: Dict[Tuple[int, int], str] = {}
 
         try:
             self.read_header()

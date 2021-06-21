@@ -337,7 +337,9 @@ def test_a_and_aaaa_record_fate_sharing():
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     ipv4_address = socket.inet_aton("10.0.1.2")
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address, ipv4_address])
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address, ipv4_address]
+    )
     aaaa_record = info.dns_addresses(version=r.IPVersion.V6Only)[0]
     a_record = info.dns_addresses(version=r.IPVersion.V4Only)[0]
 
@@ -373,7 +375,7 @@ def test_a_and_aaaa_record_fate_sharing():
     assert aaaa_record in additionals
     assert len(multicast_out.answers) == 1
     assert len(multicast_out.additionals) == 1
-    # unregister    
+    # unregister
     zc.registry.remove(info)
     zc.close()
 
