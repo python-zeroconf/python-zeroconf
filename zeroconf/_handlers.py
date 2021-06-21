@@ -30,7 +30,6 @@ from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
 from ._services import RecordUpdateListener
 from ._services.registry import ServiceRegistry
-from ._utils.net import IPVersion
 from ._utils.time import current_time_millis
 from .const import (
     _CLASS_IN,
@@ -46,8 +45,6 @@ from .const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-
-_TYPE_TO_IP_VERSION = {_TYPE_A: IPVersion.V4Only, _TYPE_AAAA: IPVersion.V6Only, _TYPE_ANY: IPVersion.All}
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
