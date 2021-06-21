@@ -542,6 +542,106 @@ def test_first_query_delay():
             zeroconf_browser.close()
 
 
+def test_asking_default_is_asking_qm_questions():
+    """Verify the service browser can ask QU questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert first_outgoing.questions[0].unicast == False
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
+def test_asking_qm_questions():
+    """Verify explictly asking QM questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        browser = ServiceBrowser(
+            zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QM
+        )
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert first_outgoing.questions[0].unicast == False
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
+def test_asking_qu_questions():
+    """Verify the service browser can ask QU questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        browser = ServiceBrowser(
+            zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QU
+        )
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert first_outgoing.questions[0].unicast == True
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
 def test_integration():
     service_added = Event()
     service_removed = Event()

@@ -25,6 +25,7 @@ from types import TracebackType  # noqa # used in type hints
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._core import Zeroconf
+from ._dns import DNSQuestionType
 from ._exceptions import NonUniqueNameException
 from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
@@ -55,11 +56,23 @@ class AsyncServiceInfo(ServiceInfo):
 
 
 class AsyncServiceBrowser(_ServiceBrowserBase):
-    """Used to browse for a service of a specific type.
+    """Used to browse for a service for specific type(s).
+
+    Constructor parameters are as follows:
+
+    * `zc`: A Zeroconf instance
+    * `type_`: fully qualified service type name
+    * `handler`: ServiceListener or Callable that knows how to process ServiceStateChange events
+    * `listener`: ServiceListener
+    * `addr`: address to send queries (will default to multicast)
+    * `port`: port to send queries (will default to mdns 5353)
+    * `delay`: The initial delay between answering questions
+    * `question_type`: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
 
     The listener object will have its add_service() and
     remove_service() methods called when this browser
-    discovers changes in the services availability."""
+    discovers changes in the services availability.
+    """
 
     def __init__(
         self,
@@ -70,8 +83,9 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
+        question_type: Optional[DNSQuestionType] = None,
     ) -> None:
-        super().__init__(zeroconf, type_, handlers, listener, addr, port, delay)
+        super().__init__(zeroconf, type_, handlers, listener, addr, port, delay, question_type)
         self._setup()
         # Start queries after the listener is installed in _setup
         self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
@@ -251,13 +265,13 @@ class AsyncZeroconf:
         await self.zeroconf._async_close()  # pylint: disable=protected-access
 
     async def async_get_service_info(
-        self, type_: str, name: str, timeout: int = 3000
+        self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
     ) -> Optional[AsyncServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
         which defaults to 3 seconds."""
         info = AsyncServiceInfo(type_, name)
-        if await info.async_request(self.zeroconf, timeout):
+        if await info.async_request(self.zeroconf, timeout, question_type):
             return info
         return None
 
