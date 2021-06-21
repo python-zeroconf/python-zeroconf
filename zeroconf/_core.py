@@ -34,7 +34,7 @@ from typing import Dict, List, Optional, Tuple, Type, Union, cast
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
 from ._exceptions import NonUniqueNameException
-from ._handlers import QueryHandler, RecordManager
+from ._handlers import QueryHandler, RecordManager, RecordUpdate
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol import DNSIncoming, DNSOutgoing
@@ -137,7 +137,7 @@ class AsyncEngine:
             now = current_time_millis()
             self.zc.question_history.async_expire(now)
             self.zc.record_manager.async_updates(
-                now, {record: None for record in self.zc.cache.async_expire(now)}
+                now, [RecordUpdate(record, None) for record in self.zc.cache.async_expire(now)]
             )
             self.zc.record_manager.async_updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))

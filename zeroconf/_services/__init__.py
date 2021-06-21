@@ -21,9 +21,10 @@
 """
 
 import enum
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Callable, List, TYPE_CHECKING
 
 from .._dns import DNSRecord
+from .._handlers import RecordUpdate
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -85,9 +86,7 @@ class RecordUpdateListener:
         """
         raise RuntimeError("update_record is deprecated and will be removed in a future version.")
 
-    def async_update_records(
-        self, zc: 'Zeroconf', now: float, records: Dict[DNSRecord, Optional[DNSRecord]]
-    ) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Update multiple records in one shot.
 
         All records that are received in a single packet are passed
@@ -100,15 +99,13 @@ class RecordUpdateListener:
 
         At this point the cache will not have the new records
 
-        Records are passed as a Dict with the key being
-        the incoming record and the value being the corresponding
-        record in the cache or None if its not in the cache.  This
+        Records are passed as a list of RecordUpdate.  This
         allows consumers of async_update_records to avoid cache lookups.
 
         This method will be run in the event loop.
         """
         for record in records:
-            self.update_record(zc, now, record)
+            self.update_record(zc, now, record[0])
 
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.

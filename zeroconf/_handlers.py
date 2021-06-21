@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Dict, Iterable, List, Optional, NamedTuple, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
@@ -55,6 +55,11 @@ if TYPE_CHECKING:
 
 
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
+
+
+class RecordUpdate(NamedTuple):
+    new: DNSRecord
+    old: Optional[DNSRecord]
 
 
 class _QueryResponse:
@@ -286,7 +291,7 @@ class RecordManager:
         self.cache = zeroconf.cache
         self.listeners: List[RecordUpdateListener] = []
 
-    def async_updates(self, now: float, records: Dict[DNSRecord, Optional[DNSRecord]]) -> None:
+    def async_updates(self, now: float, records: List[RecordUpdate]) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
@@ -316,7 +321,7 @@ class RecordManager:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        updates: Dict[DNSRecord, Optional[DNSRecord]] = {}
+        updates: List[RecordUpdate] = []
         address_adds: List[DNSAddress] = []
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
@@ -336,11 +341,11 @@ class RecordManager:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
-                updates[record] = maybe_entry
+                updates.append(RecordUpdate(record, maybe_entry))
             # This is likely a goodbye since the record is
             # expired and exists in the cache
             elif maybe_entry is not None:
-                updates[record] = maybe_entry
+                updates.append(RecordUpdate(record, maybe_entry))
                 removes.append(record)
 
         if unique_types:
@@ -413,11 +418,11 @@ class RecordManager:
         This function must be run from the event loop.
         """
         now = current_time_millis()
-        records: Dict[DNSRecord, Optional[DNSRecord]] = {}
+        records: List[RecordUpdate] = []
         for question in questions:
             for record in self.cache.async_entries_with_name(question.name):
                 if not record.is_expired(now) and question.answered_by(record):
-                    records[record] = record
+                    records.append(RecordUpdate(record, record))
 
         if not records:
             return
