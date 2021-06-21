@@ -258,11 +258,9 @@ you can likely not be concerned with the breaking changes below:
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
-* Switch to using an asyncio.Event for async_wait (#759) @bdraco
+* Add async_apple_scanner example (#719) @bdraco
 
-  We no longer need to check for thread safety under a asyncio.Condition
-  as the ServiceBrowser and ServiceInfo internals schedule coroutines
-  in the eventloop.
+* Add support for requesting QU questions to ServiceBrowser and ServiceInfo (#787) @bdraco
 
 * Ensure the queue is created before adding listeners to ServiceBrowser (#785) @bdraco
 
@@ -286,6 +284,12 @@ you can likely not be concerned with the breaking changes below:
 * Add a guard against the task list changing when shutting down (#776) @bdraco
 
 * Improve performance of parsing DNSIncoming by caching read_utf (#769) (later reverted) @bdraco
+
+* Switch to using an asyncio.Event for async_wait (#759) @bdraco
+
+  We no longer need to check for thread safety under a asyncio.Condition
+  as the ServiceBrowser and ServiceInfo internals schedule coroutines
+  in the eventloop.
 
 * Simplify ServiceBrowser callsbacks (#756) @bdraco
 
