@@ -576,7 +576,7 @@ def test_tc_bit_defers_last_response_missing():
 
     for _ in range(8):
         time.sleep(0.1)
-        if source_ip not in zc._timers:
+        if source_ip not in zc._timers and source_ip not in zc._deferred:
             break
 
     assert source_ip not in zc._deferred
