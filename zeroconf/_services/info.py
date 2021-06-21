@@ -260,14 +260,18 @@ class ServiceInfo(RecordUpdateListener):
         if record is not None:
             self._process_records_threadsafe(zc, now, [record])
 
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def async_update_records(
+        self, zc: 'Zeroconf', now: float, records: Dict[DNSRecord, Optional[DNSRecord]]
+    ) -> None:
         """Updates service information from a DNS record.
 
         This method will be run in the event loop.
         """
         self._process_records_threadsafe(zc, now, records)
 
-    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def _process_records_threadsafe(
+        self, zc: 'Zeroconf', now: float, records: Dict[DNSRecord, Optional[DNSRecord]]
+    ) -> None:
         """Thread safe record updating."""
         update_addresses = False
         for record in records:

@@ -21,7 +21,7 @@
 """
 
 import enum
-from typing import Any, Callable, List, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 from .._dns import DNSRecord
 
@@ -85,7 +85,9 @@ class RecordUpdateListener:
         """
         raise RuntimeError("update_record is deprecated and will be removed in a future version.")
 
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[DNSRecord]) -> None:
+    def async_update_records(
+        self, zc: 'Zeroconf', now: float, records: Dict[DNSRecord, Optional[DNSRecord]]
+    ) -> None:
         """Update multiple records in one shot.
 
         All records that are received in a single packet are passed
@@ -97,6 +99,11 @@ class RecordUpdateListener:
         NotImplementedError in a future version.
 
         At this point the cache will not have the new records
+
+        Records are passed as a Dict with the key being
+        the incoming record and the value being the corresponding
+        record in the cache or None if its not in the cache.  This
+        allows consumers of async_update_records to avoid cache lookups.
 
         This method will be run in the event loop.
         """

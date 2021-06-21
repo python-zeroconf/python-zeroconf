@@ -286,7 +286,7 @@ class RecordManager:
         self.cache = zeroconf.cache
         self.listeners: List[RecordUpdateListener] = []
 
-    def async_updates(self, now: float, rec: List[DNSRecord]) -> None:
+    def async_updates(self, now: float, records: Dict[DNSRecord, Optional[DNSRecord]]) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
@@ -295,7 +295,7 @@ class RecordManager:
         This method will be run in the event loop.
         """
         for listener in self.listeners:
-            listener.async_update_records(self.zc, now, rec)
+            listener.async_update_records(self.zc, now, records)
 
     def async_updates_complete(self) -> None:
         """Used to notify listeners of new information that has updated
@@ -316,7 +316,7 @@ class RecordManager:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        updates: List[DNSRecord] = []
+        updates: Dict[DNSRecord, Optional[DNSRecord]] = {}
         address_adds: List[DNSAddress] = []
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
@@ -336,11 +336,11 @@ class RecordManager:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
-                updates.append(record)
+                updates[record] = maybe_entry
             # This is likely a goodbye since the record is
             # expired and exists in the cache
             elif maybe_entry is not None:
-                updates.append(record)
+                updates[record] = maybe_entry
                 removes.append(record)
 
         if unique_types:
@@ -410,11 +410,11 @@ class RecordManager:
         This function must be run from the event loop.
         """
         now = current_time_millis()
-        records = []
+        records: Dict[DNSRecord, DNSRecord] = {}
         for question in questions:
             for record in self.cache.async_entries_with_name(question.name):
                 if not record.is_expired(now) and question.answered_by(record):
-                    records.append(record)
+                    records[record] = record
 
         if not records:
             return

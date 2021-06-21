@@ -136,7 +136,9 @@ class AsyncEngine:
         while not self.zc.done:
             now = current_time_millis()
             self.zc.question_history.async_expire(now)
-            self.zc.record_manager.async_updates(now, self.zc.cache.async_expire(now))
+            self.zc.record_manager.async_updates(
+                now, {record: None for record in self.zc.cache.async_expire(now)}
+            )
             self.zc.record_manager.async_updates_complete()
             await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
 
