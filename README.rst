@@ -140,12 +140,12 @@ See examples directory for more.
 Changelog
 =========
 
-0.32.0 Beta 2 (Unreleased)
-==========================
+0.32.0 Beta 2
+=============
 
 * Ensure we handle threadsafe shutdown under PyPy with multiple event loops (#800) @bdraco
 
-* Ensure fresh ServiceBrowsers see old_record as None when replaying the cache (#793)
+* Ensure fresh ServiceBrowsers see old_record as None when replaying the cache (#793) @bdraco
 
   This is fixing ServiceBrowser missing an add when the record is already in the cache.
 
