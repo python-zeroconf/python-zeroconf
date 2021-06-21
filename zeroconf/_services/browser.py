@@ -417,11 +417,11 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
     ) -> None:
+        threading.Thread.__init__(self)
+        super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
         assert self.zc.loop is not None
         if not self.zc.loop.is_running():
             raise RuntimeError("The event loop is not running")
-        threading.Thread.__init__(self)
-        super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
         # Add the queue before the listener is installed in _setup
         # to ensure that events run in the dedicated thread and do
         # not block the event loop
