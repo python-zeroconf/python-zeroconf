@@ -140,7 +140,6 @@ def generate_service_query(
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
     qu_question = not multicast if question_type is None else question_type == DNSQuestionType.QU
     for type_ in types_:
-        service_type_name(type_, strict=False)
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
         question.unicast = qu_question
         known_answers = set(

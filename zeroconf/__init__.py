@@ -54,7 +54,6 @@ from ._services import (  # noqa # import needed for backwards compat
     ServiceStateChange,
 )
 from ._services.browser import (  # noqa # import needed for backwards compat
-    generate_service_query,
     ServiceBrowser,
 )
 from ._services.info import (  # noqa # import needed for backwards compat
