@@ -236,6 +236,10 @@ you can likely not be concerned with the breaking changes below:
 
 * TRAFFIC REDUCTION: Efficiently bucket queries with known answers (#698) @bdraco
 
+* TRAFFIC REDUCTION: Implement duplicate question supression (#770) @bdraco
+
+  http://datatracker.ietf.org/doc/html/rfc6762#section-7.3
+
 * MAJOR BUG: Ensure matching PTR queries are returned with the ANY query (#618) @bdraco
 
 * MAJOR BUG: Fix lookup of uppercase names in registry (#597) @bdraco
@@ -253,6 +257,35 @@ you can likely not be concerned with the breaking changes below:
   The above query will now see a response
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
+
+* Switch to using an asyncio.Event for async_wait (#759) @bdraco
+
+  We no longer need to check for thread safety under a asyncio.Condition
+  as the ServiceBrowser and ServiceInfo internals schedule coroutines
+  in the eventloop.
+
+* Ensure the queue is created before adding listeners to ServiceBrowser (#785) @bdraco
+
+  The callback from the listener could generate an event that would
+  fire in async context that should have gone to the queue which
+  could result in the consumer running a sync call in the event loop
+  and blocking it.
+
+* Add a guard to prevent running ServiceInfo.request in async context (#784) @bdraco
+
+* Inline utf8 decoding when processing incoming packets (#782) @bdraco
+
+* Drop utf cache from _dns (#781) (later reverted) @bdraco
+
+* Switch to using a simple cache instead of lru_cache (#779) (later reverted) @bdraco
+
+* Fix Responding to Address Queries (RFC6762 section 6.2) (#777) @bdraco
+
+* Fix deadlock on ServiceBrowser shutdown with PyPy (#774) @bdraco
+
+* Add a guard against the task list changing when shutting down (#776) @bdraco
+
+* Improve performance of parsing DNSIncoming by caching read_utf (#769) (later reverted) @bdraco
 
 * Simplify ServiceBrowser callsbacks (#756) @bdraco
 
