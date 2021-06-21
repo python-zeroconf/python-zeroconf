@@ -14,9 +14,7 @@ from threading import Event
 import pytest
 
 import zeroconf as r
-from zeroconf import const
 from zeroconf import Zeroconf
-from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 
 from . import has_working_ipv6, _clear_cache
