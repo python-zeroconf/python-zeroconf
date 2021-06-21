@@ -2,6 +2,7 @@
 
 """ Scan for apple devices. """
 
+import asyncio
 import argparse
 import asyncio
 import logging
@@ -39,14 +40,11 @@ def async_on_service_state_change(
     print("Service %s of type %s state changed: %s" % (name, service_type, state_change))
     if state_change is not ServiceStateChange.Added:
         return
-    asyncio.ensure_future(async_display_service_info(zeroconf, service_type, name))
-
-
-async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
     base_name = name[: -len(service_type) - 1]
     device_name = f"{base_name}.{DEVICE_INFO_SERVICE}"
-    await _async_show_service_info(zeroconf, service_type, name)
-    await _async_show_service_info(zeroconf, DEVICE_INFO_SERVICE, device_name)
+    asyncio.ensure_future(_async_show_service_info(zeroconf, service_type, name))
+    # Also probe for device info
+    asyncio.ensure_future(_async_show_service_info(zeroconf, DEVICE_INFO_SERVICE, device_name))
 
 
 async def _async_show_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
@@ -83,7 +81,7 @@ class AsyncAppleScanner:
         kwargs = {'handlers': [async_on_service_state_change], 'question_type': DNSQuestionType.QU}
         if self.args.target:
             kwargs["addr"] = self.args.target
-        self.aiobrowser = AsyncServiceBrowser(self.aiozc.zeroconf, ALL_SERVICES, **kwargs)
+        self.aiobrowser = AsyncServiceBrowser(self.aiozc.zeroconf, ALL_SERVICES, **kwargs)  # type: ignore
         while True:
             await asyncio.sleep(1)
 
