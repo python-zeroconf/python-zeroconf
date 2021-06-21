@@ -72,6 +72,8 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         delay: int = _BROWSER_TIME,
     ) -> None:
         super().__init__(zeroconf, type_, handlers, listener, addr, port, delay)
+        self._setup()
+        # Start queries after the listener is installed in _setup
         self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
 
     async def async_cancel(self) -> None:

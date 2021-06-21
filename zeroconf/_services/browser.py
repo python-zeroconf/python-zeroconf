@@ -205,8 +205,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.queue: Optional[queue.Queue] = None
         self.done = False
 
-        self._generate_first_next_time()
-
         if hasattr(handlers, 'add_service'):
             listener = cast('ServiceListener', handlers)
             handlers = None
@@ -219,6 +217,13 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for h in handlers:
             self.service_state_changed.register_handler(h)
 
+    def _setup(self) -> None:
+        """Generate the next time and setup listeners.
+
+        Must be called by uses of this base class after they
+        have finished setting their properties.
+        """
+        self._generate_first_next_time()
         self.zc.add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
 
     def _generate_first_next_time(self) -> None:
@@ -412,15 +417,20 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
     ) -> None:
+        assert zc.loop is not None
+        if not zc.loop.is_running():
+            raise RuntimeError("The event loop is not running")
         threading.Thread.__init__(self)
         super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
+        # Add the queue before the listener is installed in _setup
+        # to ensure that events run in the dedicated thread and do
+        # not block the event loop
         self.queue = get_best_available_queue()
         self.daemon = True
-        assert self.zc.loop is not None
-        if not self.zc.loop.is_running():
-            raise RuntimeError("The event loop is not running")
-        self.zc.loop.call_soon_threadsafe(self._async_start_browser)
         self.start()
+        self._setup()
+        # Start queries after the listener is installed in _setup
+        zc.loop.call_soon_threadsafe(self._async_start_browser)
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
             '-'.join([type_[:-7] for type_ in self.types]),
             getattr(self, 'native_id', self.ident),
