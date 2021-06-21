@@ -140,8 +140,23 @@ See examples directory for more.
 Changelog
 =========
 
-0.32.0 (Unreleased)
-===================
+0.32.0 Beta 2 (Unreleased)
+==========================
+
+* Pass both the new and old records to async_update_records (#792) @bdraco
+
+  Pass the old_record (cached) as the value and the new_record (wire)
+  to async_update_records instead of forcing each consumer to
+  check the cache since we will always have the old_record
+  when generating the async_update_records call. This avoids
+  the overhead of multiple cache lookups for each listener.
+
+* Make add_listener and remove_listener threadsafe (#794) @bdraco
+
+* Ensure outgoing ServiceBrowser questions are seen by the question history (#790) @bdraco
+
+0.32.0 Beta 1
+=============
 
 Documentation for breaking changes era on the side of the caution and likely
 overstates the risk on many of these. If you are not accessing zeroconf internals,
