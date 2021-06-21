@@ -33,12 +33,12 @@ from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSReco
 from .._logger import log
 from .._protocol import DNSOutgoing
 from .._services import (
-    RecordUpdateListener,
     ServiceListener,
     ServiceStateChange,
     Signal,
     SignalRegistrationInterface,
 )
+from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.aio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
@@ -330,9 +330,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if type_:
             self._enqueue_callback(ServiceStateChange.Updated, type_, record.name)
 
-    def async_update_records(
-        self, zc: 'Zeroconf', now: float, records: Dict[DNSRecord, Optional[DNSRecord]]
-    ) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache.
@@ -341,8 +339,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        for record, old_record in records.items():
-            self._async_process_record_update(now, record, old_record)
+        for record in records:
+            self._async_process_record_update(now, record[0], record[1])
 
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.

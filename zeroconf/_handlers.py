@@ -28,9 +28,8 @@ from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
 from ._history import QuestionHistory
 from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
-from ._services import RecordUpdateListener
 from ._services.registry import ServiceRegistry
-from ._utils.net import IPVersion
+from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.time import current_time_millis
 from .const import (
     _CLASS_IN,
@@ -46,8 +45,6 @@ from .const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-
-_TYPE_TO_IP_VERSION = {_TYPE_A: IPVersion.V4Only, _TYPE_AAAA: IPVersion.V6Only, _TYPE_ANY: IPVersion.All}
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -286,7 +283,7 @@ class RecordManager:
         self.cache = zeroconf.cache
         self.listeners: List[RecordUpdateListener] = []
 
-    def async_updates(self, now: float, records: Dict[DNSRecord, Optional[DNSRecord]]) -> None:
+    def async_updates(self, now: float, records: List[RecordUpdate]) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
@@ -316,7 +313,7 @@ class RecordManager:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        updates: Dict[DNSRecord, Optional[DNSRecord]] = {}
+        updates: List[RecordUpdate] = []
         address_adds: List[DNSAddress] = []
         other_adds: List[DNSRecord] = []
         removes: List[DNSRecord] = []
@@ -336,11 +333,11 @@ class RecordManager:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
-                updates[record] = maybe_entry
+                updates.append(RecordUpdate(record, maybe_entry))
             # This is likely a goodbye since the record is
             # expired and exists in the cache
             elif maybe_entry is not None:
-                updates[record] = maybe_entry
+                updates.append(RecordUpdate(record, maybe_entry))
                 removes.append(record)
 
         if unique_types:
@@ -413,11 +410,11 @@ class RecordManager:
         This function must be run from the event loop.
         """
         now = current_time_millis()
-        records: Dict[DNSRecord, Optional[DNSRecord]] = {}
+        records: List[RecordUpdate] = []
         for question in questions:
             for record in self.cache.async_entries_with_name(question.name):
                 if not record.is_expired(now) and question.answered_by(record):
-                    records[record] = None
+                    records.append(RecordUpdate(record, None))
 
         if not records:
             return
