@@ -419,7 +419,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     ) -> None:
         assert zc.loop is not None
         if not zc.loop.is_running():
-            raise RuntimeError("The event loop is not running")    
+            raise RuntimeError("The event loop is not running")
         threading.Thread.__init__(self)
         super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
         # Add the queue before the listener is installed in _setup
