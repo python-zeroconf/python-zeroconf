@@ -2,7 +2,6 @@
 
 """ Scan for apple devices. """
 
-import asyncio
 import argparse
 import asyncio
 import logging
