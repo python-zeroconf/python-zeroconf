@@ -387,12 +387,15 @@ class RecordManager:
                     # Expire in 1s
                     entry.set_created_ttl(now, 1)
 
-    def add_listener(
+    def async_add_listener(
         self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
-        answer the question(s)."""
+        answer the question(s).
+
+        This function is not threadsafe and must be called in the eventloop.
+        """
         self.listeners.append(listener)
 
         if question is None:
@@ -400,7 +403,7 @@ class RecordManager:
 
         questions = [question] if isinstance(question, DNSQuestion) else question
         assert self.zc.loop is not None
-        self.zc.loop.call_soon_threadsafe(self._async_update_matching_records, listener, questions)
+        self._async_update_matching_records(listener, questions)
 
     def _async_update_matching_records(
         self, listener: RecordUpdateListener, questions: List[DNSQuestion]
@@ -422,10 +425,13 @@ class RecordManager:
         listener.async_update_records_complete()
         self.zc.async_notify_all()
 
-    def remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Removes a listener."""
+    def async_remove_listener(self, listener: RecordUpdateListener) -> None:
+        """Removes a listener.
+
+        This function is not threadsafe and must be called in the eventloop.
+        """
         try:
             self.listeners.remove(listener)
-            self.zc.notify_all()
+            self.zc.async_notify_all()
         except ValueError as e:
             log.exception('Failed to remove listener: %r', e)
