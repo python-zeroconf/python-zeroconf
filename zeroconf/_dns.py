@@ -71,6 +71,8 @@ class DNSEntry:
 
     """A DNS entry"""
 
+    __slots__ = ('key', 'name', 'type', 'class_', 'unique')
+
     def __init__(self, name: str, type_: int, class_: int) -> None:
         self.key = name.lower()
         self.name = name
@@ -156,6 +158,8 @@ class DNSRecord(DNSEntry):
 
     """A DNS record - like a DNS entry, but has a TTL"""
 
+    __slots__ = ('ttl', 'created', '_expiration_time', '_stale_time', '_recent_time')
+
     # TODO: Switch to just int ttl
     def __init__(
         self, name: str, type_: int, class_: int, ttl: Union[float, int], created: Optional[float] = None
@@ -238,6 +242,8 @@ class DNSAddress(DNSRecord):
 
     """A DNS address record"""
 
+    __slots__ = ('address',)
+
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, address: bytes, created: Optional[float] = None
     ) -> None:
@@ -274,6 +280,8 @@ class DNSHinfo(DNSRecord):
 
     """A DNS host information record"""
 
+    __slots__ = ('cpu', 'os')
+
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, cpu: str, os: str, created: Optional[float] = None
     ) -> None:
@@ -307,6 +315,8 @@ class DNSHinfo(DNSRecord):
 class DNSPointer(DNSRecord):
 
     """A DNS pointer record"""
+
+    __slots__ = ('alias',)
 
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, alias: str, created: Optional[float] = None
@@ -345,6 +355,8 @@ class DNSText(DNSRecord):
 
     """A DNS text record"""
 
+    __slots__ = ('text',)
+
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, text: bytes, created: Optional[float] = None
     ) -> None:
@@ -374,6 +386,8 @@ class DNSText(DNSRecord):
 class DNSService(DNSRecord):
 
     """A DNS service record"""
+
+    __slots__ = ('priority', 'weight', 'port', 'server')
 
     def __init__(
         self,
@@ -422,6 +436,8 @@ class DNSService(DNSRecord):
 
 class DNSRRSet:
     """A set of dns records independent of the ttl."""
+
+    __slots__ = ('_records', '_lookup')
 
     def __init__(self, records: Iterable[DNSRecord]) -> None:
         """Create an RRset from records."""
