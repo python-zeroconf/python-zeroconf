@@ -430,7 +430,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         self.start()
         self._setup()
         # Start queries after the listener is installed in _setup
-        self.zc.loop.call_soon_threadsafe(self._async_start_browser)
+        zc.loop.call_soon_threadsafe(self._async_start_browser)
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
             '-'.join([type_[:-7] for type_ in self.types]),
             getattr(self, 'native_id', self.ident),
