@@ -143,6 +143,10 @@ Changelog
 0.32.0 Beta 2 (Unreleased)
 ==========================
 
+* Ensure fresh ServiceBrowsers see old_record as None when replaying the cache (#793)
+
+  This is fixing ServiceBrowser missing an add when the record is already in the cache.
+
 * Pass both the new and old records to async_update_records (#792) @bdraco
 
   Pass the old_record (cached) as the value and the new_record (wire)
