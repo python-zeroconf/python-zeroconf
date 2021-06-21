@@ -22,7 +22,7 @@
 import asyncio
 import contextlib
 from types import TracebackType  # noqa # used in type hints
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from ._core import Zeroconf
 from ._dns import DNSQuestionType
@@ -86,15 +86,13 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         question_type: Optional[DNSQuestionType] = None,
     ) -> None:
         super().__init__(zeroconf, type_, handlers, listener, addr, port, delay, question_type)
-        self._setup()
-        # Start queries after the listener is installed in _setup
-        self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+        self._async_start()
 
     async def async_cancel(self) -> None:
         """Cancel the browser."""
+        self._async_cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await self._async_cancel_browser()
-        super().cancel()
 
 
 class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):

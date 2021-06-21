@@ -421,7 +421,7 @@ class ServiceInfo(RecordUpdateListener):
         last = now + timeout
         await zc.async_wait_for_start()
         try:
-            zc.add_listener(self, None)
+            zc.async_add_listener(self, None)
             while not self._is_complete:
                 if last <= now:
                     return False
@@ -436,7 +436,7 @@ class ServiceInfo(RecordUpdateListener):
                 await zc.async_wait(min(next_, last) - now)
                 now = current_time_millis()
         finally:
-            zc.remove_listener(self)
+            zc.async_remove_listener(self)
 
         return True
 
