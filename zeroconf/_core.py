@@ -548,12 +548,38 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
-        answer the question(s)."""
-        self.record_manager.add_listener(listener, question)
+        answer the question(s).
+
+        This function is threadsafe
+        """
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.record_manager.async_add_listener, listener, question)
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Removes a listener."""
-        self.record_manager.remove_listener(listener)
+        """Removes a listener.
+
+        This function is threadsafe
+        """
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.record_manager.async_remove_listener, listener)
+
+    def async_add_listener(
+        self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
+    ) -> None:
+        """Adds a listener for a given question.  The listener will have
+        its update_record method called when information is available to
+        answer the question(s).
+
+        This function is not threadsafe and must be called in the eventloop.
+        """
+        self.record_manager.async_add_listener(listener, question)
+
+    def async_remove_listener(self, listener: RecordUpdateListener) -> None:
+        """Removes a listener.
+
+        This function is not threadsafe and must be called in the eventloop.
+        """
+        self.record_manager.async_remove_listener(listener)
 
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
