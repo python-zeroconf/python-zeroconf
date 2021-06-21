@@ -73,6 +73,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
     ) -> None:
         super().__init__(zeroconf, type_, handlers, listener, addr, port, delay)
         self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+        self._setup()
 
     async def async_cancel(self) -> None:
         """Cancel the browser."""
