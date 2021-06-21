@@ -20,6 +20,7 @@
     USA
 """
 
+import enum
 import socket
 from typing import Any, Dict, Iterable, Optional, TYPE_CHECKING, Tuple, Union, cast
 
@@ -47,6 +48,19 @@ _NAME_COMPRESSION_MIN_SIZE = _LEN_BYTE * 2
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
     from ._protocol import DNSIncoming, DNSOutgoing  # pylint: disable=cyclic-import
+
+
+@enum.unique
+class DNSQuestionType(enum.Enum):
+    """An MDNS question type.
+
+    "QU" - questions requesting unicast responses
+    "QM" - questions requesting multicast responses
+    https://datatracker.ietf.org/doc/html/rfc6762#section-5.4
+    """
+
+    QU = 1
+    QM = 2
 
 
 def dns_entry_matches(record: 'DNSEntry', key: str, type_: int, class_: int) -> bool:

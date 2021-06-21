@@ -625,3 +625,51 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
         addresses=addresses,
     )
     assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
+
+
+def test_asking_qu_questions():
+    """Verify explictly asking QU questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf, "async_send", send):
+        zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QU)
+        assert first_outgoing.questions[0].unicast == True
+        zeroconf.close()
+
+
+def test_asking_qm_questions_are_default():
+    """Verify default is QM questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf, "async_send", send):
+        zeroconf.get_service_info(f"name.{type_}", type_, 500)
+        assert first_outgoing.questions[0].unicast == False
+        zeroconf.close()

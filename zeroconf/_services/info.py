@@ -24,7 +24,7 @@ import asyncio
 import socket
 from typing import Dict, List, Optional, TYPE_CHECKING, Union, cast
 
-from .._dns import DNSAddress, DNSPointer, DNSRecord, DNSService, DNSText
+from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
 from .._services import RecordUpdateListener
@@ -85,7 +85,6 @@ class ServiceInfo(RecordUpdateListener):
     * `other_ttl`: ttl used for PTR/TXT records
     * `addresses` and `parsed_addresses`: List of IP addresses (either as bytes, network byte order,
       or in parsed form as text; at most one of those parameters can be provided)
-
     """
 
     text = b''
@@ -103,7 +102,7 @@ class ServiceInfo(RecordUpdateListener):
         other_ttl: int = _DNS_OTHER_TTL,
         *,
         addresses: Optional[List[bytes]] = None,
-        parsed_addresses: Optional[List[str]] = None
+        parsed_addresses: Optional[List[str]] = None,
     ) -> None:
         # Accept both none, or one, but not both.
         if addresses is not None and parsed_addresses is not None:
@@ -394,16 +393,22 @@ class ServiceInfo(RecordUpdateListener):
         """The ServiceInfo has all expected properties."""
         return not (self.text is None or not self._addresses)
 
-    def request(self, zc: 'Zeroconf', timeout: float) -> bool:
+    def request(
+        self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None
+    ) -> bool:
         """Returns true if the service could be discovered on the
         network, and updates this object with details discovered.
         """
         assert zc.loop is not None and zc.loop.is_running()
         if zc.loop == get_running_loop():
             raise RuntimeError("Use AsyncServiceInfo.async_request from the event loop")
-        return asyncio.run_coroutine_threadsafe(self.async_request(zc, timeout), zc.loop).result()
+        return asyncio.run_coroutine_threadsafe(
+            self.async_request(zc, timeout, question_type), zc.loop
+        ).result()
 
-    async def async_request(self, zc: 'Zeroconf', timeout: float) -> bool:
+    async def async_request(
+        self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None
+    ) -> bool:
         """Returns true if the service could be discovered on the
         network, and updates this object with details discovered.
         """
@@ -421,7 +426,7 @@ class ServiceInfo(RecordUpdateListener):
                 if last <= now:
                     return False
                 if next_ <= now:
-                    out = self.generate_request_query(zc, now)
+                    out = self.generate_request_query(zc, now, question_type)
                     if not out.questions:
                         return self.load_from_cache(zc)
                     zc.async_send(out)
@@ -435,13 +440,18 @@ class ServiceInfo(RecordUpdateListener):
 
         return True
 
-    def generate_request_query(self, zc: 'Zeroconf', now: float) -> DNSOutgoing:
+    def generate_request_query(
+        self, zc: 'Zeroconf', now: float, question_type: Optional[DNSQuestionType] = None
+    ) -> DNSOutgoing:
         """Generate the request query."""
         out = DNSOutgoing(_FLAGS_QR_QUERY)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_SRV, _CLASS_IN)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_TXT, _CLASS_IN)
         out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_A, _CLASS_IN)
         out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_AAAA, _CLASS_IN)
+        if question_type == DNSQuestionType.QU:
+            for question in out.questions:
+                question.unicast = True
         return out
 
     def __eq__(self, other: object) -> bool:

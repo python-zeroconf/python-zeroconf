@@ -32,7 +32,7 @@ from types import TracebackType  # noqa # used in type hints
 from typing import Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
-from ._dns import DNSQuestion
+from ._dns import DNSQuestion, DNSQuestionType
 from ._exceptions import NonUniqueNameException
 from ._handlers import QueryHandler, RecordManager
 from ._history import QuestionHistory
@@ -360,12 +360,14 @@ class Zeroconf(QuietLogger):
         self.notify_event.set()
         self.notify_event.clear()
 
-    def get_service_info(self, type_: str, name: str, timeout: int = 3000) -> Optional[ServiceInfo]:
+    def get_service_info(
+        self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
+    ) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
         which defaults to 3 seconds."""
         info = ServiceInfo(type_, name)
-        if info.request(self, timeout):
+        if info.request(self, timeout, question_type):
             return info
         return None
 
