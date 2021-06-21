@@ -5,3 +5,8 @@ python-zeroconf API reference
     :members:
     :undoc-members:
     :show-inheritance:
+
+.. automodule:: zeroconf.aio
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -27,7 +27,5 @@ jobs:
         pip install .
     - name: Run tests
       run: make ci
-      env:
-        SKIP_IPV6: 1
     - name: Report coverage to Codecov
       uses: codecov/codecov-action@v1
