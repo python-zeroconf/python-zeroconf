@@ -151,6 +151,7 @@ def generate_service_query(
             log.debug("Asking %s was suppressed by the question history", question)
             continue
         questions_with_known_answers[question] = known_answers
+        zc.question_history.add_question_at_time(question, now, cast(Set[DNSRecord], known_answers))
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
