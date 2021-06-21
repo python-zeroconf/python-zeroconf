@@ -28,6 +28,7 @@ from .._dns import DNSAddress, DNSPointer, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
 from .._services import RecordUpdateListener
+from .._utils.aio import get_running_loop
 from .._utils.name import service_type_name
 from .._utils.net import (
     IPVersion,
@@ -398,6 +399,8 @@ class ServiceInfo(RecordUpdateListener):
         network, and updates this object with details discovered.
         """
         assert zc.loop is not None and zc.loop.is_running()
+        if zc.loop == get_running_loop():
+            raise RuntimeError("Use AsyncServiceInfo.async_request from the event loop")
         return asyncio.run_coroutine_threadsafe(self.async_request(zc, timeout), zc.loop).result()
 
     async def async_request(self, zc: 'Zeroconf', timeout: float) -> bool:
