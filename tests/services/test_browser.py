@@ -1045,4 +1045,15 @@ async def test_generate_service_query_suppress_duplicate_questions():
     # We do not suppress QU queries ever
     outs = _services_browser.generate_service_query(zc, now, [name], multicast=False)
     assert outs
+
+    zc.question_history.async_expire(now + 1000)
+    # No suppression after clearing the history
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    assert outs
+
+    # The previous query we just sent is still remembered and
+    # the next one is suppressed
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    assert not outs
+
     await aiozc.async_close()
