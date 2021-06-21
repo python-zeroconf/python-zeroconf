@@ -207,10 +207,6 @@ class DNSIncoming(DNSMessage, QuietLogger):
             if rec is not None:
                 self.answers.append(rec)
 
-    def read_utf(self, offset: int, length: int) -> str:
-        """Reads a UTF-8 string of a given length from the packet"""
-        return str(self.data[offset : offset + length], 'utf-8', 'replace')
-
     def read_name(self) -> str:
         """Reads a domain name from the packet"""
         result = ''
@@ -218,6 +214,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         next_ = -1
         first = off
 
+        # This is a tight loop that is called frequently, small optimizations can make a difference.
         while True:
             length = self.data[off]
             off += 1
@@ -225,7 +222,8 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 break
             t = length & 0xC0
             if t == 0x00:
-                result += self.read_utf(off, length) + '.'
+                # Convert to utf-8
+                result += str(self.data[off : off + length], 'utf-8', 'replace') + '.'
                 off += length
             elif t == 0xC0:
                 if next_ < 0:
