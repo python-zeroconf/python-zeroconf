@@ -33,6 +33,7 @@ from ._dns import (  # noqa # import needed for backwards compat
     DNSRecord,
     DNSService,
     DNSText,
+    DNSQuestionType,
 )
 from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
 from ._exceptions import (  # noqa # import needed for backwards compat
@@ -85,7 +86,7 @@ __license__ = 'LGPL'
 
 __all__ = [
     "__version__",
-    "generate_service_query",
+    "DNSQuestionType",
     "Zeroconf",
     "ServiceInfo",
     "ServiceBrowser",

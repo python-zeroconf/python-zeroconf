@@ -50,10 +50,26 @@ async def test_reaper():
         record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
         record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
+        question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
+        now = r.current_time_millis()
+        other_known_answers = set(
+            [
+                r.DNSPointer(
+                    "_hap._tcp.local.",
+                    const._TYPE_PTR,
+                    const._CLASS_IN,
+                    10000,
+                    'known-to-other._hap._tcp.local.',
+                )
+            ]
+        )
+        zeroconf.question_history.add_question_at_time(question, now, other_known_answers)
+        assert zeroconf.question_history.suppresses(question, now, other_known_answers)
         entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         await asyncio.sleep(1.2)
         entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
         await aiozc.async_close()
+        assert not zeroconf.question_history.suppresses(question, now, other_known_answers)
         assert entries != original_entries
         assert entries_with_cache != original_entries
         assert record_with_10s_ttl in entries
@@ -568,4 +584,23 @@ def test_tc_bit_defers_last_response_missing():
 
     # unregister
     zc.registry.remove(info)
+    zc.close()
+
+
+@pytest.mark.asyncio
+async def test_open_close_twice_from_async() -> None:
+    """Test we can close twice from a coroutine when using Zeroconf.
+
+    Ideally callers switch to using AsyncZeroconf, however there will
+    be a peroid where they still call the sync wrapper that we want
+    to ensure will not deadlock on shutdown.
+
+    This test is expected to throw warnings about tasks being destroyed
+    since we force shutdown right away since we don't want to block
+    callers event loops and since they aren't using the AsyncZeroconf
+    version they won't yield with an await like async_close we don't
+    have much choice but to force things down.
+    """
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc.close()
     zc.close()

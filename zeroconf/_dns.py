@@ -20,6 +20,7 @@
     USA
 """
 
+import enum
 import socket
 from typing import Any, Dict, Iterable, Optional, TYPE_CHECKING, Tuple, Union, cast
 
@@ -47,6 +48,19 @@ _NAME_COMPRESSION_MIN_SIZE = _LEN_BYTE * 2
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
     from ._protocol import DNSIncoming, DNSOutgoing  # pylint: disable=cyclic-import
+
+
+@enum.unique
+class DNSQuestionType(enum.Enum):
+    """An MDNS question type.
+
+    "QU" - questions requesting unicast responses
+    "QM" - questions requesting multicast responses
+    https://datatracker.ietf.org/doc/html/rfc6762#section-5.4
+    """
+
+    QU = 1
+    QM = 2
 
 
 def dns_entry_matches(record: 'DNSEntry', key: str, type_: int, class_: int) -> bool:
@@ -414,18 +428,19 @@ class DNSRRSet:
         self._records = records
         self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
 
-    def suppresses(self, record: DNSRecord) -> bool:
-        """Returns true if any answer in the rrset can suffice for the
-        information held in this record."""
+    @property
+    def lookup(self) -> Dict[DNSRecord, DNSRecord]:
         if self._lookup is None:
             # Build the hash table so we can lookup the record independent of the ttl
             self._lookup = {record: record for record in self._records}
-        other = self._lookup.get(record)
+        return self._lookup
+
+    def suppresses(self, record: DNSRecord) -> bool:
+        """Returns true if any answer in the rrset can suffice for the
+        information held in this record."""
+        other = self.lookup.get(record)
         return bool(other and other.ttl > (record.ttl / 2))
 
     def __contains__(self, record: DNSRecord) -> bool:
         """Returns true if the rrset contains the record."""
-        if self._lookup is None:
-            # Build the hash table so we can lookup the record independent of the ttl
-            self._lookup = {record: record for record in self._records}
-        return record in self._lookup
+        return record in self.lookup

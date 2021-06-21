@@ -21,16 +21,17 @@
 """
 
 import asyncio
-import concurrent.futures
 import contextlib
 import queue
+import random
 import threading
 import warnings
 from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from .._cache import _UniqueRecordsType
-from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord
+from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
+from .._logger import log
 from .._protocol import DNSOutgoing
 from .._services import (
     RecordUpdateListener,
@@ -39,9 +40,9 @@ from .._services import (
     Signal,
     SignalRegistrationInterface,
 )
-from .._utils.aio import get_best_available_queue, get_running_loop
+from .._utils.aio import get_best_available_queue
 from .._utils.name import service_type_name
-from .._utils.time import current_time_millis
+from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
@@ -56,6 +57,8 @@ from ..const import (
     _TYPE_PTR,
 )
 
+# https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+_FIRST_QUERY_DELAY_RANDOM_INTERVAL = (20, 120)  # ms
 
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
@@ -127,24 +130,27 @@ def _group_ptr_queries_with_known_answers(
 
 
 def generate_service_query(
-    zc: 'Zeroconf', now: float, types_: List[str], multicast: bool = True, include_known_answers: bool = True
+    zc: 'Zeroconf',
+    now: float,
+    types_: List[str],
+    multicast: bool = True,
+    question_type: Optional[DNSQuestionType] = None,
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
+    qu_question = not multicast if question_type is None else question_type == DNSQuestionType.QU
     for type_ in types_:
         service_type_name(type_, strict=False)
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
-        if not multicast:
-            question.unicast = True
-        if include_known_answers:
-            known_answers = set(
-                cast(DNSPointer, record)
-                for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
-                if not record.is_stale(now)
-            )
-        else:
-            known_answers = cast(Set[DNSPointer], set())
-
+        question.unicast = qu_question
+        known_answers = set(
+            cast(DNSPointer, record)
+            for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+            if not record.is_stale(now)
+        )
+        if multicast and zc.question_history.suppresses(question, now, cast(Set[DNSRecord], known_answers)):
+            log.debug("Asking %s was suppressed by the question history", question)
+            continue
         questions_with_known_answers[question] = known_answers
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
@@ -187,8 +193,25 @@ class _ServiceBrowserBase(RecordUpdateListener):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
+        question_type: Optional[DNSQuestionType] = None,
     ) -> None:
-        """Creates a browser for a specific type"""
+        """Used to browse for a service for specific type(s).
+
+        Constructor parameters are as follows:
+
+        * `zc`: A Zeroconf instance
+        * `type_`: fully qualified service type name
+        * `handler`: ServiceListener or Callable that knows how to process ServiceStateChange events
+        * `listener`: ServiceListener
+        * `addr`: address to send queries (will default to multicast)
+        * `port`: port to send queries (will default to mdns 5353)
+        * `delay`: The initial delay between answering questions
+        * `question_type`: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
+
+        The listener object will have its add_service() and
+        remove_service() methods called when this browser
+        discovers changes in the services availability.
+        """
         assert handlers or listener, 'You need to specify at least one handler'
         self.types: Set[str] = set(type_ if isinstance(type_, list) else [type_])
         for check_type_ in self.types:
@@ -199,9 +222,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.addr = addr
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
-        current_time = current_time_millis()
-        self._next_time = {check_type_: current_time for check_type_ in self.types}
-        self._delay = {check_type_: delay for check_type_ in self.types}
+        self.question_type = question_type
+        self._next_time: Dict[str, float] = {}
+        self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self.types}
         self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
         self.queue: Optional[queue.Queue] = None
@@ -219,7 +242,28 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for h in handlers:
             self.service_state_changed.register_handler(h)
 
+    def _setup(self) -> None:
+        """Generate the next time and setup listeners.
+
+        Must be called by uses of this base class after they
+        have finished setting their properties.
+        """
+        self._generate_first_next_time()
         self.zc.add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
+
+    def _generate_first_next_time(self) -> None:
+        """Generate the initial next query times.
+
+        https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+        To avoid accidental synchronization when, for some reason, multiple
+        clients begin querying at exactly the same moment (e.g., because of
+        some common external trigger event), a Multicast DNS querier SHOULD
+        also delay the first query of the series by a randomly chosen amount
+        in the range 20-120 ms.
+        """
+        delay = millis_to_seconds(random.randint(*_FIRST_QUERY_DELAY_RANDOM_INTERVAL))
+        next_time = current_time_millis() + delay
+        self._next_time = {check_type_: next_time for check_type_ in self.types}
 
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
@@ -351,7 +395,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
-        return generate_service_query(self.zc, now, ready_types, self.multicast)
+        return generate_service_query(self.zc, now, ready_types, self.multicast, self.question_type)
 
     def _millis_to_wait(self, now: float) -> Optional[float]:
         """Returns the number of milliseconds to wait for the next event."""
@@ -377,7 +421,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._browser_task.cancel()
         browser_task = self._browser_task
         self._browser_task = None
-        await browser_task
+        with contextlib.suppress(asyncio.CancelledError):
+            await browser_task
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
@@ -396,41 +441,42 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
+        question_type: Optional[DNSQuestionType] = None,
     ) -> None:
+        assert zc.loop is not None
+        if not zc.loop.is_running():
+            raise RuntimeError("The event loop is not running")
         threading.Thread.__init__(self)
-        super().__init__(zc, type_, handlers=handlers, listener=listener, addr=addr, port=port, delay=delay)
+        super().__init__(zc, type_, handlers, listener, addr, port, delay, question_type)
+        # Add the queue before the listener is installed in _setup
+        # to ensure that events run in the dedicated thread and do
+        # not block the event loop
         self.queue = get_best_available_queue()
         self.daemon = True
-        assert self.zc.loop is not None
-        if get_running_loop() == self.zc.loop:
-            self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
-        else:
-            if not self.zc.loop.is_running():
-                raise RuntimeError("The event loop is not running")
-            self._browser_task = cast(
-                asyncio.Task,
-                asyncio.run_coroutine_threadsafe(self._async_browser_task(), self.zc.loop).result(),
-            )
         self.start()
+        self._setup()
+        # Start queries after the listener is installed in _setup
+        zc.loop.call_soon_threadsafe(self._async_start_browser)
         self.name = "zeroconf-ServiceBrowser-%s-%s" % (
             '-'.join([type_[:-7] for type_ in self.types]),
             getattr(self, 'native_id', self.ident),
         )
 
-    async def _async_browser_task(self) -> asyncio.Task:
-        return cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+    def _async_start_browser(self) -> None:
+        """Start the browser from the event loop."""
+        self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+
+    def _async_cancel_browser_soon(self) -> None:
+        """Cancel the browser from the event loop."""
+        if self._browser_task:
+            asyncio.ensure_future(self._async_cancel_browser())
 
     def cancel(self) -> None:
         """Cancel the browser."""
         assert self.zc.loop is not None
         assert self.queue is not None
         self.queue.put(None)
-        if self._browser_task:
-            if get_running_loop() == self.zc.loop:
-                asyncio.ensure_future(self._async_cancel_browser())
-            elif self.zc.loop.is_running():
-                with contextlib.suppress(asyncio.CancelledError, concurrent.futures.CancelledError):
-                    asyncio.run_coroutine_threadsafe(self._async_cancel_browser(), self.zc.loop).result()
+        self.zc.loop.call_soon_threadsafe(self._async_cancel_browser_soon)
         super().cancel()
         self.join()
 

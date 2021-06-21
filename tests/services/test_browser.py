@@ -14,12 +14,13 @@ from threading import Event
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSPointer, DNSQuestion, const, current_time_millis
+from zeroconf import DNSPointer, DNSQuestion, const, current_time_millis, millis_to_seconds
 import zeroconf._services.browser as _services_browser
 from zeroconf import Zeroconf
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
+from zeroconf.aio import AsyncZeroconf
 
 from .. import has_working_ipv6, _inject_response
 
@@ -426,7 +427,8 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             zeroconf.close()
 
 
-def test_backoff():
+@unittest.mock.patch("zeroconf._core.QuestionHistory.suppresses", return_value=False)
+def test_backoff(suppresses_mock):
     got_query = Event()
 
     type_ = "_http._tcp.local."
@@ -453,7 +455,11 @@ def test_backoff():
     # patch the backoff limit to prevent test running forever
     with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch.object(
         _services_browser, "current_time_millis", current_time_millis
-    ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10):
+    ), unittest.mock.patch.object(
+        _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
+    ), unittest.mock.patch.object(
+        _services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)
+    ):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
@@ -493,6 +499,144 @@ def test_backoff():
                     assert not got_query.is_set()
                 time_offset += initial_query_interval
 
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
+def test_first_query_delay():
+    """Verify the first query is delayed.
+
+    https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+    """
+    type_ = "_http._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_query_time = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_query_time
+        if first_query_time is None:
+            first_query_time = current_time_millis()
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        start_time = current_time_millis()
+        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert (
+                current_time_millis() - start_time > _services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[0]
+            )
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
+def test_asking_default_is_asking_qm_questions():
+    """Verify the service browser can ask QU questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert first_outgoing.questions[0].unicast == False
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
+def test_asking_qm_questions():
+    """Verify explictly asking QM questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        browser = ServiceBrowser(
+            zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QM
+        )
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert first_outgoing.questions[0].unicast == False
+        finally:
+            browser.cancel()
+            zeroconf_browser.close()
+
+
+def test_asking_qu_questions():
+    """Verify the service browser can ask QU questions."""
+    type_ = "_quservice._tcp.local."
+    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_browser.async_send
+
+    first_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        if first_outgoing is None:
+            first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+        # dummy service callback
+        def on_service_state_change(zeroconf, service_type, state_change, name):
+            pass
+
+        browser = ServiceBrowser(
+            zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QU
+        )
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        try:
+            assert first_outgoing.questions[0].unicast == True
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -860,3 +1004,45 @@ def test_group_ptr_queries_with_known_answers():
         # If we generate multiple packets there must
         # only be one question
         assert len(packets) == 1 or len(out.questions) == 1
+
+
+# This test uses asyncio because it needs to access the cache directly
+# which is not threadsafe
+@pytest.mark.asyncio
+async def test_generate_service_query_suppress_duplicate_questions():
+    """Generate a service query for sending with zeroconf.send."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
+    now = current_time_millis()
+    name = "_hap._tcp.local."
+    question = r.DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)
+    answer = r.DNSPointer(
+        name,
+        const._TYPE_PTR,
+        const._CLASS_IN,
+        10000,
+        f'known-to-other.{name}',
+    )
+    other_known_answers = set([answer])
+    zc.question_history.add_question_at_time(question, now, other_known_answers)
+    assert zc.question_history.suppresses(question, now, other_known_answers)
+
+    # The known answer list is different, do not suppress
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    assert outs
+
+    zc.cache.async_add_records([answer])
+    # The known answer list contains all the asked questions in the history
+    # we should suppress
+
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    assert not outs
+
+    # We do not suppress once the question history expires
+    outs = _services_browser.generate_service_query(zc, now + 1000, [name], multicast=True)
+    assert outs
+
+    # We do not suppress QU queries ever
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=False)
+    assert outs
+    await aiozc.async_close()

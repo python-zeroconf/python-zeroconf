@@ -21,10 +21,11 @@
 """
 
 import itertools
-from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
+from ._history import QuestionHistory
 from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
 from ._services import RecordUpdateListener
@@ -156,10 +157,11 @@ class _QueryResponse:
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    def __init__(self, registry: ServiceRegistry, cache: DNSCache) -> None:
+    def __init__(self, registry: ServiceRegistry, cache: DNSCache, question_history: QuestionHistory) -> None:
         """Init the query handler."""
         self.registry = registry
         self.cache = cache
+        self.question_history = question_history
 
     def _add_service_type_enumeration_query_answers(
         self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
@@ -202,9 +204,15 @@ class QueryHandler:
     ) -> None:
         """Answer A/AAAA/ANY question."""
         for service in self.registry.get_infos_server(name):
-            for dns_address in service.dns_addresses(version=_TYPE_TO_IP_VERSION[type_], created=now):
-                if not known_answers.suppresses(dns_address):
-                    answer_set[dns_address] = set()
+            answers: List[DNSAddress] = []
+            additionals: Set[DNSRecord] = set()
+            for dns_address in service.dns_addresses(created=now):
+                if dns_address.type != type_:
+                    additionals.add(dns_address)
+                elif not known_answers.suppresses(dns_address):
+                    answers.append(dns_address)
+            for answer in answers:
+                answer_set[answer] = additionals
 
     def _answer_question(
         self,
@@ -253,6 +261,8 @@ class QueryHandler:
 
         for msg in msgs:
             for question in msg.questions:
+                if not question.unicast:
+                    self.question_history.add_question_at_time(question, msg.now, set(known_answers.lookup))
                 answer_set: _AnswerWithAdditionalsType = {}
                 self._answer_question(question, answer_set, known_answers, msg.now)
                 if not ucast_source and question.unicast:
@@ -364,7 +374,7 @@ class RecordManager:
             self.async_updates_complete()
 
     def _async_mark_unique_cached_records_older_than_1s_to_expire(
-        self, unique_types: Set[Tuple[str, int, int]], answers: List[DNSRecord], now: float
+        self, unique_types: Set[Tuple[str, int, int]], answers: Iterable[DNSRecord], now: float
     ) -> None:
         # rfc6762#section-10.2 para 2
         # Since unique is set, all old records with that name, rrtype,
@@ -386,7 +396,6 @@ class RecordManager:
         self.listeners.append(listener)
 
         if question is None:
-            self.zc.notify_all()
             return
 
         questions = [question] if isinstance(question, DNSQuestion) else question
@@ -406,6 +415,7 @@ class RecordManager:
             for record in self.cache.async_entries_with_name(question.name):
                 if not record.is_expired(now) and question.answered_by(record):
                     records.append(record)
+
         if not records:
             return
         listener.async_update_records(self.zc, now, records)
