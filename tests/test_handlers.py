@@ -16,7 +16,9 @@ from typing import List
 import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
+from zeroconf._dns import DNSRRSet
 from zeroconf.aio import AsyncZeroconf
+
 
 from . import _clear_cache, _inject_response
 
@@ -320,6 +322,59 @@ def test_aaaa_query():
         [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
     )
     assert multicast_out.answers[0][0].address == ipv6_address
+    # unregister
+    zc.registry.remove(info)
+    zc.close()
+
+
+def test_a_and_aaaa_record_fate_sharing():
+    """Test that queries for AAAA always return A records in the additionals."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_a-and-aaaa-service._tcp.local."
+    name = "knownname"
+    registration_name = "%s.%s" % (name, type_)
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+    ipv4_address = socket.inet_aton("10.0.1.2")
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address, ipv4_address]
+    )
+    aaaa_record = info.dns_addresses(version=r.IPVersion.V6Only)[0]
+    a_record = info.dns_addresses(version=r.IPVersion.V4Only)[0]
+
+    zc.registry.add(info)
+
+    # Test AAAA query
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    _, multicast_out = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
+    answers = DNSRRSet([answer[0] for answer in multicast_out.answers])
+    additionals = DNSRRSet(multicast_out.additionals)
+    assert aaaa_record in answers
+    assert a_record in additionals
+    assert len(multicast_out.answers) == 1
+    assert len(multicast_out.additionals) == 1
+
+    # Test A query
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    _, multicast_out = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
+    )
+    answers = DNSRRSet([answer[0] for answer in multicast_out.answers])
+    additionals = DNSRRSet(multicast_out.additionals)
+
+    assert a_record in answers
+    assert aaaa_record in additionals
+    assert len(multicast_out.answers) == 1
+    assert len(multicast_out.additionals) == 1
     # unregister
     zc.registry.remove(info)
     zc.close()
