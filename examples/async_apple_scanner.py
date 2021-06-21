@@ -48,7 +48,7 @@ def async_on_service_state_change(
 
 async def _async_show_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
     info = AsyncServiceInfo(service_type, name)
-    await info.async_request(zeroconf, 3000)
+    await info.async_request(zeroconf, 3000, question_type=DNSQuestionType.QU)
     print("Info from zeroconf.get_service_info: %r" % (info))
     if info:
         addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
