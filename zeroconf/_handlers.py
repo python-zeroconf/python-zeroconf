@@ -410,7 +410,7 @@ class RecordManager:
         This function must be run from the event loop.
         """
         now = current_time_millis()
-        records: Dict[DNSRecord, DNSRecord] = {}
+        records: Dict[DNSRecord, Optional[DNSRecord]] = {}
         for question in questions:
             for record in self.cache.async_entries_with_name(question.name):
                 if not record.is_expired(now) and question.answered_by(record):

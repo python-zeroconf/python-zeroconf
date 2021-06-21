@@ -258,7 +258,7 @@ class ServiceInfo(RecordUpdateListener):
         This method will be run in the event loop.
         """
         if record is not None:
-            self._process_records_threadsafe(zc, now, [record])
+            self._process_records_threadsafe(zc, now, {record: None})
 
     def async_update_records(
         self, zc: 'Zeroconf', now: float, records: Dict[DNSRecord, Optional[DNSRecord]]
@@ -378,17 +378,18 @@ class ServiceInfo(RecordUpdateListener):
         This method is designed to be threadsafe.
         """
         now = current_time_millis()
-        record_updates = []
+        record_updates: Dict[DNSRecord, Optional[DNSRecord]] = {}
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
             # If there is a srv record, A and AAAA will already
             # be called and we do not want to do it twice
-            record_updates.append(cached_srv_record)
+            record_updates[cached_srv_record] = cached_srv_record
         else:
-            record_updates.extend(self._get_address_records_from_cache(zc))
+            for record in self._get_address_records_from_cache(zc):
+                record_updates[record] = record
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
-            record_updates.append(cached_txt_record)
+            record_updates[cached_txt_record] = cached_txt_record
         self._process_records_threadsafe(zc, now, record_updates)
         return self._is_complete
 

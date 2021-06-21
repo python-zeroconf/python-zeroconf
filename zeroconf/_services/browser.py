@@ -29,7 +29,6 @@ import warnings
 from collections import OrderedDict
 from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
-from .._cache import _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
 from .._protocol import DNSOutgoing
