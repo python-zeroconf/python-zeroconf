@@ -315,6 +315,7 @@ class TestServiceBrowser(unittest.TestCase):
         finally:
             assert len(zeroconf.listeners) == 1
             service_browser.cancel()
+            time.sleep(0.2)
             assert len(zeroconf.listeners) == 0
             zeroconf.remove_all_service_listeners()
             zeroconf.close()
@@ -422,6 +423,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
         finally:
             assert len(zeroconf.listeners) == 1
             service_browser.cancel()
+            time.sleep(0.2)
             assert len(zeroconf.listeners) == 0
             zeroconf.remove_all_service_listeners()
             zeroconf.close()
