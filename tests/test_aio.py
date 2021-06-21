@@ -597,3 +597,13 @@ async def test_async_zeroconf_service_types():
 
     finally:
         await zeroconf_registrar.async_close()
+
+
+@pytest.mark.asyncio
+async def test_guard_against_running_serviceinfo_request_event_loop() -> None:
+    """Test that running ServiceInfo.request from the event loop throws."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+
+    service_info = AsyncServiceInfo("_hap._tcp.local.", "doesnotmatter._hap._tcp.local.")
+    with pytest.raises(RuntimeError):
+        service_info.request(aiozc.zeroconf, 3000)
