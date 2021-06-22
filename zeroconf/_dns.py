@@ -267,9 +267,9 @@ class DNSAddress(DNSRecord):
         """Tests equality on address"""
         return (
             isinstance(other, DNSAddress)
-            and DNSEntry.__eq__(self, other)
             and self.address == other.address
             and self.scope_id == other.scope_id
+            and DNSEntry.__eq__(self, other)
         )
 
     def __hash__(self) -> int:
@@ -310,9 +310,9 @@ class DNSHinfo(DNSRecord):
         """Tests equality on cpu and os"""
         return (
             isinstance(other, DNSHinfo)
-            and DNSEntry.__eq__(self, other)
             and self.cpu == other.cpu
             and self.os == other.os
+            and DNSEntry.__eq__(self, other)
         )
 
     def __hash__(self) -> int:
