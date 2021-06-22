@@ -439,7 +439,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         now = current_time_millis()
         ready_types = self.query_scheduler.ready_types(now)
         if not ready_types:
-            return
+            return []
 
         # If they did not specify and this is the first request, ask QU questions
         # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
@@ -455,10 +455,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
         while True:
             await self.query_scheduler.async_wait_ready()
             outs = self._generate_ready_queries(first_request)
-            if outs:
-                first_request = False
-                for out in outs:
-                    self.zc.async_send(out, addr=self.addr, port=self.port)
+            if not outs:
+                continue
+
+            first_request = False
+            for out in outs:
+                self.zc.async_send(out, addr=self.addr, port=self.port)
 
     async def _async_cancel_browser(self) -> None:
         """Cancel the browser."""
