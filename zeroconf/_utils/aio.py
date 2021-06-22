@@ -23,7 +23,7 @@
 import asyncio
 import contextlib
 import queue
-from typing import List, Optional, Set, cast
+from typing import Any, List, Optional, Set, cast
 
 
 def get_best_available_queue() -> queue.Queue:
@@ -39,18 +39,13 @@ async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
     loop = asyncio.get_event_loop()
     future = loop.create_future()
 
-    def _handle_timeout() -> None:
+    def _handle_timeout_or_wait_complete(*_: Any) -> None:
         if not future.done():
             future.set_result(None)
 
-    timer_handle = loop.call_later(timeout, _handle_timeout)
+    timer_handle = loop.call_later(timeout, _handle_timeout_or_wait_complete)
     event_wait = loop.create_task(event.wait())
-
-    def _handle_wait_complete(_: asyncio.Task) -> None:
-        if not future.done():
-            future.set_result(None)
-
-    event_wait.add_done_callback(_handle_wait_complete)
+    event_wait.add_done_callback(_handle_timeout_or_wait_complete)
 
     try:
         await future
