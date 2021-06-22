@@ -140,6 +140,31 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Beta 4
+=============
+
+* Simplify wait_event_or_timeout (#810) @bdraco
+
+  This function always did the same thing on timeout and
+  wait complete so we can use the same callback.  This
+  solves the CI failing due to the test coverage flapping
+  back and forth as the timeout would rarely happen.
+
+* Make DNSHinfo and DNSAddress use the same match order as DNSPointer and DNSText (#808) @bdraco
+
+  We want to check the data that is most likely to be unique first
+  so we can reject the __eq__ as soon as possible.
+
+* Qualify IPv6 link-local addresses with scope_id (#343) @ibygrave
+
+  When a service is advertised on an IPv6 address where
+  the scope is link local, i.e. fe80::/64 (see RFC 4007)
+  the resolved IPv6 address must be extended with the
+  scope_id that identifies through the "%" symbol the
+  local interface to be used when routing to that address.
+  A new API `parsed_scoped_addresses()` is provided to
+  return qualified addresses to avoid breaking compatibility
+  on the existing parsed_addresses().
 
 0.32.0 Beta 3
 =============
