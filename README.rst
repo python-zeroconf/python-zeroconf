@@ -140,6 +140,20 @@ See examples directory for more.
 Changelog
 =========
 
+
+0.32.0 Beta 3 (Unreleased)
+==========================
+
+* Skip network adapters that are disconnected (#327) @ZLJasonG
+
+* Add slots to DNS classes (#803) @bdraco
+
+  On a busy network that receives many mDNS packets per second, we
+  will not know the answer to most of the questions being asked.
+  In this case the creating the DNS* objects are usually garbage
+  collected within 1s as they are not needed. We now set __slots__
+  to speed up the creation and destruction of these objects
+
 0.32.0 Beta 2
 =============
 
