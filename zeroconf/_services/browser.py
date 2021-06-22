@@ -146,11 +146,14 @@ def generate_service_query(
             for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             if not record.is_stale(now)
         )
-        if multicast and zc.question_history.suppresses(question, now, cast(Set[DNSRecord], known_answers)):
+        if not qu_question and zc.question_history.suppresses(
+            question, now, cast(Set[DNSRecord], known_answers)
+        ):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
         questions_with_known_answers[question] = known_answers
-        zc.question_history.add_question_at_time(question, now, cast(Set[DNSRecord], known_answers))
+        if not qu_question:
+            zc.question_history.add_question_at_time(question, now, cast(Set[DNSRecord], known_answers))
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
@@ -379,7 +382,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.done = True
         self.zc.async_remove_listener(self)
 
-    def generate_ready_queries(self) -> List[DNSOutgoing]:
+    def _generate_ready_queries(self, first_request: bool) -> List[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
         now = current_time_millis()
         if self._millis_to_wait(current_time_millis()):
@@ -395,7 +398,13 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
-        return generate_service_query(self.zc, now, ready_types, self.multicast, self.question_type)
+        # If they did not specify and this is the first request, ask QU questions
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
+        # just starting up and we know our cache is likely empty. This ensures
+        # the next outgoing will be sent with the known answers list.
+        question_type = DNSQuestionType.QU if not self.question_type and first_request else self.question_type
+
+        return generate_service_query(self.zc, now, ready_types, self.multicast, question_type)
 
     def _millis_to_wait(self, now: float) -> Optional[float]:
         """Returns the number of milliseconds to wait for the next event."""
@@ -406,14 +415,17 @@ class _ServiceBrowserBase(RecordUpdateListener):
     async def async_browser_task(self) -> None:
         """Run the browser task."""
         await self.zc.async_wait_for_start()
+        first_request = True
         while True:
             timeout = self._millis_to_wait(current_time_millis())
             if timeout:
                 await self.zc.async_wait(timeout)
 
-            outs = self.generate_ready_queries()
-            for out in outs:
-                self.zc.async_send(out, addr=self.addr, port=self.port)
+            outs = self._generate_ready_queries(first_request)
+            if outs:
+                first_request = False
+                for out in outs:
+                    self.zc.async_send(out, addr=self.addr, port=self.port)
 
     async def _async_cancel_browser(self) -> None:
         """Cancel the browser."""

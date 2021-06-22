@@ -544,8 +544,8 @@ def test_first_query_delay():
             zeroconf_browser.close()
 
 
-def test_asking_default_is_asking_qm_questions():
-    """Verify the service browser can ask QU questions."""
+def test_asking_default_is_asking_qm_questions_after_the_first_qu():
+    """Verify the service browser's first question is QU and subsequent ones are QM questions."""
     type_ = "_quservice._tcp.local."
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
 
@@ -553,10 +553,14 @@ def test_asking_default_is_asking_qm_questions():
     old_send = zeroconf_browser.async_send
 
     first_outgoing = None
+    second_outgoing = None
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
         nonlocal first_outgoing
+        nonlocal second_outgoing
+        if first_outgoing is not None and second_outgoing is None:
+            second_outgoing = out
         if first_outgoing is None:
             first_outgoing = out
         old_send(out, addr=addr, port=port)
@@ -567,10 +571,11 @@ def test_asking_default_is_asking_qm_questions():
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
 
-        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change], delay=100)
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 5))
         try:
-            assert first_outgoing.questions[0].unicast == False
+            assert first_outgoing.questions[0].unicast == True
+            assert second_outgoing.questions[0].unicast == False
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -1016,7 +1021,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     zc = aiozc.zeroconf
     now = current_time_millis()
-    name = "_hap._tcp.local."
+    name = "_suppresstest._tcp.local."
     question = r.DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)
     answer = r.DNSPointer(
         name,
@@ -1048,7 +1053,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
     outs = _services_browser.generate_service_query(zc, now, [name], multicast=False)
     assert outs
 
-    zc.question_history.async_expire(now + 1000)
+    zc.question_history.async_expire(now + 2000)
     # No suppression after clearing the history
     outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
     assert outs
