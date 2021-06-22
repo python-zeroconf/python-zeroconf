@@ -210,7 +210,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=None):
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
@@ -355,7 +355,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=None):
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
