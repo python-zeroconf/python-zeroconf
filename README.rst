@@ -141,8 +141,8 @@ Changelog
 =========
 
 
-0.32.0 Beta 3 (Unreleased)
-==========================
+0.32.0 Beta 3
+=============
 
 * Skip network adapters that are disconnected (#327) @ZLJasonG
 
