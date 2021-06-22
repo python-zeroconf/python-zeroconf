@@ -201,6 +201,8 @@ class TestServiceInfo(unittest.TestCase):
         service_server = 'ash-1.local.'
         service_text = b'path=/~matt1/'
         service_address = '10.0.1.2'
+        service_address_v6_ll = 'fe80::52e:c2f2:bc5f:e9c6'
+        service_scope_id = 12
 
         service_info = None
         send_event = Event()
@@ -208,7 +210,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=None):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
@@ -316,7 +318,15 @@ class TestServiceInfo(unittest.TestCase):
                                 const._CLASS_IN | const._CLASS_UNIQUE,
                                 ttl,
                                 socket.inet_pton(socket.AF_INET, service_address),
-                            )
+                            ),
+                            r.DNSAddress(
+                                service_server,
+                                const._TYPE_AAAA,
+                                const._CLASS_IN | const._CLASS_UNIQUE,
+                                ttl,
+                                socket.inet_pton(socket.AF_INET6, service_address_v6_ll),
+                                scope_id=service_scope_id,
+                            ),
                         ]
                     ),
                 )
@@ -345,7 +355,7 @@ class TestServiceInfo(unittest.TestCase):
 
         last_sent = None  # type: Optional[r.DNSOutgoing]
 
-        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=None):
             """Sends an outgoing packet."""
             nonlocal last_sent
 
@@ -442,6 +452,8 @@ def test_multiple_addresses():
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address, address])
 
     assert info.addresses == [address, address]
+    assert info.parsed_addresses() == [address_parsed, address_parsed]
+    assert info.parsed_scoped_addresses() == [address_parsed, address_parsed]
 
     info = ServiceInfo(
         type_,
@@ -454,10 +466,16 @@ def test_multiple_addresses():
         parsed_addresses=[address_parsed, address_parsed],
     )
     assert info.addresses == [address, address]
+    assert info.parsed_addresses() == [address_parsed, address_parsed]
+    assert info.parsed_scoped_addresses() == [address_parsed, address_parsed]
 
     if has_working_ipv6() and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
         address_v6 = socket.inet_pton(socket.AF_INET6, address_v6_parsed)
+        address_v6_ll_parsed = "fe80::52e:c2f2:bc5f:e9c6"
+        address_v6_ll_scoped_parsed = "fe80::52e:c2f2:bc5f:e9c6%12"
+        address_v6_ll = socket.inet_pton(socket.AF_INET6, address_v6_ll_parsed)
+        interface_index = 12
         infos = [
             ServiceInfo(
                 type_,
@@ -467,7 +485,8 @@ def test_multiple_addresses():
                 0,
                 desc,
                 "ash-2.local.",
-                addresses=[address, address_v6],
+                addresses=[address, address_v6, address_v6_ll],
+                interface_index=interface_index,
             ),
             ServiceInfo(
                 type_,
@@ -477,17 +496,21 @@ def test_multiple_addresses():
                 0,
                 desc,
                 "ash-2.local.",
-                parsed_addresses=[address_parsed, address_v6_parsed],
+                parsed_addresses=[address_parsed, address_v6_parsed, address_v6_ll_parsed],
+                interface_index=interface_index,
             ),
         ]
         for info in infos:
             assert info.addresses == [address]
-            assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6]
+            assert info.addresses_by_version(r.IPVersion.All) == [address, address_v6, address_v6_ll]
             assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
-            assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6]
-            assert info.parsed_addresses() == [address_parsed, address_v6_parsed]
+            assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6, address_v6_ll]
+            assert info.parsed_addresses() == [address_parsed, address_v6_parsed, address_v6_ll_parsed]
             assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
-            assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed]
+            assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed, address_v6_ll_parsed]
+            assert info.parsed_scoped_addresses() == [address_v6_ll_scoped_parsed, address_parsed, address_v6_parsed]
+            assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
+            assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [address_v6_ll_scoped_parsed, address_v6_parsed]
 
 
 # This test uses asyncio because it needs to access the cache directly

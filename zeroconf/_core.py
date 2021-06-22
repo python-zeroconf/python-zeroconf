@@ -191,12 +191,16 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
         assert self.transport is not None
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
+            scope = None
         elif len(addrs) == 4:
             # https://github.com/python/mypy/issues/1178
-            addr, port, _flow, _scope = addrs  # type: ignore
+            addr, port, flow, scope = addrs  # type: ignore
+            log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
+            v6_flow_scope = (flow, scope)
         else:
             return
 
@@ -212,7 +216,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             return
 
         self.data = data
-        msg = DNSIncoming(data)
+        msg = DNSIncoming(data, scope)
         if msg.valid:
             log.debug(
                 'Received from %r:%r (socket %d): %r (%d bytes) as [%r]',
@@ -238,7 +242,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.zc.handle_response(msg)
             return
 
-        self.zc.handle_query(msg, addr, port)
+        self.zc.handle_query(msg, addr, port, v6_flow_scope)
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
@@ -589,7 +593,9 @@ class Zeroconf(QuietLogger):
         are held in the cache, and listeners are notified."""
         self.record_manager.async_updates_from_response(msg)
 
-    def handle_query(self, msg: DNSIncoming, addr: str, port: int) -> None:
+    def handle_query(
+        self, msg: DNSIncoming, addr: str, port: int, v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
+    ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
         if not msg.truncated:
@@ -606,9 +612,15 @@ class Zeroconf(QuietLogger):
         assert self.loop is not None
         if addr in self._timers:
             self._timers.pop(addr).cancel()
-        self._timers[addr] = self.loop.call_later(delay, self._respond_query, None, addr, port)
+        self._timers[addr] = self.loop.call_later(delay, self._respond_query, None, addr, port, v6_flow_scope)
 
-    def _respond_query(self, msg: Optional[DNSIncoming], addr: str, port: int) -> None:
+    def _respond_query(
+        self,
+        msg: Optional[DNSIncoming],
+        addr: str,
+        port: int,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    ) -> None:
         """Respond to a query and reassemble any truncated deferred packets."""
         if addr in self._timers:
             self._timers.pop(addr).cancel()
@@ -618,16 +630,28 @@ class Zeroconf(QuietLogger):
 
         unicast_out, multicast_out = self.query_handler.async_response(packets, addr, port)
         if unicast_out:
-            self.async_send(unicast_out, addr, port)
+            self.async_send(unicast_out, addr, port, v6_flow_scope)
         if multicast_out:
             self.async_send(multicast_out, None, _MDNS_PORT)
 
-    def send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
+    def send(
+        self,
+        out: DNSOutgoing,
+        addr: Optional[str] = None,
+        port: int = _MDNS_PORT,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_send, out, addr, port)
+        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope)
 
-    def async_send(self, out: DNSOutgoing, addr: Optional[str] = None, port: int = _MDNS_PORT) -> None:
+    def async_send(
+        self,
+        out: DNSOutgoing,
+        addr: Optional[str] = None,
+        port: int = _MDNS_PORT,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    ) -> None:
         """Sends an outgoing packet."""
         for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
@@ -653,7 +677,7 @@ class Zeroconf(QuietLogger):
                         continue
                     else:
                         real_addr = addr
-                    transport.sendto(packet, (real_addr, port or _MDNS_PORT))
+                    transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
                 except OSError as exc:
                     if exc.errno == errno.ENETUNREACH and s.family == socket.AF_INET6:
                         # with IPv6 we don't have a reliable way to determine if an interface actually has

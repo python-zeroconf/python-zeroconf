@@ -447,10 +447,10 @@ def test_backoff(suppresses_mock):
         """Current system time in milliseconds"""
         return start_time + time_offset * 1000
 
-    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=None):
         """Sends an outgoing packet."""
         got_query.set()
-        old_send(out, addr=addr, port=port)
+        old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
@@ -674,7 +674,7 @@ def test_integration():
     expected_ttl = const._DNS_HOST_TTL
     nbr_answers = 0
 
-    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=None):
         """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packets()[0])
         nonlocal nbr_answers
@@ -686,7 +686,7 @@ def test_integration():
         got_query.set()
         got_query.clear()
 
-        old_send(out, addr=addr, port=port)
+        old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
     # patch the zeroconf send
     # patch the zeroconf current_time_millis

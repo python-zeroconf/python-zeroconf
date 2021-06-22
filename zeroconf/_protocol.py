@@ -79,7 +79,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
     """Object representation of an incoming DNS packet"""
 
-    def __init__(self, data: bytes) -> None:
+    def __init__(self, data: bytes, scope_id: Optional[int] = None) -> None:
         """Constructor from string holding bytes of packet"""
         super().__init__(0)
         self.offset = 0
@@ -93,6 +93,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.num_additionals = 0
         self.valid = False
         self.now = current_time_millis()
+        self.scope_id = scope_id
 
         try:
             self.read_header()
@@ -169,7 +170,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
             type_, class_, ttl, length = self.unpack(b'!HHiH')
             rec: Optional[DNSRecord] = None
             if type_ == _TYPE_A:
-                rec = DNSAddress(domain, type_, class_, ttl, self.read_string(4), self.now)
+                rec = DNSAddress(domain, type_, class_, ttl, self.read_string(4), created=self.now)
             elif type_ in (_TYPE_CNAME, _TYPE_PTR):
                 rec = DNSPointer(domain, type_, class_, ttl, self.read_name(), self.now)
             elif type_ == _TYPE_TXT:
@@ -197,7 +198,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
                     self.now,
                 )
             elif type_ == _TYPE_AAAA:
-                rec = DNSAddress(domain, type_, class_, ttl, self.read_string(16), self.now)
+                rec = DNSAddress(
+                    domain, type_, class_, ttl, self.read_string(16), created=self.now, scope_id=self.scope_id
+                )
             else:
                 # Try to ignore types we don't know about
                 # Skip the payload for the resource record so the next

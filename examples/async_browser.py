@@ -28,7 +28,7 @@ async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name
     await info.async_request(zeroconf, 3000)
     print("Info from zeroconf.get_service_info: %r" % (info))
     if info:
-        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
+        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
         print("  Name: %s" % name)
         print("  Addresses: %s" % ", ".join(addresses))
         print("  Weight: %d, priority: %d" % (info.weight, info.priority))
