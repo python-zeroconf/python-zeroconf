@@ -268,6 +268,13 @@ def add_multicast_member(
         if _errno in err_einval:
             log.info('Interface of %s does not support multicast, ' 'it is expected in WSL', interface)
             return False
+        if _errno == errno.ENOPROTOOPT:
+            log.info(
+                'Failed to set socket option on %s, this can happen if '
+                'the network adapter is in a disconnected state',
+                interface,
+            )
+            return False
         raise
     return True
 
