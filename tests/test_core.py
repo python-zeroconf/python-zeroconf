@@ -367,8 +367,8 @@ def test_register_service_with_custom_ttl():
         addresses=[socket.inet_aton("10.0.1.2")],
     )
 
-    zc.register_service(info_service, ttl=30)
-    assert zc.cache.get(info_service.dns_pointer()).ttl == 30
+    zc.register_service(info_service, ttl=3000)
+    assert zc.cache.get(info_service.dns_pointer()).ttl == 3000
     zc.close()
 
 
