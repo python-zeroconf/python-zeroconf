@@ -194,12 +194,12 @@ class QueryScheduler:
         self,
         types: Set[str],
         delay: int,
-        first_delay_interval: Tuple[int, int],
+        first_random_delay_interval: Tuple[int, int],
     ):
         self._schedule_changed_event: Optional[asyncio.Event] = None
         self._types = types
         self._next_time: Dict[str, float] = {}
-        self._first_delay_interval = first_delay_interval
+        self._first_random_delay_interval = first_random_delay_interval
         self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self._types}
 
     def start(self, now: float) -> None:
@@ -217,7 +217,7 @@ class QueryScheduler:
         also delay the first query of the series by a randomly chosen amount
         in the range 20-120 ms.
         """
-        delay = millis_to_seconds(random.randint(*self._first_delay_interval))
+        delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))
         next_time = now + delay
         self._next_time = {check_type_: next_time for check_type_ in self._types}
 
