@@ -194,7 +194,7 @@ class QueryScheduler:
         self,
         types: Set[str],
         delay: int = _BROWSER_TIME,
-        first_delay_interval=_FIRST_QUERY_DELAY_RANDOM_INTERVAL,
+        first_delay_interval: Tuple[int, int] = _FIRST_QUERY_DELAY_RANDOM_INTERVAL,
     ):
         self._schedule_changed_event: Optional[asyncio.Event] = None
         self._types = types
