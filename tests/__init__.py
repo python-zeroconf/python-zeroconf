@@ -41,6 +41,12 @@ def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:
     asyncio.run_coroutine_threadsafe(_wait_for_response(), zc.loop).result()
 
 
+def _wait_for_start(zc: Zeroconf) -> None:
+    """Wait for all sockets to be up and running."""
+    assert zc.loop is not None
+    asyncio.run_coroutine_threadsafe(zc.async_wait_for_start(), zc.loop).result()
+
+
 @lru_cache(maxsize=None)
 def has_working_ipv6():
     """Return True if if the system can bind an IPv6 address."""

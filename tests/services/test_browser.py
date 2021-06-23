@@ -22,7 +22,7 @@ from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 from zeroconf.aio import AsyncZeroconf
 
-from .. import has_working_ipv6, _inject_response
+from .. import has_working_ipv6, _inject_response, _wait_for_start
 
 
 log = logging.getLogger('zeroconf')
@@ -435,6 +435,7 @@ def test_backoff(suppresses_mock):
 
     type_ = "_http._tcp.local."
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+    _wait_for_start(zeroconf_browser)
 
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
@@ -513,6 +514,7 @@ def test_first_query_delay():
     """
     type_ = "_http._tcp.local."
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+    _wait_for_start(zeroconf_browser)
 
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
@@ -666,6 +668,7 @@ def test_integration():
                 service_removed.set()
 
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+    _wait_for_start(zeroconf_browser)
 
     # we are going to patch the zeroconf send to check packet sizes
     old_send = zeroconf_browser.async_send
