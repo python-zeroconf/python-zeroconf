@@ -223,7 +223,8 @@ class QueryScheduler:
         self._next_time[type_] = next_time
         self.set_schedule_changed()
 
-    def set_schedule_changed(self):
+    def set_schedule_changed(self) -> None:
+        """Set the event to unblock async_wait_ready to make sure the adjusted next time is seen."""
         assert self._schedule_changed_event is not None
         self._schedule_changed_event.set()
         self._schedule_changed_event.clear()
