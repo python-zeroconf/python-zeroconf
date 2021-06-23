@@ -221,6 +221,9 @@ class QueryScheduler:
             return
 
         self._next_time[type_] = next_time
+        self.set_schedule_changed()
+
+    def set_schedule_changed(self):
         assert self._schedule_changed_event is not None
         self._schedule_changed_event.set()
         self._schedule_changed_event.clear()

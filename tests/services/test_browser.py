@@ -475,15 +475,7 @@ def test_backoff(suppresses_mock):
             expected_query_time = 0.0
             while True:
                 sleep_count += 1
-                for _ in range(2):
-                    # If the browser thread is starting up
-                    # its possible we notify before the initial sleep
-                    # which means the test will fail so we need to d
-                    # this twice to eliminate the race condition
-                    zeroconf_browser.loop.call_soon_threadsafe(
-                        browser.query_scheduler.reschedule_type, type_, 0
-                    )
-                    got_query.wait(0.1)
+                got_query.wait(0.1)
                 if time_offset == expected_query_time:
                     assert got_query.is_set()
                     got_query.clear()
@@ -502,6 +494,7 @@ def test_backoff(suppresses_mock):
                 else:
                     assert not got_query.is_set()
                 time_offset += initial_query_interval
+                zeroconf_browser.loop.call_soon_threadsafe(browser.query_scheduler.set_schedule_changed)
 
         finally:
             browser.cancel()
@@ -725,7 +718,7 @@ def test_integration():
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
-                zeroconf_browser.loop.call_soon_threadsafe(browser.query_scheduler.reschedule_type, type_, 0)
+                zeroconf_browser.loop.call_soon_threadsafe(browser.query_scheduler.set_schedule_changed)
                 sleep_count += 1
                 got_query.wait(0.5)
                 # Prevent the test running indefinitely in an error condition
