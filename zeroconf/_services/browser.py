@@ -228,7 +228,7 @@ class QueryScheduler:
         return None if next_time <= now else next_time - now
 
     def reschedule_type(self, type_: str, next_time: float) -> None:
-        """Rescheudle the query for a type to happen sooner."""
+        """Reschedule the query for a type to happen sooner."""
         if next_time >= self._next_time[type_]:
             return
 
