@@ -47,6 +47,11 @@ _MDNS_PORT = 5353
 _DNS_PORT = 53
 _DNS_HOST_TTL = 120  # two minute for host records (A, SRV etc) as-per RFC6762
 _DNS_OTHER_TTL = 4500  # 75 minutes for non-host records (PTR, TXT etc) as-per RFC6762
+# Currently we enforce a minimum TTL for PTR records to avoid
+# ServiceBrowsers generating excessive queries refresh queries.
+# Apple uses a 15s minimum TTL, however we do not have the same
+# level of rate limit and safe guards so we use 1/4 of the recommended value
+_DNS_PTR_MIN_TTL = _DNS_OTHER_TTL / 4
 
 _DNS_PACKET_HEADER_LEN = 12
 

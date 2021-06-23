@@ -34,6 +34,7 @@ from ._utils.time import current_time_millis
 from .const import (
     _CLASS_IN,
     _DNS_OTHER_TTL,
+    _DNS_PTR_MIN_TTL,
     _FLAGS_AA,
     _FLAGS_QR_RESPONSE,
     _MDNS_PORT,
@@ -52,6 +53,23 @@ if TYPE_CHECKING:
 
 
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
+
+
+def sanitize_incoming_record(record: DNSRecord) -> None:
+    """Protect zeroconf from records that can cause denial of service.
+
+    We enforce a minimum TTL for PTR records to avoid
+    ServiceBrowsers generating excessive queries refresh queries.
+    Apple uses a 15s minimum TTL, however we do not have the same
+    level of rate limit and safe guards so we use 1/4 of the recommended value.
+    """
+    if record.ttl and record.ttl < _DNS_PTR_MIN_TTL and isinstance(record, DNSPointer):
+        log.debug(
+            "Increasing effective ttl of %s to minimum of %s to protect against excessive refreshes.",
+            record,
+            _DNS_PTR_MIN_TTL,
+        )
+        record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
 
 
 class _QueryResponse:
@@ -321,6 +339,8 @@ class RecordManager:
         unique_types: Set[Tuple[str, int, int]] = set()
 
         for record in msg.answers:
+            sanitize_incoming_record(record)
+
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record.type, record.class_))
 
