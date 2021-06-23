@@ -746,37 +746,3 @@ def test_records_same_packet_share_fate():
         first_time = dnsin.answers[0].created
         for answer in dnsin.answers:
             assert answer.created == first_time
-
-
-def test_guard_against_low_ptr_ttl():
-    """Ensure we enforce a minimum for PTR record ttls to avoid excessive refresh queries from ServiceBrowsers.
-
-    Some poorly designed IoT devices can set excessively low PTR
-    TTLs would will cause ServiceBrowsers to flood the network
-    with excessive refresh queries.
-    """
-    # Apple uses a 15s minimum TTL, however we do not have the same
-    # level of rate limit and safe guards so we use 1/4 of the recommended value
-    answer_with_low_ttl = r.DNSPointer(
-        "myservicelow_tcp._tcp.local.",
-        const._TYPE_PTR,
-        const._CLASS_IN | const._CLASS_UNIQUE,
-        2,
-        'low.local.',
-    )
-    answer_with_normal_ttl = r.DNSPointer(
-        "myservicelow_tcp._tcp.local.",
-        const._TYPE_PTR,
-        const._CLASS_IN | const._CLASS_UNIQUE,
-        const._DNS_OTHER_TTL,
-        'normal.local.',
-    )
-    # TTL should be adjusted to a safe value
-    response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-    response.add_answer_at_time(answer_with_low_ttl, 0)
-    response.add_answer_at_time(answer_with_normal_ttl, 0)
-    incoming = r.DNSIncoming(response.packets()[0])
-    incoming_answer_low = incoming.answers[0]
-    assert incoming_answer_low.ttl == const._DNS_PTR_MIN_TTL
-    incoming_answer_normal = incoming.answers[1]
-    assert incoming_answer_normal.ttl == const._DNS_OTHER_TTL
