@@ -140,6 +140,28 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Beta 5
+=============
+
+* Only wake up the query loop when there is a change in the next query time (#818) @bdraco
+
+  The ServiceBrowser query loop (async_browser_task) was being awoken on
+  every packet because it was using `zeroconf.async_wait` which wakes
+  up on every new packet.  We only need to awaken the loop when the next time
+  we are going to send a query has changed.
+
+* New ServiceBrowsers now request QU in the first outgoing when unspecified (#812) @bdraco
+
+  https://datatracker.ietf.org/doc/html/rfc6762#section-5.4
+  When we start a ServiceBrowser and zeroconf has just started up, the known
+  answer list will be small. By asking a QU question first, it is likely
+  that we have a large known answer list by the time we ask the QM question
+  a second later (current default which is likely too low but would be
+  a breaking change to increase). This reduces the amount of traffic on
+  the network, and has the secondary advantage that most responders will
+  answer a QU question without the typical delay answering QM questions.
+
+
 0.32.0 Beta 4
 =============
 
