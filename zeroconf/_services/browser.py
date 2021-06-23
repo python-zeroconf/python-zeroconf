@@ -184,6 +184,12 @@ def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[
 
 
 class QueryScheduler:
+    """Schedule outgoing PTR queries for Continuous Multicast DNS Querying
+
+    https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+
+    """
+
     def __init__(self, types: Set[str], delay: int = _BROWSER_TIME):
         self._schedule_changed_event: Optional[asyncio.Event] = None
         self._types = types
