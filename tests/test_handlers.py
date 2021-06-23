@@ -1070,3 +1070,41 @@ def test_questions_query_handler_does_not_put_qu_questions_in_history():
     assert not zc.question_history.suppresses(question, now, set([known_answer]))
 
     zc.close()
+
+
+def test_guard_against_low_ptr_ttl():
+    """Ensure we enforce a minimum for PTR record ttls to avoid excessive refresh queries from ServiceBrowsers.
+
+    Some poorly designed IoT devices can set excessively low PTR
+    TTLs would will cause ServiceBrowsers to flood the network
+    with excessive refresh queries.
+    """
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # Apple uses a 15s minimum TTL, however we do not have the same
+    # level of rate limit and safe guards so we use 1/4 of the recommended value
+    answer_with_low_ttl = r.DNSPointer(
+        "myservicelow_tcp._tcp.local.",
+        const._TYPE_PTR,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        2,
+        'low.local.',
+    )
+    answer_with_normal_ttl = r.DNSPointer(
+        "myservicelow_tcp._tcp.local.",
+        const._TYPE_PTR,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        const._DNS_OTHER_TTL,
+        'normal.local.',
+    )
+    # TTL should be adjusted to a safe value
+    response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    response.add_answer_at_time(answer_with_low_ttl, 0)
+    response.add_answer_at_time(answer_with_normal_ttl, 0)
+    incoming = r.DNSIncoming(response.packets()[0])
+    zc.record_manager.async_updates_from_response(incoming)
+
+    incoming_answer_low = zc.cache.async_get_unique(answer_with_low_ttl)
+    assert incoming_answer_low.ttl == const._DNS_PTR_MIN_TTL
+    incoming_answer_normal = zc.cache.async_get_unique(answer_with_normal_ttl)
+    assert incoming_answer_normal.ttl == const._DNS_OTHER_TTL
+    zc.close()

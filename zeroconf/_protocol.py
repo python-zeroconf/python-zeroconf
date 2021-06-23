@@ -173,12 +173,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
             if type_ == _TYPE_A:
                 rec = DNSAddress(domain, type_, class_, ttl, self.read_string(4), created=self.now)
             elif type_ in (_TYPE_CNAME, _TYPE_PTR):
-                # Currently we enforce a minimum TTL for PTR records to avoid
-                # ServiceBrowsers generating excessive queries refresh queries.
-                # Apple uses a 15s minimum TTL, however we do not have the same
-                # level of rate limit and safe guards so we use 1/4 of the recommended value
-                safe_ttl = max(_DNS_PTR_MIN_TTL, ttl) if ttl > 0 else 0
-                rec = DNSPointer(domain, type_, class_, safe_ttl, self.read_name(), self.now)
+                rec = DNSPointer(domain, type_, class_, ttl, self.read_name(), self.now)
             elif type_ == _TYPE_TXT:
                 rec = DNSText(domain, type_, class_, ttl, self.read_string(length), self.now)
             elif type_ == _TYPE_SRV:
