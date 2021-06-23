@@ -1096,10 +1096,18 @@ def test_guard_against_low_ptr_ttl():
         const._DNS_OTHER_TTL,
         'normal.local.',
     )
+    good_bye_answer = r.DNSPointer(
+        "myservicelow_tcp._tcp.local.",
+        const._TYPE_PTR,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        0,
+        'normal.local.',
+    )    
     # TTL should be adjusted to a safe value
     response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     response.add_answer_at_time(answer_with_low_ttl, 0)
     response.add_answer_at_time(answer_with_normal_ttl, 0)
+    response.add_answer_at_time(good_bye_answer, 0)
     incoming = r.DNSIncoming(response.packets()[0])
     zc.record_manager.async_updates_from_response(incoming)
 
@@ -1107,4 +1115,6 @@ def test_guard_against_low_ptr_ttl():
     assert incoming_answer_low.ttl == const._DNS_PTR_MIN_TTL
     incoming_answer_normal = zc.cache.async_get_unique(answer_with_normal_ttl)
     assert incoming_answer_normal.ttl == const._DNS_OTHER_TTL
+    incoming_answer_goodbye = zc.cache.async_get_unique(good_bye_answer)
+    assert incoming_answer_goodbye.ttl == 0
     zc.close()
