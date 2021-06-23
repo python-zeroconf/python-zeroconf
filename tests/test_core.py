@@ -17,7 +17,7 @@ import unittest.mock
 from typing import cast
 
 import zeroconf as r
-from zeroconf import _core, const, ServiceBrowser, Zeroconf, current_time_millis
+from zeroconf import _core, _protocol, const, ServiceBrowser, Zeroconf, current_time_millis
 from zeroconf.aio import AsyncZeroconf
 
 from . import has_working_ipv6, _clear_cache, _inject_response
@@ -629,3 +629,71 @@ async def test_multiple_sync_instances_stared_from_async_close():
     assert zc3.loop.is_running()
 
     await asyncio.sleep(0)
+
+
+def test_guard_against_oversized_packets():
+    """Ensure we do not process oversized packets.
+
+    These packets can quickly overwhelm the system.
+    """
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+
+    for i in range(5000):
+        generated.add_answer_at_time(
+            r.DNSText(
+                "packet{i}.local.",
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                500,
+                b'path=/~paulsm/',
+            ),
+            0,
+        )
+
+    # We are patching to generate an oversized packet
+    with unittest.mock.patch.object(_protocol, "_MAX_MSG_ABSOLUTE", 100000), unittest.mock.patch.object(
+        _protocol, "_MAX_MSG_TYPICAL", 100000
+    ):
+        over_sized_packet = generated.packets()[0]
+        assert len(over_sized_packet) > const._MAX_MSG_ABSOLUTE
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    okpacket_record = r.DNSText(
+        "okpacket.local.",
+        const._TYPE_TXT,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        500,
+        b'path=/~paulsm/',
+    )
+
+    generated.add_answer_at_time(
+        okpacket_record,
+        0,
+    )
+    ok_packet = generated.packets()[0]
+
+    # We cannot test though the network interface as some operating systems
+    # will guard against the oversized packet and we won't see it.
+    listener = _core.AsyncListener(zc)
+    listener.transport = unittest.mock.MagicMock()
+
+    listener.datagram_received(ok_packet, ('127.0.0.1', 5353))
+    assert zc.cache.async_get_unique(okpacket_record) is not None
+
+    listener.datagram_received(over_sized_packet, ('127.0.0.1', 5353))
+    assert (
+        zc.cache.async_get_unique(
+            r.DNSText(
+                "packet0.local.",
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                500,
+                b'path=/~paulsm/',
+            )
+        )
+        is None
+    )
+
+    zc.close()
