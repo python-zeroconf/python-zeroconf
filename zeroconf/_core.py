@@ -216,6 +216,18 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             return
 
         self.data = data
+
+        if len(data) > _MAX_MSG_ABSOLUTE:
+            # Guard against oversized packets to ensure bad implementations cannot overwhelm
+            # the system.
+            log.debug(
+                "Discarding incoming packet with length %s, which is larger "
+                "than the absolute maximum size of %s",
+                len(data),
+                _MAX_MSG_ABSOLUTE,
+            )
+            return
+
         msg = DNSIncoming(data, scope)
         if msg.valid:
             log.debug(
