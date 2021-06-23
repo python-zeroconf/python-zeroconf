@@ -190,10 +190,16 @@ class QueryScheduler:
 
     """
 
-    def __init__(self, types: Set[str], delay: int = _BROWSER_TIME):
+    def __init__(
+        self,
+        types: Set[str],
+        delay: int = _BROWSER_TIME,
+        first_delay_interval=_FIRST_QUERY_DELAY_RANDOM_INTERVAL,
+    ):
         self._schedule_changed_event: Optional[asyncio.Event] = None
         self._types = types
         self._next_time: Dict[str, float] = {}
+        self._first_delay_interval = first_delay_interval
         self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self._types}
 
     def start(self, now: float) -> None:
@@ -211,7 +217,7 @@ class QueryScheduler:
         also delay the first query of the series by a randomly chosen amount
         in the range 20-120 ms.
         """
-        delay = millis_to_seconds(random.randint(*_FIRST_QUERY_DELAY_RANDOM_INTERVAL))
+        delay = millis_to_seconds(random.randint(*self._first_delay_interval))
         next_time = now + delay
         self._next_time = {check_type_: next_time for check_type_ in self._types}
 
@@ -235,8 +241,8 @@ class QueryScheduler:
         self._schedule_changed_event.set()
         self._schedule_changed_event.clear()
 
-    def ready_types(self, now: float) -> List[str]:
-        """Generate the service browser query for any type that is due."""
+    def process_ready_types(self, now: float) -> List[str]:
+        """Generate the service browser query for any type that is due and schedule the next time."""
         if self.millis_to_wait(now):
             return []
 
@@ -447,7 +453,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def _generate_ready_queries(self, first_request: bool) -> List[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
         now = current_time_millis()
-        ready_types = self.query_scheduler.ready_types(now)
+        ready_types = self.query_scheduler.process_ready_types(now)
         if not ready_types:
             return []
 
