@@ -193,8 +193,8 @@ class QueryScheduler:
     def __init__(
         self,
         types: Set[str],
-        delay: int = _BROWSER_TIME,
-        first_delay_interval: Tuple[int, int] = _FIRST_QUERY_DELAY_RANDOM_INTERVAL,
+        delay: int,
+        first_delay_interval: Tuple[int, int],
     ):
         self._schedule_changed_event: Optional[asyncio.Event] = None
         self._types = types
@@ -310,7 +310,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.question_type = question_type
         self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
-        self.query_scheduler = QueryScheduler(self.types, delay)
+        self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
         self.queue: Optional[queue.Queue] = None
         self.done = False
 
