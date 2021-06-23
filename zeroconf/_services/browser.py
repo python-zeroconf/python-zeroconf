@@ -242,7 +242,7 @@ class QueryScheduler:
         self._schedule_changed_event.clear()
 
     def process_ready_types(self, now: float) -> List[str]:
-        """Generate the service browser query for any type that is due and schedule the next time."""
+        """Generate a list of ready types that is due and schedule the next time."""
         if self.millis_to_wait(now):
             return []
 
