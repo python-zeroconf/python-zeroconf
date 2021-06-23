@@ -196,12 +196,12 @@ class QueryScheduler:
         self._next_time: Dict[str, float] = {}
         self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self._types}
 
-    def start(self) -> None:
+    def start(self, now: float) -> None:
         """Start the scheduler."""
         self._schedule_changed_event = asyncio.Event()
-        self._generate_first_next_time()
+        self._generate_first_next_time(now)
 
-    def _generate_first_next_time(self) -> None:
+    def _generate_first_next_time(self, now: float) -> None:
         """Generate the initial next query times.
 
         https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
@@ -212,10 +212,10 @@ class QueryScheduler:
         in the range 20-120 ms.
         """
         delay = millis_to_seconds(random.randint(*_FIRST_QUERY_DELAY_RANDOM_INTERVAL))
-        next_time = current_time_millis() + delay
+        next_time = now + delay
         self._next_time = {check_type_: next_time for check_type_ in self._types}
 
-    def _millis_to_wait(self, now: float) -> Optional[float]:
+    def millis_to_wait(self, now: float) -> Optional[float]:
         """Returns the number of milliseconds to wait for the next event."""
         # Wait for the type has the smallest next time
         next_time = min(self._next_time.values())
@@ -237,7 +237,7 @@ class QueryScheduler:
 
     def ready_types(self, now: float) -> List[str]:
         """Generate the service browser query for any type that is due."""
-        if self._millis_to_wait(current_time_millis()):
+        if self.millis_to_wait(now):
             return []
 
         ready_types: List[str] = []
@@ -252,9 +252,9 @@ class QueryScheduler:
 
         return ready_types
 
-    async def async_wait_ready(self) -> None:
+    async def async_wait_ready(self, now: float) -> None:
         """Wait for at least one query to be ready."""
-        timeout = self._millis_to_wait(current_time_millis())
+        timeout = self.millis_to_wait(now)
         if timeout:
             assert self._schedule_changed_event is not None
             await wait_event_or_timeout(self._schedule_changed_event, timeout=millis_to_seconds(timeout))
@@ -326,7 +326,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         Must be called by uses of this base class after they
         have finished setting their properties.
         """
-        self.query_scheduler.start()
+        self.query_scheduler.start(current_time_millis())
         self.zc.async_add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
         # Only start queries after the listener is installed
         self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
@@ -463,7 +463,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         await self.zc.async_wait_for_start()
         first_request = True
         while True:
-            await self.query_scheduler.async_wait_ready()
+            await self.query_scheduler.async_wait_ready(current_time_millis())
             outs = self._generate_ready_queries(first_request)
             if not outs:
                 continue
