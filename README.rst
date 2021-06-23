@@ -140,6 +140,26 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Beta 6
+=============
+
+This beta addresses two potential areas where zeroconf can be overwhelmed and
+deny service to legitimate queriers.
+
+* BREAKING CHANGE: Drop oversize packets before processing them (#826) @bdraco
+
+  Oversized packets can quickly overwhelm the system and deny
+  service to legitimate queriers. In practice this is usually
+  due to broken mDNS implementations rather than malicious
+  actors.
+
+* BREAKING CHANGE: Guard against excessive ServiceBrowser queries from PTR records significantly lower than recommended (#824) @bdraco
+
+  We now enforce a minimum TTL for PTR records to avoid
+  ServiceBrowsers generating excessive queries refresh queries.
+  Apple uses a 15s minimum TTL, however we do not have the same
+  level of rate limit and safe guards so we use 1/4 of the recommended value.
+
 0.32.0 Beta 5
 =============
 
