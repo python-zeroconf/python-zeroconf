@@ -33,7 +33,6 @@ from ._utils.time import current_time_millis
 from .const import (
     _CLASS_UNIQUE,
     _DNS_PACKET_HEADER_LEN,
-    _DNS_PTR_MIN_TTL,
     _FLAGS_QR_MASK,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
