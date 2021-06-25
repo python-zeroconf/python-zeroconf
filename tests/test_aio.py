@@ -723,6 +723,8 @@ async def test_integration(suppresses_mock):
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
 
         aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+        await aio_zeroconf_registrar.async_wait_for_start()
+
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
             type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
