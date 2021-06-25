@@ -36,6 +36,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
+#
+# macos is very slow without using a cache (4-5m), however
+# its usually < 10s with a cache even without skipping
+# this step
+#
 #        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           python -m venv env
