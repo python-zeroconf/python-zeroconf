@@ -48,4 +48,3 @@ test_coverage:
 
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf
-
