@@ -662,7 +662,10 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
 
 
 @pytest.mark.asyncio
-async def test_integration():
+# Disable duplicate question suppression for this test as it works
+# by asking the same question over and over
+@unittest.mock.patch("zeroconf._core.QuestionHistory.suppresses", return_value=False)
+async def test_integration(suppresses_mock):
     service_added = asyncio.Event()
     service_removed = asyncio.Event()
     unexpected_ttl = asyncio.Event()
