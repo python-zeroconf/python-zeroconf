@@ -38,7 +38,7 @@ jobs:
         run: pip install pytest-github-actions-annotate-failures               
       - name: Run tests
         run: |
-        . env/bin/activate
-        make ci
+          . env/bin/activate
+          make ci
       - name: Report coverage to Codecov
         uses: codecov/codecov-action@v1
