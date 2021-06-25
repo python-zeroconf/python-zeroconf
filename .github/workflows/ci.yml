@@ -13,14 +13,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
-#        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8, 3.9, pypy3]
         include:
-#          - os: ubuntu-latest
-#            venvcmd: . env/bin/activate
-#          - os: macos-latest
-#            venvcmd: . env/bin/activate
+          - os: ubuntu-latest
+            venvcmd: . env/bin/activate
+          - os: macos-latest
+            venvcmd: . env/bin/activate
           - os: windows-latest
             venvcmd: env\Scripts\activate.bat
     steps:
@@ -37,7 +36,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
+#        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           python -m venv env
           ${{ matrix.venvcmd }}
