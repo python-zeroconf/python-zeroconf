@@ -13,7 +13,7 @@ endif
 virtualenv: ./env/requirements.built
 
 env:
-	virtualenv env
+	python -m venv env
 
 ./env/requirements.built: env requirements-dev.txt
 	./env/bin/pip install -r requirements-dev.txt
@@ -41,10 +41,11 @@ mypy:
 	mypy --no-warn-redundant-casts --no-warn-unused-ignores examples/*.py zeroconf
 
 test:
-	pytest --timeout=60 -v tests
+	pytest --durations=20 --timeout=60 -v tests
 
 test_coverage:
-	pytest --timeout=60 -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing tests
+	pytest --durations=20 --timeout=60 -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing tests
 
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf
+
