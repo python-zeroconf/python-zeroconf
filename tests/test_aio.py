@@ -7,16 +7,18 @@
 import asyncio
 import logging
 import socket
+import time
 import threading
 import unittest.mock
 
 import pytest
 
 from zeroconf.aio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
-from zeroconf import Zeroconf
+from zeroconf import DNSIncoming, ServiceStateChange, Zeroconf, const
 from zeroconf.const import _LISTENER_TIME
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
 from zeroconf._services import ServiceListener
+import zeroconf._services.browser as _services_browser
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.time import current_time_millis
 
@@ -657,3 +659,96 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     await browser.async_cancel()
 
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_integration():
+    service_added = asyncio.Event()
+    service_removed = asyncio.Event()
+    unexpected_ttl = asyncio.Event()
+    got_query = asyncio.Event()
+
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+            elif state_change is ServiceStateChange.Removed:
+                service_removed.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    await zeroconf_browser.async_wait_for_start()
+
+    # we are going to patch the zeroconf send to check packet sizes
+    old_send = zeroconf_browser.async_send
+
+    time_offset = 0.0
+
+    def current_time_millis():
+        """Current system time in milliseconds"""
+        return (time.time() * 1000) + (time_offset * 1000)
+
+    expected_ttl = const._DNS_HOST_TTL
+    nbr_answers = 0
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = DNSIncoming(out.packets()[0])
+        nonlocal nbr_answers
+        for answer in pout.answers:
+            nbr_answers += 1
+            if not answer.ttl > expected_ttl / 2:
+                unexpected_ttl.set()
+
+        got_query.set()
+        got_query.clear()
+
+        old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
+
+    # patch the zeroconf send
+    # patch the zeroconf current_time_millis
+    # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
+    with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch(
+        "zeroconf._services.browser.current_time_millis", current_time_millis
+    ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
+        service_added = asyncio.Event()
+        service_removed = asyncio.Event()
+
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+
+        aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+
+            # Test that we receive queries containing answers only if the remaining TTL
+            # is greater than half the original TTL
+            sleep_count = 0
+            test_iterations = 50
+
+            while nbr_answers < test_iterations:
+                # Increase simulated time shift by 1/4 of the TTL in seconds
+                time_offset += expected_ttl / 4
+                browser.query_scheduler.set_schedule_changed()
+                sleep_count += 1
+                await asyncio.wait_for(got_query.wait(), 0.5)
+                # Prevent the test running indefinitely in an error condition
+                assert sleep_count < test_iterations * 4
+            assert not unexpected_ttl.is_set()
+            # Don't remove service, allow close() to cleanup
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await asyncio.wait_for(service_removed.wait(), 1)
+            assert service_removed.is_set()
+            await browser.async_cancel()
+            await aiozc.async_close()
