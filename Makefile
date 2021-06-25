@@ -13,7 +13,7 @@ endif
 virtualenv: ./env/requirements.built
 
 env:
-	virtualenv env
+	python -m venv env
 
 ./env/requirements.built: env requirements-dev.txt
 	./env/bin/pip install -r requirements-dev.txt
@@ -48,3 +48,4 @@ test_coverage:
 
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf
+
