@@ -36,6 +36,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           python -m venv env
           ${{ matrix.venvcmd }}
