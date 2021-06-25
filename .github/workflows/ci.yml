@@ -30,7 +30,7 @@ jobs:
           path: env
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-dev.txt') }}-${{ hashFiles('**/Makefile') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
