@@ -129,7 +129,7 @@ class AsyncEngine:
 
         for s in reader_sockets:
             transport, protocol = await loop.create_datagram_endpoint(lambda: AsyncListener(self.zc), sock=s)
-            self.protocols.append(protocol)
+            self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(cast(asyncio.DatagramTransport, transport))
             if s in sender_sockets:
                 self.senders.append(cast(asyncio.DatagramTransport, transport))
