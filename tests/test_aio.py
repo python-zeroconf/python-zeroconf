@@ -661,8 +661,12 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     await aiozc.async_close()
 
 
+# Disable duplicate question suppression for this test as it works
+# by asking the same question over and over
 @pytest.mark.asyncio
-async def test_integration():
+@unittest.mock.patch("zeroconf._core.AsyncListener.suppress_duplicate_packet", return_value=False)
+@unittest.mock.patch("zeroconf._history.QuestionHistory.suppresses", return_value=False)
+async def test_integration(suppress_duplicate_packet_mock, suppresses_mock):
     service_added = asyncio.Event()
     service_removed = asyncio.Event()
     unexpected_ttl = asyncio.Event()
@@ -715,13 +719,7 @@ async def test_integration():
     # by asking the same question over and over
     with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch(
         "zeroconf._services.browser.current_time_millis", current_time_millis
-    ), unittest.mock.patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
-    ), unittest.mock.patch(
-        "zeroconf._core.AsyncListener.suppress_duplicate_packet", return_value=False
-    ), unittest.mock.patch(
-        "zeroconf._core.QuestionHistory.suppresses", return_value=False
-    ):
+    ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
