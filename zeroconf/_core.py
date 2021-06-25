@@ -272,7 +272,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             return
 
         deferred = self._deferred.setdefault(addr, [])
-        # If we get the same packet on another iterface we ignore it
+        # If we get the same packet we ignore it
         for incoming in reversed(deferred):
             if incoming.data == msg.data:
                 return
