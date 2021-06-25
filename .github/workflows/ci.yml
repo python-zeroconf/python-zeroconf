@@ -15,19 +15,12 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8, 3.9, pypy3]
-        include:
-          - os: ubuntu-latest
-            path: ~/.cache/pip
-          - os: macos-latest
-            path: ~/Library/Caches/pip
-          - os: windows-latest
-            path: ~\AppData\Local\pip\Cache
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
         id: cache
         with:
-          path: ${{ matrix.path }}
+          path: env
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-dev.txt') }}-${{ hashFiles('**/Makefile') }}
           restore-keys: |
             ${{ runner.os }}-pip-
