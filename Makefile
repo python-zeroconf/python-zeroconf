@@ -13,7 +13,7 @@ endif
 virtualenv: ./env/requirements.built
 
 env:
-	virtualenv env
+	python -m venv env
 
 ./env/requirements.built: env requirements-dev.txt
 	./env/bin/pip install -r requirements-dev.txt
