@@ -21,7 +21,7 @@ jobs:
           - os: macos-latest
             venvcmd: . env/bin/activate
           - os: windows-latest
-            venvcmd: env\Scripts\activate
+            venvcmd: env\Scripts\Activate.ps1
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
