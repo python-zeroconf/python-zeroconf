@@ -279,11 +279,15 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         deferred.append(msg)
         delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
         assert self.zc.loop is not None
-        if addr in self._timers:
-            self._timers.pop(addr).cancel()
+        self._cancel_any_timers_for_addr(addr)
         self._timers[addr] = self.zc.loop.call_later(
             delay, self._respond_query, None, addr, port, v6_flow_scope
         )
+
+    def _cancel_any_timers_for_addr(self, addr: str) -> None:
+        """Cancel any future truncated packet timers for the address."""
+        if addr in self._timers:
+            self._timers.pop(addr).cancel()
 
     def _respond_query(
         self,
@@ -293,8 +297,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Respond to a query and reassemble any truncated deferred packets."""
-        if addr in self._timers:
-            self._timers.pop(addr).cancel()
+        self._cancel_any_timers_for_addr(addr)
         packets = self._deferred.pop(addr, [])
         if msg:
             packets.append(msg)
