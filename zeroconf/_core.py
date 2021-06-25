@@ -85,6 +85,7 @@ class AsyncEngine:
     ) -> None:
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self.zc = zeroconf
+        self.protocols: List[AsyncListener] = []
         self.readers: List[asyncio.DatagramTransport] = []
         self.senders: List[asyncio.DatagramTransport] = []
         self._listen_socket = listen_socket
@@ -127,7 +128,8 @@ class AsyncEngine:
             sender_sockets.append(s)
 
         for s in reader_sockets:
-            transport, _ = await loop.create_datagram_endpoint(lambda: AsyncListener(self.zc), sock=s)
+            transport, protocol = await loop.create_datagram_endpoint(lambda: AsyncListener(self.zc), sock=s)
+            self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(cast(asyncio.DatagramTransport, transport))
             if s in sender_sockets:
                 self.senders.append(cast(asyncio.DatagramTransport, transport))
@@ -185,6 +187,10 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.zc = zc
         self.data: Optional[bytes] = None
         self.transport: Optional[asyncio.DatagramTransport] = None
+
+        self._deferred: Dict[str, List[DNSIncoming]] = {}
+        self._timers: Dict[str, asyncio.TimerHandle] = {}
+
         super().__init__()
 
     def datagram_received(
@@ -254,7 +260,49 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.zc.handle_response(msg)
             return
 
-        self.zc.handle_query(msg, addr, port, v6_flow_scope)
+        self.handle_query_or_defer(msg, addr, port, v6_flow_scope)
+
+    def handle_query_or_defer(
+        self, msg: DNSIncoming, addr: str, port: int, v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
+    ) -> None:
+        """Deal with incoming query packets.  Provides a response if
+        possible."""
+        if not msg.truncated:
+            self._respond_query(msg, addr, port, v6_flow_scope)
+            return
+
+        deferred = self._deferred.setdefault(addr, [])
+        # If we get the same packet we ignore it
+        for incoming in reversed(deferred):
+            if incoming.data == msg.data:
+                return
+        deferred.append(msg)
+        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
+        assert self.zc.loop is not None
+        self._cancel_any_timers_for_addr(addr)
+        self._timers[addr] = self.zc.loop.call_later(
+            delay, self._respond_query, None, addr, port, v6_flow_scope
+        )
+
+    def _cancel_any_timers_for_addr(self, addr: str) -> None:
+        """Cancel any future truncated packet timers for the address."""
+        if addr in self._timers:
+            self._timers.pop(addr).cancel()
+
+    def _respond_query(
+        self,
+        msg: Optional[DNSIncoming],
+        addr: str,
+        port: int,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    ) -> None:
+        """Respond to a query and reassemble any truncated deferred packets."""
+        self._cancel_any_timers_for_addr(addr)
+        packets = self._deferred.pop(addr, [])
+        if msg:
+            packets.append(msg)
+
+        self.zc.handle_assembled_query(packets, addr, port, v6_flow_scope)
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
@@ -316,9 +364,6 @@ class Zeroconf(QuietLogger):
         self.notify_event: Optional[asyncio.Event] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
-
-        self._deferred: Dict[str, List[DNSIncoming]] = {}
-        self._timers: Dict[str, asyncio.TimerHandle] = {}
 
         self.start()
 
@@ -605,41 +650,21 @@ class Zeroconf(QuietLogger):
         are held in the cache, and listeners are notified."""
         self.record_manager.async_updates_from_response(msg)
 
-    def handle_query(
-        self, msg: DNSIncoming, addr: str, port: int, v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
-    ) -> None:
-        """Deal with incoming query packets.  Provides a response if
-        possible."""
-        if not msg.truncated:
-            self._respond_query(msg, addr, port)
-            return
-
-        deferred = self._deferred.setdefault(addr, [])
-        # If we get the same packet on another iterface we ignore it
-        for incoming in reversed(deferred):
-            if incoming.data == msg.data:
-                return
-        deferred.append(msg)
-        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
-        assert self.loop is not None
-        if addr in self._timers:
-            self._timers.pop(addr).cancel()
-        self._timers[addr] = self.loop.call_later(delay, self._respond_query, None, addr, port, v6_flow_scope)
-
-    def _respond_query(
+    def handle_assembled_query(
         self,
-        msg: Optional[DNSIncoming],
+        packets: List[DNSIncoming],
         addr: str,
         port: int,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
-        """Respond to a query and reassemble any truncated deferred packets."""
-        if addr in self._timers:
-            self._timers.pop(addr).cancel()
-        packets = self._deferred.pop(addr, [])
-        if msg:
-            packets.append(msg)
+        """Respond to a (re)assembled query.
 
+        If the protocol recieved packets with the TC bit set, it will
+        wait a bit for the rest of the packets and only call
+        handle_assembled_query once it has a complete set of packets
+        or the timer expires. If the TC bit is not set, a single
+        packet will be in packets.
+        """
         unicast_out, multicast_out = self.query_handler.async_response(packets, addr, port)
         if unicast_out:
             self.async_send(unicast_out, addr, port, v6_flow_scope)
