@@ -44,7 +44,7 @@ test:
 	pytest --durations=20 --timeout=60 -v tests
 
 test_coverage:
-	pytest --durations=20 --timeout=60 -v --cov=zeroconf --cov-branch --cov-report html --cov-report term-missing tests
+	pytest --durations=20 --timeout=60 -v --cov=zeroconf --cov-branch --cov-report xml --cov-report html --cov-report term-missing tests
 
 autopep8:
 	autopep8 --max-line-length=$(MAX_LINE_LENGTH) -i setup.py examples zeroconf
