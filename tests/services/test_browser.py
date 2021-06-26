@@ -11,6 +11,7 @@ import time
 import os
 import unittest
 from threading import Event
+from unittest.mock import patch
 
 import pytest
 
@@ -382,7 +383,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                 return self.created + (percent * self.ttl * 10)
 
             # Set an expire time that will force a refresh
-            with unittest.mock.patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
+            with patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
                 _inject_response(
                     zeroconf,
                     mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
@@ -430,8 +431,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             zeroconf.close()
 
 
-@unittest.mock.patch("zeroconf._core.QuestionHistory.suppresses", return_value=False)
-def test_backoff(suppresses_mock):
+def test_backoff():
     got_query = Event()
 
     type_ = "_http._tcp.local."
@@ -457,11 +457,11 @@ def test_backoff(suppresses_mock):
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
-    with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch.object(
-        _services_browser, "current_time_millis", current_time_millis
-    ), unittest.mock.patch.object(
+    with patch.object(zeroconf_browser, "async_send", send), patch.object(
+        zeroconf_browser.question_history, "suppresses", return_value=False
+    ), patch.object(_services_browser, "current_time_millis", current_time_millis), patch.object(
         _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
-    ), unittest.mock.patch.object(
+    ), patch.object(
         _services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)
     ):
         # dummy service callback
@@ -525,7 +525,7 @@ def test_first_query_delay():
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
-    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+    with patch.object(zeroconf_browser, "async_send", send):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
@@ -564,7 +564,7 @@ def test_asking_default_is_asking_qm_questions_after_the_first_qu():
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
-    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+    with patch.object(zeroconf_browser, "async_send", send):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
@@ -597,7 +597,7 @@ def test_asking_qm_questions():
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
-    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+    with patch.object(zeroconf_browser, "async_send", send):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
@@ -631,7 +631,7 @@ def test_asking_qu_questions():
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
-    with unittest.mock.patch.object(zeroconf_browser, "async_send", send):
+    with patch.object(zeroconf_browser, "async_send", send):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass

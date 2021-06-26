@@ -9,7 +9,8 @@ import logging
 import socket
 import time
 import threading
-import unittest.mock
+from unittest.mock import patch
+
 
 import pytest
 
@@ -411,7 +412,7 @@ async def test_service_info_async_request() -> None:
     _clear_cache(aiozc.zeroconf)
     # Generating the race condition is almost impossible
     # without patching since its a TOCTOU race
-    with unittest.mock.patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
+    with patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
         await aiosinfo.async_request(aiozc.zeroconf, 3000)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
@@ -664,9 +665,8 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
 # Disable duplicate question suppression for this test as it works
 # by asking the same question over and over
 @pytest.mark.asyncio
-@unittest.mock.patch("zeroconf._core.AsyncListener.suppress_duplicate_packet", return_value=False)
-@unittest.mock.patch("zeroconf._core.QuestionHistory.suppresses", return_value=False)
-async def test_integration(suppress_duplicate_packet_mock, suppresses_mock):
+@patch("zeroconf._core.AsyncListener.suppress_duplicate_packet", return_value=False)
+async def test_integration(suppress_duplicate_packet_mock):
     service_added = asyncio.Event()
     service_removed = asyncio.Event()
     unexpected_ttl = asyncio.Event()
@@ -717,9 +717,11 @@ async def test_integration(suppress_duplicate_packet_mock, suppresses_mock):
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
     # Disable duplicate question suppression for this test as it works
     # by asking the same question over and over
-    with unittest.mock.patch.object(zeroconf_browser, "async_send", send), unittest.mock.patch(
-        "zeroconf._services.browser.current_time_millis", current_time_millis
-    ), unittest.mock.patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
+    with patch.object(zeroconf_browser.question_history, "suppresses", return_value=False), patch.object(
+        zeroconf_browser, "async_send", send
+    ), patch("zeroconf._services.browser.current_time_millis", current_time_millis), patch.object(
+        _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
+    ):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 

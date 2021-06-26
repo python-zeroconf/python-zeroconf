@@ -6,7 +6,7 @@
 
 import asyncio
 import contextlib
-import unittest.mock
+from unittest.mock import patch
 
 import pytest
 
@@ -23,7 +23,7 @@ async def test_async_get_all_tasks() -> None:
     await aioutils._async_get_all_tasks(aioutils.get_running_loop())
     if not hasattr(asyncio, 'all_tasks'):
         return
-    with unittest.mock.patch("zeroconf._utils.aio.asyncio.all_tasks", side_effect=RuntimeError):
+    with patch("zeroconf._utils.aio.asyncio.all_tasks", side_effect=RuntimeError):
         await aioutils._async_get_all_tasks(aioutils.get_running_loop())
 
 

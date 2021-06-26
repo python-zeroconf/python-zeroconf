@@ -15,6 +15,7 @@ import time
 import unittest
 import unittest.mock
 from typing import cast
+from unittest.mock import patch
 
 import zeroconf as r
 from zeroconf import _core, _protocol, const, Zeroconf, current_time_millis
@@ -48,7 +49,7 @@ def threadsafe_query(zc, protocol, *args):
 # which is not threadsafe
 @pytest.mark.asyncio
 async def test_reaper():
-    with unittest.mock.patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10):
+    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10):
         assert _core._CACHE_CLEANUP_INTERVAL == 10
         aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
         zeroconf = aiozc.zeroconf
@@ -652,7 +653,7 @@ def test_guard_against_oversized_packets():
         )
 
     # We are patching to generate an oversized packet
-    with unittest.mock.patch.object(_protocol, "_MAX_MSG_ABSOLUTE", 100000), unittest.mock.patch.object(
+    with patch.object(_protocol, "_MAX_MSG_ABSOLUTE", 100000), patch.object(
         _protocol, "_MAX_MSG_TYPICAL", 100000
     ):
         over_sized_packet = generated.packets()[0]

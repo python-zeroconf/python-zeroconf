@@ -10,6 +10,7 @@ import time
 import unittest
 import unittest.mock
 from typing import Optional  # noqa # used in type hints
+from unittest.mock import patch
 
 import zeroconf as r
 from zeroconf import DNSOutgoing, ServiceBrowser, ServiceInfo, Zeroconf, const
@@ -90,7 +91,7 @@ class Names(unittest.TestCase):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=['127.0.0.1'])
 
-        with unittest.mock.patch('zeroconf._logger.log.warning') as mocked_log_warn, unittest.mock.patch(
+        with patch('zeroconf._logger.log.warning') as mocked_log_warn, patch(
             'zeroconf._logger.log.debug'
         ) as mocked_log_debug:
             # now that we have a long packet in our possession, let's verify the
