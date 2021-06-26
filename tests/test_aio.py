@@ -762,6 +762,7 @@ async def test_integration():
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
+                await asyncio.sleep(0) # Allow the loop to run and wait for the event on time change
                 browser.query_scheduler.set_schedule_changed()
                 sleep_count += 1
                 await asyncio.wait_for(got_query.wait(), 1)
