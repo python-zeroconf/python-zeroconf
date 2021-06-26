@@ -701,7 +701,6 @@ def test_guard_against_oversized_packets():
 
 def test_guard_against_duplicate_packets():
     """Ensure we do not process duplicate packets.
-
     These packets can quickly overwhelm the system.
     """
     zc = Zeroconf(interfaces=['127.0.0.1'])
