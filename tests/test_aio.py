@@ -746,7 +746,7 @@ async def test_integration(suppresses_mock):
                 time_offset += expected_ttl / 4
                 browser.query_scheduler.set_schedule_changed()
                 sleep_count += 1
-                await asyncio.wait_for(got_query.wait(), 0.5)
+                await asyncio.wait_for(got_query.wait(), 1)
                 # Prevent the test running indefinitely in an error condition
                 assert sleep_count < test_iterations * 4
             assert not unexpected_ttl.is_set()
