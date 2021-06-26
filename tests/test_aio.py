@@ -710,12 +710,22 @@ async def test_integration():
         old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
     assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
-    # Disable duplicate question suppression for this test as it works
+    # Disable duplicate question suppression and duplicate packet suppression for this test as it works
     # by asking the same question over and over
     with patch.object(
+        zeroconf_registrar.engine.protocols[0], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
+        zeroconf_registrar.engine.protocols[1], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
         zeroconf_browser.engine.protocols[0], "suppress_duplicate_packet", return_value=False
     ), patch.object(
         zeroconf_browser.engine.protocols[1], "suppress_duplicate_packet", return_value=False
@@ -732,9 +742,6 @@ async def test_integration():
         service_removed = asyncio.Event()
 
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-
-        aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
-        await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
