@@ -99,6 +99,7 @@ class ServiceTypesQuery(unittest.TestCase):
         type_ = "_test-listenv6ip-type._tcp.local."
         name = "xxxyyy"
         registration_name = "%s.%s" % (name, type_)
+        addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
 
         zeroconf_registrar = Zeroconf(ip_version=r.IPVersion.V6Only)
         desc = {'path': '/~paulsm/'}
@@ -110,7 +111,7 @@ class ServiceTypesQuery(unittest.TestCase):
             0,
             desc,
             "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            addresses=[socket.inet_pton(socket.AF_INET6, addr)],
         )
         zeroconf_registrar.registry.add(info)
         try:
