@@ -140,6 +140,30 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Release Candidate 2
+==========================
+
+* Limit duplicate packet suppression to 1s intervals (#841) @bdraco
+
+  Only suppress duplicate packets that happen within the same
+  second. Legitimate queriers will retry the question if they
+  are suppressed. The limit was reduced to one second to be
+  in line with rfc6762
+
+* Make multipacket known answer suppression per interface (#836) @bdraco
+
+  The suppression was happening per instance of Zeroconf instead
+  of per interface. Since the same network can be seen on multiple
+  interfaces (usually and wifi and ethernet), this would confuse the
+  multi-packet known answer supression since it was not expecting
+  to get the same data more than once
+
+
+0.32.0 Release Candidate 1
+==========================
+
+No changes
+
 0.32.0 Beta 6
 =============
 
