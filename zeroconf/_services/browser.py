@@ -238,8 +238,10 @@ class QueryScheduler:
     def set_schedule_changed(self) -> None:
         """Set the event to unblock async_wait_ready to make sure the adjusted next time is seen."""
         assert self._schedule_changed_event is not None
+        log.debug("Set event")
         self._schedule_changed_event.set()
         self._schedule_changed_event.clear()
+        log.debug("Done event")
 
     def process_ready_types(self, now: float) -> List[str]:
         """Generate a list of ready types that is due and schedule the next time."""
@@ -253,6 +255,7 @@ class QueryScheduler:
                 continue
 
             ready_types.append(type_)
+            log.debug("Adding to now=%s, next time %s %s", now / 1000, type_, self._delay[type_])
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
@@ -261,9 +264,12 @@ class QueryScheduler:
     async def async_wait_ready(self, now: float) -> None:
         """Wait for at least one query to be ready."""
         timeout = self.millis_to_wait(now)
+        log.warning("Waiting for ready now=%s", now / 1000)
         if timeout:
             assert self._schedule_changed_event is not None
+            log.debug("Waiting for event or timeout: %s", millis_to_seconds(timeout))
             await wait_event_or_timeout(self._schedule_changed_event, timeout=millis_to_seconds(timeout))
+            log.debug("Finished Waiting")
 
 
 class _ServiceBrowserBase(RecordUpdateListener):
