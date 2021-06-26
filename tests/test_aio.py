@@ -709,6 +709,7 @@ async def test_integration():
 
         old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
+    assert len(zeroconf_browser.engine.protocols) == 2
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
