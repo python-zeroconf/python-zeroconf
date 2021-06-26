@@ -9,6 +9,7 @@ import socket
 import threading
 import os
 import unittest
+from unittest.mock import patch
 from threading import Event
 from typing import List
 
@@ -218,7 +219,7 @@ class TestServiceInfo(unittest.TestCase):
             send_event.set()
 
         # patch the zeroconf send
-        with unittest.mock.patch.object(zc, "async_send", send):
+        with patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records) -> r.DNSIncoming:
 
@@ -363,7 +364,7 @@ class TestServiceInfo(unittest.TestCase):
             send_event.set()
 
         # patch the zeroconf send
-        with unittest.mock.patch.object(zc, "async_send", send):
+        with patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records) -> r.DNSIncoming:
 
@@ -675,7 +676,7 @@ def test_asking_qu_questions():
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
-    with unittest.mock.patch.object(zeroconf, "async_send", send):
+    with patch.object(zeroconf, "async_send", send):
         zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QU)
         assert first_outgoing.questions[0].unicast == True
         zeroconf.close()
@@ -699,7 +700,7 @@ def test_asking_qm_questions_are_default():
         old_send(out, addr=addr, port=port)
 
     # patch the zeroconf send
-    with unittest.mock.patch.object(zeroconf, "async_send", send):
+    with patch.object(zeroconf, "async_send", send):
         zeroconf.get_service_info(f"name.{type_}", type_, 500)
         assert first_outgoing.questions[0].unicast == False
         zeroconf.close()
