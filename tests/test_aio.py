@@ -665,7 +665,7 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
 # by asking the same question over and over
 @pytest.mark.asyncio
 @unittest.mock.patch("zeroconf._core.AsyncListener.suppress_duplicate_packet", return_value=False)
-@unittest.mock.patch("zeroconf._browser.QuestionHistory.suppresses", return_value=False)
+@unittest.mock.patch("zeroconf._services.browser.QuestionHistory.suppresses", return_value=False)
 async def test_integration(suppress_duplicate_packet_mock, suppresses_mock):
     service_added = asyncio.Event()
     service_removed = asyncio.Event()

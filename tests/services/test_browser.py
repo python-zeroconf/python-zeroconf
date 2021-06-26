@@ -430,7 +430,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             zeroconf.close()
 
 
-@unittest.mock.patch("zeroconf._browser.QuestionHistory.suppresses", return_value=False)
+@unittest.mock.patch("zeroconf._services.browser.QuestionHistory.suppresses", return_value=False)
 def test_backoff(suppresses_mock):
     got_query = Event()
 
