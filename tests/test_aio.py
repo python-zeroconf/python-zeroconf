@@ -21,6 +21,7 @@ from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException,
 from zeroconf._services import ServiceListener
 import zeroconf._services.browser as _services_browser
 from zeroconf._services.info import ServiceInfo
+from zeroconf._utils.aio import wait_event_or_timeout
 from zeroconf._utils.time import current_time_millis
 
 from . import _clear_cache
@@ -769,7 +770,7 @@ async def test_integration():
                 await asyncio.sleep(0)  # Allow the loop to run and wait for the event on time change
                 sleep_count += 1
                 _services_browser.log.debug("Starting wait")
-                await asyncio.wait_for(got_query.wait(), 1)
+                await wait_event_or_timeout(got_query, 1)
                 _services_browser.log.debug("done wait")
                 # Prevent the test running indefinitely in an error condition
                 assert sleep_count < test_iterations * 4, "Answers=%s" % (nbr_answers)
