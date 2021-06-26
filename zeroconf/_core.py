@@ -196,10 +196,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def suppress_duplicate_packet(self, data: bytes, now: float) -> bool:
         """Suppress duplicate packet if the last one was the same in the last second."""
-        if self.data == data and (now - 1000) < self.last_time:
-            return True
-        self.data = data
-        self.last_time = now
         return False
 
     def datagram_received(
