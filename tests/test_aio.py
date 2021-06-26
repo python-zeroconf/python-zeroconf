@@ -662,11 +662,8 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     await aiozc.async_close()
 
 
-# Disable duplicate question suppression for this test as it works
-# by asking the same question over and over
 @pytest.mark.asyncio
-@patch("zeroconf._core.AsyncListener.suppress_duplicate_packet", return_value=False)
-async def test_integration(suppress_duplicate_packet_mock):
+async def test_integration():
     service_added = asyncio.Event()
     service_removed = asyncio.Event()
     unexpected_ttl = asyncio.Event()
@@ -717,9 +714,17 @@ async def test_integration(suppress_duplicate_packet_mock):
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
     # Disable duplicate question suppression for this test as it works
     # by asking the same question over and over
-    with patch.object(zeroconf_browser.question_history, "suppresses", return_value=False), patch.object(
+    with patch.object(
+        zeroconf_browser.engine.protocols[0], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
+        zeroconf_browser.engine.protocols[1], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
+        zeroconf_browser.question_history, "suppresses", return_value=False
+    ), patch.object(
         zeroconf_browser, "async_send", send
-    ), patch("zeroconf._services.browser.current_time_millis", current_time_millis), patch.object(
+    ), patch(
+        "zeroconf._services.browser.current_time_millis", current_time_millis
+    ), patch.object(
         _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
     ):
         service_added = asyncio.Event()
