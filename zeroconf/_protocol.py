@@ -79,7 +79,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
     """Object representation of an incoming DNS packet"""
 
-    def __init__(self, data: bytes, scope_id: Optional[int] = None) -> None:
+    def __init__(self, data: bytes, scope_id: Optional[int] = None, now: Optional[float] = None) -> None:
         """Constructor from string holding bytes of packet"""
         super().__init__(0)
         self.offset = 0
@@ -92,7 +92,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.num_authorities = 0
         self.num_additionals = 0
         self.valid = False
-        self.now = current_time_millis()
+        self.now = now or current_time_millis()
         self.scope_id = scope_id
 
         try:

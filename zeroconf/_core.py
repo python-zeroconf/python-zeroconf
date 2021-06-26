@@ -186,12 +186,21 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
         self.data: Optional[bytes] = None
+        self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
 
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
 
         super().__init__()
+
+    def suppress_duplicate_packet(self, data: bytes, now: float) -> bool:
+        """Suppress duplicate packet if the last one was the same in the last second."""
+        if self.data == data and (now - 1000) < self.last_time:
+            return True
+        self.data = data
+        self.last_time = now
+        return False
 
     def datagram_received(
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
@@ -210,7 +219,9 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         else:
             return
 
-        if self.data == data:
+        now = current_time_millis()
+        if self.suppress_duplicate_packet(data, now):
+            # Guard against duplicate packets
             log.debug(
                 'Ignoring duplicate message received from %r:%r (socket %d) (%d bytes) as [%r]',
                 addr,
@@ -220,8 +231,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
                 data,
             )
             return
-
-        self.data = data
 
         if len(data) > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
@@ -234,7 +243,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             )
             return
 
-        msg = DNSIncoming(data, scope)
+        msg = DNSIncoming(data, scope, now)
         if msg.valid:
             log.debug(
                 'Received from %r:%r (socket %d): %r (%d bytes) as [%r]',

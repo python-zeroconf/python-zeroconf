@@ -696,3 +696,21 @@ def test_guard_against_oversized_packets():
     )
 
     zc.close()
+
+
+def test_guard_against_duplicate_packets():
+    """Ensure we do not process duplicate packets.
+    These packets can quickly overwhelm the system.
+    """
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    listener = _core.AsyncListener(zc)
+    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is False
+    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
+    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
+    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis() + 1000) is False
+    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
+    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis()) is False
+    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis()) is True
+    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis() + 1000) is False
+    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is False
+    zc.close()
