@@ -27,14 +27,14 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}          
+          python-version: ${{ matrix.python-version }}
       - uses: actions/cache@v2
         id: cache
         with:
           path: env
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/Makefile') }}-${{ hashFiles('**/requirements-dev.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/Makefile') }}        
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/Makefile') }}
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -64,6 +64,6 @@ jobs:
       - name: Run tests
         run: |
           ${{ matrix.venvcmd }}
-          make test_coverage          
+          make test_coverage
       - name: Report coverage to Codecov
         uses: codecov/codecov-action@v1
