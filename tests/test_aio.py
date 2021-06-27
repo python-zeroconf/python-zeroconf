@@ -688,7 +688,7 @@ async def test_integration():
 
     time_offset = 0.0
 
-    def current_time_millis():
+    def _new_current_time_millis():
         """Current system time in milliseconds"""
         return (time.time() * 1000) + (time_offset * 1000)
 
@@ -705,7 +705,6 @@ async def test_integration():
                 unexpected_ttl.set()
 
         got_query.set()
-        got_query.clear()
 
         old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
@@ -734,7 +733,7 @@ async def test_integration():
     ), patch.object(
         zeroconf_browser, "async_send", send
     ), patch(
-        "zeroconf._services.browser.current_time_millis", current_time_millis
+        "zeroconf._services.browser.current_time_millis", _new_current_time_millis
     ), patch.object(
         _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
     ):
@@ -762,9 +761,11 @@ async def test_integration():
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
-                browser.query_scheduler.set_schedule_changed()
+                now = _new_current_time_millis()
+                browser.reschedule_type(type_, now)
                 sleep_count += 1
                 await asyncio.wait_for(got_query.wait(), 1)
+                got_query.clear()
                 # Prevent the test running indefinitely in an error condition
                 assert sleep_count < test_iterations * 4
             assert not unexpected_ttl.is_set()

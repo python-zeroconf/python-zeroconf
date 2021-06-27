@@ -496,7 +496,7 @@ def test_backoff():
                 else:
                     assert not got_query.is_set()
                 time_offset += initial_query_interval
-                zeroconf_browser.loop.call_soon_threadsafe(browser.query_scheduler.set_schedule_changed)
+                zeroconf_browser.loop.call_soon_threadsafe(browser.schedule_changed)
 
         finally:
             browser.cancel()
@@ -984,8 +984,8 @@ async def test_query_scheduler():
 
     # Test query interval is increasing
     assert query_scheduler.millis_to_wait(now - 1) == 1
-    assert query_scheduler.millis_to_wait(now) is None
-    assert query_scheduler.millis_to_wait(now + 1) is None
+    assert query_scheduler.millis_to_wait(now) is 0
+    assert query_scheduler.millis_to_wait(now + 1) is 0
 
     assert set(query_scheduler.process_ready_types(now)) == types_
     assert set(query_scheduler.process_ready_types(now)) == set()
@@ -1018,41 +1018,3 @@ async def test_query_scheduler():
     assert set(query_scheduler.process_ready_types(now + delay * 20)) == set()
 
     assert set(query_scheduler.process_ready_types(now + delay * 31)) == set(["_http._tcp.local."])
-
-
-@pytest.mark.asyncio
-async def test_query_scheduler_triggers_async_wait_ready_on_reschedule():
-    """Test that a reschedule wakes up the async_wait_ready."""
-    delay = const._BROWSER_TIME
-    types_ = set(["_hap._tcp.local.", "_http._tcp.local."])
-    query_scheduler = _services_browser.QueryScheduler(types_, delay, (0, 0))
-
-    now = current_time_millis()
-    query_scheduler.start(now)
-    assert set(query_scheduler.process_ready_types(now)) == types_
-    assert query_scheduler.millis_to_wait(now) == delay
-
-    task = asyncio.ensure_future(query_scheduler.async_wait_ready(now))
-    await asyncio.sleep(0)  # Start the task
-    await asyncio.sleep(0)  # Make sure its waiting
-    assert not task.done()
-    assert query_scheduler.millis_to_wait(now + 1) == delay - 1
-    query_scheduler.reschedule_type("_hap._tcp.local.", now + 1)
-    assert query_scheduler.millis_to_wait(now + 1) is None
-    await asyncio.wait_for(task, timeout=0.1)
-    assert task.done()
-
-    task2 = asyncio.ensure_future(query_scheduler.async_wait_ready(now + 10000))
-    assert set(query_scheduler.process_ready_types(now + 1)) == set(["_hap._tcp.local."])
-    assert not task2.done()
-    assert query_scheduler.millis_to_wait(now + 2) == delay - 2
-    query_scheduler.reschedule_type("_hap._tcp.local.", now + 2)
-    assert query_scheduler.millis_to_wait(now + 2) is None
-    await asyncio.wait_for(task2, timeout=0.1)
-    assert task2.done()
-    assert set(query_scheduler.process_ready_types(now + 10000)) == types_
-    assert query_scheduler.millis_to_wait(now + 10000) == delay * 2
-
-    task3 = asyncio.ensure_future(query_scheduler.async_wait_ready(now + 10000))
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(task3, timeout=0.1)
