@@ -143,7 +143,7 @@ Changelog
 0.32.0 Release Candidate 4
 ==========================
 
-Make ServiceInfo first question QU (#852) @bdraco
+* Make ServiceInfo first question QU (#852) @bdraco
 
   We want an immediate response when making a request with ServiceInfo
   by asking a QU question, most responders will not delay the response
