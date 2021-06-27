@@ -463,7 +463,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.query_scheduler.reschedule_type(type_, next_time)
         self.schedule_changed()
 
-    def schedule_changed(self):
+    def schedule_changed(self) -> None:
         """Called when the schedule has changed."""
         self._cancel_send_timer()
         self._async_send_ready_queries_schedule_next()
