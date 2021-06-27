@@ -472,8 +472,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         await self.zc.async_wait_for_start()
         first_request = True
         while True:
-            now = current_time_millis()
-            wait_time = self.query_scheduler.millis_to_wait(now)
+            wait_time = self.query_scheduler.millis_to_wait(current_time_millis())
             if wait_time:
                 await self.query_scheduler.async_wait_ready(wait_time)
 
