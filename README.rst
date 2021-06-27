@@ -140,6 +140,27 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Release Candidate 4
+==========================
+
+Make ServiceInfo first question QU (#852) @bdraco
+
+  We want an immediate response when making a request with ServiceInfo
+  by asking a QU question, most responders will not delay the response
+  and respond right away to our question. This also improves compatibility
+  with split networks as we may not have been able to see the response
+  otherwise.  If the responder has not multicast the record recently
+  it may still choose to do so in addition to responding via unicast
+
+  Reduces traffic when there are multiple zeroconf instances running
+  on the network running ServiceBrowsers
+
+  If we don't get an answer on the first try, we ask a QM question
+  in the event we can't receive a unicast response for some reason
+
+  This change puts ServiceInfo inline with ServiceBrowser which
+  also asks the first question as QU since ServiceInfo is commonly
+  called from ServiceBrowser callbacks
 
 0.32.0 Release Candidate 3
 ==========================
