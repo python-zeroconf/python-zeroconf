@@ -694,6 +694,7 @@ async def test_integration():
         return (time.time() * 1000) + (time_offset * 1000)
 
     expected_ttl = const._DNS_HOST_TTL
+    one_quarter_expected_ttl = expected_ttl / 4
     nbr_answers = 0
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
@@ -737,7 +738,7 @@ async def test_integration():
     ), patch(
         "zeroconf._services.browser.current_time_millis", _new_current_time_millis
     ), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
+        _services_browser, "_BROWSER_BACKOFF_LIMIT", one_quarter_expected_ttl
     ):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
@@ -759,14 +760,17 @@ async def test_integration():
             # is greater than half the original TTL
             sleep_count = 0
             test_iterations = 50
+            last_time = _new_current_time_millis()
 
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
-                time_offset += expected_ttl / 4
+                time_offset += one_quarter_expected_ttl
                 new_time = _new_current_time_millis()
+                assert (new_time - last_time) > one_quarter_expected_ttl
+                last_time = new_time
+                assert browser.query_scheduler.millis_to_wait(new_time) is None
                 await asyncio.sleep(0)  # Allow the loop to run and wait for the event on time change
                 browser.query_scheduler.set_schedule_changed()
-                assert browser.query_scheduler.millis_to_wait(new_time) is None
                 await asyncio.sleep(0)  # Allow the loop to run and wait for the event on time change
                 sleep_count += 1
                 _services_browser.log.debug("Starting wait")
