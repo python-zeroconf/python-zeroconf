@@ -261,15 +261,12 @@ class QueryScheduler:
 
         return ready_types
 
-    async def async_wait_ready(self, now: float) -> None:
+    async def async_wait_ready(self, timeout: float) -> None:
         """Wait for at least one query to be ready."""
-        timeout = self.millis_to_wait(now)
-        log.warning("Waiting for ready now=%s", now / 1000)
-        if timeout:
-            assert self._schedule_changed_event is not None
-            log.debug("Waiting for event or timeout: %s", millis_to_seconds(timeout))
-            await wait_event_or_timeout(self._schedule_changed_event, timeout=millis_to_seconds(timeout))
-            log.debug("Finished Waiting")
+        assert self._schedule_changed_event is not None
+        log.debug("Waiting for event or timeout: %s", millis_to_seconds(timeout))
+        await wait_event_or_timeout(self._schedule_changed_event, timeout=millis_to_seconds(timeout))
+        log.debug("Finished Waiting")
 
 
 class _ServiceBrowserBase(RecordUpdateListener):
@@ -475,14 +472,16 @@ class _ServiceBrowserBase(RecordUpdateListener):
         await self.zc.async_wait_for_start()
         first_request = True
         while True:
-            await self.query_scheduler.async_wait_ready(current_time_millis())
-            outs = self._generate_ready_queries(first_request)
-            if not outs:
-                continue
+            now = current_time_millis()
+            wait_time = self.query_scheduler.millis_to_wait(now)
+            if wait_time:
+                await self.query_scheduler.async_wait_ready(wait_time)
 
-            first_request = False
-            for out in outs:
-                self.zc.async_send(out, addr=self.addr, port=self.port)
+            outs = self._generate_ready_queries(first_request)
+            if outs:
+                first_request = False
+                for out in outs:
+                    self.zc.async_send(out, addr=self.addr, port=self.port)
 
     async def _async_cancel_browser(self) -> None:
         """Cancel the browser."""
