@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Set up GCC
-        if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os != "macOS" }}
+        if: ${{ steps.cache.outputs.cache-hit != 'true' && runner.os != 'macOS' }}
         uses: egor-tensin/setup-gcc@v1          
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
