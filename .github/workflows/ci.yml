@@ -35,6 +35,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Set up GCC
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: egor-tensin/setup-gcc@v1          
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
