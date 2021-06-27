@@ -140,6 +140,20 @@ See examples directory for more.
 Changelog
 =========
 
+
+0.32.0 Release Candidate 3
+==========================
+
+* Switch ServiceBrowser query scheduling to use call_later instead of a loop (#849) @bdraco
+
+  Simplifies scheduling as there is no more need to sleep in a loop as
+  we now schedule future callbacks with call_later
+
+  Simplifies cancelation as there is no more coroutine to cancel, only a timer handle
+  We no longer have to handle the canceled error and cleaning up the awaitable
+
+  Solves the infrequent test failures in test_backoff and test_integration
+
 0.32.0 Release Candidate 2
 ==========================
 
