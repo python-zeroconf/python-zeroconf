@@ -23,7 +23,7 @@
 import asyncio
 import socket
 from functools import lru_cache
-
+from typing import List
 
 import ifaddr
 
@@ -31,14 +31,20 @@ import ifaddr
 from zeroconf import DNSIncoming, Zeroconf
 
 
-def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:
+def _inject_responses(zc: Zeroconf, msgs: List[DNSIncoming]) -> None:
     """Inject a DNSIncoming response."""
     assert zc.loop is not None
 
     async def _wait_for_response():
-        zc.handle_response(msg)
+        for msg in msgs:
+            zc.handle_response(msg)
 
     asyncio.run_coroutine_threadsafe(_wait_for_response(), zc.loop).result()
+
+
+def _inject_response(zc: Zeroconf, msg: DNSIncoming) -> None:
+    """Inject a DNSIncoming response."""
+    _inject_responses(zc, [msg])
 
 
 def _wait_for_start(zc: Zeroconf) -> None:
