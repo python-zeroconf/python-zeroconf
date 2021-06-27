@@ -776,3 +776,50 @@ async def test_integration():
             assert service_removed.is_set()
             await browser.async_cancel()
             await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
+    """Verify the service info first question is QU and subsequent ones are QM questions."""
+    type_ = "_quservice._tcp.local."
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_info = aiozc.zeroconf
+
+    name = "xxxyyy"
+    registration_name = "%s.%s" % (name, type_)
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+
+    zeroconf_info.registry.add(info)
+
+    # we are going to patch the zeroconf send to check query transmission
+    old_send = zeroconf_info.async_send
+
+    first_outgoing = None
+    second_outgoing = None
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal first_outgoing
+        nonlocal second_outgoing
+        if out.questions:
+            if first_outgoing is not None and second_outgoing is None:
+                second_outgoing = out
+            if first_outgoing is None:
+                first_outgoing = out
+        old_send(out, addr=addr, port=port)
+
+    # patch the zeroconf send
+    with patch.object(zeroconf_info, "async_send", send):
+        aiosinfo = AsyncServiceInfo(type_, registration_name)
+        # Patch _is_complete so we send multiple times
+        with patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
+            await aiosinfo.async_request(aiozc.zeroconf, 1200)
+        try:
+            assert first_outgoing.questions[0].unicast == True
+            assert second_outgoing.questions[0].unicast == False
+        finally:
+            await aiozc.async_close()

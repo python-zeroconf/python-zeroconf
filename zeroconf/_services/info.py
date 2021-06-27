@@ -438,6 +438,7 @@ class ServiceInfo(RecordUpdateListener):
         if self.load_from_cache(zc):
             return True
 
+        first_request = True
         now = current_time_millis()
         delay = _LISTENER_TIME
         next_ = now
@@ -449,7 +450,10 @@ class ServiceInfo(RecordUpdateListener):
                 if last <= now:
                     return False
                 if next_ <= now:
-                    out = self.generate_request_query(zc, now, question_type)
+                    out = self.generate_request_query(
+                        zc, now, question_type or DNSQuestionType.QU if first_request else DNSQuestionType.QM
+                    )
+                    first_request = False
                     if not out.questions:
                         return self.load_from_cache(zc)
                     zc.async_send(out)
