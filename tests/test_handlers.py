@@ -1022,8 +1022,10 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     await aiozc.async_close()
 
 
-def test_questions_query_handler_populates_the_question_history_from_qm_questions():
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+@pytest.mark.asyncio
+async def test_questions_query_handler_populates_the_question_history_from_qm_questions():
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
     now = current_time_millis()
     _clear_cache(zc)
 
@@ -1044,11 +1046,13 @@ def test_questions_query_handler_populates_the_question_history_from_qm_question
     assert multicast_out is None
     assert zc.question_history.suppresses(question, now, set([known_answer]))
 
-    zc.close()
+    await aiozc.async_close()
 
 
-def test_questions_query_handler_does_not_put_qu_questions_in_history():
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+@pytest.mark.asyncio
+async def test_questions_query_handler_does_not_put_qu_questions_in_history():
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
     now = current_time_millis()
     _clear_cache(zc)
 
@@ -1069,17 +1073,19 @@ def test_questions_query_handler_does_not_put_qu_questions_in_history():
     assert multicast_out is None
     assert not zc.question_history.suppresses(question, now, set([known_answer]))
 
-    zc.close()
+    await aiozc.async_close()
 
 
-def test_guard_against_low_ptr_ttl():
+@pytest.mark.asyncio
+async def test_guard_against_low_ptr_ttl():
     """Ensure we enforce a minimum for PTR record ttls to avoid excessive refresh queries from ServiceBrowsers.
 
     Some poorly designed IoT devices can set excessively low PTR
     TTLs would will cause ServiceBrowsers to flood the network
     with excessive refresh queries.
     """
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
     # Apple uses a 15s minimum TTL, however we do not have the same
     # level of rate limit and safe guards so we use 1/4 of the recommended value
     answer_with_low_ttl = r.DNSPointer(
@@ -1116,4 +1122,4 @@ def test_guard_against_low_ptr_ttl():
     incoming_answer_normal = zc.cache.async_get_unique(answer_with_normal_ttl)
     assert incoming_answer_normal.ttl == const._DNS_OTHER_TTL
     assert zc.cache.async_get_unique(good_bye_answer) is None
-    zc.close()
+    await aiozc.async_close()
