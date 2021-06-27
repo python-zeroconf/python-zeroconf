@@ -682,8 +682,8 @@ def test_asking_qu_questions():
         zeroconf.close()
 
 
-def test_asking_qm_questions_are_default():
-    """Verify default is QM questions."""
+def test_asking_qm_questions():
+    """Verify explictly asking QM questions."""
     type_ = "_quservice._tcp.local."
     zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
 
@@ -701,6 +701,6 @@ def test_asking_qm_questions_are_default():
 
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
-        zeroconf.get_service_info(f"name.{type_}", type_, 500)
+        zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QM)
         assert first_outgoing.questions[0].unicast == False
         zeroconf.close()
