@@ -92,6 +92,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         """Cancel the browser."""
         self._async_cancel()
 
+
 class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
     """An async version of ZeroconfServiceTypes."""
 
