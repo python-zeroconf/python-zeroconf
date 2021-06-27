@@ -24,26 +24,46 @@ jobs:
             venvcmd: env\Scripts\Activate.ps1
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        id: cache
-        with:
-          path: env
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-dev.txt') }}-${{ hashFiles('**/Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: env
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/Makefile') }}-${{ hashFiles('**/requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/Makefile') }}
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           python -m venv env
           ${{ matrix.venvcmd }}
           pip install --upgrade -r requirements-dev.txt pytest-github-actions-annotate-failures
+      - name: Run flake8
+        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy3' }}
+        run: |
+          ${{ matrix.venvcmd }}
+          make flake8
+      - name: Run mypy
+        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy3' }}
+        run: |
+          ${{ matrix.venvcmd }}
+          make mypy
+      - name: Run black_check
+        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy3' }}
+        run: |
+          ${{ matrix.venvcmd }}
+          make black_check
+      - name: Run pylint
+        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy3' }}
+        run: |
+          ${{ matrix.venvcmd }}
+          make pylint
       - name: Run tests
         run: |
           ${{ matrix.venvcmd }}
-          make ci
+          make test_coverage
       - name: Report coverage to Codecov
         uses: codecov/codecov-action@v1
