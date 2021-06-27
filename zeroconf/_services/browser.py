@@ -262,7 +262,7 @@ class QueryScheduler:
         return ready_types
 
     async def async_wait_ready(self, timeout: float) -> None:
-        """Wait for at least one query to be ready."""
+        """Wait until timeout or the schedule changed."""
         assert self._schedule_changed_event is not None
         log.debug("Waiting for event or timeout: %s", millis_to_seconds(timeout))
         await wait_event_or_timeout(self._schedule_changed_event, timeout=millis_to_seconds(timeout))
