@@ -42,7 +42,7 @@ jobs:
           ${{ matrix.venvcmd }}
           pip install --upgrade -r requirements-dev.txt pytest-github-actions-annotate-failures
       - name: Run lint
-        if: runner.os == "Linux"
+        if: ${{ runner.os == "Linux" }}
         run: |
           ${{ matrix.venvcmd }}
           make lint
