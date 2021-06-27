@@ -496,7 +496,7 @@ def test_backoff():
                 else:
                     assert not got_query.is_set()
                 time_offset += initial_query_interval
-                zeroconf_browser.loop.call_soon_threadsafe(browser.query_scheduler.set_schedule_changed)
+                zeroconf_browser.loop.call_soon_threadsafe(browser.schedule_changed)
 
         finally:
             browser.cancel()
@@ -984,8 +984,8 @@ async def test_query_scheduler():
 
     # Test query interval is increasing
     assert query_scheduler.millis_to_wait(now - 1) == 1
-    assert query_scheduler.millis_to_wait(now) is None
-    assert query_scheduler.millis_to_wait(now + 1) is None
+    assert query_scheduler.millis_to_wait(now) is 0
+    assert query_scheduler.millis_to_wait(now + 1) is 0
 
     assert set(query_scheduler.process_ready_types(now)) == types_
     assert set(query_scheduler.process_ready_types(now)) == set()
@@ -1018,6 +1018,7 @@ async def test_query_scheduler():
     assert set(query_scheduler.process_ready_types(now + delay * 20)) == set()
 
     assert set(query_scheduler.process_ready_types(now + delay * 31)) == set(["_http._tcp.local."])
+<<<<<<< HEAD
 
 
 @pytest.mark.asyncio
@@ -1052,3 +1053,5 @@ async def test_query_scheduler_triggers_async_wait_ready_on_reschedule():
     task3 = asyncio.ensure_future(query_scheduler.async_wait_ready(1000))
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task3, timeout=0.1)
+=======
+>>>>>>> upstream/master

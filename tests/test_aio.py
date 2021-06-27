@@ -21,7 +21,6 @@ from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException,
 from zeroconf._services import ServiceListener
 import zeroconf._services.browser as _services_browser
 from zeroconf._services.info import ServiceInfo
-from zeroconf._utils.aio import wait_event_or_timeout
 from zeroconf._utils.time import current_time_millis
 
 from . import _clear_cache
@@ -694,7 +693,6 @@ async def test_integration():
         return (time.time() * 1000) + (time_offset * 1000)
 
     expected_ttl = const._DNS_HOST_TTL
-    one_quarter_expected_ttl = expected_ttl / 4
     nbr_answers = 0
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
@@ -707,7 +705,6 @@ async def test_integration():
                 unexpected_ttl.set()
 
         got_query.set()
-        got_query.clear()
 
         old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
@@ -738,7 +735,7 @@ async def test_integration():
     ), patch(
         "zeroconf._services.browser.current_time_millis", _new_current_time_millis
     ), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", one_quarter_expected_ttl
+        _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
     ):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
@@ -760,24 +757,17 @@ async def test_integration():
             # is greater than half the original TTL
             sleep_count = 0
             test_iterations = 50
-            last_time = _new_current_time_millis()
 
             while nbr_answers < test_iterations:
                 # Increase simulated time shift by 1/4 of the TTL in seconds
-                time_offset += one_quarter_expected_ttl
-                new_time = _new_current_time_millis()
-                assert (new_time - last_time) > one_quarter_expected_ttl
-                last_time = new_time
-                assert browser.query_scheduler.millis_to_wait(new_time) is None
-                await asyncio.sleep(0)  # Allow the loop to run and wait for the event on time change
-                browser.query_scheduler.set_schedule_changed()
-                await asyncio.sleep(0)  # Allow the loop to run and wait for the event on time change
+                time_offset += expected_ttl / 4
+                now = _new_current_time_millis()
+                browser.reschedule_type(type_, now)
                 sleep_count += 1
-                _services_browser.log.debug("Starting wait")
-                await wait_event_or_timeout(got_query, 1)
-                _services_browser.log.debug("done wait")
+                await asyncio.wait_for(got_query.wait(), 1)
+                got_query.clear()
                 # Prevent the test running indefinitely in an error condition
-                assert sleep_count < test_iterations * 4, "Answers=%s" % (nbr_answers)
+                assert sleep_count < test_iterations * 4
             assert not unexpected_ttl.is_set()
             # Don't remove service, allow close() to cleanup
         finally:

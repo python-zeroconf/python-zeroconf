@@ -21,7 +21,6 @@
 """
 
 import asyncio
-import contextlib
 import queue
 import random
 import threading
@@ -39,7 +38,7 @@ from .._services import (
     SignalRegistrationInterface,
 )
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.aio import get_best_available_queue, wait_event_or_timeout
+from .._utils.aio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
@@ -221,27 +220,17 @@ class QueryScheduler:
         next_time = now + delay
         self._next_time = {check_type_: next_time for check_type_ in self._types}
 
-    def millis_to_wait(self, now: float) -> Optional[float]:
+    def millis_to_wait(self, now: float) -> float:
         """Returns the number of milliseconds to wait for the next event."""
         # Wait for the type has the smallest next time
         next_time = min(self._next_time.values())
-        return None if next_time <= now else next_time - now
+        return 0 if next_time <= now else next_time - now
 
     def reschedule_type(self, type_: str, next_time: float) -> None:
         """Reschedule the query for a type to happen sooner."""
         if next_time >= self._next_time[type_]:
             return
-
         self._next_time[type_] = next_time
-        self.set_schedule_changed()
-
-    def set_schedule_changed(self) -> None:
-        """Set the event to unblock async_wait_ready to make sure the adjusted next time is seen."""
-        assert self._schedule_changed_event is not None
-        log.debug("Set event")
-        self._schedule_changed_event.set()
-        self._schedule_changed_event.clear()
-        log.debug("Done event")
 
     def process_ready_types(self, now: float) -> List[str]:
         """Generate a list of ready types that is due and schedule the next time."""
@@ -255,18 +244,10 @@ class QueryScheduler:
                 continue
 
             ready_types.append(type_)
-            log.debug("Adding to now=%s, next time %s %s", now / 1000, type_, self._delay[type_])
             self._next_time[type_] = now + self._delay[type_]
             self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
 
         return ready_types
-
-    async def async_wait_ready(self, timeout: float) -> None:
-        """Wait until timeout or the schedule changed."""
-        assert self._schedule_changed_event is not None
-        log.debug("Waiting for event or timeout: %s", millis_to_seconds(timeout))
-        await wait_event_or_timeout(self._schedule_changed_event, timeout=millis_to_seconds(timeout))
-        log.debug("Finished Waiting")
 
 
 class _ServiceBrowserBase(RecordUpdateListener):
@@ -305,7 +286,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for check_type_ in self.types:
             # Will generate BadTypeInNameException on a bad name
             service_type_name(check_type_, strict=False)
-        self._browser_task: Optional[asyncio.Task] = None
         self.zc = zc
         self.addr = addr
         self.port = port
@@ -316,6 +296,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
         self.queue: Optional[queue.Queue] = None
         self.done = False
+        self._first_request: bool = True
+        self._next_send_timer: Optional[asyncio.TimerHandle] = None
 
         if hasattr(handlers, 'add_service'):
             listener = cast('ServiceListener', handlers)
@@ -338,7 +320,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.query_scheduler.start(current_time_millis())
         self.zc.async_add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
         # Only start queries after the listener is installed
-        self._browser_task = cast(asyncio.Task, asyncio.ensure_future(self.async_browser_task()))
+        asyncio.ensure_future(self._async_start_query_sender())
 
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
@@ -381,9 +363,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             elif expired:
                 self._enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
             else:
-                self.query_scheduler.reschedule_type(
-                    record.name, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
-                )
+                self.reschedule_type(record.name, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
             return
 
         # If its expired or already exists in the cache it cannot be updated.
@@ -451,6 +431,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def _async_cancel(self) -> None:
         """Cancel the browser."""
         self.done = True
+        self._cancel_send_timer()
         self.zc.async_remove_listener(self)
 
     def _generate_ready_queries(self, first_request: bool) -> List[DNSOutgoing]:
@@ -467,33 +448,40 @@ class _ServiceBrowserBase(RecordUpdateListener):
         question_type = DNSQuestionType.QU if not self.question_type and first_request else self.question_type
         return generate_service_query(self.zc, now, ready_types, self.multicast, question_type)
 
-    async def async_browser_task(self) -> None:
-        """Run the browser task."""
+    async def _async_start_query_sender(self) -> None:
+        """Start scheduling queries."""
         await self.zc.async_wait_for_start()
-        first_request = True
-        while True:
-            # Calculate the wait time before we return control
-            # to the event loop with the await before
-            wait_time = self.query_scheduler.millis_to_wait(current_time_millis())
-            if wait_time:
-                await self.query_scheduler.async_wait_ready(wait_time)
+        self._async_send_ready_queries_schedule_next()
 
-            # Check time again in _generate_ready_queries
-            # again after await as it will have changed
-            outs = self._generate_ready_queries(first_request)
-            if outs:
-                first_request = False
-                for out in outs:
-                    self.zc.async_send(out, addr=self.addr, port=self.port)
+    def _cancel_send_timer(self) -> None:
+        """Cancel the next send."""
+        if self._next_send_timer:
+            self._next_send_timer.cancel()
 
-    async def _async_cancel_browser(self) -> None:
-        """Cancel the browser."""
-        assert self._browser_task is not None
-        self._browser_task.cancel()
-        browser_task = self._browser_task
-        self._browser_task = None
-        with contextlib.suppress(asyncio.CancelledError):
-            await browser_task
+    def reschedule_type(self, type_: str, next_time: float) -> None:
+        """Reschedule a type to be refreshed in the future."""
+        self.query_scheduler.reschedule_type(type_, next_time)
+        self.schedule_changed()
+
+    def schedule_changed(self) -> None:
+        """Called when the schedule has changed."""
+        self._cancel_send_timer()
+        self._async_send_ready_queries_schedule_next()
+
+    def _async_send_ready_queries_schedule_next(self) -> None:
+        """Send any ready queries and scheule the next time."""
+        if self.done or self.zc.done:
+            return
+
+        outs = self._generate_ready_queries(self._first_request)
+        if outs:
+            self._first_request = False
+            for out in outs:
+                self.zc.async_send(out, addr=self.addr, port=self.port)
+
+        assert self.zc.loop is not None
+        delay = millis_to_seconds(self.query_scheduler.millis_to_wait(current_time_millis()))
+        self._next_send_timer = self.zc.loop.call_later(delay, self._async_send_ready_queries_schedule_next)
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
@@ -531,18 +519,12 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             getattr(self, 'native_id', self.ident),
         )
 
-    def _async_cancel_soon(self) -> None:
-        """Cancel the browser from the event loop."""
-        self._async_cancel()
-        if self._browser_task:
-            asyncio.ensure_future(self._async_cancel_browser())
-
     def cancel(self) -> None:
         """Cancel the browser."""
         assert self.zc.loop is not None
         assert self.queue is not None
         self.queue.put(None)
-        self.zc.loop.call_soon_threadsafe(self._async_cancel_soon)
+        self.zc.loop.call_soon_threadsafe(self._async_cancel)
         self.join()
 
     def run(self) -> None:
