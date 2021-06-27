@@ -41,9 +41,14 @@ jobs:
           python -m venv env
           ${{ matrix.venvcmd }}
           pip install --upgrade -r requirements-dev.txt pytest-github-actions-annotate-failures
+      - name: Run lint
+        if: runner.os == "Linux"
+        run: |
+          ${{ matrix.venvcmd }}
+          make lint
       - name: Run tests
         run: |
           ${{ matrix.venvcmd }}
-          make ci
+          make test_coverage          
       - name: Report coverage to Codecov
         uses: codecov/codecov-action@v1
