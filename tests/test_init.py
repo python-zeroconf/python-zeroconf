@@ -9,13 +9,12 @@ import socket
 import time
 import unittest
 import unittest.mock
-from typing import Optional  # noqa # used in type hints
 from unittest.mock import patch
 
 import zeroconf as r
-from zeroconf import DNSOutgoing, ServiceBrowser, ServiceInfo, Zeroconf, const
+from zeroconf import ServiceInfo, Zeroconf, const
 
-from . import _inject_response
+from . import _inject_responses
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -162,14 +161,16 @@ class Names(unittest.TestCase):
     def generate_many_hosts(self, zc, type_, name, number_hosts):
         block_size = 25
         number_hosts = int(((number_hosts - 1) / block_size + 1)) * block_size
+        out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
         for i in range(1, number_hosts + 1):
             next_name = name if i == 1 else '%s-%d' % (name, i)
-            self.generate_host(zc, next_name, type_)
+            self.generate_host(out, next_name, type_)
+
+        _inject_responses(zc, [r.DNSIncoming(packet) for packet in out.packets()])
 
     @staticmethod
-    def generate_host(zc, host_name, type_):
+    def generate_host(out, host_name, type_):
         name = '.'.join((host_name, type_))
-        out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
         out.add_answer_at_time(
             r.DNSPointer(type_, const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, name), 0
         )
@@ -186,4 +187,3 @@ class Names(unittest.TestCase):
             ),
             0,
         )
-        _inject_response(zc, r.DNSIncoming(out.packets()[0]))
