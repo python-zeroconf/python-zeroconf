@@ -6,6 +6,8 @@
 
 import asyncio
 import contextlib
+import threading
+import time
 from unittest.mock import patch
 
 import pytest
@@ -56,3 +58,28 @@ async def test_wait_event_or_timeout_times_out() -> None:
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
+
+
+def test_shutdown_loop() -> None:
+    """Test shutting down an event loop."""
+    loop = None
+    loop_thread_ready = threading.Event()
+
+    def _run_loop() -> None:
+        nonlocal loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop_thread_ready.set()
+        loop.run_forever()
+
+    loop_thread = threading.Thread(target=_run_loop, daemon=True)
+    loop_thread.start()
+    loop_thread_ready.wait()
+
+    aioutils.shutdown_loop(loop)
+    for _ in range(5):
+        if not loop.is_running():
+            break
+        time.sleep(0.05)
+
+    assert loop.is_running() is False
