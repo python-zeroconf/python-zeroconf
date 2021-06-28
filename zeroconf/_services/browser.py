@@ -58,6 +58,12 @@ from ..const import (
 # https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
 _FIRST_QUERY_DELAY_RANDOM_INTERVAL = (20, 120)  # ms
 
+_ON_CHANGE_DISPATCH = {
+    ServiceStateChange.Added: "add_service",
+    ServiceStateChange.Removed: "remove_service",
+    ServiceStateChange.Updated: "update_service",
+}
+
 if TYPE_CHECKING:
     # https://github.com/PyCQA/pylint/issues/3525
     from .._core import Zeroconf  # pylint: disable=cyclic-import
@@ -159,25 +165,18 @@ def generate_service_query(
 
 def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[..., None]:
     """Generate a service_state_changed handlers from a listener."""
+    assert listener is not None
+    if not hasattr(listener, 'update_service'):
+        warnings.warn(
+            "%r has no update_service method. Provide one (it can be empty if you "
+            "don't care about the updates), it'll become mandatory." % (listener,),
+            FutureWarning,
+        )
 
     def on_change(
         zeroconf: 'Zeroconf', service_type: str, name: str, state_change: ServiceStateChange
     ) -> None:
-        assert listener is not None
-        args = (zeroconf, service_type, name)
-        if state_change is ServiceStateChange.Added:
-            listener.add_service(*args)
-        elif state_change is ServiceStateChange.Removed:
-            listener.remove_service(*args)
-        elif state_change is ServiceStateChange.Updated:
-            if hasattr(listener, 'update_service'):
-                listener.update_service(*args)
-            else:
-                warnings.warn(
-                    "%r has no update_service method. Provide one (it can be empty if you "
-                    "don't care about the updates), it'll become mandatory." % (listener,),
-                    FutureWarning,
-                )
+        getattr(listener, _ON_CHANGE_DISPATCH[state_change])(zeroconf, service_type, name)
 
     return on_change
 
