@@ -140,6 +140,15 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Release Candidate 5
+==========================
+
+* Ensure protocol and sending errors are logged once (#862) @bdraco
+
+* Remove unreachable code in AsyncListener.datagram_received (#863) @bdraco
+
+* Make a dispatch dict for ServiceStateChange listeners (#859) @bdraco
+
 0.32.0 Release Candidate 4
 ==========================
 
