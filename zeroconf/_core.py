@@ -314,6 +314,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
+        assert self.transport is not None
         self.log_warning_once(
             'Error with socket %d: %s', self.transport.get_extra_info('socket').fileno(), exc
         )
