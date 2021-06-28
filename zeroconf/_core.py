@@ -21,6 +21,7 @@
 """
 
 import asyncio
+import concurrent.futures
 import contextlib
 import itertools
 import random
@@ -71,6 +72,7 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
+_CLOSE_TIMEOUT = 2
 
 
 class AsyncEngine:
@@ -170,7 +172,7 @@ class AsyncEngine:
             return
         if not self.loop.is_running():
             return
-        asyncio.run_coroutine_threadsafe(self._async_close(), self.loop).result()
+        asyncio.run_coroutine_threadsafe(self._async_close(), self.loop).result(_CLOSE_TIMEOUT)
 
 
 class AsyncListener(asyncio.Protocol, QuietLogger):
@@ -416,7 +418,10 @@ class Zeroconf(QuietLogger):
     def wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         assert self.loop is not None
-        asyncio.run_coroutine_threadsafe(self.async_wait(timeout), self.loop).result()
+        with contextlib.suppress(concurrent.futures.TimeoutError):
+            asyncio.run_coroutine_threadsafe(self.async_wait(timeout), self.loop).result(
+                millis_to_seconds(timeout)
+            )
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
