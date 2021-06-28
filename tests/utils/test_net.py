@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 import errno
 import ifaddr
 import pytest
+import socket
 import unittest
 
 from zeroconf._utils import net as netutils
@@ -99,3 +100,42 @@ def test_autodetect_ip_version():
     assert r.autodetect_ip_version([]) is r.IPVersion.V4Only
     assert r.autodetect_ip_version(["::1", "1.2.3.4"]) is r.IPVersion.All
     assert r.autodetect_ip_version(["::1"]) is r.IPVersion.V6Only
+
+
+def test_disable_ipv6_only_or_raise():
+    """Test that IPV6_V6ONLY failing logs a nice error message and still raises."""
+    errors_logged = []
+
+    def _log_error(*args):
+        nonlocal errors_logged
+        errors_logged.append(args)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    with pytest.raises(OSError), patch.object(netutils.log, "error", _log_error), patch(
+        "socket.socket.setsockopt", side_effect=OSError
+    ):
+        netutils.disable_ipv6_only_or_raise(sock)
+
+    assert (
+        errors_logged[0][0]
+        == 'Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6'
+    )
+
+
+@pytest.mark.skipif(not hasattr(socket, 'SO_REUSEPORT'), reason="System does not have SO_REUSEPORT")
+def test_set_so_reuseport_if_available_is_present():
+    """Test that setting socket.SO_REUSEPORT only OSError errno.ENOPROTOOPT is trapped."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError):
+        netutils.set_so_reuseport_if_available(sock)
+
+    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
+        netutils.set_so_reuseport_if_available(sock)
+
+
+@pytest.mark.skipif(hasattr(socket, 'SO_REUSEPORT'), reason="System has SO_REUSEPORT")
+def test_set_so_reuseport_if_available_not_present():
+    """Test that we do not try to set SO_REUSEPORT if it is not present."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    with patch("socket.socket.setsockopt", side_effect=OSError):
+        netutils.set_so_reuseport_if_available(sock)

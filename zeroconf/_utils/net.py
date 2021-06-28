@@ -161,6 +161,34 @@ def normalize_interface_choice(
     return result
 
 
+def disable_ipv6_only_or_raise(s: socket.socket) -> None:
+    """Make V6 sockets work for both V4 and V6 (required for Windows)."""
+    try:
+        s.setsockopt(_IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+    except OSError:
+        log.error('Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6')
+        raise
+
+
+def set_so_reuseport_if_available(s: socket.socket) -> None:
+    """Set SO_REUSEADDR on a socket if available."""
+    # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
+    # multicast UDP sockets (p 731, "TCP/IP Illustrated,
+    # Volume 2"), but some BSD-derived systems require
+    # SO_REUSEPORT to be specified explicitly.  Also, not all
+    # versions of Python have SO_REUSEPORT available.
+    # Catch OSError and socket.error for kernel versions <3.9 because lacking
+    # SO_REUSEPORT support.
+    if not hasattr(socket, 'SO_REUSEPORT'):
+        return
+
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=no-member
+    except OSError as err:
+        if err.errno != errno.ENOPROTOOPT:
+            raise
+
+
 def new_socket(  # pylint: disable=too-many-branches
     bind_addr: Union[Tuple[str], Tuple[str, int, int]],
     port: int = _MDNS_PORT,
@@ -180,28 +208,11 @@ def new_socket(  # pylint: disable=too-many-branches
         s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
 
     if ip_version == IPVersion.All:
-        # make V6 sockets work for both V4 and V6 (required for Windows)
-        try:
-            s.setsockopt(_IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
-        except OSError:
-            log.error('Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6')
-            raise
+        disable_ipv6_only_or_raise(s)
 
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
-    # multicast UDP sockets (p 731, "TCP/IP Illustrated,
-    # Volume 2"), but some BSD-derived systems require
-    # SO_REUSEPORT to be specified explicitly.  Also, not all
-    # versions of Python have SO_REUSEPORT available.
-    # Catch OSError and socket.error for kernel versions <3.9 because lacking
-    # SO_REUSEPORT support.
-    if hasattr(socket, 'SO_REUSEPORT'):
-        try:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=no-member
-        except OSError as err:
-            if err.errno != errno.ENOPROTOOPT:
-                raise
+    set_so_reuseport_if_available(s)
 
     if port == _MDNS_PORT:
         ttl = struct.pack(b'B', 255)
