@@ -79,8 +79,7 @@ async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
 def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
     """Wait for pending tasks and stop an event loop."""
     pending_tasks = set(asyncio.run_coroutine_threadsafe(_async_get_all_tasks(loop), loop).result())
-    done_tasks = set(task for task in pending_tasks if not task.done())
-    pending_tasks -= done_tasks
+    pending_tasks -= set(task for task in pending_tasks if task.done())
     if pending_tasks:
         asyncio.run_coroutine_threadsafe(_wait_for_loop_tasks(pending_tasks), loop).result()
     loop.call_soon_threadsafe(loop.stop)
