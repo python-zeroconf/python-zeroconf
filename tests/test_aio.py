@@ -15,7 +15,16 @@ from unittest.mock import patch
 import pytest
 
 from zeroconf.aio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
-from zeroconf import DNSIncoming, ServiceStateChange, Zeroconf, const
+from zeroconf import (
+    DNSIncoming,
+    DNSOutgoing,
+    DNSPointer,
+    DNSService,
+    DNSAddress,
+    ServiceStateChange,
+    Zeroconf,
+    const,
+)
 from zeroconf.const import _LISTENER_TIME
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
 from zeroconf._services import ServiceListener
@@ -823,3 +832,84 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
             assert second_outgoing.questions[0].unicast == False
         finally:
             await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_service_browser_ignores_unrelated_updates():
+    """Test that the ServiceBrowser ignores unrelated updates."""
+
+    # instantiate a zeroconf instance
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
+    type_ = "_veryuniqueone._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    callbacks = []
+
+    class MyServiceListener(ServiceListener):
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+        def update_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("update", type_, name))
+
+    listener = MyServiceListener()
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    zc.cache.async_add_records(
+        [info.dns_pointer(), info.dns_service(), *info.dns_addresses(), info.dns_text()]
+    )
+
+    browser = AsyncServiceBrowser(zc, type_, None, listener)
+
+    generated = DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        DNSPointer(
+            "_unrelated._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            "zoom._unrelated._tcp.local.",
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        DNSAddress(
+            "zoom._unrelated._tcp.local.", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"1234"
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        DNSService(
+            "zoom._unrelated._tcp.local.",
+            const._TYPE_SRV,
+            const._CLASS_IN,
+            const._DNS_HOST_TTL,
+            0,
+            0,
+            81,
+            'unrelated.local.',
+        ),
+        0,
+    )
+
+    zc.handle_response(DNSIncoming(generated.packets()[0]))
+
+    await browser.async_cancel()
+    await asyncio.sleep(0)
+
+    assert callbacks == [
+        ('add', type_, registration_name),
+    ]
+    await aiozc.async_close()
