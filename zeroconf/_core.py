@@ -72,7 +72,7 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
-_CLOSE_TIMEOUT = 2
+_CLOSE_TIMEOUT = 3
 
 
 class AsyncEngine:
