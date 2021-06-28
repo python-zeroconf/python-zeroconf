@@ -211,13 +211,11 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
             scope = None
-        elif len(addrs) == 4:
+        else:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs  # type: ignore
             log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
-        else:
-            return
 
         now = current_time_millis()
         if self.suppress_duplicate_packet(data, now):
