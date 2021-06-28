@@ -716,24 +716,13 @@ class Zeroconf(QuietLogger):
                 if self._GLOBAL_DONE:
                     return
                 s = transport.get_extra_info('socket')
-                try:
-                    if addr is None:
-                        real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
-                    elif not can_send_to(s, addr):
-                        continue
-                    else:
-                        real_addr = addr
-                    transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
-                except OSError as exc:
-                    if exc.errno == errno.ENETUNREACH and s.family == socket.AF_INET6:
-                        # with IPv6 we don't have a reliable way to determine if an interface actually has
-                        # IPV6 support, so we have to try and ignore errors.
-                        continue
-                    # on send errors, log the exception and keep going
-                    self.log_exception_warning('Error sending through socket %d', s.fileno())
-                except Exception:  # pylint: disable=broad-except  # TODO stop catching all Exceptions
-                    # on send errors, log the exception and keep going
-                    self.log_exception_warning('Error sending through socket %d', s.fileno())
+                if addr is None:
+                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+                elif not can_send_to(s, addr):
+                    continue
+                else:
+                    real_addr = addr
+                transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
     def _close(self) -> None:
         """Set global done and remove all service listeners."""
