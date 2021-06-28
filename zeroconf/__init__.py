@@ -97,8 +97,8 @@ __all__ = [
     "ZeroconfServiceTypes",
 ]
 
-if sys.version_info <= (3, 6):
-    raise ImportError(
+if sys.version_info <= (3, 6):  # pragma: no cover
+    raise ImportError(  # pragma: no cover
         '''
 Python version > 3.6 required for python-zeroconf.
 If you need support for Python 2 or Python 3.3-3.4 please use version 19.1
