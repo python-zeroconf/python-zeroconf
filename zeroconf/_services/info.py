@@ -37,7 +37,7 @@ from .._utils.net import (
     _is_v6_address,
 )
 from .._utils.struct import int2byte
-from .._utils.time import current_time_millis
+from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _CLASS_IN,
     _CLASS_UNIQUE,
@@ -427,7 +427,7 @@ class ServiceInfo(RecordUpdateListener):
             raise RuntimeError("Use AsyncServiceInfo.async_request from the event loop")
         return asyncio.run_coroutine_threadsafe(
             self.async_request(zc, timeout, question_type), zc.loop
-        ).result()
+        ).result(millis_to_seconds(timeout) + 1)
 
     async def async_request(
         self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None

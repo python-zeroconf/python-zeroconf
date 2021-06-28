@@ -64,6 +64,7 @@ def test_shutdown_loop() -> None:
     """Test shutting down an event loop."""
     loop = None
     loop_thread_ready = threading.Event()
+    runcoro_thread_ready = threading.Event()
 
     def _run_loop() -> None:
         nonlocal loop
@@ -76,6 +77,18 @@ def test_shutdown_loop() -> None:
     loop_thread.start()
     loop_thread_ready.wait()
 
+    async def _still_running():
+        await asyncio.sleep(5)
+
+    def _run_coro() -> None:
+        runcoro_thread_ready.set()
+        asyncio.run_coroutine_threadsafe(_still_running(), loop).result(1)
+
+    runcoro_thread = threading.Thread(target=_run_coro, daemon=True)
+    runcoro_thread.start()
+    runcoro_thread_ready.wait()
+
+    time.sleep(0.1)
     aioutils.shutdown_loop(loop)
     for _ in range(5):
         if not loop.is_running():
@@ -83,3 +96,4 @@ def test_shutdown_loop() -> None:
         time.sleep(0.05)
 
     assert loop.is_running() is False
+    runcoro_thread.join()

@@ -25,6 +25,10 @@ import contextlib
 import queue
 from typing import Any, List, Optional, Set, cast
 
+_TASK_AWAIT_TIMEOUT = 1
+_GET_ALL_TASKS_TIMEOUT = 1
+_WAIT_FOR_LOOP_TASKS_TIMEOUT = 2  # Must be larger than _TASK_AWAIT_TIMEOUT
+
 
 def get_best_available_queue() -> queue.Queue:
     """Create the best available queue type."""
@@ -73,16 +77,19 @@ async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> List[asyncio.
 
 async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
     """Wait for the event loop thread we started to shutdown."""
-    await asyncio.wait(wait_tasks, timeout=1)
+    await asyncio.wait(wait_tasks, timeout=_TASK_AWAIT_TIMEOUT)
 
 
 def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
     """Wait for pending tasks and stop an event loop."""
-    pending_tasks = set(asyncio.run_coroutine_threadsafe(_async_get_all_tasks(loop), loop).result())
-    done_tasks = set(task for task in pending_tasks if not task.done())
-    pending_tasks -= done_tasks
+    pending_tasks = set(
+        asyncio.run_coroutine_threadsafe(_async_get_all_tasks(loop), loop).result(_GET_ALL_TASKS_TIMEOUT)
+    )
+    pending_tasks -= set(task for task in pending_tasks if task.done())
     if pending_tasks:
-        asyncio.run_coroutine_threadsafe(_wait_for_loop_tasks(pending_tasks), loop).result()
+        asyncio.run_coroutine_threadsafe(_wait_for_loop_tasks(pending_tasks), loop).result(
+            _WAIT_FOR_LOOP_TASKS_TIMEOUT
+        )
     loop.call_soon_threadsafe(loop.stop)
 
 

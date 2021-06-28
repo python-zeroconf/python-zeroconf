@@ -12,6 +12,7 @@ import pytest
 import socket
 import sys
 import time
+import threading
 import unittest
 import unittest.mock
 from typing import cast
@@ -715,3 +716,34 @@ def test_guard_against_duplicate_packets():
     assert listener.suppress_duplicate_packet(b"other packet", current_time_millis() + 1000) is False
     assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is False
     zc.close()
+
+
+def test_shutdown_while_register_in_process():
+    """Test we can shutdown while registering a service in another thread."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # start a browser
+    type_ = "_homeassistant._tcp.local."
+    name = "MyTestHome"
+    info_service = r.ServiceInfo(
+        type_,
+        '%s.%s' % (name, type_),
+        80,
+        0,
+        0,
+        {'path': '/~paulsm/'},
+        "ash-90.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+
+    def _background_register():
+        zc.register_service(info_service)
+
+    bgthread = threading.Thread(target=_background_register, daemon=True)
+    bgthread.start()
+    time.sleep(0.3)
+
+    zc.close()
+    bgthread.join()
