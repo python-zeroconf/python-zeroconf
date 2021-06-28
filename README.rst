@@ -140,6 +140,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Release Candidate 6
+==========================
+
+* Fix deadlock when event loop is shutdown during service registration (#869) @bdraco
+
+* Break apart new_socket to be testable (#867) @bdraco
+
 0.32.0 Release Candidate 5
 ==========================
 
