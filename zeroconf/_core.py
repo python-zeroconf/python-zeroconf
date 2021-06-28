@@ -22,7 +22,6 @@
 
 import asyncio
 import contextlib
-import errno
 import itertools
 import random
 import socket
