@@ -441,6 +441,41 @@ class TestServiceInfo(unittest.TestCase):
                 zc.remove_all_service_listeners()
                 zc.close()
 
+    def test_service_info_duplicate_properties_txt_records(self):
+        """Verify the first property is always used when there are duplicates in a txt record."""
+
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+        desc = {'path': '/~paulsm/'}
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+        service_server = 'ash-1.local.'
+        service_address = socket.inet_aton("10.0.1.2")
+        ttl = 120
+        now = r.current_time_millis()
+        info = ServiceInfo(
+            service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        )
+        info.async_update_records(
+            zc,
+            now,
+            [
+                r.RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==\x04dd=0\x04jl=2\x04qq=0\x0brr=6fLM5A==\x04ci=3',
+                    ),
+                    None,
+                )
+            ],
+        )
+        assert info.properties[b"dd"] == b"0"
+        assert info.properties[b"jl"] == b"2"
+        assert info.properties[b"ci"] == b"2"
+        zc.close()
+
 
 def test_multiple_addresses():
     type_ = "_http._tcp.local."
