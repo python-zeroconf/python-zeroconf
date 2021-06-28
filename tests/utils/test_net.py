@@ -123,7 +123,7 @@ def test_disable_ipv6_only_or_raise():
 
 
 @pytest.mark.skipif(not hasattr(socket, 'SO_REUSEPORT'), reason="System does not have SO_REUSEPORT")
-def test_set_so_reuseport_if_available():
+def test_set_so_reuseport_if_available_is_present():
     """Test that setting socket.SO_REUSEPORT only OSError errno.ENOPROTOOPT is trapped."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError):
@@ -134,7 +134,7 @@ def test_set_so_reuseport_if_available():
 
 
 @pytest.mark.skipif(hasattr(socket, 'SO_REUSEPORT'), reason="System has SO_REUSEPORT")
-def test_set_so_reuseport_if_available():
+def test_set_so_reuseport_if_available_not_present():
     """Test that we do not try to set SO_REUSEPORT if it is not present."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     with patch("socket.socket.setsockopt", side_effect=OSError):
