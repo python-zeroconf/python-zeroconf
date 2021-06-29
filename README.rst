@@ -404,13 +404,6 @@ This release offers 100% line and branch coverage
   The bit should be set per
   datatracker.ietf.org/doc/html/rfc6762#section-8.1
 
-* Fix docs version to match readme (cpython 3.6+) (#602) @bdraco
-
-* Add ZeroconfServiceTypes to zeroconf.__all__ (#601) @bdraco
-
-  This class is in the readme, but is not exported by
-  default
-
 * Breaking change: Update python compatibility as PyPy3 7.2 is required (#523) @bdraco
 
 * Set the TC bit for query packets where the known answers span multiple packets (#494) @bdraco
