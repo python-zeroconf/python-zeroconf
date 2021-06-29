@@ -145,7 +145,7 @@ Changelog
 
 This release offers 100% line and branch coverage
 
-* Make ServiceInfo first question QU (#852) @bdraco
+* Made ServiceInfo first question QU (#852) @bdraco
 
   We want an immediate response when making a request with ServiceInfo
   by asking a QU question, most responders will not delay the response
@@ -163,13 +163,13 @@ This release offers 100% line and branch coverage
   This change puts ServiceInfo inline with ServiceBrowser which
   also asks the first question as QU since ServiceInfo is commonly
   called from ServiceBrowser callbacks
-* Limit duplicate packet suppression to 1s intervals (#841) @bdraco
+* Limited duplicate packet suppression to 1s intervals (#841) @bdraco
 
   Only suppress duplicate packets that happen within the same
   second. Legitimate queriers will retry the question if they
   are suppressed. The limit was reduced to one second to be
   in line with rfc6762
-* Make multipacket known answer suppression per interface (#836) @bdraco
+* Made multipacket known answer suppression per interface (#836) @bdraco
 
   The suppression was happening per instance of Zeroconf instead
   of per interface. Since the same network can be seen on multiple
@@ -186,7 +186,7 @@ This release offers 100% line and branch coverage
   a breaking change to increase). This reduces the amount of traffic on
   the network, and has the secondary advantage that most responders will
   answer a QU question without the typical delay answering QM questions.
-* Qualify IPv6 link-local addresses with scope_id (#343) @ibygrave
+* IPv6 link-local addresses are now qualified with scope_id (#343) @ibygrave
 
   When a service is advertised on an IPv6 address where
   the scope is link local, i.e. fe80::/64 (see RFC 4007)
@@ -196,47 +196,35 @@ This release offers 100% line and branch coverage
   A new API `parsed_scoped_addresses()` is provided to
   return qualified addresses to avoid breaking compatibility
   on the existing parsed_addresses().
-* Skip network adapters that are disconnected (#327) @ZLJasonG
-* Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
+* Network adapters that are disconnected are now skipped (#327) @ZLJasonG
+* Fixed listeners missing initial packets if Engine starts too quickly (#387) @bdraco
 
   When manually creating a zeroconf.Engine object, it is no longer started automatically.
   It must manually be started by calling .start() on the created object.
 
   The Engine thread is now started after all the listeners have been added to avoid a
   race condition where packets could be missed at startup.
-* Prefix cache functions that are non threadsafe with async_ (#724) @bdraco
-
-  Adding (`zc.cache.add` -> `zc.cache.async_add_records`), removing (`zc.cache.remove` ->
-  `zc.cache.async_remove_records`), and expiring the cache (`zc.cache.expire` ->
-  `zc.cache.async_expire`) the cache is not threadsafe and must be called from the
-  event loop (previously the Engine select loop before 0.32)
-
-  These functions should only be run from the event loop as they are NOT thread safe.
-
-  We never expect these functions will be called externally, however it was possible so this
-  is documented as a breaking change.  It is highly recommended that external callers do not
-  modify the cache directly.
-* TRAFFIC REDUCTION: Add support for handling QU questions (#621) @bdraco
+* TRAFFIC REDUCTION: Added support for handling QU questions (#621) @bdraco
 
   Implements RFC 6762 sec 5.4:
   Questions Requesting Unicast Responses
   datatracker.ietf.org/doc/html/rfc6762#section-5.4
-* TRAFFIC REDUCTION: Protect the network against excessive packet flooding (#619) @bdraco
-* TRAFFIC REDUCTION: Suppress additionals when they are already in the answers section (#617) @bdraco
-* TRAFFIC REDUCTION: Avoid including additionals when the answer is suppressed by known-answer supression (#614) @bdraco
-* TRAFFIC REDUCTION: Implement multi-packet known answer supression (#687) @bdraco
+* TRAFFIC REDUCTION: Implemented protect the network against excessive packet flooding (#619) @bdraco
+* TRAFFIC REDUCTION: Additionals are now suppressed when they are already in the answers section (#617) @bdraco
+* TRAFFIC REDUCTION: Additionals are no longer included when the answer is suppressed by known-answer supression (#614) @bdraco
+* TRAFFIC REDUCTION: Implemented multi-packet known answer supression (#687) @bdraco
 
   Implements datatracker.ietf.org/doc/html/rfc6762#section-7.2
-* TRAFFIC REDUCTION: Efficiently bucket queries with known answers (#698) @bdraco
-* TRAFFIC REDUCTION: Implement duplicate question supression (#770) @bdraco
+* TRAFFIC REDUCTION: Implemented efficent bucketing of queries with known answers (#698) @bdraco
+* TRAFFIC REDUCTION: Implemented duplicate question supression (#770) @bdraco
 
   http://datatracker.ietf.org/doc/html/rfc6762#section-7.3
-* MAJOR BUG: Ensure matching PTR queries are returned with the ANY query (#618) @bdraco
-* MAJOR BUG: Fix lookup of uppercase names in registry (#597) @bdraco
+* MAJOR BUG: Fixed answering matching PTR queries with the ANY query (#618) @bdraco
+* MAJOR BUG: Fixed lookup of uppercase names in registry (#597) @bdraco
 
   If the ServiceInfo was registered with an uppercase name and the query was
   for a lowercase name, it would not be found and vice-versa.
-* MAJOR BUG: Ensure unicast responses can be sent to any source port (#598) @bdraco
+* MAJOR BUG: Fixed unicast responses from any source port (#598) @bdraco
 
   Unicast responses were only being sent if the source port
   was 53, this prevented responses when testing with dig:
@@ -244,19 +232,19 @@ This release offers 100% line and branch coverage
     dig -p 5353 @224.0.0.251 media-12.local
 
   The above query will now see a response
-* MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
-* Remove second level caching from ServiceBrowsers (#737) @bdraco
+* MAJOR BUG: Fixed queries for AAAA records not being answered (#616) @bdraco
+* Removed second level caching from ServiceBrowsers (#737) @bdraco
 
   The ServiceBrowser had its own cache of the last time it
   saw a service which was reimplementing the DNSCache and
   presenting a source of truth problem that lead to unexpected
   queries when the two disagreed.
-* Fix server cache to be case-insensitive (#731) @bdraco
+* Fixed server cache not being case-insensitive (#731) @bdraco
 
   If the server name had uppercase chars and any of the
   matching records were lowercase, the server would not be
   found
-* Fix cache handling of records with different TTLs (#729) @bdraco
+* Fixed cache handling of records with different TTLs (#729) @bdraco
 
   There should only be one unique record in the cache at
   a time as having multiple unique records will different
@@ -267,12 +255,14 @@ This release offers 100% line and branch coverage
   to ensure that the newest record always replaces the same
   unique record and we never have a source of truth problem
   determining the TTL of a record from the cache.
-* Fix ServiceInfo with multiple A records (#725) @bdraco
+* Fixed ServiceInfo with multiple A records (#725) @bdraco
 
   If there were multiple A records for the host, ServiceInfo
   would always return the last one that was in the incoming
   packet which was usually not the one that was wanted.
-* Set stale unique records to expire 1s in the future instead of instant removal (#706) @bdraco
+* Fixed stale unique records expiring too quickly (#706) @bdraco
+
+  Recods now expire 1s in the future instead of instant removal.
 
   tools.ietf.org/html/rfc6762#section-10.2
   Queriers receiving a Multicast DNS response with a TTL of zero SHOULD
@@ -283,26 +273,25 @@ This release offers 100% line and branch coverage
   incorrectly sends goodbye packets for its records, it gives the other
   cooperating responders one second to send out their own response to
   "rescue" the records before they expire and are deleted.
-* Suppress additionals when answer is suppressed (#690) @bdraco
-* Allow unregistering a service multiple times (#679) @bdraco
-* Add an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.asyncio (#658) @bdraco
-* Ensure interface_index_to_ip6_address skips ipv4 adapters (#651) @bdraco
-* Add async_unregister_all_services to AsyncZeroconf (#649) @bdraco
-* Ensure services are removed from the registry when calling unregister_all_services (#644) @bdraco
+* Fixed exception when unregistering a service multiple times (#679) @bdraco
+* Added an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.asyncio (#658) @bdraco
+* Fixed interface_index_to_ip6_address not skiping ipv4 adapters (#651) @bdraco
+* Added async_unregister_all_services to AsyncZeroconf (#649) @bdraco
+* Fixed services not being removed from the registry when calling unregister_all_services (#644) @bdraco
 
   There was a race condition where a query could be answered for a service
   in the registry while goodbye packets which could result a fresh record
   being broadcast after the goodbye if a query came in at just the right
   time. To avoid this, we now remove the services from the registry right
   after we generate the goodbye packet
-* Ensure zeroconf can be loaded when the system disables IPv6 (#624) @bdraco
-* Ensure the QU bit is set for probe queries (#609) @bdraco
+* Fixed zeroconf exception on load when the system disables IPv6 (#624) @bdraco
+* Fixed the QU bit missing from for probe queries (#609) @bdraco
 
   The bit should be set per
   datatracker.ietf.org/doc/html/rfc6762#section-8.1
 
-* Set the TC bit for query packets where the known answers span multiple packets (#494) @bdraco
-* Ensure packets are properly seperated when exceeding maximum size (#498) @bdraco
+* Fixed the TC bit mising for query packets where the known answers span multiple packets (#494) @bdraco
+* Fixed packets not being properly seperated when exceeding maximum size (#498) @bdraco
 
   Ensure that questions that exceed the max packet size are
   moved to the next packet. This fixes DNSQuestions being
@@ -312,28 +301,28 @@ This release offers 100% line and branch coverage
   Ensure only one resource record is sent when a record
   exceeds _MAX_MSG_TYPICAL
   datatracker.ietf.org/doc/html/rfc6762#section-17
-* Ensure PTR questions asked in uppercase are answered (#465) @bdraco
-* Support for context managers in Zeroconf and AsyncZeroconf (#284) @shenek
-* Implement an AsyncServiceBrowser to compliment the sync ServiceBrowser (#429) @bdraco
-* Add async_get_service_info to AsyncZeroconf and async_request to AsyncServiceInfo (#408) @bdraco
-* Allow passing in a sync Zeroconf instance to AsyncZeroconf (#406) @bdraco
-* Fix IPv6 setup under MacOS when binding to "" (#392) @bdraco
-* Ensure ZeroconfServiceTypes.find always cancels the ServiceBrowser (#389) @bdraco
+* Fixed PTR questions asked in uppercase not being answered (#465) @bdraco
+* Added Support for context managers in Zeroconf and AsyncZeroconf (#284) @shenek
+* Implemented an AsyncServiceBrowser to compliment the sync ServiceBrowser (#429) @bdraco
+* Added async_get_service_info to AsyncZeroconf and async_request to AsyncServiceInfo (#408) @bdraco
+* Implemented allowing passing in a sync Zeroconf instance to AsyncZeroconf (#406) @bdraco
+* Fixed IPv6 setup under MacOS when binding to "" (#392) @bdraco
+* Fixed ZeroconfServiceTypes.find not always cancels the ServiceBrowser (#389) @bdraco
 
   There was a short window where the ServiceBrowser thread
   could be left running after Zeroconf is closed because
   the .join() was never waited for when a new Zeroconf
   object was created
-* Ensure duplicate packets do not trigger duplicate updates (#376) @bdraco
+* Fixed duplicate packets triggering duplicate updates (#376) @bdraco
 
   If TXT or SRV records update was already processed and then
   recieved again, it was possible for a second update to be
   called back in the ServiceBrowser
-* Only trigger a ServiceStateChange.Updated event when an ip address is added (#375) @bdraco
-* Fix RFC6762 Section 10.2 paragraph 2 compliance (#374) @bdraco
-* Reduce length of ServiceBrowser thread name with many types (#373) @bdraco
-* Fix empty answers being added in ServiceInfo.request (#367) @bdraco
-* Ensure ServiceInfo populates all AAAA records (#366) @bdraco
+* Fixed ServiceStateChange.Updated event happening for IPs that already existed (#375) @bdraco
+* Fixed RFC6762 Section 10.2 paragraph 2 compliance (#374) @bdraco
+* Reduced length of ServiceBrowser thread name with many types (#373) @bdraco
+* Fixed empty answers being added in ServiceInfo.request (#367) @bdraco
+* Fixed ServiceInfo not populating all AAAA records (#366) @bdraco
 
   Use get_all_by_details to ensure all records are loaded
   into addresses.
@@ -343,13 +332,7 @@ This release offers 100% line and branch coverage
 
   Move duplicate code that checked if the ServiceInfo was complete
   into its own function
-* Add new cache function get_all_by_details (#363) @bdraco
-  When working with IPv6, multiple AAAA records can exist
-  for a given host. get_by_details would only return the
-  latest record in the cache.
-
-  Fix a case where the cache list can change during
-  iteration
+* Fixed a case where the cache list can change during iteration (#363) @bdraco
 * Return task objects created by AsyncZeroconf (#360) @nocarryr
 
 Technically backwards incompatible:
