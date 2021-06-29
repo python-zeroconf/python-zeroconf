@@ -224,10 +224,8 @@ def new_socket(  # pylint: disable=too-many-branches
         apple_p2p,
         bind_addr,
     )
-    if ip_version == IPVersion.V4Only:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    else:
-        s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    socket_family = socket.AF_INET if ip_version == IPVersion.V4Only else socket.AF_INET6
+    s = socket.socket(socket_family, socket.SOCK_DGRAM)
 
     if ip_version == IPVersion.All:
         disable_ipv6_only_or_raise(s)
