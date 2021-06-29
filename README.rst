@@ -204,27 +204,12 @@ This release offers 100% line and branch coverage.
 
   The Engine thread is now started after all the listeners have been added to avoid a
   race condition where packets could be missed at startup.
-* TRAFFIC REDUCTION: Added support for handling QU questions (#621) @bdraco
-
-  Implements RFC 6762 sec 5.4:
-  Questions Requesting Unicast Responses
-  datatracker.ietf.org/doc/html/rfc6762#section-5.4
-* TRAFFIC REDUCTION: Implemented protect the network against excessive packet flooding (#619) @bdraco
-* TRAFFIC REDUCTION: Additionals are now suppressed when they are already in the answers section (#617) @bdraco
-* TRAFFIC REDUCTION: Additionals are no longer included when the answer is suppressed by known-answer suppression (#614) @bdraco
-* TRAFFIC REDUCTION: Implemented multi-packet known answer supression (#687) @bdraco
-
-  Implements datatracker.ietf.org/doc/html/rfc6762#section-7.2
-* TRAFFIC REDUCTION: Implemented efficient bucketing of queries with known answers (#698) @bdraco
-* TRAFFIC REDUCTION: Implemented duplicate question suppression (#770) @bdraco
-
-  http://datatracker.ietf.org/doc/html/rfc6762#section-7.3
-* MAJOR BUG: Fixed answering matching PTR queries with the ANY query (#618) @bdraco
-* MAJOR BUG: Fixed lookup of uppercase names in the registry (#597) @bdraco
+* Fixed answering matching PTR queries with the ANY query (#618) @bdraco
+* Fixed lookup of uppercase names in the registry (#597) @bdraco
 
   If the ServiceInfo was registered with an uppercase name and the query was
   for a lowercase name, it would not be found and vice-versa.
-* MAJOR BUG: Fixed unicast responses from any source port (#598) @bdraco
+* Fixed unicast responses from any source port (#598) @bdraco
 
   Unicast responses were only being sent if the source port
   was 53, this prevented responses when testing with dig:
@@ -232,7 +217,7 @@ This release offers 100% line and branch coverage.
     dig -p 5353 @224.0.0.251 media-12.local
 
   The above query will now see a response
-* MAJOR BUG: Fixed queries for AAAA records not being answered (#616) @bdraco
+* Fixed queries for AAAA records not being answered (#616) @bdraco
 * Removed second level caching from ServiceBrowsers (#737) @bdraco
 
   The ServiceBrowser had its own cache of the last time it
@@ -334,6 +319,24 @@ This release offers 100% line and branch coverage.
   into its own function
 * Fixed a case where the cache list can change during iteration (#363) @bdraco
 * Return task objects created by AsyncZeroconf (#360) @nocarryr
+
+Traffic Reduction:
+
+* Added support for handling QU questions (#621) @bdraco
+
+  Implements RFC 6762 sec 5.4:
+  Questions Requesting Unicast Responses
+  datatracker.ietf.org/doc/html/rfc6762#section-5.4
+* Implemented protect the network against excessive packet flooding (#619) @bdraco
+* Additionals are now suppressed when they are already in the answers section (#617) @bdraco
+* Additionals are no longer included when the answer is suppressed by known-answer suppression (#614) @bdraco
+* Implemented multi-packet known answer supression (#687) @bdraco
+
+  Implements datatracker.ietf.org/doc/html/rfc6762#section-7.2
+* Implemented efficient bucketing of queries with known answers (#698) @bdraco
+* Implemented duplicate question suppression (#770) @bdraco
+
+  http://datatracker.ietf.org/doc/html/rfc6762#section-7.3
 
 Technically backwards incompatible:
 
