@@ -4,8 +4,24 @@
 
 """Unit tests for logger.py."""
 
+import logging
 from unittest.mock import patch
-from zeroconf._logger import QuietLogger
+from zeroconf._logger import QuietLogger, set_logger_level_if_unset
+
+
+def test_loading_logger():
+    """Test loading logger does not change level unless it is unset."""
+    log = logging.getLogger('zeroconf')
+    log.setLevel(logging.CRITICAL)
+    set_logger_level_if_unset()
+    log = logging.getLogger('zeroconf')
+    assert log.level == logging.CRITICAL
+
+    log = logging.getLogger('zeroconf')
+    log.setLevel(logging.NOTSET)
+    set_logger_level_if_unset()
+    log = logging.getLogger('zeroconf')
+    assert log.level == logging.WARNING
 
 
 def test_log_warning_once():
