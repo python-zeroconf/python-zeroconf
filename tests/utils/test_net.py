@@ -156,3 +156,32 @@ def test_set_mdns_port_socket_options_for_ip_version():
     # Should not raise on EINVAL when bind address is ''
     with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
         netutils.set_mdns_port_socket_options_for_ip_version(sock, ('',), r.IPVersion.V4Only)
+
+
+def test_add_multicast_member():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    interface = '127.0.0.1'
+
+    # EPERM should always raise
+    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
+        netutils.add_multicast_member(sock, interface)
+
+    # EADDRINUSE should return False
+    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EADDRINUSE, None)):
+        assert netutils.add_multicast_member(sock, interface) is False
+
+    # EADDRNOTAVAIL should return False
+    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EADDRNOTAVAIL, None)):
+        assert netutils.add_multicast_member(sock, interface) is False
+
+    # EINVAL should return False
+    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
+        assert netutils.add_multicast_member(sock, interface) is False
+
+    # ENOPROTOOPT should return False
+    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
+        assert netutils.add_multicast_member(sock, interface) is False
+
+    # No error should return True
+    with patch("socket.socket.setsockopt"):
+        assert netutils.add_multicast_member(sock, interface) is True
