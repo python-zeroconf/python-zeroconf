@@ -28,7 +28,7 @@ log = logging.getLogger(__name__.split('.')[0])
 log.addHandler(logging.NullHandler())
 
 
-def set_logger_level_if_unset():
+def set_logger_level_if_unset() -> None:
     if log.level == logging.NOTSET:
         log.setLevel(logging.WARN)
 
