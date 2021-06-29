@@ -189,6 +189,28 @@ def set_so_reuseport_if_available(s: socket.socket) -> None:
             raise
 
 
+def set_mdns_port_socket_options_for_ip_version(
+    s: socket.socket, bind_addr: Union[Tuple[str], Tuple[str, int, int]], ip_version: IPVersion
+) -> None:
+    """Set ttl/hops and loop for mdns port."""
+    if ip_version != IPVersion.V6Only:
+        ttl = struct.pack(b'B', 255)
+        loop = struct.pack(b'B', 1)
+        # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
+        # IP_MULTICAST_LOOP socket options as an unsigned char.
+        try:
+            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+        except socket.error as e:
+            if bind_addr[0] != '' or get_errno(e) != errno.EINVAL:  # Fails to set on MacOS
+                raise
+
+    if ip_version != IPVersion.V4Only:
+        # However, char doesn't work here (at least on Linux)
+        s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
+        s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
+
+
 def new_socket(  # pylint: disable=too-many-branches
     bind_addr: Union[Tuple[str], Tuple[str, int, int]],
     port: int = _MDNS_PORT,
@@ -202,34 +224,17 @@ def new_socket(  # pylint: disable=too-many-branches
         apple_p2p,
         bind_addr,
     )
-    if ip_version == IPVersion.V4Only:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    else:
-        s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    socket_family = socket.AF_INET if ip_version == IPVersion.V4Only else socket.AF_INET6
+    s = socket.socket(socket_family, socket.SOCK_DGRAM)
 
     if ip_version == IPVersion.All:
         disable_ipv6_only_or_raise(s)
 
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
     set_so_reuseport_if_available(s)
 
     if port == _MDNS_PORT:
-        ttl = struct.pack(b'B', 255)
-        loop = struct.pack(b'B', 1)
-        if ip_version != IPVersion.V6Only:
-            # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
-            # IP_MULTICAST_LOOP socket options as an unsigned char.
-            try:
-                s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-                s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
-            except socket.error as e:
-                if bind_addr[0] != '' or get_errno(e) != errno.EINVAL:  # Fails to set on MacOS
-                    raise
-        if ip_version != IPVersion.V4Only:
-            # However, char doesn't work here (at least on Linux)
-            s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
-            s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
+        set_mdns_port_socket_options_for_ip_version(s, bind_addr, ip_version)
 
     if apple_p2p:
         # SO_RECV_ANYIF = 0x1104
