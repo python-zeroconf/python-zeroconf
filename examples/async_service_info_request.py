@@ -13,7 +13,7 @@ from typing import Any, Optional, cast
 
 
 from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
-from zeroconf.aio import AsyncServiceInfo, AsyncZeroconf
+from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
 
 HAP_TYPE = "_hap._tcp.local."

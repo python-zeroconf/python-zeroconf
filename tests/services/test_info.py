@@ -18,7 +18,7 @@ import pytest
 import zeroconf as r
 from zeroconf import DNSAddress, const
 from zeroconf._services.info import ServiceInfo
-from zeroconf.aio import AsyncZeroconf
+from zeroconf.asyncio import AsyncZeroconf
 
 from .. import has_working_ipv6, _inject_response
 

@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 import zeroconf as r
 from zeroconf import _core, _protocol, const, Zeroconf, current_time_millis
-from zeroconf.aio import AsyncZeroconf
+from zeroconf.asyncio import AsyncZeroconf
 
 from . import has_working_ipv6, _clear_cache, _inject_response, _wait_for_start
 

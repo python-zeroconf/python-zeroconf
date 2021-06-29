@@ -6,7 +6,7 @@ python-zeroconf API reference
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: zeroconf.aio
+.. automodule:: zeroconf.asyncio
     :members:
     :undoc-members:
     :show-inheritance:

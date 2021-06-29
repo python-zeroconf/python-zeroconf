@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import pytest
 
-from zeroconf.aio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
+from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
 from zeroconf import (
     DNSIncoming,
     DNSOutgoing,
@@ -422,7 +422,7 @@ async def test_service_info_async_request() -> None:
     _clear_cache(aiozc.zeroconf)
     # Generating the race condition is almost impossible
     # without patching since its a TOCTOU race
-    with patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
+    with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
         await aiosinfo.async_request(aiozc.zeroconf, 3000)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
@@ -826,7 +826,7 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
     with patch.object(zeroconf_info, "async_send", send):
         aiosinfo = AsyncServiceInfo(type_, registration_name)
         # Patch _is_complete so we send multiple times
-        with patch("zeroconf.aio.AsyncServiceInfo._is_complete", False):
+        with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
             await aiosinfo.async_request(aiozc.zeroconf, 1200)
         try:
             assert first_outgoing.questions[0].unicast == True

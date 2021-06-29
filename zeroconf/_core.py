@@ -43,7 +43,7 @@ from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener
-from ._utils.aio import get_running_loop, shutdown_loop, wait_event_or_timeout
+from ._utils.asyncio import get_running_loop, shutdown_loop, wait_event_or_timeout
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,

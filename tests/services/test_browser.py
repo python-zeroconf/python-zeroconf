@@ -22,7 +22,7 @@ from zeroconf import Zeroconf
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
-from zeroconf.aio import AsyncZeroconf
+from zeroconf.asyncio import AsyncZeroconf
 
 from .. import has_working_ipv6, _inject_response, _wait_for_start
 
