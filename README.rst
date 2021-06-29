@@ -143,22 +143,22 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
-This release offers 100% line and branch coverage
+This release offers 100% line and branch coverage.
 
 * Made ServiceInfo first question QU (#852) @bdraco
 
-  We want an immediate response when making a request with ServiceInfo
-  by asking a QU question, most responders will not delay the response
+  We want an immediate response when requesting with ServiceInfo
+  by asking a QU question; most responders will not delay the response
   and respond right away to our question. This also improves compatibility
   with split networks as we may not have been able to see the response
-  otherwise.  If the responder has not multicast the record recently
+  otherwise.  If the responder has not multicast the record recently,
   it may still choose to do so in addition to responding via unicast
 
   Reduces traffic when there are multiple zeroconf instances running
   on the network running ServiceBrowsers
 
   If we don't get an answer on the first try, we ask a QM question
-  in the event we can't receive a unicast response for some reason
+  in the event, we can't receive a unicast response for some reason
 
   This change puts ServiceInfo inline with ServiceBrowser which
   also asks the first question as QU since ServiceInfo is commonly
@@ -211,16 +211,16 @@ This release offers 100% line and branch coverage
   datatracker.ietf.org/doc/html/rfc6762#section-5.4
 * TRAFFIC REDUCTION: Implemented protect the network against excessive packet flooding (#619) @bdraco
 * TRAFFIC REDUCTION: Additionals are now suppressed when they are already in the answers section (#617) @bdraco
-* TRAFFIC REDUCTION: Additionals are no longer included when the answer is suppressed by known-answer supression (#614) @bdraco
+* TRAFFIC REDUCTION: Additionals are no longer included when the answer is suppressed by known-answer suppression (#614) @bdraco
 * TRAFFIC REDUCTION: Implemented multi-packet known answer supression (#687) @bdraco
 
   Implements datatracker.ietf.org/doc/html/rfc6762#section-7.2
-* TRAFFIC REDUCTION: Implemented efficent bucketing of queries with known answers (#698) @bdraco
-* TRAFFIC REDUCTION: Implemented duplicate question supression (#770) @bdraco
+* TRAFFIC REDUCTION: Implemented efficient bucketing of queries with known answers (#698) @bdraco
+* TRAFFIC REDUCTION: Implemented duplicate question suppression (#770) @bdraco
 
   http://datatracker.ietf.org/doc/html/rfc6762#section-7.3
 * MAJOR BUG: Fixed answering matching PTR queries with the ANY query (#618) @bdraco
-* MAJOR BUG: Fixed lookup of uppercase names in registry (#597) @bdraco
+* MAJOR BUG: Fixed lookup of uppercase names in the registry (#597) @bdraco
 
   If the ServiceInfo was registered with an uppercase name and the query was
   for a lowercase name, it would not be found and vice-versa.
@@ -236,13 +236,13 @@ This release offers 100% line and branch coverage
 * Removed second level caching from ServiceBrowsers (#737) @bdraco
 
   The ServiceBrowser had its own cache of the last time it
-  saw a service which was reimplementing the DNSCache and
+  saw a service that was reimplementing the DNSCache and
   presenting a source of truth problem that lead to unexpected
   queries when the two disagreed.
 * Fixed server cache not being case-insensitive (#731) @bdraco
 
   If the server name had uppercase chars and any of the
-  matching records were lowercase, the server would not be
+  matching records were lowercase, and the server would not be
   found
 * Fixed cache handling of records with different TTLs (#729) @bdraco
 
@@ -251,18 +251,18 @@ This release offers 100% line and branch coverage
   TTLs in the cache can result in unexpected behavior since
   some functions returned all matching records and some
   fetched from the right side of the list to return the
-  newest record. Intead we now store the records in a dict
+  newest record. Instead we now store the records in a dict
   to ensure that the newest record always replaces the same
-  unique record and we never have a source of truth problem
+  unique record, and we never have a source of truth problem
   determining the TTL of a record from the cache.
 * Fixed ServiceInfo with multiple A records (#725) @bdraco
 
   If there were multiple A records for the host, ServiceInfo
   would always return the last one that was in the incoming
-  packet which was usually not the one that was wanted.
+  packet, which was usually not the one that was wanted.
 * Fixed stale unique records expiring too quickly (#706) @bdraco
 
-  Recods now expire 1s in the future instead of instant removal.
+  Records now expire 1s in the future instead of instant removal.
 
   tools.ietf.org/html/rfc6762#section-10.2
   Queriers receiving a Multicast DNS response with a TTL of zero SHOULD
@@ -280,7 +280,7 @@ This release offers 100% line and branch coverage
 * Fixed services not being removed from the registry when calling unregister_all_services (#644) @bdraco
 
   There was a race condition where a query could be answered for a service
-  in the registry while goodbye packets which could result a fresh record
+  in the registry, while goodbye packets which could result in a fresh record
   being broadcast after the goodbye if a query came in at just the right
   time. To avoid this, we now remove the services from the registry right
   after we generate the goodbye packet
@@ -290,8 +290,8 @@ This release offers 100% line and branch coverage
   The bit should be set per
   datatracker.ietf.org/doc/html/rfc6762#section-8.1
 
-* Fixed the TC bit mising for query packets where the known answers span multiple packets (#494) @bdraco
-* Fixed packets not being properly seperated when exceeding maximum size (#498) @bdraco
+* Fixed the TC bit missing for query packets where the known answers span multiple packets (#494) @bdraco
+* Fixed packets not being properly separated when exceeding maximum size (#498) @bdraco
 
   Ensure that questions that exceed the max packet size are
   moved to the next packet. This fixes DNSQuestions being
@@ -316,7 +316,7 @@ This release offers 100% line and branch coverage
 * Fixed duplicate packets triggering duplicate updates (#376) @bdraco
 
   If TXT or SRV records update was already processed and then
-  recieved again, it was possible for a second update to be
+  received again, it was possible for a second update to be
   called back in the ServiceBrowser
 * Fixed ServiceStateChange.Updated event happening for IPs that already existed (#375) @bdraco
 * Fixed RFC6762 Section 10.2 paragraph 2 compliance (#374) @bdraco
@@ -327,7 +327,7 @@ This release offers 100% line and branch coverage
   Use get_all_by_details to ensure all records are loaded
   into addresses.
 
-  Only load A/AAAA records from cache once in load_from_cache
+  Only load A/AAAA records from the cache once in load_from_cache
   if there is a SRV record present
 
   Move duplicate code that checked if the ServiceInfo was complete
@@ -339,8 +339,8 @@ Technically backwards incompatible:
 
 * Update internal version check to match docs (3.6+) (#491) @bdraco
 
-  Python version eariler then 3.6 were likely broken with zeroconf
-  already, however the version is now explictly checked.
+  Python version earlier then 3.6 were likely broken with zeroconf
+  already, however, the version is now explicitly checked.
 * Update python compatibility as PyPy3 7.2 is required (#523) @bdraco
 
 Backwards incompatible:
@@ -348,15 +348,14 @@ Backwards incompatible:
 * Drop oversize packets before processing them (#826) @bdraco
 
   Oversized packets can quickly overwhelm the system and deny
-  service to legitimate queriers. In practice this is usually
-  due to broken mDNS implementations rather than malicious
-  actors.
-* Guard against excessive ServiceBrowser queries from PTR records significantly lower than recommended (#824) @bdraco
+  service to legitimate queriers. In practice, this is usually due to broken mDNS
+  implementations rather than malicious actors.
+* Guard against excessive ServiceBrowser queries from PTR records significantly lowerthan recommended (#824) @bdraco
 
   We now enforce a minimum TTL for PTR records to avoid
   ServiceBrowsers generating excessive queries refresh queries.
-  Apple uses a 15s minimum TTL, however we do not have the same
-  level of rate limit and safe guards so we use 1/4 of the recommended value.
+  Apple uses a 15s minimum TTL, however, we do not have the same
+  level of rate limit and safeguards, so we use 1/4 of the recommended value.
 * RecordUpdateListener now uses async_update_records instead of update_record (#419, #726) @bdraco
 
   This allows the listener to receive all the records that have
@@ -366,7 +365,7 @@ Backwards incompatible:
   update_record has been deprecated in favor of async_update_records
   A compatibility shim exists to ensure classes that use
   RecordUpdateListener as a base class continue to have
-  update_record called, however they should be updated
+  update_record called, however, they should be updated
   as soon as possible.
 
   A new method async_update_records_complete is now called on each
@@ -376,7 +375,7 @@ Backwards incompatible:
   has been updated as its a common pattern to call for
   ServiceInfo when a ServiceBrowser handler fires.
 
-  The async_ prefix was choosen to make it clear that these
+  The async_ prefix was chosen to make it clear that these
   functions run in the eventloop and should never do blocking
   I/O. Before 0.32+ these functions ran in a select() loop and
   should not have been doing any blocking I/O, but it was not
