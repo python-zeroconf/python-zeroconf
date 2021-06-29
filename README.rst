@@ -143,10 +143,6 @@ Changelog
 0.32.0 (Unreleased)
 ===================
 
-Documentation for breaking changes era on the side of the caution and likely
-overstates the risk on many of these. If you are not accessing zeroconf internals,
-you can likely not be concerned with the breaking changes below:
-
 This release offers 100% line and branch coverage
 
 * Make ServiceInfo first question QU (#852) @bdraco
@@ -180,18 +176,6 @@ This release offers 100% line and branch coverage
   interfaces (usually and wifi and ethernet), this would confuse the
   multi-packet known answer supression since it was not expecting
   to get the same data more than once
-* BREAKING CHANGE: Drop oversize packets before processing them (#826) @bdraco
-
-  Oversized packets can quickly overwhelm the system and deny
-  service to legitimate queriers. In practice this is usually
-  due to broken mDNS implementations rather than malicious
-  actors.
-* BREAKING CHANGE: Guard against excessive ServiceBrowser queries from PTR records significantly lower than recommended (#824) @bdraco
-
-  We now enforce a minimum TTL for PTR records to avoid
-  ServiceBrowsers generating excessive queries refresh queries.
-  Apple uses a 15s minimum TTL, however we do not have the same
-  level of rate limit and safe guards so we use 1/4 of the recommended value.
 * New ServiceBrowsers now request QU in the first outgoing when unspecified (#812) @bdraco
 
   https://datatracker.ietf.org/doc/html/rfc6762#section-5.4
@@ -213,61 +197,14 @@ This release offers 100% line and branch coverage
   return qualified addresses to avoid breaking compatibility
   on the existing parsed_addresses().
 * Skip network adapters that are disconnected (#327) @ZLJasonG
-* Pass both the new and old records to async_update_records (#792) @bdraco
-
-  Pass the old_record (cached) as the value and the new_record (wire)
-  to async_update_records instead of forcing each consumer to
-  check the cache since we will always have the old_record
-  when generating the async_update_records call. This avoids
-  the overhead of multiple cache lookups for each listener.
-* BREAKING CHANGE: Update internal version check to match docs (3.6+) (#491) @bdraco
-
-  Python version eariler then 3.6 were likely broken with zeroconf
-  already, however the version is now explictly checked.
-* BREAKING CHANGE: RecordUpdateListener now uses async_update_records instead of update_record (#419, #726) @bdraco
-
-  This allows the listener to receive all the records that have
-  been updated in a single transaction such as a packet or
-  cache expiry.
-
-  update_record has been deprecated in favor of async_update_records
-  A compatibility shim exists to ensure classes that use
-  RecordUpdateListener as a base class continue to have
-  update_record called, however they should be updated
-  as soon as possible.
-
-  A new method async_update_records_complete is now called on each
-  listener when all listeners have completed processing updates
-  and the cache has been updated. This allows ServiceBrowsers
-  to delay calling handlers until they are sure the cache
-  has been updated as its a common pattern to call for
-  ServiceInfo when a ServiceBrowser handler fires.
-
-  The async_ prefix was choosen to make it clear that these
-  functions run in the eventloop and should never do blocking
-  I/O. Before 0.32+ these functions ran in a select() loop and
-  should not have been doing any blocking I/O, but it was not
-  clear to implementors that I/O would block the loop.
-* BREAKING CHANGE: Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
+* Ensure listeners do not miss initial packets if Engine starts too quickly (#387) @bdraco
 
   When manually creating a zeroconf.Engine object, it is no longer started automatically.
   It must manually be started by calling .start() on the created object.
 
   The Engine thread is now started after all the listeners have been added to avoid a
   race condition where packets could be missed at startup.
-* BREAKING CHANGE: Remove DNSOutgoing.packet backwards compatibility (#569) @bdraco
-
-  DNSOutgoing.packet only returned a partial message when the
-  DNSOutgoing contents exceeded _MAX_MSG_ABSOLUTE or _MAX_MSG_TYPICAL
-  This was a legacy function that was replaced with .packets()
-  which always returns a complete payload in #248  As packet()
-  should not be used since it will end up missing data, it has
-  been removed
-* BREAKING CHANGE: Mark DNSOutgoing write functions as protected (#633) @bdraco
-
-  These functions are not intended to be used by external
-  callers and the API is not likely to be stable in the future
-* BREAKING CHANGE: Prefix cache functions that are non threadsafe with async_ (#724) @bdraco
+* Prefix cache functions that are non threadsafe with async_ (#724) @bdraco
 
   Adding (`zc.cache.add` -> `zc.cache.async_add_records`), removing (`zc.cache.remove` ->
   `zc.cache.async_remove_records`), and expiring the cache (`zc.cache.expire` ->
@@ -364,7 +301,6 @@ This release offers 100% line and branch coverage
   The bit should be set per
   datatracker.ietf.org/doc/html/rfc6762#section-8.1
 
-* Breaking change: Update python compatibility as PyPy3 7.2 is required (#523) @bdraco
 * Set the TC bit for query packets where the known answers span multiple packets (#494) @bdraco
 * Ensure packets are properly seperated when exceeding maximum size (#498) @bdraco
 
@@ -415,6 +351,60 @@ This release offers 100% line and branch coverage
   Fix a case where the cache list can change during
   iteration
 * Return task objects created by AsyncZeroconf (#360) @nocarryr
+
+Technically backwards incompatible:
+
+* Update internal version check to match docs (3.6+) (#491) @bdraco
+
+  Python version eariler then 3.6 were likely broken with zeroconf
+  already, however the version is now explictly checked.
+* Update python compatibility as PyPy3 7.2 is required (#523) @bdraco
+
+Backwards incompatible:
+
+* Drop oversize packets before processing them (#826) @bdraco
+
+  Oversized packets can quickly overwhelm the system and deny
+  service to legitimate queriers. In practice this is usually
+  due to broken mDNS implementations rather than malicious
+  actors.
+* Guard against excessive ServiceBrowser queries from PTR records significantly lower than recommended (#824) @bdraco
+
+  We now enforce a minimum TTL for PTR records to avoid
+  ServiceBrowsers generating excessive queries refresh queries.
+  Apple uses a 15s minimum TTL, however we do not have the same
+  level of rate limit and safe guards so we use 1/4 of the recommended value.
+* RecordUpdateListener now uses async_update_records instead of update_record (#419, #726) @bdraco
+
+  This allows the listener to receive all the records that have
+  been updated in a single transaction such as a packet or
+  cache expiry.
+
+  update_record has been deprecated in favor of async_update_records
+  A compatibility shim exists to ensure classes that use
+  RecordUpdateListener as a base class continue to have
+  update_record called, however they should be updated
+  as soon as possible.
+
+  A new method async_update_records_complete is now called on each
+  listener when all listeners have completed processing updates
+  and the cache has been updated. This allows ServiceBrowsers
+  to delay calling handlers until they are sure the cache
+  has been updated as its a common pattern to call for
+  ServiceInfo when a ServiceBrowser handler fires.
+
+  The async_ prefix was choosen to make it clear that these
+  functions run in the eventloop and should never do blocking
+  I/O. Before 0.32+ these functions ran in a select() loop and
+  should not have been doing any blocking I/O, but it was not
+  clear to implementors that I/O would block the loop.
+* Pass both the new and old records to async_update_records (#792) @bdraco
+
+  Pass the old_record (cached) as the value and the new_record (wire)
+  to async_update_records instead of forcing each consumer to
+  check the cache since we will always have the old_record
+  when generating the async_update_records call. This avoids
+  the overhead of multiple cache lookups for each listener.
 
 0.31.0
 ======
