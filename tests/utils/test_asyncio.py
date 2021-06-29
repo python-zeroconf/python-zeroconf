@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-"""Unit tests for zeroconf._utils.aio."""
+"""Unit tests for zeroconf._utils.asyncio."""
 
 import asyncio
 import contextlib
@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import pytest
 
-from zeroconf._utils import aio as aioutils
+from zeroconf._utils import asyncio as aioutils
 
 
 @pytest.mark.asyncio
@@ -25,7 +25,7 @@ async def test_async_get_all_tasks() -> None:
     await aioutils._async_get_all_tasks(aioutils.get_running_loop())
     if not hasattr(asyncio, 'all_tasks'):
         return
-    with patch("zeroconf._utils.aio.asyncio.all_tasks", side_effect=RuntimeError):
+    with patch("zeroconf._utils.asyncio.asyncio.all_tasks", side_effect=RuntimeError):
         await aioutils._async_get_all_tasks(aioutils.get_running_loop())
 
 

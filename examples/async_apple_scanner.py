@@ -8,7 +8,7 @@ import logging
 from typing import Any, Optional, cast
 
 from zeroconf import DNSQuestionType, IPVersion, ServiceStateChange, Zeroconf
-from zeroconf.aio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
+from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
 HOMESHARING_SERVICE: str = "_appletv-v2._tcp.local."
 DEVICE_SERVICE: str = "_touch-able._tcp.local."

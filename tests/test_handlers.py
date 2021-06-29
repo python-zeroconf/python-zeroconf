@@ -17,7 +17,7 @@ import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
 from zeroconf._dns import DNSRRSet
-from zeroconf.aio import AsyncZeroconf
+from zeroconf.asyncio import AsyncZeroconf
 
 
 from . import _clear_cache, _inject_response

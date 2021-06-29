@@ -38,7 +38,7 @@ from .._services import (
     SignalRegistrationInterface,
 )
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.aio import get_best_available_queue
+from .._utils.asyncio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (

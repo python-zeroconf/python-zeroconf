@@ -29,7 +29,7 @@ from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSServic
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.aio import get_running_loop
+from .._utils.asyncio import get_running_loop
 from .._utils.name import service_type_name
 from .._utils.net import (
     IPVersion,
