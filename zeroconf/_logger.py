@@ -27,11 +27,15 @@ from typing import Any, Dict, Union, cast
 log = logging.getLogger(__name__.split('.')[0])
 log.addHandler(logging.NullHandler())
 
+
 def set_logger_level_if_unset():
     if log.level == logging.NOTSET:
         log.setLevel(logging.WARN)
 
+
 set_logger_level_if_unset()
+
+
 class QuietLogger:
     _seen_logs: Dict[str, Union[int, tuple]] = {}
 
