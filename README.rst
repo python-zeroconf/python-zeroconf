@@ -385,8 +385,6 @@ This release offers 100% line and branch coverage
 
 * Add an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.aio (#658) @bdraco
 
-* Set __all__ in zeroconf.aio to ensure private functions do now show in the docs (#652) @bdraco
-
 * Ensure interface_index_to_ip6_address skips ipv4 adapters (#651) @bdraco
 
 * Add async_unregister_all_services to AsyncZeroconf (#649) @bdraco
