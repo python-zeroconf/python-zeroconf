@@ -381,7 +381,7 @@ This release offers 100% line and branch coverage
 
 * Allow unregistering a service multiple times (#679) @bdraco
 
-* Add an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.aio (#658) @bdraco
+* Add an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.asyncio (#658) @bdraco
 
 * Ensure interface_index_to_ip6_address skips ipv4 adapters (#651) @bdraco
 
