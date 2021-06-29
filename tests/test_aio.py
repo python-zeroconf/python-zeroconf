@@ -21,6 +21,7 @@ from zeroconf import (
     DNSPointer,
     DNSService,
     DNSAddress,
+    DNSText,
     ServiceStateChange,
     Zeroconf,
     const,
@@ -868,7 +869,22 @@ async def test_service_browser_ignores_unrelated_updates():
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
     zc.cache.async_add_records(
-        [info.dns_pointer(), info.dns_service(), *info.dns_addresses(), info.dns_text()]
+        [
+            info.dns_pointer(),
+            info.dns_service(),
+            *info.dns_addresses(),
+            info.dns_text(),
+            DNSService(
+                "zoom._unrelated._tcp.local.",
+                const._TYPE_SRV,
+                const._CLASS_IN,
+                const._DNS_HOST_TTL,
+                0,
+                0,
+                81,
+                'unrelated.local.',
+            ),
+        ]
     )
 
     browser = AsyncServiceBrowser(zc, type_, None, listener)
@@ -885,21 +901,16 @@ async def test_service_browser_ignores_unrelated_updates():
         0,
     )
     generated.add_answer_at_time(
-        DNSAddress(
-            "zoom._unrelated._tcp.local.", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"1234"
-        ),
+        DNSAddress("unrelated.local.", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"1234"),
         0,
     )
     generated.add_answer_at_time(
-        DNSService(
+        DNSText(
             "zoom._unrelated._tcp.local.",
-            const._TYPE_SRV,
-            const._CLASS_IN,
-            const._DNS_HOST_TTL,
-            0,
-            0,
-            81,
-            'unrelated.local.',
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            b"zoom",
         ),
         0,
     )
