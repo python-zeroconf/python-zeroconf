@@ -399,11 +399,6 @@ This release offers 100% line and branch coverage
 
 * Ensure zeroconf can be loaded when the system disables IPv6 (#624) @bdraco
 
-* Add is_recent property to DNSRecord (#620) @bdraco
-
-  RFC 6762 defines recent as not multicast within one quarter of its TTL
-  datatracker.ietf.org/doc/html/rfc6762#section-5.4
-
 * Ensure the QU bit is set for probe queries (#609) @bdraco
 
   The bit should be set per
