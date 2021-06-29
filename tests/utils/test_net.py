@@ -139,3 +139,20 @@ def test_set_so_reuseport_if_available_not_present():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     with patch("socket.socket.setsockopt", side_effect=OSError):
         netutils.set_so_reuseport_if_available(sock)
+
+
+def test_set_mdns_port_socket_options_for_ip_version():
+    """Test OSError with errno with EINVAL and bind address '' from setsockopt IP_MULTICAST_TTL does not raise."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # Should raise on EPERM always
+    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
+        netutils.set_mdns_port_socket_options_for_ip_version(sock, ('',), r.IPVersion.V4Only)
+
+    # Should raise on EINVAL always when bind address is not ''
+    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
+        netutils.set_mdns_port_socket_options_for_ip_version(sock, ('127.0.0.1',), r.IPVersion.V4Only)
+
+    # Should not raise on EINVAL when bind address is ''
+    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
+        netutils.set_mdns_port_socket_options_for_ip_version(sock, ('',), r.IPVersion.V4Only)
