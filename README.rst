@@ -419,8 +419,6 @@ This release offers 100% line and branch coverage
   exceeds _MAX_MSG_TYPICAL
   datatracker.ietf.org/doc/html/rfc6762#section-17
 
-* Provide a helper function to convert milliseconds to seconds (#481) @bdraco
-
 * Ensure PTR questions asked in uppercase are answered (#465) @bdraco
 
 * Support for context managers in Zeroconf and AsyncZeroconf (#284) @shenek
