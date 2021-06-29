@@ -436,8 +436,6 @@ This release offers 100% line and branch coverage
   the .join() was never waited for when a new Zeroconf
   object was created
 
-* Ensure the cache is checked for name conflict after final service query with asyncio (#382) @bdraco
-
 * Ensure duplicate packets do not trigger duplicate updates (#376) @bdraco
 
   If TXT or SRV records update was already processed and then
