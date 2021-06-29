@@ -56,11 +56,6 @@ jobs:
         run: |
           ${{ matrix.venvcmd }}
           make black_check
-      - name: Run pylint
-        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy3' }}
-        run: |
-          ${{ matrix.venvcmd }}
-          make pylint
       - name: Run tests
         run: |
           ${{ matrix.venvcmd }}
