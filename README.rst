@@ -149,7 +149,7 @@ This release offers 100% line and branch coverage.
 
   We want an immediate response when requesting with ServiceInfo
   by asking a QU question; most responders will not delay the response
-  and respond rightaway to our question. This also improves compatibility
+  and respond right away to our question. This also improves compatibility
   with split networks as we may not have been able to see the response
   otherwise.  If the responder has not multicast the record recently,
   it may still choose to do so in addition to responding via unicast
