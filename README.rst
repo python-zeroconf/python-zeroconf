@@ -140,6 +140,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.32.0 Release Candidate 7
+==========================
+
+This release offers 100% line and branch coverage
+
+* Break apart new_socket for easier testing (#875) @bdraco
+
 0.32.0 Release Candidate 6
 ==========================
 
