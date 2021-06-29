@@ -365,8 +365,6 @@ This release offers 100% line and branch coverage
   would always return the last one that was in the incoming
   packet which was usually not the one that was wanted.
 
-* Synchronize time for fate sharing (#718) @bdraco
-
 * Set stale unique records to expire 1s in the future instead of instant removal (#706) @bdraco
 
   tools.ietf.org/html/rfc6762#section-10.2
