@@ -140,31 +140,14 @@ See examples directory for more.
 Changelog
 =========
 
-0.32.0 Release Candidate 7
-==========================
+0.32.0 (Unreleased)
+===================
+
+Documentation for breaking changes era on the side of the caution and likely
+overstates the risk on many of these. If you are not accessing zeroconf internals,
+you can likely not be concerned with the breaking changes below:
 
 This release offers 100% line and branch coverage
-
-* Break apart new_socket for easier testing (#875) @bdraco
-
-0.32.0 Release Candidate 6
-==========================
-
-* Fix deadlock when event loop is shutdown during service registration (#869) @bdraco
-
-* Break apart new_socket to be testable (#867) @bdraco
-
-0.32.0 Release Candidate 5
-==========================
-
-* Ensure protocol and sending errors are logged once (#862) @bdraco
-
-* Remove unreachable code in AsyncListener.datagram_received (#863) @bdraco
-
-* Make a dispatch dict for ServiceStateChange listeners (#859) @bdraco
-
-0.32.0 Release Candidate 4
-==========================
 
 * Make ServiceInfo first question QU (#852) @bdraco
 
@@ -185,22 +168,6 @@ This release offers 100% line and branch coverage
   also asks the first question as QU since ServiceInfo is commonly
   called from ServiceBrowser callbacks
 
-0.32.0 Release Candidate 3
-==========================
-
-* Switch ServiceBrowser query scheduling to use call_later instead of a loop (#849) @bdraco
-
-  Simplifies scheduling as there is no more need to sleep in a loop as
-  we now schedule future callbacks with call_later
-
-  Simplifies cancelation as there is no more coroutine to cancel, only a timer handle
-  We no longer have to handle the canceled error and cleaning up the awaitable
-
-  Solves the infrequent test failures in test_backoff and test_integration
-
-0.32.0 Release Candidate 2
-==========================
-
 * Limit duplicate packet suppression to 1s intervals (#841) @bdraco
 
   Only suppress duplicate packets that happen within the same
@@ -216,18 +183,6 @@ This release offers 100% line and branch coverage
   multi-packet known answer supression since it was not expecting
   to get the same data more than once
 
-
-0.32.0 Release Candidate 1
-==========================
-
-No changes
-
-0.32.0 Beta 6
-=============
-
-This beta addresses two potential areas where zeroconf can be overwhelmed and
-deny service to legitimate queriers.
-
 * BREAKING CHANGE: Drop oversize packets before processing them (#826) @bdraco
 
   Oversized packets can quickly overwhelm the system and deny
@@ -242,16 +197,6 @@ deny service to legitimate queriers.
   Apple uses a 15s minimum TTL, however we do not have the same
   level of rate limit and safe guards so we use 1/4 of the recommended value.
 
-0.32.0 Beta 5
-=============
-
-* Only wake up the query loop when there is a change in the next query time (#818) @bdraco
-
-  The ServiceBrowser query loop (async_browser_task) was being awoken on
-  every packet because it was using `zeroconf.async_wait` which wakes
-  up on every new packet.  We only need to awaken the loop when the next time
-  we are going to send a query has changed.
-
 * New ServiceBrowsers now request QU in the first outgoing when unspecified (#812) @bdraco
 
   https://datatracker.ietf.org/doc/html/rfc6762#section-5.4
@@ -262,22 +207,6 @@ deny service to legitimate queriers.
   a breaking change to increase). This reduces the amount of traffic on
   the network, and has the secondary advantage that most responders will
   answer a QU question without the typical delay answering QM questions.
-
-
-0.32.0 Beta 4
-=============
-
-* Simplify wait_event_or_timeout (#810) @bdraco
-
-  This function always did the same thing on timeout and
-  wait complete so we can use the same callback.  This
-  solves the CI failing due to the test coverage flapping
-  back and forth as the timeout would rarely happen.
-
-* Make DNSHinfo and DNSAddress use the same match order as DNSPointer and DNSText (#808) @bdraco
-
-  We want to check the data that is most likely to be unique first
-  so we can reject the __eq__ as soon as possible.
 
 * Qualify IPv6 link-local addresses with scope_id (#343) @ibygrave
 
@@ -290,27 +219,7 @@ deny service to legitimate queriers.
   return qualified addresses to avoid breaking compatibility
   on the existing parsed_addresses().
 
-0.32.0 Beta 3
-=============
-
 * Skip network adapters that are disconnected (#327) @ZLJasonG
-
-* Add slots to DNS classes (#803) @bdraco
-
-  On a busy network that receives many mDNS packets per second, we
-  will not know the answer to most of the questions being asked.
-  In this case the creating the DNS* objects are usually garbage
-  collected within 1s as they are not needed. We now set __slots__
-  to speed up the creation and destruction of these objects
-
-0.32.0 Beta 2
-=============
-
-* Ensure we handle threadsafe shutdown under PyPy with multiple event loops (#800) @bdraco
-
-* Ensure fresh ServiceBrowsers see old_record as None when replaying the cache (#793) @bdraco
-
-  This is fixing ServiceBrowser missing an add when the record is already in the cache.
 
 * Pass both the new and old records to async_update_records (#792) @bdraco
 
@@ -319,23 +228,6 @@ deny service to legitimate queriers.
   check the cache since we will always have the old_record
   when generating the async_update_records call. This avoids
   the overhead of multiple cache lookups for each listener.
-
-* Make add_listener and remove_listener threadsafe (#794) @bdraco
-
-* Ensure outgoing ServiceBrowser questions are seen by the question history (#790) @bdraco
-
-0.32.0 Beta 1
-=============
-
-Documentation for breaking changes era on the side of the caution and likely
-overstates the risk on many of these. If you are not accessing zeroconf internals,
-you can likely not be concerned with the breaking changes below:
-
-* BREAKING CHANGE: zeroconf.asyncio has been renamed zeroconf.aio (#503) @bdraco
-
-  The asyncio name could shadow system asyncio in some cases. If
-  zeroconf is in sys.path, this would result in loading zeroconf.asyncio
-  when system asyncio was intended.
 
 * BREAKING CHANGE: Update internal version check to match docs (3.6+) (#491) @bdraco
 
@@ -442,94 +334,12 @@ you can likely not be concerned with the breaking changes below:
 
 * MAJOR BUG: Fix queries for AAAA records (#616) @bdraco
 
-* Add async_apple_scanner example (#719) @bdraco
-
-* Add support for requesting QU questions to ServiceBrowser and ServiceInfo (#787) @bdraco
-
-* Ensure the queue is created before adding listeners to ServiceBrowser (#785) @bdraco
-
-  The callback from the listener could generate an event that would
-  fire in async context that should have gone to the queue which
-  could result in the consumer running a sync call in the event loop
-  and blocking it.
-
-* Add a guard to prevent running ServiceInfo.request in async context (#784) @bdraco
-
-* Inline utf8 decoding when processing incoming packets (#782) @bdraco
-
-* Drop utf cache from _dns (#781) (later reverted) @bdraco
-
-* Switch to using a simple cache instead of lru_cache (#779) (later reverted) @bdraco
-
-* Fix Responding to Address Queries (RFC6762 section 6.2) (#777) @bdraco
-
-* Fix deadlock on ServiceBrowser shutdown with PyPy (#774) @bdraco
-
-* Add a guard against the task list changing when shutting down (#776) @bdraco
-
-* Improve performance of parsing DNSIncoming by caching read_utf (#769) (later reverted) @bdraco
-
-* Switch to using an asyncio.Event for async_wait (#759) @bdraco
-
-  We no longer need to check for thread safety under a asyncio.Condition
-  as the ServiceBrowser and ServiceInfo internals schedule coroutines
-  in the eventloop.
-
-* Simplify ServiceBrowser callsbacks (#756) @bdraco
-
-* Revert: Fix thread safety in _ServiceBrowser.update_records_complete (#708) (#755) @bdraco
-
-- This guarding is no longer needed as the ServiceBrowser loop
-  now runs in the event loop and the thread safety guard is no
-  longer needed
-
-* Drop AsyncServiceListener (#754) @bdraco  (Never shipped)
-
-* Run ServiceBrowser queries in the event loop (#752) @bdraco
-
-* Remove unused argument from AsyncZeroconf (#751) @bdraco
-
-* Fix warning about Zeroconf._async_notify_all not being awaited in sync shutdown (#750) @bdraco
-
-* Update async_service_info_request example to ensure it runs in the right event loop (#749) @bdraco
-
-* Run ServiceInfo requests in the event loop (#748) @bdraco
-
-* Remove support for notify listeners (#733) @bdraco  (Never shipped)
-
-* Relocate service browser tests to tests/services/test_browser.py (#745) @bdraco
-
-* Relocate ServiceInfo to zeroconf._services.info (#741) @bdraco
-
-* Run question answer callbacks from add_listener in the event loop (#740) @bdraco
-
-  Calling async_update_records and async_update_records_complete should always
-  happen in the event loop to ensure implementers do not need to worry about
-  thread safety
-
 * Remove second level caching from ServiceBrowsers (#737) @bdraco
 
   The ServiceBrowser had its own cache of the last time it
   saw a service which was reimplementing the DNSCache and
   presenting a source of truth problem that lead to unexpected
   queries when the two disagreed.
-
-* Breakout ServiceBrowser handler from listener creation (#736) @bdraco
-
-  Add coverage for the handler from listener
-
-* Add fast cache lookup functions (#732) @bdraco
-
-  The majority of our lookups happen in the event loop so there is no need
-  for them to be threadsafe. Now that the codebase is more clear about what
-  needs to be threadsafe and what does not need to be threadsafe we can use
-  the much faster non-threadsafe versions in the places where we are calling
-  from the event loop.
-
-* Switch to using DNSRRSet in RecordManager (#735) @bdraco
-
-  DNSRRSet is able to do O(1) lookups of records assuming
-  there are no collisions.
 
 * Fix server cache to be case-insensitive (#731) @bdraco
 
@@ -549,32 +359,11 @@ you can likely not be concerned with the breaking changes below:
   unique record and we never have a source of truth problem
   determining the TTL of a record from the cache.
 
-* Rename handlers and internals to make it clear what is threadsafe (#726) @bdraco
-
-  It was too easy to get confused about what was threadsafe and
-  what was not threadsafe which lead to unexpected failures.
-  Rename functions to make it clear what will be run in the event
-  loop and what is expected to be threadsafe
-
 * Fix ServiceInfo with multiple A records (#725) @bdraco
 
   If there were multiple A records for the host, ServiceInfo
   would always return the last one that was in the incoming
   packet which was usually not the one that was wanted.
-
-* Synchronize time for fate sharing (#718) @bdraco
-
-* Cleanup typing in zero._core and document ignores (#714) @bdraco
-
-* Cleanup typing in zeroconf._logger (#715) @bdraco
-
-* Cleanup typing in zeroconf._utils.net (#713) @bdraco
-
-* Cleanup typing in zeroconf._services (#711) @bdraco
-
-* Cleanup typing in zeroconf._services.registry (#712) @bdraco
-
-* Add setter for DNSQuestion to easily make a QU question (#710) @bdraco
 
 * Set stale unique records to expire 1s in the future instead of instant removal (#706) @bdraco
 
@@ -588,44 +377,11 @@ you can likely not be concerned with the breaking changes below:
   cooperating responders one second to send out their own response to
   "rescue" the records before they expire and are deleted.
 
-* Fix thread safety in _ServiceBrowser.update_records_complete (#708) @bdraco
-
-* Split DNSOutgoing/DNSIncoming/DNSMessage into zeroconf._protocol (#705) @bdraco
-
-* Abstract DNSOutgoing ttl write into _write_ttl (#695) @bdraco
-
-* Rollback data in one call instead of poping one byte at a time in DNS Outgoing (#696) @bdraco
-
 * Suppress additionals when answer is suppressed (#690) @bdraco
-
-* Move setting DNS created and ttl into its own function (#692) @bdraco
-
-* Add truncated property to DNSMessage to lookup the TC bit (#686) @bdraco
-
-* Check if SO_REUSEPORT exists instead of using an exception catch (#682) @bdraco
-
-* Use DNSRRSet for known answer suppression (#680) @bdraco
-
-  DNSRRSet uses hash table lookups under the hood which
-  is much faster than the linear searches used by
-  DNSRecord.suppressed_by
-
-* Add DNSRRSet class for quick hashtable lookups of records (#678) @bdraco
-
-  This class will be used to do fast checks to see
-  if records should be suppressed by a set of answers.
 
 * Allow unregistering a service multiple times (#679) @bdraco
 
-* Remove unreachable BadTypeInNameException check in _ServiceBrowser (#677) @bdraco
-
-* Update async_browser.py example to use AsyncZeroconfServiceTypes (#665) @bdraco
-
-* Add an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.aio (#658) @bdraco
-
-* Remove all calls to the executor in AsyncZeroconf (#653) @bdraco
-
-* Set __all__ in zeroconf.aio to ensure private functions do now show in the docs (#652) @bdraco
+* Add an AsyncZeroconfServiceTypes to mirror ZeroconfServiceTypes to zeroconf.asyncio (#658) @bdraco
 
 * Ensure interface_index_to_ip6_address skips ipv4 adapters (#651) @bdraco
 
@@ -639,136 +395,14 @@ you can likely not be concerned with the breaking changes below:
   time. To avoid this, we now remove the services from the registry right
   after we generate the goodbye packet
 
-* Use ServiceInfo.key/ServiceInfo.server_key instead of lowering in ServiceRegistry (#647) @bdraco
-
-* Ensure the ServiceInfo.key gets updated when the name is changed externally (#645) @bdraco
-
-* Ensure AsyncZeroconf.async_close can be called multiple times like Zeroconf.close (#638) @bdraco
-
-* Ensure eventloop shutdown is threadsafe (#636) @bdraco
-
-* Return early in the shutdown/close process (#632) @bdraco
-
-* Remove unreachable cache check for DNSAddresses (#629) @bdraco
-
-  The ServiceBrowser would check to see if a DNSAddress was
-  already in the cache and return early to avoid sending
-  updates when the address already was held in the cache.
-  This check was not needed since there is already a check
-  a few lines before as `self.zc.cache.get(record)` which
-  effectively does the same thing. This lead to the check
-  never being covered in the tests and 2 cache lookups when
-  only one was needed.
-
-* Add test for wait_condition_or_timeout_times_out util (#630) @bdraco
-
-* Return early on invalid data received (#628)  @bdraco
-
-  Improve coverage for handling invalid incoming data
-
-* Add test to ensure ServiceBrowser sees port change as an update (#625) @bdraco
-
-* Fix random test failures due to monkey patching not being undone between tests (#626) @bdraco
-
-  Switch patching to use unitest.mock.patch to ensure the patch
-  is reverted when the test is completed
-
 * Ensure zeroconf can be loaded when the system disables IPv6 (#624) @bdraco
-
-* Eliminate aio sender thread (#622) @bdraco
-
-* Replace select loop with asyncio loop (#504) @bdraco
-
-* Add is_recent property to DNSRecord (#620) @bdraco
-
-  RFC 6762 defines recent as not multicast within one quarter of its TTL
-  datatracker.ietf.org/doc/html/rfc6762#section-5.4
-
-* Breakout the query response handler into its own class (#615) @bdraco
-
-* Add the ability for ServiceInfo.dns_addresses to filter by address type (#612) @bdraco
-
-* Make DNSRecords hashable (#611) @bdraco
-
-  Allows storing them in a set for de-duplication
-
-  Needed to be able to check for duplicates to solve #604
 
 * Ensure the QU bit is set for probe queries (#609) @bdraco
 
   The bit should be set per
   datatracker.ietf.org/doc/html/rfc6762#section-8.1
 
-* Log destination when sending packets (#606) @bdraco
-
-* Fix docs version to match readme (cpython 3.6+) (#602) @bdraco
-
-* Add ZeroconfServiceTypes to zeroconf.__all__ (#601) @bdraco
-
-  This class is in the readme, but is not exported by
-  default
-
-* Add id_ param to allow setting the id in the DNSOutgoing constructor (#599) @bdraco
-
-* Add unicast property to DNSQuestion to determine if the QU bit is set (#593) @bdraco
-
-* Reduce branching in DNSOutgoing.add_answer_at_time (#592) @bdraco
-
-* Breakout DNSCache into zeroconf.cache (#568) @bdraco
-
-* Removed protected imports from zeroconf namespace (#567) @bdraco
-
-* Fix invalid typing in ServiceInfo._set_text (#554) @bdraco
-
-* Move QueryHandler and RecordManager handlers into zeroconf.handlers (#551) @bdraco
-
-* Move ServiceListener to zeroconf.services (#550) @bdraco
-
-* Move the ServiceRegistry into its own module (#549) @bdraco
-
-* Move ServiceStateChange to zeroconf.services (#548) @bdraco
-
-* Relocate core functions into zeroconf.core (#547) @bdraco
-
-* Breakout service classes into zeroconf.services (#544) @bdraco
-
-* Move service_type_name to zeroconf.utils.name (#543) @bdraco
-
-* Relocate DNS classes to zeroconf.dns (#541) @bdraco
-
-* Update zeroconf.aio import locations (#539) @bdraco
-
-* Move int2byte to zeroconf.utils.struct (#540) @bdraco
-
-* Breakout network utils into zeroconf.utils.net (#537) @bdraco
-
-* Move time utility functions into zeroconf.utils.time (#536) @bdraco
-
-* Avoid making DNSOutgoing aware of the Zeroconf object (#535) @bdraco
-
-* Move logger into zeroconf.logger (#533) @bdraco
-
-* Move exceptions into zeroconf.exceptions (#532) @bdraco
-
-* Move constants into const.py (#531) @bdraco
-
-* Move asyncio utils into zeroconf.utils.aio (#530) @bdraco
-
-* Move ipversion auto detection code into its own function (#524) @bdraco
-
 * Breaking change: Update python compatibility as PyPy3 7.2 is required (#523) @bdraco
-
-* Remove broad exception catch from RecordManager.remove_listener (#517) @bdraco
-
-* Small cleanups to RecordManager.add_listener (#516) @bdraco
-
-* Move RecordUpdateListener management into RecordManager (#514) @bdraco
-
-* Break out record updating into RecordManager (#512) @bdraco
-
-* Remove uneeded wait in the Engine thread (#511) @bdraco
-
-* Extract code for handling queries into QueryHandler (#507) @bdraco
 
 * Set the TC bit for query packets where the known answers span multiple packets (#494) @bdraco
 
@@ -783,141 +417,15 @@ you can likely not be concerned with the breaking changes below:
   exceeds _MAX_MSG_TYPICAL
   datatracker.ietf.org/doc/html/rfc6762#section-17
 
-* Make a base class for DNSIncoming and DNSOutgoing (#497) @bdraco
-
-* Remove unused __ne__ code from Python 2 era (#492) @bdraco
-
-* Lint before testing in the CI (#488) @bdraco
-
-* Add AsyncServiceBrowser example (#487) @bdraco
-
-* Move threading daemon property into ServiceBrowser class (#486) @bdraco
-
-* Enable test_integration_with_listener_class test on PyPy (#485) @bdraco
-
-* AsyncServiceBrowser must recheck for handlers to call when holding condition (#483)
-
-  There was a short race condition window where the AsyncServiceBrowser
-  could add to _handlers_to_call in the Engine thread, have the
-  condition notify_all called, but since the AsyncServiceBrowser was
-  not yet holding the condition it would not know to stop waiting
-  and process the handlers to call.
-
-* Relocate ServiceBrowser wait time calculation to seperate function (#484) @bdraco
-
-  Eliminate the need to duplicate code between the ServiceBrowser
-  and AsyncServiceBrowser to calculate the wait time.
-
-* Switch from using an asyncio.Event to asyncio.Condition for waiting (#482) @bdraco
-
-* ServiceBrowser must recheck for handlers to call when holding condition (#477) @bdraco
-
-  There was a short race condition window where the ServiceBrowser
-  could add to _handlers_to_call in the Engine thread, have the
-  condition notify_all called, but since the ServiceBrowser was
-  not yet holding the condition it would not know to stop waiting
-  and process the handlers to call.
-
-* Provide a helper function to convert milliseconds to seconds (#481) @bdraco
-
-* Fix AsyncServiceInfo.async_request not waiting long enough (#480) @bdraco
-
-* Add support for updating multiple records at once to ServiceInfo (#474) @bdraco
-
-* Narrow exception catch in DNSAddress.__repr__ to only expected exceptions (#473) @bdraco
-
-* Add test coverage to ensure ServiceInfo rejects expired records (#468) @bdraco
-
-* Reduce branching in service_type_name (#472) @bdraco
-
-* Fix flakey test_update_record (#470) @bdraco
-
-* Reduce branching in Zeroconf.handle_response (#467) @bdraco
-
 * Ensure PTR questions asked in uppercase are answered (#465) @bdraco
-
-* Clear cache between ServiceTypesQuery tests (#466) @bdraco
-
-* Break apart Zeroconf.handle_query to reduce branching (#462) @bdraco
 
 * Support for context managers in Zeroconf and AsyncZeroconf (#284) @shenek
 
-* Use constant for service type enumeration (#461) @bdraco
-
-* Reduce branching in Zeroconf.handle_response (#459) @bdraco
-
-* Reduce branching in Zeroconf.handle_query (#460) @bdraco
-
-* Enable pylint (#438) @bdraco
-
-* Trap OSError directly in Zeroconf.send instead of checking isinstance (#453) @bdraco
-
-* Disable protected-access on the ServiceBrowser usage of _handlers_lock (#452) @bdraco
-
-* Mark functions with too many branches in need of refactoring (#455) @bdraco
-
-* Disable pylint no-self-use check on abstract methods (#451) @bdraco
-
-* Use unique name in test_async_service_browser test (#450) @bdraco
-
-* Disable no-member check for WSAEINVAL false positive (#454) @bdraco
-
-* Mark methods used by asyncio without self use (#447) @bdraco
-
-* Extract _get_queue from zeroconf.asyncio._AsyncSender (#444) @bdraco
-
-* Fix redefining argument with the local name 'record' in ServiceInfo.update_record (#448) @bdraco
-
-* Remove unneeded-not in new_socket (#445) @bdraco
-
-* Disable broad except checks in places we still catch broad exceptions (#443) @bdraco
-
-* Merge _TYPE_CNAME and _TYPE_PTR comparison in DNSIncoming.read_others (#442) @bdraco
-
-* Convert unnecessary use of a comprehension to a list (#441) @bdraco
-
-* Remove unused now argument from ServiceInfo._process_record (#440) @bdraco
-
-* Disable pylint too-many-branches for functions that need refactoring (#439) @bdraco
-
-* Cleanup unused variables (#437) @bdraco
-
-* Cleanup unnecessary else after returns (#436) @bdraco
-
-* Add zeroconf.asyncio to the docs (#434) @bdraco
-
-* Fix warning when generating sphinx docs (#432) @bdraco
-
 * Implement an AsyncServiceBrowser to compliment the sync ServiceBrowser (#429) @bdraco
-
-* Seperate non-thread specific code from ServiceBrowser into _ServiceBrowserBase (#428) @bdraco
-
-* Remove is_type_unique as it is unused (#426)
-
-* Avoid checking the registry when answering requests for _services._dns-sd._udp.local. (#425) @bdraco
-
-  _services._dns-sd._udp.local. is a special case and should never
-  be in the registry
-
-* Remove unused argument from ServiceInfo.dns_addresses (#423) @bdraco
-
-* Add methods to generate DNSRecords from ServiceInfo (#422) @bdraco
-
-* Seperate logic for consuming records in ServiceInfo (#421) @bdraco
-
-* Seperate query generation for ServiceBrowser (#420) @bdraco
-
-* Add async_request example with browse (#415) @bdraco
-
-* Add async_register_service/async_unregister_service example (#414) @bdraco
 
 * Add async_get_service_info to AsyncZeroconf and async_request to AsyncServiceInfo (#408) @bdraco
 
-* Add support for registering notify listeners (#409) @bdraco
-
 * Allow passing in a sync Zeroconf instance to AsyncZeroconf (#406) @bdraco
-
-* Use a dedicated thread for sending outgoing packets with asyncio (#404) @bdraco
 
 * Fix IPv6 setup under MacOS when binding to "" (#392) @bdraco
 
@@ -927,17 +435,6 @@ you can likely not be concerned with the breaking changes below:
   could be left running after Zeroconf is closed because
   the .join() was never waited for when a new Zeroconf
   object was created
-
-* Simplify DNSPointer processing in ServiceBrowser (#386) @bdraco
-
-* Ensure the cache is checked for name conflict after final service query with asyncio (#382) @bdraco
-
-* Complete ServiceInfo request as soon as all questions are answered (#380) @bdraco
-
-  Closes a small race condition where there were no questions
-  to ask because the cache was populated in between checks
-
-* Coalesce browser questions scheduled at the same time (#379) @bdraco
 
 * Ensure duplicate packets do not trigger duplicate updates (#376) @bdraco
 
@@ -950,12 +447,6 @@ you can likely not be concerned with the breaking changes below:
 * Fix RFC6762 Section 10.2 paragraph 2 compliance (#374) @bdraco
 
 * Reduce length of ServiceBrowser thread name with many types (#373) @bdraco
-
-* Remove Callable quoting (#371) @bdraco
-
-* Abstract check to see if a record matches a type the ServiceBrowser wants (#369) @bdraco
-
-* Reduce complexity of ServiceBrowser enqueue_callback (#368) @bdraco
 
 * Fix empty answers being added in ServiceInfo.request (#367) @bdraco
 
@@ -970,10 +461,6 @@ you can likely not be concerned with the breaking changes below:
   Move duplicate code that checked if the ServiceInfo was complete
   into its own function
 
-* Remove black python 3.5 exception block (#365) @bdraco
-
-* Small cleanup of ServiceInfo.update_record (#364) @bdraco
-
 * Add new cache function get_all_by_details (#363) @bdraco
   When working with IPv6, multiple AAAA records can exist
   for a given host. get_by_details would only return the
@@ -981,10 +468,6 @@ you can likely not be concerned with the breaking changes below:
 
   Fix a case where the cache list can change during
   iteration
-
-* Small cleanups to asyncio tests (#362) @bdraco
-
-* Improve test coverage for name conflicts (#357) @bdraco
 
 * Return task objects created by AsyncZeroconf (#360) @nocarryr
 
