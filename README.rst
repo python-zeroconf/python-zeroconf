@@ -378,7 +378,7 @@ Backwards incompatible:
   has been updated as its a common pattern to call for
   ServiceInfo when a ServiceBrowser handler fires.
 
-  The async_ prefix was chosen to make it clear that these
+  The async\_ prefix was chosen to make it clear that these
   functions run in the eventloop and should never do blocking
   I/O. Before 0.32+ these functions ran in a select() loop and
   should not have been doing any blocking I/O, but it was not
