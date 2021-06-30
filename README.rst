@@ -140,8 +140,8 @@ See examples directory for more.
 Changelog
 =========
 
-0.32.0 (Unreleased)
-===================
+0.32.0
+======
 
 This release offers 100% line and branch coverage.
 
