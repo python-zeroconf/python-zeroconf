@@ -930,6 +930,7 @@ async def test_service_browser_ignores_unrelated_updates():
 async def test_async_request_timeout():
     """Test that the timeout does not throw an exception and finishes close to the actual timeout."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
     start_time = current_time_millis()
     assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.", 200) is None
     end_time = current_time_millis()
