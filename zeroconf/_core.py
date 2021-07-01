@@ -441,8 +441,10 @@ class Zeroconf(QuietLogger):
     def async_notify_all(self) -> None:
         """Schedule an async_notify_all."""
         assert self.notify_event is not None
+        log.debug("async_notify_all called at: %s", current_time_millis())
         self.notify_event.set()
         self.notify_event.clear()
+        log.debug("async_notify_all finished at: %s", current_time_millis())
 
     def get_service_info(
         self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None

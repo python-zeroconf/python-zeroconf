@@ -932,9 +932,9 @@ async def test_async_request_timeout():
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     await aiozc.zeroconf.async_wait_for_start()
     start_time = current_time_millis()
-    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.", 200) is None
+    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.") is None
     end_time = current_time_millis()
     await aiozc.async_close()
-    # 200ms for the timeout
-    # 100ms for loaded systems + schedule overhead
-    assert (end_time - start_time) < 200 + 100
+    # 3000ms for the default timeout
+    # 1000ms for loaded systems + schedule overhead
+    assert (end_time - start_time) < 3000 + 1000
