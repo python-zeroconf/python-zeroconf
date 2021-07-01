@@ -429,9 +429,7 @@ class Zeroconf(QuietLogger):
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         assert self.notify_event is not None
-        log.debug("Wait event or timeout: %s - start: %s", timeout, current_time_millis())
         await wait_event_or_timeout(self.notify_event, timeout=millis_to_seconds(timeout))
-        log.debug("Done Wait event or timeout: %s - end: %s", timeout, current_time_millis())
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
@@ -441,10 +439,8 @@ class Zeroconf(QuietLogger):
     def async_notify_all(self) -> None:
         """Schedule an async_notify_all."""
         assert self.notify_event is not None
-        log.debug("async_notify_all called at: %s", current_time_millis())
         self.notify_event.set()
         self.notify_event.clear()
-        log.debug("async_notify_all finished at: %s", current_time_millis())
 
     def get_service_info(
         self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None

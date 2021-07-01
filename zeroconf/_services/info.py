@@ -462,10 +462,8 @@ class ServiceInfo(RecordUpdateListener):
                     next_ = now + delay
                     delay *= 2
 
-                log.debug("Waiting: %s @ %s", min(next_, last) - now, current_time_millis())
                 await zc.async_wait(min(next_, last) - now)
                 now = current_time_millis()
-                log.debug("Finished waiting: %s", now)
         finally:
             zc.async_remove_listener(self)
 
