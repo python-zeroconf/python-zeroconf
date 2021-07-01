@@ -27,6 +27,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
+from .._logger import log
 from .._protocol import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.asyncio import get_running_loop
@@ -461,6 +462,7 @@ class ServiceInfo(RecordUpdateListener):
                     next_ = now + delay
                     delay *= 2
 
+                log.debug("Waiting: %s", min(next_, last) - now)
                 await zc.async_wait(min(next_, last) - now)
                 now = current_time_millis()
         finally:
