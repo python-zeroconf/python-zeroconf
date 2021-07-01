@@ -26,8 +26,8 @@ import queue
 from typing import Any, List, Optional, Set, cast
 
 _TASK_AWAIT_TIMEOUT = 1
-_GET_ALL_TASKS_TIMEOUT = 1
-_WAIT_FOR_LOOP_TASKS_TIMEOUT = 2  # Must be larger than _TASK_AWAIT_TIMEOUT
+_GET_ALL_TASKS_TIMEOUT = 3
+_WAIT_FOR_LOOP_TASKS_TIMEOUT = 3  # Must be larger than _TASK_AWAIT_TIMEOUT
 
 
 def get_best_available_queue() -> queue.Queue:

@@ -5,6 +5,7 @@
 """Unit tests for zeroconf._utils.asyncio."""
 
 import asyncio
+import concurrent.futures
 import contextlib
 import threading
 import time
@@ -12,7 +13,9 @@ from unittest.mock import patch
 
 import pytest
 
+from zeroconf._core import _CLOSE_TIMEOUT
 from zeroconf._utils import asyncio as aioutils
+from zeroconf.const import _LOADED_SYSTEM_TIMEOUT
 
 
 @pytest.mark.asyncio
@@ -82,7 +85,8 @@ def test_shutdown_loop() -> None:
 
     def _run_coro() -> None:
         runcoro_thread_ready.set()
-        asyncio.run_coroutine_threadsafe(_still_running(), loop).result(1)
+        with contextlib.suppress(concurrent.futures._base.TimeoutError):
+            asyncio.run_coroutine_threadsafe(_still_running(), loop).result(1)
 
     runcoro_thread = threading.Thread(target=_run_coro, daemon=True)
     runcoro_thread.start()
@@ -97,3 +101,14 @@ def test_shutdown_loop() -> None:
 
     assert loop.is_running() is False
     runcoro_thread.join()
+
+
+def test_cumulative_timeouts_less_than_close_plus_buffer():
+    """Test that the combined async timeouts are shorter than the close timeout with the buffer.
+
+    We want to make sure that the close timeout is the one that gets
+    raised if something goes wrong.
+    """
+    assert (
+        aioutils._TASK_AWAIT_TIMEOUT + aioutils._GET_ALL_TASKS_TIMEOUT + aioutils._WAIT_FOR_LOOP_TASKS_TIMEOUT
+    ) < 1 + _CLOSE_TIMEOUT + _LOADED_SYSTEM_TIMEOUT

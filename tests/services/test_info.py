@@ -745,7 +745,9 @@ def test_request_timeout():
     """Test that the timeout does not throw an exception and finishes close to the actual timeout."""
     zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
     start_time = r.current_time_millis()
-    assert zeroconf.get_service_info("_notfound.local.", "notthere._notfound.local.", 100) is None
+    assert zeroconf.get_service_info("_notfound.local.", "notthere._notfound.local.", 200) is None
     end_time = r.current_time_millis()
     zeroconf.close()
-    assert (end_time - start_time) < 120
+    # 200ms for the timeout
+    # 100ms for loaded systems + schedule overhead
+    assert (end_time - start_time) < 200 + 100

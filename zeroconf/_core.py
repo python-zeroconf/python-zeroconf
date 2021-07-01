@@ -62,6 +62,7 @@ from .const import (
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
+    _LOADED_SYSTEM_TIMEOUT,
     _MAX_MSG_ABSOLUTE,
     _MDNS_ADDR,
     _MDNS_ADDR6,
@@ -172,7 +173,9 @@ class AsyncEngine:
             return
         if not self.loop.is_running():
             return
-        asyncio.run_coroutine_threadsafe(self._async_close(), self.loop).result(_CLOSE_TIMEOUT)
+        asyncio.run_coroutine_threadsafe(self._async_close(), self.loop).result(
+            _CLOSE_TIMEOUT + _LOADED_SYSTEM_TIMEOUT
+        )
 
 
 class AsyncListener(asyncio.Protocol, QuietLogger):

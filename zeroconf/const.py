@@ -34,6 +34,12 @@ _BROWSER_TIME = 1000  # ms
 _DUPLICATE_QUESTION_INTERVAL = _BROWSER_TIME - 1  # ms
 _BROWSER_BACKOFF_LIMIT = 3600  # s
 _CACHE_CLEANUP_INTERVAL = 10000  # ms
+_LOADED_SYSTEM_TIMEOUT = 10  # s
+# If the system is loaded or the event
+# loop was blocked by another task that was doing I/O in the loop
+# (shouldn't happen but it does in practice) we need to give
+# a buffer timeout to ensure a coroutine can finish before
+# the future times out
 
 # Some DNS constants
 

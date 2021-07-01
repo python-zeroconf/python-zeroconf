@@ -931,7 +931,9 @@ async def test_async_request_timeout():
     """Test that the timeout does not throw an exception and finishes close to the actual timeout."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     start_time = current_time_millis()
-    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.", 100) is None
+    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.", 200) is None
     end_time = current_time_millis()
     await aiozc.async_close()
-    assert (end_time - start_time) < 120
+    # 200ms for the timeout
+    # 100ms for loaded systems + schedule overhead
+    assert (end_time - start_time) < 200 + 100
