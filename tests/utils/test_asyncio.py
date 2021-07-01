@@ -85,7 +85,7 @@ def test_shutdown_loop() -> None:
 
     def _run_coro() -> None:
         runcoro_thread_ready.set()
-        with contextlib.suppress(concurrent.futures._base.TimeoutError):
+        with contextlib.suppress(concurrent.futures.TimeoutError):
             asyncio.run_coroutine_threadsafe(_still_running(), loop).result(1)
 
     runcoro_thread = threading.Thread(target=_run_coro, daemon=True)
