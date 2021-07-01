@@ -429,7 +429,9 @@ class Zeroconf(QuietLogger):
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         assert self.notify_event is not None
+        log.debug("Wait event or timeout: %s - start: %s", timeout, current_time_millis())
         await wait_event_or_timeout(self.notify_event, timeout=millis_to_seconds(timeout))
+        log.debug("Done Wait event or timeout: %s - end: %s", timeout, current_time_millis())
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
