@@ -924,3 +924,14 @@ async def test_service_browser_ignores_unrelated_updates():
         ('add', type_, registration_name),
     ]
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_request_timeout():
+    """Test that the timeout does not throw an exception and finishes close to the actual timeout."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    start_time = current_time_millis()
+    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.", 100) is None
+    end_time = current_time_millis()
+    await aiozc.async_close()
+    assert (end_time - start_time) < 120
