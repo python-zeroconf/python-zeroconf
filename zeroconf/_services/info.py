@@ -45,6 +45,7 @@ from ..const import (
     _DNS_OTHER_TTL,
     _FLAGS_QR_QUERY,
     _LISTENER_TIME,
+    _LOADED_SYSTEM_TIMEOUT,
     _TYPE_A,
     _TYPE_AAAA,
     _TYPE_PTR,
@@ -427,7 +428,7 @@ class ServiceInfo(RecordUpdateListener):
             raise RuntimeError("Use AsyncServiceInfo.async_request from the event loop")
         return asyncio.run_coroutine_threadsafe(
             self.async_request(zc, timeout, question_type), zc.loop
-        ).result(millis_to_seconds(timeout) + 1)
+        ).result(millis_to_seconds(timeout) + _LOADED_SYSTEM_TIMEOUT)
 
     async def async_request(
         self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None
