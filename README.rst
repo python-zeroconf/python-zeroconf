@@ -140,6 +140,29 @@ See examples directory for more.
 Changelog
 =========
 
+
+0.32.1 (Unreleased)
+===================
+
+* Increase timeout in ServiceInfo.request to handle loaded systems (#895) @bdraco
+
+  It can take a few seconds for a loaded system to run the `async_request`
+  coroutine when the event loop is busy, or the system is CPU bound (example being
+  Home Assistant startup).  We now add an additional `_LOADED_SYSTEM_TIMEOUT` (10s)
+  to the  `run_coroutine_threadsafe` calls to ensure the coroutine has the total
+  amount of time to run up to its internal timeout (default of 3000ms).
+
+  Ten seconds is a bit large of a timeout; however, it is only unused in cases
+  where we wrap other timeouts. We now expect the only instance the
+  `run_coroutine_threadsafe` result timeout will happen in a production
+  circumstance is when someone is running a `ServiceInfo.request()` in a thread and
+  another thread calls `Zeroconf.close()` at just the right moment that the future
+  is never completed unless the system is so loaded that it is nearly unresponsive.
+
+  The timeout for `run_coroutine_threadsafe` is the maximum time a thread can
+  cleanly shut down when zeroconf is closed out in another thread, which should
+  always be longer than the underlying thread operation.
+
 0.32.0
 ======
 
