@@ -152,7 +152,7 @@ Changelog
   to the  `run_coroutine_threadsafe` calls to ensure the coroutine has the total
   amount of time to run up to its internal timeout (default of 3000ms).
 
-  Ten seconds is a bit large of a timeout; however, it is only unused in cases
+  Ten seconds is a bit large of a timeout; however, it is only used in cases
   where we wrap other timeouts. We now expect the only instance the
   `run_coroutine_threadsafe` result timeout will happen in a production
   circumstance is when someone is running a `ServiceInfo.request()` in a thread and
