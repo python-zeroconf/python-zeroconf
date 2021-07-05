@@ -141,8 +141,8 @@ Changelog
 =========
 
 
-0.32.1 (Unreleased)
-===================
+0.32.1
+======
 
 * Increased timeout in ServiceInfo.request to handle loaded systems (#895) @bdraco
 
