@@ -144,7 +144,7 @@ Changelog
 0.32.1 (Unreleased)
 ===================
 
-* Increase timeout in ServiceInfo.request to handle loaded systems (#895) @bdraco
+* Increased timeout in ServiceInfo.request to handle loaded systems (#895) @bdraco
 
   It can take a few seconds for a loaded system to run the `async_request`
   coroutine when the event loop is busy, or the system is CPU bound (example being
