@@ -22,7 +22,7 @@
 
 import enum
 import struct
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, cast
 
 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
@@ -223,9 +223,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
             if rec is not None:
                 self.answers.append(rec)
 
-    def read_bitmap(self, end: int) -> Set[int]:
+    def read_bitmap(self, end: int) -> List[int]:
         """Reads an NSEC bitmap from the packet."""
-        rdtypes = set()
+        rdtypes = []
         while self.offset < end:
             window = self.data[self.offset]
             self.offset += 1
@@ -235,7 +235,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
             for i, byte in enumerate(bitmap):
                 for bit in range(0, 8):
                     if byte & (0x80 >> bit):
-                        rdtypes.add(bit + window * 256 + i * 8)
+                        rdtypes.append(bit + window * 256 + i * 8)
             self.offset += bitmap_length
         return rdtypes
 
