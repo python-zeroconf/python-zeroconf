@@ -736,6 +736,7 @@ def test_parse_packet_with_nsec_record():
     assert "nsec," in str(nsec_record)
     assert nsec_record.rdtypes == [16, 33]
 
+
 def test_records_same_packet_share_fate():
     """Test records in the same packet all have the same created time."""
     out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
