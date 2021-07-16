@@ -26,20 +26,15 @@ from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from ._core import Zeroconf
 from ._dns import DNSQuestionType
-from ._exceptions import NonUniqueNameException
 from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
-from ._services.info import ServiceInfo, instance_name_from_service_info
+from ._services.info import ServiceInfo
 from ._services.types import ZeroconfServiceTypes
 from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
-from ._utils.time import millis_to_seconds
 from .const import (
     _BROWSER_TIME,
-    _CHECK_TIME,
     _MDNS_PORT,
-    _REGISTER_TIME,
     _SERVICE_TYPE_ENUMERATION_NAME,
-    _UNREGISTER_TIME,
 )
 
 
@@ -172,16 +167,11 @@ class AsyncZeroconf:
         )
         self.async_browsers: Dict[ServiceListener, AsyncServiceBrowser] = {}
 
-    async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
-        """Send a broadcasts to announce a service at intervals."""
-        for i in range(3):
-            if i != 0:
-                await asyncio.sleep(millis_to_seconds(interval))
-            self.zeroconf.async_send(self.zeroconf.generate_service_broadcast(info, ttl))
-
     async def async_register_service(
         self,
         info: ServiceInfo,
+        ttl: Optional[int] = None,
+        allow_name_change: bool = False,
         cooperating_responders: bool = False,
     ) -> Awaitable:
         """Registers service information to the network with a default TTL.
@@ -194,10 +184,9 @@ class AsyncZeroconf:
         The service will be broadcast in a task. This task is returned
         and therefore can be awaited if necessary.
         """
-        await self.zeroconf.async_wait_for_start()
-        await self.async_check_service(info, cooperating_responders)
-        self.zeroconf.registry.add(info)
-        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+        return await self.zeroconf.async_register_service(
+            info, ttl, allow_name_change, cooperating_responders
+        )
 
     async def async_unregister_all_services(self) -> None:
         """Unregister all registered services.
@@ -206,30 +195,7 @@ class AsyncZeroconf:
         method does not return a future and is always expected to be
         awaited since its only called at shutdown.
         """
-        out = self.zeroconf.generate_unregister_all_services()
-        if not out:
-            return
-        for i in range(3):
-            if i != 0:
-                await asyncio.sleep(millis_to_seconds(_UNREGISTER_TIME))
-            self.zeroconf.async_send(out)
-
-    async def async_check_service(self, info: ServiceInfo, cooperating_responders: bool = False) -> None:
-        """Checks the network for a unique service name."""
-        instance_name_from_service_info(info)
-        if cooperating_responders:
-            return
-        self._raise_on_name_conflict(info)
-        for i in range(3):
-            if i != 0:
-                await asyncio.sleep(millis_to_seconds(_CHECK_TIME))
-            self.zeroconf.async_send(self.zeroconf.generate_service_query(info))
-            self._raise_on_name_conflict(info)
-
-    def _raise_on_name_conflict(self, info: ServiceInfo) -> None:
-        """Raise NonUniqueNameException if the ServiceInfo has a conflict."""
-        if self.zeroconf.cache.current_entry_with_name_and_alias(info.type, info.name):
-            raise NonUniqueNameException
+        await self.zeroconf.async_unregister_all_services()
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
         """Unregister a service.
@@ -237,8 +203,7 @@ class AsyncZeroconf:
         The service will be broadcast in a task. This task is returned
         and therefore can be awaited if necessary.
         """
-        self.zeroconf.registry.remove(info)
-        return asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
+        return await self.zeroconf.async_unregister_service(info)
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
         """Registers service information to the network with a default TTL.
@@ -248,8 +213,7 @@ class AsyncZeroconf:
         The service will be broadcast in a task. This task is returned
         and therefore can be awaited if necessary.
         """
-        self.zeroconf.registry.update(info)
-        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+        return await self.zeroconf.async_update_service(info)
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from

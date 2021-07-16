@@ -23,8 +23,9 @@
 import asyncio
 import contextlib
 import queue
-from typing import Any, List, Optional, Set, cast
+from typing import Any, Awaitable, List, Optional, Set, cast
 
+# The combined timeouts should be lower than _CLOSE_TIMEOUT + _WAIT_FOR_LOOP_TASKS_TIMEOUT
 _TASK_AWAIT_TIMEOUT = 1
 _GET_ALL_TASKS_TIMEOUT = 3
 _WAIT_FOR_LOOP_TASKS_TIMEOUT = 3  # Must be larger than _TASK_AWAIT_TIMEOUT
@@ -78,6 +79,12 @@ async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> List[asyncio.
 async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
     """Wait for the event loop thread we started to shutdown."""
     await asyncio.wait(wait_tasks, timeout=_TASK_AWAIT_TIMEOUT)
+
+
+async def await_awaitable(aw: Awaitable) -> None:
+    """Wait on an awaitable and the task it returns."""
+    task = await aw
+    await task
 
 
 def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
