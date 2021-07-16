@@ -734,6 +734,7 @@ def test_parse_packet_with_nsec_record():
     nsec_record = parsed.answers[3]
     assert "nsec," in str(nsec_record)
     assert nsec_record.rdtypes == [16, 33]
+    assert nsec_record.next_name == "MyHome54 (2)._meshcop._udp.local."
 
 
 def test_records_same_packet_share_fate():
