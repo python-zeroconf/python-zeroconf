@@ -36,11 +36,11 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
                 addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
                 print("  Addresses: %s" % ", ".join(addresses))
                 print("  Weight: %d, priority: %d" % (info.weight, info.priority))
-                print("  Server: %s" % (info.server,))
+                print(f"  Server: {info.server}")
                 if info.properties:
                     print("  Properties are:")
                     for key, value in info.properties.items():
-                        print("    %s: %s" % (key, value))
+                        print(f"    {key}: {value}")
                 else:
                     print("  No properties")
             else:

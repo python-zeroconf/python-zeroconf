@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     # Test a few module features, including service registration, service
     # query (for Zoe), and service unregistration.
-    print("Multicast DNS Service Discovery for Python, version %s" % (__version__,))
+    print(f"Multicast DNS Service Discovery for Python, version {__version__}")
     r = Zeroconf()
     print("1. Testing registration of a service...")
     desc = {'version': '0.10', 'a': 'test value', 'b': 'another value'}
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     queried_info = r.get_service_info("_http._tcp.local.", "My Service Name._http._tcp.local.")
     assert queried_info
     assert set(queried_info.parsed_addresses()) == expected
-    print("   Getting self: %s" % (queried_info,))
+    print(f"   Getting self: {queried_info}")
     print("   Query done.")
     print("4. Testing unregister of service information...")
     r.unregister_service(info)
