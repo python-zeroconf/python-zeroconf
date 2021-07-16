@@ -104,6 +104,7 @@ async def test_async_with_sync_passed_in_closed_in_async() -> None:
 @pytest.mark.asyncio
 async def test_sync_within_event_loop_executor() -> None:
     """Test sync version still works from an executor within an event loop."""
+
     def sync_code():
         zc = Zeroconf(interfaces=['127.0.0.1'])
         assert zc.get_service_info("_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10) is None
