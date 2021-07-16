@@ -466,7 +466,7 @@ class DNSNsec(DNSRecord):
         """Tests equality on cpu and os"""
         return (
             isinstance(other, DNSNsec)
-            and self.next == other.next
+            and self.next_name == other.next_name
             and self.rdtypes == other.rdtypes
             and DNSEntry.__eq__(self, other)
         )
