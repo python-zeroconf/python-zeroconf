@@ -446,7 +446,7 @@ class DNSNsec(DNSRecord):
 
     """A DNS NSEC record"""
 
-    __slots__ = ('next', 'rdtypes')
+    __slots__ = ('next_name', 'rdtypes')
 
     def __init__(
         self,
@@ -454,30 +454,32 @@ class DNSNsec(DNSRecord):
         type_: int,
         class_: int,
         ttl: int,
-        next: str,
+        next_name: str,
         rdtypes: List[int],
         created: Optional[float] = None,
     ) -> None:
         super().__init__(name, type_, class_, ttl, created)
-        self.next = next
+        self.next_name = next_name
         self.rdtypes = rdtypes
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on cpu and os"""
         return (
             isinstance(other, DNSNsec)
-            and self.next == other.next
+            and self.next_name == other.next_name
             and self.rdtypes == other.rdtypes
             and DNSEntry.__eq__(self, other)
         )
 
     def __hash__(self) -> int:
         """Hash to compare like DNSNSec."""
-        return hash((*self._entry_tuple(), self.next, *self.rdtypes))
+        return hash((*self._entry_tuple(), self.next_name, *self.rdtypes))
 
     def __repr__(self) -> str:
         """String representation"""
-        return self.to_string(self.next + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes]))
+        return self.to_string(
+            self.next_name + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes])
+        )
 
 
 class DNSRRSet:
