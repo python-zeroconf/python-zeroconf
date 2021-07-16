@@ -722,6 +722,20 @@ def test_qu_packet_parser():
     assert ",QU," in str(parsed.questions[0])
 
 
+def test_parse_packet_with_nsec_record():
+    """Test we can parse a packet with an NSEC record."""
+    nsec_packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x03\x08_meshcop\x04_udp\x05local\x00\x00\x0c\x00"
+        b"\x01\x00\x00\x11\x94\x00\x0f\x0cMyHome54 (2)\xc0\x0c\xc0+\x00\x10\x80\x01\x00\x00\x11\x94\x00"
+        b")\x0bnn=MyHome54\x13xp=695034D148CC4784\x08tv=0.0.0\xc0+\x00!\x80\x01\x00\x00\x00x\x00\x15\x00"
+        b"\x00\x00\x00\xc0'\x0cMaster-Bed-2\xc0\x1a\xc0+\x00/\x80\x01\x00\x00\x11\x94\x00\t\xc0+\x00\x05"
+        b"\x00\x00\x80\x00@"
+    )
+    parsed = DNSIncoming(nsec_packet)
+    nsec_record = parsed.answers[3]
+    assert "nsec," in str(nsec_record)
+    assert nsec_record.rdtypes == [16, 33]
+
 def test_records_same_packet_share_fate():
     """Test records in the same packet all have the same created time."""
     out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
