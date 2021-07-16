@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """Unit tests for _history.py."""
@@ -14,20 +13,16 @@ def test_question_suppression():
 
     question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
     now = r.current_time_millis()
-    other_known_answers = set(
-        [
-            r.DNSPointer(
-                "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
-            )
-        ]
-    )
-    our_known_answers = set(
-        [
-            r.DNSPointer(
-                "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-us._hap._tcp.local.'
-            )
-        ]
-    )
+    other_known_answers = {
+        r.DNSPointer(
+            "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
+        )
+    }
+    our_known_answers = {
+        r.DNSPointer(
+            "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-us._hap._tcp.local.'
+        )
+    }
 
     history.add_question_at_time(question, now, other_known_answers)
 
@@ -52,13 +47,11 @@ def test_question_expire():
 
     question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
     now = r.current_time_millis()
-    other_known_answers = set(
-        [
-            r.DNSPointer(
-                "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
-            )
-        ]
-    )
+    other_known_answers = {
+        r.DNSPointer(
+            "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
+        )
+    }
     history.add_question_at_time(question, now, other_known_answers)
 
     # Verify the question is suppressed if the known answers are the same

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._services. """
@@ -48,7 +47,7 @@ class ListenerTest(unittest.TestCase):
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
         name = "UPPERxxxyyyæøå"
-        registration_name = "%s.%s" % (name, subtype)
+        registration_name = f"{name}.{subtype}"
 
         class MyListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf.py """
@@ -127,7 +126,7 @@ class Names(unittest.TestCase):
         desc = {'path': '/~paulsm/'}
         info_service = ServiceInfo(
             type_,
-            '%s.%s' % (name, type_),
+            f'{name}.{type_}',
             80,
             0,
             0,
@@ -147,7 +146,7 @@ class Names(unittest.TestCase):
         # in the registry
         info_service2 = ServiceInfo(
             type_,
-            '%s.%s' % (name, type_),
+            f'{name}.{type_}',
             80,
             0,
             0,
@@ -160,7 +159,7 @@ class Names(unittest.TestCase):
 
     def generate_many_hosts(self, zc, type_, name, number_hosts):
         block_size = 25
-        number_hosts = int(((number_hosts - 1) / block_size + 1)) * block_size
+        number_hosts = int((number_hosts - 1) / block_size + 1) * block_size
         out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
         for i in range(1, number_hosts + 1):
             next_name = name if i == 1 else '%s-%d' % (name, i)

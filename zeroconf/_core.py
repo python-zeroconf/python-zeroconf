@@ -653,7 +653,7 @@ class Zeroconf(QuietLogger):
                     raise NonUniqueNameException
 
                 # change the name and look for a conflict
-                info.name = '%s-%s.%s' % (instance_name, next_instance_number, info.type)
+                info.name = f'{instance_name}-{next_instance_number}.{info.type}'
                 next_instance_number += 1
                 service_type_name(info.name)
                 next_time = now

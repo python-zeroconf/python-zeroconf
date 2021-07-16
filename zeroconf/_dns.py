@@ -100,7 +100,7 @@ class DNSEntry:
 
     def entry_to_string(self, hdr: str, other: Optional[Union[bytes, str]]) -> str:
         """String representation with additional information"""
-        return "%s[%s,%s%s,%s]%s" % (
+        return "{}[{},{}{},{}]{}".format(
             hdr,
             self.get_type(self.type),
             self.get_class_(self.class_),
@@ -142,7 +142,7 @@ class DNSQuestion(DNSEntry):
 
     def __repr__(self) -> str:
         """String representation"""
-        return "%s[question,%s,%s,%s]" % (
+        return "{}[question,{},{},{}]".format(
             self.get_type(self.type),
             "QU" if self.unicast else "QM",
             self.get_class_(self.class_),
@@ -230,7 +230,7 @@ class DNSRecord(DNSEntry):
 
     def to_string(self, other: Union[bytes, str]) -> str:
         """String representation with additional information"""
-        arg = "%s/%s,%s" % (self.ttl, int(self.get_remaining_ttl(current_time_millis())), cast(Any, other))
+        arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"
         return DNSEntry.entry_to_string(self, "record", arg)
 
 
@@ -439,7 +439,7 @@ class DNSService(DNSRecord):
 
     def __repr__(self) -> str:
         """String representation"""
-        return self.to_string("%s:%s" % (self.server, self.port))
+        return self.to_string(f"{self.server}:{self.port}")
 
 
 class DNSNsec(DNSRecord):

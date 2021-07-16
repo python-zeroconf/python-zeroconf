@@ -16,7 +16,7 @@ from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf, Ze
 def on_service_state_change(
     zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
 ) -> None:
-    print("Service %s of type %s state changed: %s" % (name, service_type, state_change))
+    print(f"Service {name} of type {service_type} state changed: {state_change}")
 
     if state_change is ServiceStateChange.Added:
         info = zeroconf.get_service_info(service_type, name)
@@ -26,11 +26,11 @@ def on_service_state_change(
             addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
             print("  Addresses: %s" % ", ".join(addresses))
             print("  Weight: %d, priority: %d" % (info.weight, info.priority))
-            print("  Server: %s" % (info.server,))
+            print(f"  Server: {info.server}")
             if info.properties:
                 print("  Properties are:")
                 for key, value in info.properties.items():
-                    print("    %s: %s" % (key, value))
+                    print(f"    {key}: {value}")
             else:
                 print("  No properties")
         else:

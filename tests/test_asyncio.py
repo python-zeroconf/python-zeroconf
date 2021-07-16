@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """Unit tests for aio.py."""
@@ -57,11 +56,9 @@ def verify_threads_ended():
     yield
     threads_after = frozenset(threading.enumerate())
     non_executor_threads = frozenset(
-        [
-            thread
-            for thread in threads_after
-            if "asyncio" not in thread.name and "ThreadPoolExecutor" not in thread.name
-        ]
+        thread
+        for thread in threads_after
+        if "asyncio" not in thread.name and "ThreadPoolExecutor" not in thread.name
     )
     threads = non_executor_threads - threads_before
     assert not threads
@@ -119,7 +116,7 @@ async def test_async_service_registration() -> None:
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     calls = []
 
@@ -179,7 +176,7 @@ async def test_async_service_registration_name_conflict() -> None:
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test-srvc2-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -227,7 +224,7 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test-srvc3-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -254,7 +251,7 @@ async def test_async_tasks() -> None:
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test-srvc4-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     calls = []
 
@@ -320,7 +317,7 @@ async def test_async_wait_unblocks_on_update() -> None:
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test-srvc4-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -356,8 +353,8 @@ async def test_service_info_async_request() -> None:
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "abc"
-    registration_name = "%s.%s" % (name, type_)
-    registration_name2 = "%s.%s" % (name2, type_)
+    registration_name = f"{name}.{type_}"
+    registration_name2 = f"{name2}.{type_}"
 
     # Start a tasks BEFORE the registration that will keep trying
     # and see the registration a bit later
@@ -454,7 +451,7 @@ async def test_async_service_browser() -> None:
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test9-srvc-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     calls = []
 
@@ -513,7 +510,7 @@ async def test_async_context_manager() -> None:
     """Test using an async context manager."""
     type_ = "_test10-sr-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     async with AsyncZeroconf(interfaces=['127.0.0.1']) as aiozc:
         info = ServiceInfo(
@@ -539,8 +536,8 @@ async def test_async_unregister_all_services() -> None:
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "abc"
-    registration_name = "%s.%s" % (name, type_)
-    registration_name2 = "%s.%s" % (name2, type_)
+    registration_name = f"{name}.{type_}"
+    registration_name2 = f"{name2}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -594,7 +591,7 @@ async def test_async_unregister_all_services() -> None:
 async def test_async_zeroconf_service_types():
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
     desc = {'path': '/~paulsm/'}
@@ -808,7 +805,7 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
     zeroconf_info = aiozc.zeroconf
 
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
