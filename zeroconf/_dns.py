@@ -22,7 +22,7 @@
 
 import enum
 import socket
-from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Iterable, Optional, TYPE_CHECKING, Set, Tuple, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
@@ -455,7 +455,7 @@ class DNSNsec(DNSRecord):
         class_: int,
         ttl: int,
         next: str,
-        rdtypes: List[int],
+        rdtypes: Set[int],
         created: Optional[float] = None,
     ) -> None:
         super().__init__(name, type_, class_, ttl, created)
