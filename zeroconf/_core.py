@@ -43,7 +43,13 @@ from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener
-from ._utils.asyncio import await_awaitable, get_running_loop, shutdown_loop, wait_event_or_timeout
+from ._utils.asyncio import (
+    await_awaitable,
+    get_running_loop,
+    run_coro_with_timeout,
+    shutdown_loop,
+    wait_event_or_timeout,
+)
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,
@@ -62,7 +68,6 @@ from .const import (
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
-    _LOADED_SYSTEM_TIMEOUT,
     _MAX_MSG_ABSOLUTE,
     _MDNS_ADDR,
     _MDNS_ADDR6,
@@ -73,7 +78,7 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
-_CLOSE_TIMEOUT = 3
+_CLOSE_TIMEOUT = 3000  # ms
 _REGISTER_BROADCASTS = 3
 
 
@@ -174,9 +179,7 @@ class AsyncEngine:
             return
         if not self.loop.is_running():
             return
-        asyncio.run_coroutine_threadsafe(self._async_close(), self.loop).result(
-            _CLOSE_TIMEOUT + _LOADED_SYSTEM_TIMEOUT
-        )
+        run_coro_with_timeout(self._async_close(), self.loop, _CLOSE_TIMEOUT)
 
 
 class AsyncListener(asyncio.Protocol, QuietLogger):
@@ -486,12 +489,13 @@ class Zeroconf(QuietLogger):
         can register the same service on the network for resilience
         (if you want this behavior set `cooperating_responders` to `True`)."""
         assert self.loop is not None
-        asyncio.run_coroutine_threadsafe(
+        run_coro_with_timeout(
             await_awaitable(
                 self.async_register_service(info, ttl, allow_name_change, cooperating_responders)
             ),
             self.loop,
-        ).result(millis_to_seconds(_REGISTER_TIME * _REGISTER_BROADCASTS) + _LOADED_SYSTEM_TIMEOUT)
+            _REGISTER_TIME * _REGISTER_BROADCASTS,
+        )
 
     async def async_register_service(
         self,
@@ -522,8 +526,8 @@ class Zeroconf(QuietLogger):
         Zeroconf will then respond to requests for information for that
         service."""
         assert self.loop is not None
-        asyncio.run_coroutine_threadsafe(await_awaitable(self.async_update_service(info)), self.loop).result(
-            millis_to_seconds(_REGISTER_TIME * _REGISTER_BROADCASTS) + _LOADED_SYSTEM_TIMEOUT
+        run_coro_with_timeout(
+            await_awaitable(self.async_update_service(info)), self.loop, _REGISTER_TIME * _REGISTER_BROADCASTS
         )
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
@@ -577,9 +581,9 @@ class Zeroconf(QuietLogger):
     def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service."""
         assert self.loop is not None
-        asyncio.run_coroutine_threadsafe(
-            await_awaitable(self.async_unregister_service(info)), self.loop
-        ).result(millis_to_seconds(_UNREGISTER_TIME * _REGISTER_BROADCASTS) + _LOADED_SYSTEM_TIMEOUT)
+        run_coro_with_timeout(
+            self.async_unregister_service(info), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS
+        )
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
         """Unregister a service."""
