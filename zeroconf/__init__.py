@@ -28,6 +28,7 @@ from ._dns import (  # noqa # import needed for backwards compat
     DNSAddress,
     DNSEntry,
     DNSHinfo,
+    DNSNsec,
     DNSPointer,
     DNSQuestion,
     DNSRecord,
