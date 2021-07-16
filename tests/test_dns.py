@@ -288,6 +288,31 @@ def test_dns_service_record_hashablity():
     assert len(record_set) == 4
 
 
+def test_dns_nsec_record_hashablity():
+    """Test DNSNsec are hashable."""
+    nsec1 = r.DNSNsec(
+        'irrelevant', const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, 'irrelevant', [1, 2, 3]
+    )
+    nsec2 = r.DNSNsec(
+        'irrelevant', const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, 'irrelevant', [1, 2]
+    )
+
+    record_set = set([nsec1, nsec2])
+    assert len(record_set) == 2
+
+    record_set.add(nsec1)
+    assert len(record_set) == 2
+
+    nsec2_dupe = r.DNSNsec(
+        'irrelevant', const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, 'irrelevant', [1, 2]
+    )
+    assert nsec2 == nsec2_dupe
+    assert nsec2.__hash__() == nsec2_dupe.__hash__()
+
+    record_set.add(nsec2_dupe)
+    assert len(record_set) == 2
+
+
 def test_rrset_does_not_consider_ttl():
     """Test DNSRRSet does not consider the ttl in the hash."""
 

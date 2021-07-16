@@ -25,7 +25,7 @@ import struct
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Tuple, Union, cast
 
 
-from ._dns import DNSAddress, DNSHinfo, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
+from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from ._exceptions import IncomingDecodeError, NamePartTooLongException
 from ._logger import QuietLogger, log
 from ._utils.struct import int2byte
@@ -43,6 +43,7 @@ from .const import (
     _TYPE_AAAA,
     _TYPE_CNAME,
     _TYPE_HINFO,
+    _TYPE_NSEC,
     _TYPE_PTR,
     _TYPE_SRV,
     _TYPE_TXT,
@@ -201,6 +202,18 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 rec = DNSAddress(
                     domain, type_, class_, ttl, self.read_string(16), created=self.now, scope_id=self.scope_id
                 )
+            elif type_ == _TYPE_NSEC:
+                name_start = self.offset
+                name = self.read_name()
+                rec = DNSNsec(
+                    domain,
+                    type_,
+                    class_,
+                    ttl,
+                    name,
+                    self.read_bitmap(name_start + length),
+                    self.now,
+                )
             else:
                 # Try to ignore types we don't know about
                 # Skip the payload for the resource record so the next
@@ -209,6 +222,19 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
             if rec is not None:
                 self.answers.append(rec)
+
+    def read_bitmap(self, end: int) -> List[int]:
+        """Reads an NSEC bitmap from the packet."""
+        rdtypes = []
+        while self.offset < end:
+            window = self.data[self.offset]
+            bitmap_length = self.data[self.offset + 1]
+            for i, byte in enumerate(self.data[self.offset + 2 : self.offset + 2 + bitmap_length]):
+                for bit in range(0, 8):
+                    if byte & (0x80 >> bit):
+                        rdtypes.append(bit + window * 256 + i * 8)
+            self.offset += 2 + bitmap_length
+        return rdtypes
 
     def read_name(self) -> str:
         """Reads a domain name from the packet"""

@@ -22,7 +22,7 @@
 
 import enum
 import socket
-from typing import Any, Dict, Iterable, Optional, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
@@ -116,11 +116,7 @@ class DNSQuestion(DNSEntry):
 
     def answered_by(self, rec: 'DNSRecord') -> bool:
         """Returns true if the question is answered by the record"""
-        return (
-            self.class_ == rec.class_
-            and (self.type == rec.type or self.type == _TYPE_ANY)
-            and self.name == rec.name
-        )
+        return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
 
     def __hash__(self) -> int:
         return hash((self.name, self.class_, self.type))
@@ -444,6 +440,44 @@ class DNSService(DNSRecord):
     def __repr__(self) -> str:
         """String representation"""
         return self.to_string("%s:%s" % (self.server, self.port))
+
+
+class DNSNsec(DNSRecord):
+
+    """A DNS NSEC record"""
+
+    __slots__ = ('next', 'rdtypes')
+
+    def __init__(
+        self,
+        name: str,
+        type_: int,
+        class_: int,
+        ttl: int,
+        next: str,
+        rdtypes: List[int],
+        created: Optional[float] = None,
+    ) -> None:
+        super().__init__(name, type_, class_, ttl, created)
+        self.next = next
+        self.rdtypes = rdtypes
+
+    def __eq__(self, other: Any) -> bool:
+        """Tests equality on cpu and os"""
+        return (
+            isinstance(other, DNSNsec)
+            and self.next == other.next
+            and self.rdtypes == other.rdtypes
+            and DNSEntry.__eq__(self, other)
+        )
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSNSec."""
+        return hash((*self._entry_tuple(), self.next, *self.rdtypes))
+
+    def __repr__(self) -> str:
+        """String representation"""
+        return self.to_string(self.next + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes]))
 
 
 class DNSRRSet:

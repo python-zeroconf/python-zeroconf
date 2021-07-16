@@ -103,6 +103,7 @@ _TYPE_MX = 15
 _TYPE_TXT = 16
 _TYPE_AAAA = 28
 _TYPE_SRV = 33
+_TYPE_NSEC = 47
 _TYPE_ANY = 255
 
 # Mapping constants to names
@@ -136,6 +137,7 @@ _TYPES = {
     _TYPE_AAAA: "quada",
     _TYPE_SRV: "srv",
     _TYPE_ANY: "any",
+    _TYPE_NSEC: "nsec",
 }
 
 _HAS_A_TO_Z = re.compile(r'[A-Za-z]')
