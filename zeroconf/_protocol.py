@@ -228,15 +228,12 @@ class DNSIncoming(DNSMessage, QuietLogger):
         rdtypes = []
         while self.offset < end:
             window = self.data[self.offset]
-            self.offset += 1
-            bitmap_length = self.data[self.offset]
-            self.offset += 1
-            bitmap = self.data[self.offset : self.offset + bitmap_length]
-            for i, byte in enumerate(bitmap):
+            bitmap_length = self.data[self.offset + 1]
+            for i, byte in enumerate(self.data[self.offset + 2 : self.offset + 2 + bitmap_length]):
                 for bit in range(0, 8):
                     if byte & (0x80 >> bit):
                         rdtypes.append(bit + window * 256 + i * 8)
-            self.offset += bitmap_length
+            self.offset += 2 + bitmap_length
         return rdtypes
 
     def read_name(self) -> str:
