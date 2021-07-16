@@ -20,7 +20,6 @@
     USA
 """
 
-import asyncio
 import ipaddress
 import socket
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
@@ -29,7 +28,7 @@ from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSServic
 from .._exceptions import BadTypeInNameException
 from .._protocol import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.asyncio import get_running_loop
+from .._utils.asyncio import get_running_loop, run_coro_with_timeout
 from .._utils.name import service_type_name
 from .._utils.net import (
     IPVersion,
@@ -37,7 +36,7 @@ from .._utils.net import (
     _is_v6_address,
 )
 from .._utils.struct import int2byte
-from .._utils.time import current_time_millis, millis_to_seconds
+from .._utils.time import current_time_millis
 from ..const import (
     _CLASS_IN,
     _CLASS_UNIQUE,
@@ -45,7 +44,6 @@ from ..const import (
     _DNS_OTHER_TTL,
     _FLAGS_QR_QUERY,
     _LISTENER_TIME,
-    _LOADED_SYSTEM_TIMEOUT,
     _TYPE_A,
     _TYPE_AAAA,
     _TYPE_PTR,
@@ -426,9 +424,7 @@ class ServiceInfo(RecordUpdateListener):
         assert zc.loop is not None and zc.loop.is_running()
         if zc.loop == get_running_loop():
             raise RuntimeError("Use AsyncServiceInfo.async_request from the event loop")
-        return asyncio.run_coroutine_threadsafe(
-            self.async_request(zc, timeout, question_type), zc.loop
-        ).result(millis_to_seconds(timeout) + _LOADED_SYSTEM_TIMEOUT)
+        return bool(run_coro_with_timeout(self.async_request(zc, timeout, question_type), zc.loop, timeout))
 
     async def async_request(
         self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None
