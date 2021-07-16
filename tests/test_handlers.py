@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._handlers """
@@ -46,7 +45,7 @@ class TestRegistrar(unittest.TestCase):
         # service definition
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
@@ -160,7 +159,7 @@ class TestRegistrar(unittest.TestCase):
         zc = Zeroconf(interfaces=['127.0.0.1'])
         type_ = "_homeassistant._tcp.local."
         name = "Home"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         info = ServiceInfo(
             type_,
@@ -189,7 +188,7 @@ class TestRegistrar(unittest.TestCase):
         zc = Zeroconf(interfaces=['127.0.0.1'])
         type_ = "_mylowertype._tcp.local."
         name = "Home"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         info = ServiceInfo(
             type_,
@@ -224,7 +223,7 @@ def test_ptr_optimization():
     # service definition
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -280,7 +279,7 @@ def test_any_query_for_ptr():
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_anyptr._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
@@ -307,7 +306,7 @@ def test_aaaa_query():
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_knownaaaservice._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
@@ -332,7 +331,7 @@ def test_a_and_aaaa_record_fate_sharing():
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_a-and-aaaa-service._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
@@ -388,7 +387,7 @@ def test_unicast_response():
     # service definition
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
@@ -434,8 +433,8 @@ def test_qu_response():
     type_ = "_test-srvc-type._tcp.local."
     other_type_ = "_notthesame._tcp.local."
     name = "xxxyyy"
-    registration_name = "%s.%s" % (name, type_)
-    registration_name2 = "%s.%s" % (name, other_type_)
+    registration_name = f"{name}.{type_}"
+    registration_name2 = f"{name}.{other_type_}"
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
@@ -530,7 +529,7 @@ def test_known_answer_supression():
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_knownanswersv8._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     info = ServiceInfo(
@@ -643,9 +642,9 @@ def test_multi_packet_known_answer_supression():
     name2 = "knownname2"
     name3 = "knownname3"
 
-    registration_name = "%s.%s" % (name, type_)
-    registration2_name = "%s.%s" % (name2, type_)
-    registration3_name = "%s.%s" % (name3, type_)
+    registration_name = f"{name}.{type_}"
+    registration2_name = f"{name2}.{type_}"
+    registration3_name = f"{name3}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
@@ -694,7 +693,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_otherknown._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     info = ServiceInfo(
@@ -704,7 +703,7 @@ def test_known_answer_supression_service_type_enumeration_query():
 
     type_2 = "_otherknown2._tcp.local."
     name = "knownname"
-    registration_name2 = "%s.%s" % (name, type_2)
+    registration_name2 = f"{name}.{type_2}"
     desc = {'path': '/~paulsm/'}
     server_name2 = "ash-3.local."
     info2 = ServiceInfo(
@@ -772,7 +771,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     type_ = "_addtest1._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
     info = ServiceInfo(
@@ -782,7 +781,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     type_2 = "_addtest2._tcp.local."
     name = "knownname"
-    registration_name2 = "%s.%s" % (name, type_2)
+    registration_name2 = f"{name}.{type_2}"
     desc = {'path': '/~paulsm/'}
     server_name2 = "ash-3.local."
     info2 = ServiceInfo(
@@ -904,7 +903,7 @@ async def test_cache_flush_bit():
 
     type_ = "_cacheflush._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "server-uu1.local."
     info = ServiceInfo(
@@ -992,7 +991,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
 
     type_ = "_cacheflush._tcp.local."
     name = "knownname"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     desc = {'path': '/~paulsm/'}
     server_name = "server-uu1.local."
     info = ServiceInfo(
@@ -1013,11 +1012,11 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     )
     await asyncio.sleep(0)  # flush out the call_soon_threadsafe
 
-    assert set([record.new for record in updated]) == set([ptr_record, a_record])
+    assert {record.new for record in updated} == {ptr_record, a_record}
 
     # The old records should be None so we trigger Add events
     # in service browsers instead of Update events
-    assert set([record.old for record in updated]) == set([None])
+    assert {record.old for record in updated} == {None}
 
     await aiozc.async_close()
 
@@ -1044,7 +1043,7 @@ async def test_questions_query_handler_populates_the_question_history_from_qm_qu
     )
     assert unicast_out is None
     assert multicast_out is None
-    assert zc.question_history.suppresses(question, now, set([known_answer]))
+    assert zc.question_history.suppresses(question, now, {known_answer})
 
     await aiozc.async_close()
 
@@ -1071,7 +1070,7 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     )
     assert unicast_out is None
     assert multicast_out is None
-    assert not zc.question_history.suppresses(question, now, set([known_answer]))
+    assert not zc.question_history.suppresses(question, now, {known_answer})
 
     await aiozc.async_close()
 

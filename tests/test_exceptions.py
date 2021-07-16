@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._exceptions """
@@ -107,7 +106,7 @@ class Exceptions(unittest.TestCase):
         bad_names_to_try = (
             '._x._tcp.local.',
             'a' * 64 + '._sub._http._tcp.local.',
-            'a' * 62 + u'â._sub._http._tcp.local.',
+            'a' * 62 + 'â._sub._http._tcp.local.',
         )
         for name in bad_names_to_try:
             self.assertRaises(r.BadTypeInNameException, r.service_type_name, name)
@@ -129,7 +128,7 @@ class Exceptions(unittest.TestCase):
             ('_12345-67890-abc._udp.local.', '_12345-67890-abc._udp.local.'),
             ('x._sub._http._tcp.local.', '_http._tcp.local.'),
             ('a' * 63 + '._sub._http._tcp.local.', '_http._tcp.local.'),
-            ('a' * 61 + u'â._sub._http._tcp.local.', '_http._tcp.local.'),
+            ('a' * 61 + 'â._sub._http._tcp.local.', '_http._tcp.local.'),
         )
 
         for name, result in good_names_to_try:
@@ -140,7 +139,7 @@ class Exceptions(unittest.TestCase):
     def test_invalid_addresses(self):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         bad = ('127.0.0.1', '::1', 42)
         for addr in bad:

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._core """
@@ -55,28 +54,26 @@ async def test_reaper():
         aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
         zeroconf = aiozc.zeroconf
         cache = zeroconf.cache
-        original_entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
+        original_entries = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
         record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
         record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
         zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
         question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
         now = r.current_time_millis()
-        other_known_answers = set(
-            [
-                r.DNSPointer(
-                    "_hap._tcp.local.",
-                    const._TYPE_PTR,
-                    const._CLASS_IN,
-                    10000,
-                    'known-to-other._hap._tcp.local.',
-                )
-            ]
-        )
+        other_known_answers = {
+            r.DNSPointer(
+                "_hap._tcp.local.",
+                const._TYPE_PTR,
+                const._CLASS_IN,
+                10000,
+                'known-to-other._hap._tcp.local.',
+            )
+        }
         zeroconf.question_history.add_question_at_time(question, now, other_known_answers)
         assert zeroconf.question_history.suppresses(question, now, other_known_answers)
-        entries_with_cache = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
+        entries_with_cache = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
         await asyncio.sleep(1.2)
-        entries = list(itertools.chain(*[cache.entries_with_name(name) for name in cache.names()]))
+        entries = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
         await aiozc.async_close()
         assert not zeroconf.question_history.suppresses(question, now, other_known_answers)
         assert entries != original_entries
@@ -367,7 +364,7 @@ def test_register_service_with_custom_ttl():
     name = "MyTestHome"
     info_service = r.ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,
@@ -423,9 +420,9 @@ def test_tc_bit_defers():
     name2 = "knownname2"
     name3 = "knownname3"
 
-    registration_name = "%s.%s" % (name, type_)
-    registration2_name = "%s.%s" % (name2, type_)
-    registration3_name = "%s.%s" % (name3, type_)
+    registration_name = f"{name}.{type_}"
+    registration2_name = f"{name2}.{type_}"
+    registration3_name = f"{name3}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
@@ -502,9 +499,9 @@ def test_tc_bit_defers_last_response_missing():
     name2 = "knownname2"
     name3 = "knownname3"
 
-    registration_name = "%s.%s" % (name, type_)
-    registration2_name = "%s.%s" % (name2, type_)
-    registration3_name = "%s.%s" % (name3, type_)
+    registration_name = f"{name}.{type_}"
+    registration2_name = f"{name2}.{type_}"
+    registration3_name = f"{name3}.{type_}"
 
     desc = {'path': '/~paulsm/'}
     server_name = "ash-2.local."
@@ -729,7 +726,7 @@ def test_shutdown_while_register_in_process():
     name = "MyTestHome"
     info_service = r.ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,

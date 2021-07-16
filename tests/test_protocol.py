@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._protocol """
@@ -195,8 +194,8 @@ class PacketGeneration(unittest.TestCase):
         generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'os'))
         parsed = r.DNSIncoming(generated.packets()[0])
         answer = cast(r.DNSHinfo, parsed.answers[0])
-        assert answer.cpu == u'cpu'
-        assert answer.os == u'os'
+        assert answer.cpu == 'cpu'
+        assert answer.os == 'os'
 
         generated = r.DNSOutgoing(0)
         generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))

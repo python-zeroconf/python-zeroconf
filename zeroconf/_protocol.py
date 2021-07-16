@@ -259,10 +259,10 @@ class DNSIncoming(DNSMessage, QuietLogger):
                     next_ = off + 1
                 off = ((length & 0x3F) << 8) | self.data[off]
                 if off >= first:
-                    raise IncomingDecodeError("Bad domain name (circular) at %s" % (off,))
+                    raise IncomingDecodeError(f"Bad domain name (circular) at {off}")
                 first = off
             else:
-                raise IncomingDecodeError("Bad domain name at %s" % (off,))
+                raise IncomingDecodeError(f"Bad domain name at {off}")
 
         if next_ >= 0:
             self.offset = next_
@@ -523,7 +523,7 @@ class DNSOutgoing(DNSMessage):
         self.write_short(0)  # Will get replaced with the actual size
         record.write(self)
         # Adjust size for the short we will write before this record
-        length = sum((len(d) for d in self.data[index + 1 :]))
+        length = sum(len(d) for d in self.data[index + 1 :])
         # Here we replace the 0 length short we wrote
         # before with the actual length
         self._replace_short(index, length)

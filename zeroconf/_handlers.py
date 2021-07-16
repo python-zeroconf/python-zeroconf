@@ -140,11 +140,11 @@ class _QueryResponse:
 
     def _additionals_from_answers_rrset(self, rrset: Set[DNSRecord]) -> Set[DNSRecord]:
         additionals: Set[DNSRecord] = set()
-        return additionals.union(*[self._additionals[record] for record in rrset])
+        return additionals.union(*(self._additionals[record] for record in rrset))
 
     def _suppress_mcasts_from_last_second(self, rrset: Set[DNSRecord]) -> None:
         """Remove any records that were already sent in the last second."""
-        rrset -= set(record for record in rrset if self._has_mcast_record_in_last_second(record))
+        rrset -= {record for record in rrset if self._has_mcast_record_in_last_second(record)}
 
     def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord) -> bool:
         """Check to see if a record has been mcasted recently.
@@ -201,13 +201,11 @@ class QueryHandler:
             # https://tools.ietf.org/html/rfc6763#section-12.1.
             dns_pointer = service.dns_pointer(created=now)
             if not known_answers.suppresses(dns_pointer):
-                answer_set[dns_pointer] = set(
-                    [
-                        service.dns_service(created=now),
-                        service.dns_text(created=now),
-                        *service.dns_addresses(created=now),
-                    ]
-                )
+                answer_set[dns_pointer] = {
+                    service.dns_service(created=now),
+                    service.dns_text(created=now),
+                    *service.dns_addresses(created=now),
+                }
 
     def _add_address_answers(
         self,
@@ -271,7 +269,7 @@ class QueryHandler:
         threadsafe.
         """
         ucast_source = port != _MDNS_PORT
-        known_answers = DNSRRSet(itertools.chain(*[msg.answers for msg in msgs]))
+        known_answers = DNSRRSet(itertools.chain(*(msg.answers for msg in msgs)))
         query_res = _QueryResponse(self.cache, msgs[0], ucast_source)
 
         for msg in msgs:

@@ -251,7 +251,7 @@ class AsyncZeroconf:
     async def async_remove_all_service_listeners(self) -> None:
         """Removes a listener from the set that is currently listening."""
         await asyncio.gather(
-            *[self.async_remove_service_listener(listener) for listener in list(self.async_browsers)]
+            *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
         )
 
     async def __aenter__(self) -> 'AsyncZeroconf':

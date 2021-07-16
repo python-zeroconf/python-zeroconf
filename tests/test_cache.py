@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._cache. """
@@ -98,7 +97,7 @@ class TestDNSAsyncCacheAPI(unittest.TestCase):
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert set(cache.async_all_by_details('a', const._TYPE_A, const._CLASS_IN)) == set([record1, record2])
+        assert set(cache.async_all_by_details('a', const._TYPE_A, const._CLASS_IN)) == {record1, record2}
 
     def test_async_entries_with_server(self):
         record1 = r.DNSService(
@@ -109,8 +108,8 @@ class TestDNSAsyncCacheAPI(unittest.TestCase):
         )
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert set(cache.async_entries_with_server('ab')) == set([record1, record2])
-        assert set(cache.async_entries_with_server('AB')) == set([record1, record2])
+        assert set(cache.async_entries_with_server('ab')) == {record1, record2}
+        assert set(cache.async_entries_with_server('AB')) == {record1, record2}
 
     def test_async_entries_with_name(self):
         record1 = r.DNSService(
@@ -121,8 +120,8 @@ class TestDNSAsyncCacheAPI(unittest.TestCase):
         )
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert set(cache.async_entries_with_name('irrelevant')) == set([record1, record2])
-        assert set(cache.async_entries_with_name('Irrelevant')) == set([record1, record2])
+        assert set(cache.async_entries_with_name('irrelevant')) == {record1, record2}
+        assert set(cache.async_entries_with_name('Irrelevant')) == {record1, record2}
 
 
 # These functions have been seen in other projects so
@@ -152,7 +151,7 @@ class TestDNSCacheAPI(unittest.TestCase):
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 1, b'b')
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert set(cache.get_all_by_details('a', const._TYPE_A, const._CLASS_IN)) == set([record1, record2])
+        assert set(cache.get_all_by_details('a', const._TYPE_A, const._CLASS_IN)) == {record1, record2}
 
     def test_entries_with_server(self):
         record1 = r.DNSService(
@@ -163,8 +162,8 @@ class TestDNSCacheAPI(unittest.TestCase):
         )
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert set(cache.entries_with_server('ab')) == set([record1, record2])
-        assert set(cache.entries_with_server('AB')) == set([record1, record2])
+        assert set(cache.entries_with_server('ab')) == {record1, record2}
+        assert set(cache.entries_with_server('AB')) == {record1, record2}
 
     def test_entries_with_name(self):
         record1 = r.DNSService(
@@ -175,8 +174,8 @@ class TestDNSCacheAPI(unittest.TestCase):
         )
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert set(cache.entries_with_name('irrelevant')) == set([record1, record2])
-        assert set(cache.entries_with_name('Irrelevant')) == set([record1, record2])
+        assert set(cache.entries_with_name('irrelevant')) == {record1, record2}
+        assert set(cache.entries_with_name('Irrelevant')) == {record1, record2}
 
     def test_current_entry_with_name_and_alias(self):
         record1 = r.DNSPointer(
