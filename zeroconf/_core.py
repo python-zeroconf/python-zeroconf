@@ -29,7 +29,7 @@ import socket
 import sys
 import threading
 from types import TracebackType  # noqa # used in type hints
-from typing import Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
@@ -43,7 +43,7 @@ from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener
-from ._utils.asyncio import get_running_loop, shutdown_loop, wait_event_or_timeout
+from ._utils.asyncio import await_awaitable, get_running_loop, shutdown_loop, wait_event_or_timeout
 from ._utils.name import service_type_name
 from ._utils.net import (
     IPVersion,
@@ -74,6 +74,7 @@ from .const import (
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 _CLOSE_TIMEOUT = 3
+_REGISTER_BROADCASTS = 3
 
 
 class AsyncEngine:
@@ -484,51 +485,66 @@ class Zeroconf(QuietLogger):
         it unique on the network. Additionally multiple cooperating responders
         can register the same service on the network for resilience
         (if you want this behavior set `cooperating_responders` to `True`)."""
+        assert self.loop is not None
+        asyncio.run_coroutine_threadsafe(
+            await_awaitable(
+                self.async_register_service(info, ttl, allow_name_change, cooperating_responders)
+            ),
+            self.loop,
+        ).result(millis_to_seconds(_REGISTER_TIME * _REGISTER_BROADCASTS) + _LOADED_SYSTEM_TIMEOUT)
+
+    async def async_register_service(
+        self,
+        info: ServiceInfo,
+        ttl: Optional[int] = None,
+        allow_name_change: bool = False,
+        cooperating_responders: bool = False,
+    ) -> Awaitable:
+        """Registers service information to the network with a default TTL.
+        Zeroconf will then respond to requests for information for that
+        service.  The name of the service may be changed if needed to make
+        it unique on the network. Additionally multiple cooperating responders
+        can register the same service on the network for resilience
+        (if you want this behavior set `cooperating_responders` to `True`)."""
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
             # Setting TTLs via ServiceInfo is preferred
             info.host_ttl = ttl
             info.other_ttl = ttl
-        self.check_service(info, allow_name_change, cooperating_responders)
+
+        await self.async_wait_for_start()
+        await self.async_check_service(info, allow_name_change, cooperating_responders)
         self.registry.add(info)
-        self._broadcast_service(info, _REGISTER_TIME, None)
+        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     def update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service."""
+        assert self.loop is not None
+        asyncio.run_coroutine_threadsafe(await_awaitable(self.async_update_service(info)), self.loop).result(
+            millis_to_seconds(_REGISTER_TIME * _REGISTER_BROADCASTS) + _LOADED_SYSTEM_TIMEOUT
+        )
 
+    async def async_update_service(self, info: ServiceInfo) -> Awaitable:
+        """Registers service information to the network with a default TTL.
+        Zeroconf will then respond to requests for information for that
+        service."""
         self.registry.update(info)
-        self._broadcast_service(info, _REGISTER_TIME, None)
+        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
-    def _broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
+    async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
         """Send a broadcasts to announce a service at intervals."""
-        now = current_time_millis()
-        next_time = now
-        i = 0
-        while i < 3:
-            if now < next_time:
-                self.wait(next_time - now)
-                now = current_time_millis()
-                continue
-
-            self.send_service_broadcast(info, ttl)
-            i += 1
-            next_time += interval
-
-    def send_service_broadcast(self, info: ServiceInfo, ttl: Optional[int]) -> None:
-        """Send a broadcast to announce a service."""
-        self.send(self.generate_service_broadcast(info, ttl))
+        for i in range(_REGISTER_BROADCASTS):
+            if i != 0:
+                await asyncio.sleep(millis_to_seconds(interval))
+            self.async_send(self.generate_service_broadcast(info, ttl))
 
     def generate_service_broadcast(self, info: ServiceInfo, ttl: Optional[int]) -> DNSOutgoing:
         """Generate a broadcast to announce a service."""
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
         self._add_broadcast_answer(out, info, ttl)
         return out
-
-    def send_service_query(self, info: ServiceInfo) -> None:
-        """Send a query to lookup a service."""
-        self.send(self.generate_service_query(info))
 
     def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:  # pylint: disable=no-self-use
         """Generate a query to lookup a service."""
@@ -560,8 +576,15 @@ class Zeroconf(QuietLogger):
 
     def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service."""
+        assert self.loop is not None
+        asyncio.run_coroutine_threadsafe(
+            await_awaitable(self.async_unregister_service(info)), self.loop
+        ).result(millis_to_seconds(_UNREGISTER_TIME * _REGISTER_BROADCASTS) + _LOADED_SYSTEM_TIMEOUT)
+
+    async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
+        """Unregister a service."""
         self.registry.remove(info)
-        self._broadcast_service(info, _UNREGISTER_TIME, 0)
+        return asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
 
     def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
         """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
@@ -573,6 +596,22 @@ class Zeroconf(QuietLogger):
             self._add_broadcast_answer(out, info, 0)
         self.registry.remove(service_infos)
         return out
+
+    async def async_unregister_all_services(self) -> None:
+        """Unregister all registered services.
+
+        Unlike async_register_service and async_unregister_service, this
+        method does not return a future and is always expected to be
+        awaited since its only called at shutdown.
+        """
+        # Send Goodbye packets https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
+        out = self.generate_unregister_all_services()
+        if not out:
+            return
+        for i in range(_REGISTER_BROADCASTS):
+            if i != 0:
+                await asyncio.sleep(millis_to_seconds(_UNREGISTER_TIME))
+            self.async_send(out)
 
     def unregister_all_services(self) -> None:
         """Unregister all registered services."""
@@ -592,7 +631,7 @@ class Zeroconf(QuietLogger):
             i += 1
             next_time += _UNREGISTER_TIME
 
-    def check_service(
+    async def async_check_service(
         self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False
     ) -> None:
         """Checks the network for a unique service name, modifying the
@@ -603,7 +642,7 @@ class Zeroconf(QuietLogger):
         next_instance_number = 2
         next_time = now = current_time_millis()
         i = 0
-        while i < 3:
+        while i < _REGISTER_BROADCASTS:
             # check for a name conflict
             while self.cache.current_entry_with_name_and_alias(info.type, info.name):
                 if not allow_name_change:
@@ -617,11 +656,11 @@ class Zeroconf(QuietLogger):
                 i = 0
 
             if now < next_time:
-                self.wait(next_time - now)
+                await self.async_wait(next_time - now)
                 now = current_time_millis()
                 continue
 
-            self.send_service_query(info)
+            self.async_send(self.generate_service_query(info))
             i += 1
             next_time += _CHECK_TIME
 
