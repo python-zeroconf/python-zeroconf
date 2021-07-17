@@ -74,12 +74,31 @@ async def test_reaper():
         entries_with_cache = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
         await asyncio.sleep(1.2)
         entries = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
+        assert zeroconf.cache.get(record_with_1s_ttl) is None
         await aiozc.async_close()
         assert not zeroconf.question_history.suppresses(question, now, other_known_answers)
         assert entries != original_entries
         assert entries_with_cache != original_entries
         assert record_with_10s_ttl in entries
         assert record_with_1s_ttl not in entries
+
+
+@pytest.mark.asyncio
+async def test_reaper_aborts_when_done():
+    """Ensure cache cleanup stops when zeroconf is done."""
+    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10):
+        assert _core._CACHE_CLEANUP_INTERVAL == 10
+        aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+        zeroconf = aiozc.zeroconf
+        record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
+        record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
+        zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
+        assert zeroconf.cache.get(record_with_10s_ttl) is not None
+        assert zeroconf.cache.get(record_with_1s_ttl) is not None
+        await aiozc.async_close()
+        await asyncio.sleep(1.2)
+        assert zeroconf.cache.get(record_with_10s_ttl) is not None
+        assert zeroconf.cache.get(record_with_1s_ttl) is not None
 
 
 class Framework(unittest.TestCase):
