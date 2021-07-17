@@ -98,7 +98,7 @@ class AsyncEngine:
         self.senders: List[asyncio.DatagramTransport] = []
         self._listen_socket = listen_socket
         self._respond_sockets = respond_sockets
-        self._cache_cleanup_task: Optional[asyncio.Task] = None
+        self._cleanup_timer: Optional[asyncio.TimerHandle] = None
         self._running_event: Optional[asyncio.Event] = None
 
     def setup(self, loop: asyncio.AbstractEventLoop, loop_thread_ready: Optional[threading.Event]) -> None:
@@ -110,8 +110,10 @@ class AsyncEngine:
     async def _async_setup(self, loop_thread_ready: Optional[threading.Event]) -> None:
         """Set up the instance."""
         assert self.loop is not None
+        self._cleanup_timer = self.loop.call_later(
+            millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
+        )
         await self._async_create_endpoints()
-        self._cache_cleanup_task = self.loop.create_task(self._async_cache_cleanup())
         assert self._running_event is not None
         self._running_event.set()
         if loop_thread_ready:
@@ -142,26 +144,25 @@ class AsyncEngine:
             if s in sender_sockets:
                 self.senders.append(cast(asyncio.DatagramTransport, transport))
 
-    async def _async_cache_cleanup(self) -> None:
+    def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
-        while not self.zc.done:
-            now = current_time_millis()
-            self.zc.question_history.async_expire(now)
-            self.zc.record_manager.async_updates(
-                now, [RecordUpdate(record, None) for record in self.zc.cache.async_expire(now)]
-            )
-            self.zc.record_manager.async_updates_complete()
-            await asyncio.sleep(millis_to_seconds(_CACHE_CLEANUP_INTERVAL))
+        now = current_time_millis()
+        self.zc.question_history.async_expire(now)
+        self.zc.record_manager.async_updates(
+            now, [RecordUpdate(record, None) for record in self.zc.cache.async_expire(now)]
+        )
+        self.zc.record_manager.async_updates_complete()
+        assert self.loop is not None
+        self._cleanup_timer = self.loop.call_later(
+            millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
+        )
 
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
         self._async_shutdown()
-        if self._cache_cleanup_task:
-            self._cache_cleanup_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._cache_cleanup_task
-            self._cache_cleanup_task = None
         await asyncio.sleep(0)  # flush out any call soons
+        assert self._cleanup_timer is not None
+        self._cleanup_timer.cancel()
 
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets."""
