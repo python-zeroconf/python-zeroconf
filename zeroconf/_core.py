@@ -619,21 +619,10 @@ class Zeroconf(QuietLogger):
 
     def unregister_all_services(self) -> None:
         """Unregister all registered services."""
-        # Send Goodbye packets https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
-        out = self.generate_unregister_all_services()
-        if not out:
-            return
-        now = current_time_millis()
-        next_time = now
-        i = 0
-        while i < 3:
-            if now < next_time:
-                self.wait(next_time - now)
-                now = current_time_millis()
-                continue
-            self.send(out)
-            i += 1
-            next_time += _UNREGISTER_TIME
+        assert self.loop is not None
+        run_coro_with_timeout(
+            self.async_unregister_all_services(), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS
+        )
 
     async def async_check_service(
         self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False
@@ -799,7 +788,14 @@ class Zeroconf(QuietLogger):
 
         This method is idempotent and irreversible.
         """
-        self.unregister_all_services()
+        assert self.loop is not None
+        if self.loop.is_running():
+            if self.loop == get_running_loop():
+                log.warning(
+                    "unregister_all_services skipped as it does blocking i/o; use AsyncZeroconf with asyncio"
+                )
+            else:
+                self.unregister_all_services()
         self._close()
         self.engine.close()
         self._shutdown_threads()
