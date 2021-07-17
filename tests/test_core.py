@@ -335,11 +335,11 @@ def test_goodbye_all_services():
     info = r.ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info)
+    zc.registry.async_add(info)
     out = zc.generate_unregister_all_services()
     assert out is not None
     first_packet = out.packets()
-    zc.registry.add(info)
+    zc.registry.async_add(info)
     out2 = zc.generate_unregister_all_services()
     assert out2 is not None
     second_packet = out.packets()
@@ -348,7 +348,7 @@ def test_goodbye_all_services():
     # Verify the registery is empty
     out3 = zc.generate_unregister_all_services()
     assert out3 is None
-    assert zc.registry.get_service_infos() == []
+    assert zc.registry.async_get_service_infos() == []
 
     zc.close()
 
@@ -438,9 +438,9 @@ def test_tc_bit_defers():
     info3 = r.ServiceInfo(
         type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info)
-    zc.registry.add(info2)
-    zc.registry.add(info3)
+    zc.registry.async_add(info)
+    zc.registry.async_add(info2)
+    zc.registry.async_add(info3)
 
     protocol = zc.engine.protocols[0]
     now = r.current_time_millis()
@@ -517,9 +517,9 @@ def test_tc_bit_defers_last_response_missing():
     info3 = r.ServiceInfo(
         type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info)
-    zc.registry.add(info2)
-    zc.registry.add(info3)
+    zc.registry.async_add(info)
+    zc.registry.async_add(info2)
+    zc.registry.async_add(info3)
 
     protocol = zc.engine.protocols[0]
     now = r.current_time_millis()
@@ -581,7 +581,7 @@ def test_tc_bit_defers_last_response_missing():
     assert source_ip not in protocol._timers
 
     # unregister
-    zc.registry.remove(info)
+    zc.registry.async_remove(info)
     zc.close()
 
 

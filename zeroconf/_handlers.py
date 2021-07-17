@@ -185,7 +185,7 @@ class QueryHandler:
 
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
         """
-        for stype in self.registry.get_types():
+        for stype in self.registry.async_get_types():
             dns_pointer = DNSPointer(
                 _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, now
             )
@@ -196,7 +196,7 @@ class QueryHandler:
         self, name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
     ) -> None:
         """Answer PTR/ANY question."""
-        for service in self.registry.get_infos_type(name):
+        for service in self.registry.async_get_infos_type(name):
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
             dns_pointer = service.dns_pointer(created=now)
@@ -216,7 +216,7 @@ class QueryHandler:
         type_: int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
-        for service in self.registry.get_infos_server(name):
+        for service in self.registry.async_get_infos_server(name):
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             for dns_address in service.dns_addresses(created=now):
@@ -247,7 +247,7 @@ class QueryHandler:
             self._add_address_answers(question.name, answer_set, known_answers, now, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
-            service = self.registry.get_info_name(question.name)  # type: ignore
+            service = self.registry.async_get_info_name(question.name)  # type: ignore
             if service is not None:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     # Add recommended additional answers according to

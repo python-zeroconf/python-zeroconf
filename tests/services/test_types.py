@@ -50,7 +50,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.registry.add(info)
+        zeroconf_registrar.registry.async_add(info)
         try:
             with patch.object(
                 zeroconf_registrar.engine.protocols[0], "suppress_duplicate_packet", return_value=False
@@ -87,7 +87,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_pton(socket.AF_INET6, addr)],
         )
-        zeroconf_registrar.registry.add(info)
+        zeroconf_registrar.registry.async_add(info)
         try:
             with patch.object(
                 zeroconf_registrar.engine.protocols[0], "suppress_duplicate_packet", return_value=False
@@ -124,7 +124,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_pton(socket.AF_INET6, addr)],
         )
-        zeroconf_registrar.registry.add(info)
+        zeroconf_registrar.registry.async_add(info)
         try:
             with patch.object(
                 zeroconf_registrar.engine.protocols[0], "suppress_duplicate_packet", return_value=False
@@ -160,7 +160,7 @@ class ServiceTypesQuery(unittest.TestCase):
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
-        zeroconf_registrar.registry.add(info)
+        zeroconf_registrar.registry.async_add(info)
         try:
             with patch.object(
                 zeroconf_registrar.engine.protocols[0], "suppress_duplicate_packet", return_value=False

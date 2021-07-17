@@ -20,7 +20,6 @@
     USA
 """
 
-import threading
 from typing import Dict, List, Optional, Union
 
 
@@ -31,9 +30,8 @@ from .._exceptions import ServiceNameAlreadyRegistered
 class ServiceRegistry:
     """A registry to keep track of services.
 
-    This class exists to ensure services can
-    be safely added and removed with thread
-    safety.
+    The registry must only be accessed from
+    the event loop as it is not thread safe.
     """
 
     def __init__(
@@ -43,56 +41,43 @@ class ServiceRegistry:
         self._services: Dict[str, ServiceInfo] = {}
         self.types: Dict[str, List] = {}
         self.servers: Dict[str, List] = {}
-        self._lock = threading.Lock()  # add and remove services thread safe
 
-    def add(self, info: ServiceInfo) -> None:
+    def async_add(self, info: ServiceInfo) -> None:
         """Add a new service to the registry."""
-        with self._lock:
-            self._add(info)
+        self._add(info)
 
-    def remove(self, info: Union[List[ServiceInfo], ServiceInfo]) -> None:
+    def async_remove(self, info: Union[List[ServiceInfo], ServiceInfo]) -> None:
         """Remove a new service from the registry."""
-        infos = info if isinstance(info, list) else [info]
+        self._remove(info if isinstance(info, list) else [info])
 
-        with self._lock:
-            self._remove(infos)
-
-    def update(self, info: ServiceInfo) -> None:
+    def async_update(self, info: ServiceInfo) -> None:
         """Update new service in the registry."""
+        self._remove([info])
+        self._add(info)
 
-        with self._lock:
-            self._remove([info])
-            self._add(info)
-
-    def get_service_infos(self) -> List[ServiceInfo]:
+    def async_get_service_infos(self) -> List[ServiceInfo]:
         """Return all ServiceInfo."""
         return list(self._services.values())
 
-    def get_info_name(self, name: str) -> Optional[ServiceInfo]:
+    def async_get_info_name(self, name: str) -> Optional[ServiceInfo]:
         """Return all ServiceInfo for the name."""
         return self._services.get(name.lower())
 
-    def get_types(self) -> List[str]:
+    def async_get_types(self) -> List[str]:
         """Return all types."""
         return list(self.types.keys())
 
-    def get_infos_type(self, type_: str) -> List[ServiceInfo]:
+    def async_get_infos_type(self, type_: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching type."""
-        return self._get_by_index("types", type_)
+        return self._async_get_by_index("types", type_)
 
-    def get_infos_server(self, server: str) -> List[ServiceInfo]:
+    def async_get_infos_server(self, server: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching server."""
-        return self._get_by_index("servers", server)
+        return self._async_get_by_index("servers", server)
 
-    def _get_by_index(self, attr: str, key: str) -> List[ServiceInfo]:
+    def _async_get_by_index(self, attr: str, key: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
-        # Since we do not get under a lock since it would be
-        # a performance issue, its possible
-        # the service can be unregistered during the get
-        # so we must check if info is None
-        return list(
-            filter(None, [self._services.get(name) for name in getattr(self, attr).get(key.lower(), [])[:]])
-        )
+        return [self._services[name] for name in getattr(self, attr).get(key.lower(), [])]
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
