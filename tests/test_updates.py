@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 
-""" Unit tests for zeroconf._services. """
+""" Unit tests for zeroconf._updates. """
 
 import logging
 import socket
+import time
 from threading import Event
 
 import pytest
@@ -77,7 +78,7 @@ def test_legacy_record_update_listener():
 
     zc.register_service(info_service)
 
-    zc.wait(1)
+    time.sleep(0.001)
 
     browser.cancel()
 

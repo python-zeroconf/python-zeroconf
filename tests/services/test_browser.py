@@ -371,7 +371,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                 zeroconf,
                 mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120),
             )
-            zeroconf.wait(100)
+            time.sleep(0.1)
 
             called_with_refresh_time_check = False
 
@@ -693,7 +693,7 @@ def test_legacy_record_update_listener():
 
     zc.register_service(info_service)
 
-    zc.wait(1)
+    time.sleep(0.001)
 
     browser.cancel()
 

@@ -21,8 +21,6 @@
 """
 
 import asyncio
-import concurrent.futures
-import contextlib
 import itertools
 import random
 import socket
@@ -422,14 +420,6 @@ class Zeroconf(QuietLogger):
     @property
     def listeners(self) -> List[RecordUpdateListener]:
         return self.record_manager.listeners
-
-    def wait(self, timeout: float) -> None:
-        """Calling task waits for a given number of milliseconds or until notified."""
-        assert self.loop is not None
-        with contextlib.suppress(concurrent.futures.TimeoutError):
-            asyncio.run_coroutine_threadsafe(self.async_wait(timeout), self.loop).result(
-                millis_to_seconds(timeout)
-            )
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
