@@ -518,7 +518,7 @@ class Zeroconf(QuietLogger):
 
         await self.async_wait_for_start()
         await self.async_check_service(info, allow_name_change, cooperating_responders)
-        self.registry.add(info)
+        self.registry.async_add(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     def update_service(self, info: ServiceInfo) -> None:
@@ -534,7 +534,7 @@ class Zeroconf(QuietLogger):
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
         service."""
-        self.registry.update(info)
+        self.registry.async_update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
@@ -587,18 +587,18 @@ class Zeroconf(QuietLogger):
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
         """Unregister a service."""
-        self.registry.remove(info)
+        self.registry.async_remove(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
 
     def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
         """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
-        service_infos = self.registry.get_service_infos()
+        service_infos = self.registry.async_get_service_infos()
         if not service_infos:
             return None
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
         for info in service_infos:
             self._add_broadcast_answer(out, info, 0)
-        self.registry.remove(service_infos)
+        self.registry.async_remove(service_infos)
         return out
 
     async def async_unregister_all_services(self) -> None:

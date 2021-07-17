@@ -87,7 +87,7 @@ class TestRegistrar(unittest.TestCase):
         expected_ttl = None
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_query(info))
-        zc.registry.add(info)
+        zc.registry.async_add(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, None))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
@@ -112,7 +112,7 @@ class TestRegistrar(unittest.TestCase):
 
         # unregister
         expected_ttl = 0
-        zc.registry.remove(info)
+        zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
@@ -121,7 +121,7 @@ class TestRegistrar(unittest.TestCase):
         expected_ttl = None
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_query(info))
-        zc.registry.add(info)
+        zc.registry.async_add(info)
         # register service with custom TTL
         expected_ttl = const._DNS_HOST_TTL * 2
         assert expected_ttl != const._DNS_HOST_TTL
@@ -147,7 +147,7 @@ class TestRegistrar(unittest.TestCase):
 
         # unregister
         expected_ttl = 0
-        zc.registry.remove(info)
+        zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
@@ -284,7 +284,7 @@ def test_any_query_for_ptr():
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
-    zc.registry.add(info)
+    zc.registry.async_add(info)
 
     _clear_cache(zc)
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -297,7 +297,7 @@ def test_any_query_for_ptr():
     assert multicast_out.answers[0][0].name == type_
     assert multicast_out.answers[0][0].alias == registration_name
     # unregister
-    zc.registry.remove(info)
+    zc.registry.async_remove(info)
     zc.close()
 
 
@@ -311,7 +311,7 @@ def test_aaaa_query():
     server_name = "ash-2.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
-    zc.registry.add(info)
+    zc.registry.async_add(info)
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
@@ -322,7 +322,7 @@ def test_aaaa_query():
     )
     assert multicast_out.answers[0][0].address == ipv6_address
     # unregister
-    zc.registry.remove(info)
+    zc.registry.async_remove(info)
     zc.close()
 
 
@@ -342,7 +342,7 @@ def test_a_and_aaaa_record_fate_sharing():
     aaaa_record = info.dns_addresses(version=r.IPVersion.V6Only)[0]
     a_record = info.dns_addresses(version=r.IPVersion.V4Only)[0]
 
-    zc.registry.add(info)
+    zc.registry.async_add(info)
 
     # Test AAAA query
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -375,7 +375,7 @@ def test_a_and_aaaa_record_fate_sharing():
     assert len(multicast_out.answers) == 1
     assert len(multicast_out.additionals) == 1
     # unregister
-    zc.registry.remove(info)
+    zc.registry.async_remove(info)
     zc.close()
 
 
@@ -393,7 +393,7 @@ def test_unicast_response():
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
     # register
-    zc.registry.add(info)
+    zc.registry.async_add(info)
     _clear_cache(zc)
 
     # query
@@ -420,7 +420,7 @@ def test_unicast_response():
         assert has_srv and has_txt and has_a
 
     # unregister
-    zc.registry.remove(info)
+    zc.registry.async_remove(info)
     zc.close()
 
 
@@ -535,7 +535,7 @@ def test_known_answer_supression():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info)
+    zc.registry.async_add(info)
 
     now = current_time_millis()
     _clear_cache(zc)
@@ -631,7 +631,7 @@ def test_known_answer_supression():
     assert not multicast_out or not multicast_out.answers
 
     # unregister
-    zc.registry.remove(info)
+    zc.registry.async_remove(info)
     zc.close()
 
 
@@ -660,9 +660,9 @@ def test_multi_packet_known_answer_supression():
     info3 = ServiceInfo(
         type_, registration3_name, 80, 0, 0, desc, server_name3, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info)
-    zc.registry.add(info2)
-    zc.registry.add(info3)
+    zc.registry.async_add(info)
+    zc.registry.async_add(info2)
+    zc.registry.async_add(info3)
 
     now = current_time_millis()
     _clear_cache(zc)
@@ -683,9 +683,9 @@ def test_multi_packet_known_answer_supression():
     assert unicast_out is None
     assert multicast_out is None
     # unregister
-    zc.registry.remove(info)
-    zc.registry.remove(info2)
-    zc.registry.remove(info3)
+    zc.registry.async_remove(info)
+    zc.registry.async_remove(info2)
+    zc.registry.async_remove(info3)
     zc.close()
 
 
@@ -699,7 +699,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info)
+    zc.registry.async_add(info)
 
     type_2 = "_otherknown2._tcp.local."
     name = "knownname"
@@ -709,7 +709,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     info2 = ServiceInfo(
         type_2, registration_name2, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info2)
+    zc.registry.async_add(info2)
     now = current_time_millis()
     _clear_cache(zc)
 
@@ -755,8 +755,8 @@ def test_known_answer_supression_service_type_enumeration_query():
     assert not multicast_out or not multicast_out.answers
 
     # unregister
-    zc.registry.remove(info)
-    zc.registry.remove(info2)
+    zc.registry.async_remove(info)
+    zc.registry.async_remove(info2)
     zc.close()
 
 
@@ -777,7 +777,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info)
+    zc.registry.async_add(info)
 
     type_2 = "_addtest2._tcp.local."
     name = "knownname"
@@ -787,7 +787,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     info2 = ServiceInfo(
         type_2, registration_name2, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
     )
-    zc.registry.add(info2)
+    zc.registry.async_add(info2)
 
     ptr_record = info.dns_pointer()
 
@@ -888,7 +888,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     assert info2.dns_service() in unicast_out.additionals
 
     # unregister
-    zc.registry.remove(info)
+    zc.registry.async_remove(info)
     await aiozc.async_close()
 
 

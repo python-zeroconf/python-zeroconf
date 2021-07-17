@@ -812,7 +812,7 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
         type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
 
-    zeroconf_info.registry.add(info)
+    zeroconf_info.registry.async_add(info)
 
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_info.async_send
