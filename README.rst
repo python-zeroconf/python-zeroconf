@@ -140,6 +140,21 @@ See examples directory for more.
 Changelog
 =========
 
+0.33.0 (Unreleased)
+===================
+
+This release eliminates all threading locks as all non-threadsafe operations
+now happen in the event loop.
+
+Technically backwards incompatible:
+
+* Remove duplicate unregister_all_services code (#910) @bdraco
+
+  Calling Zeroconf.close from same asyncio event loop zeroconf is running in
+  will now skip unregister_all_services and log a warning as this a blocking
+  operation and is not async safe and never has been.
+
+  Use AsyncZeroconf instead, or for legacy code call async_unregister_all_services before Zeroconf.close
 
 0.32.1
 ======
