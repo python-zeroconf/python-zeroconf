@@ -187,8 +187,7 @@ class TestServiceInfo(unittest.TestCase):
             ttl,
             b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
         )
-        expired_record.created = 1000
-        expired_record._expiration_time = 1000
+        expired_record.set_created_ttl(1000, 1)
         info.update_record(zc, now, expired_record)
         assert info.properties[b"ci"] == b"2"
         zc.close()
