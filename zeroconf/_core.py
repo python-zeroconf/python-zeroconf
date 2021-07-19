@@ -161,7 +161,7 @@ class AsyncEngine:
         await asyncio.sleep(0)  # flush out any call soons
         assert self._cleanup_timer is not None
         self._cleanup_timer.cancel()
-        await asyncio.gather(*(protocol.closed for protocol in self.protocols))
+        await asyncio.gather(*(protocol.closed for protocol in self.protocols if protocol.closed is not None))
         for s in self._respond_sockets:
             s.close()
 
@@ -193,11 +193,10 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
-        assert self.zc.loop is not None
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
-        self.closed: asyncio.Future[None] = self.zc.loop.create_future()
+        self.closed: Optional[asyncio.Future[None]] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
 
@@ -329,6 +328,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
+        assert self.zc.loop is not None
+        self.closed = self.zc.loop.create_future()
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost and set the closed future.
@@ -336,7 +337,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         This should only happen at shutdown.
         """
         assert self.transport is not None
-        self.closed.set_result(None)
+        if self.closed:
+            self.closed.set_result(None)
         if exc:
             log.debug(
                 "Lost connection with socket: %d: %s", self.transport.get_extra_info('socket').fileno(), exc
