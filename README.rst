@@ -146,9 +146,17 @@ Changelog
 This release eliminates all threading locks as all non-threadsafe operations
 now happen in the event loop.
 
+* Let connection_lost close the underlying socket (#918) @bdraco
+
+  The socket was closed during shutdown before asyncio's connection_lost
+  handler had a chance to close it which resulted in a traceback on
+  windows.
+
+  Fixed #917
+
 Technically backwards incompatible:
 
-* Remove duplicate unregister_all_services code (#910) @bdraco
+* Removed duplicate unregister_all_services code (#910) @bdraco
 
   Calling Zeroconf.close from same asyncio event loop zeroconf is running in
   will now skip unregister_all_services and log a warning as this a blocking
