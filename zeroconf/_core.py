@@ -193,6 +193,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
+
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
 
