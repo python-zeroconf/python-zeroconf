@@ -337,8 +337,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         This should only happen at shutdown.
         """
         assert self.transport is not None
-        if self.closed:
-            self.closed.set_result(None)
+        assert self.closed is not None
         if exc:
             log.debug(
                 "Lost connection with socket: %d: %s", self.transport.get_extra_info('socket').fileno(), exc
