@@ -161,13 +161,14 @@ class AsyncEngine:
         await asyncio.sleep(0)  # flush out any call soons
         assert self._cleanup_timer is not None
         self._cleanup_timer.cancel()
+        await asyncio.gather(*(protocol.closed for protocol in self.protocols))
+        for s in self._respond_sockets:
+            s.close()
 
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets."""
         for transport in itertools.chain(self.senders, self.readers):
             transport.close()
-        for s in self._respond_sockets:
-            s.close()
 
     def close(self) -> None:
         """Close from sync context."""
@@ -195,7 +196,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
-
+        self.closed: asyncio.Future[None] = self.zc.loop.create_future()
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
 
@@ -334,9 +335,11 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         This should only happen at shutdown.
         """
         assert self.transport is not None
-        log.debug(
-            "Lost connection with socket: %d: %s", self.transport.get_extra_info('socket').fileno(), exc
-        )
+        self.closed.set_result(None)
+        if exc:
+            log.debug(
+                "Lost connection with socket: %d: %s", self.transport.get_extra_info('socket').fileno(), exc
+            )
 
 
 class Zeroconf(QuietLogger):
