@@ -166,8 +166,6 @@ class AsyncEngine:
         """Shutdown transports and sockets."""
         for transport in itertools.chain(self.senders, self.readers):
             transport.close()
-        for s in self._respond_sockets:
-            s.close()
 
     def close(self) -> None:
         """Close from sync context."""
@@ -327,6 +325,9 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
+
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        """Handle connection lost."""
 
 
 class Zeroconf(QuietLogger):
