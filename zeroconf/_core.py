@@ -328,6 +328,16 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
 
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        """Log connection lost.
+
+        This should only happen at shutdown.
+        """
+        assert self.transport is not None
+        log.debug(
+            "Lost connection with socket: %d: %s", self.transport.get_extra_info('socket').fileno(), exc
+        )
+
 
 class Zeroconf(QuietLogger):
 
