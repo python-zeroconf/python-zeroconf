@@ -324,7 +324,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
-        assert self.zc.loop is not None
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost.
