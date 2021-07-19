@@ -192,6 +192,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     the read() method called when a socket is available for reading."""
 
     def __init__(self, zc: 'Zeroconf') -> None:
+        assert zc.loop is not None
         self.zc = zc
         self.data: Optional[bytes] = None
         self.last_time: float = 0
