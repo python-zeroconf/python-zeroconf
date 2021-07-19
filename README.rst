@@ -140,6 +140,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.33.1
+======
+
+* Version number change only with less restrictive directory permissions
+
+  Fixed #923
+
 0.33.0
 ======
 
