@@ -140,8 +140,8 @@ See examples directory for more.
 Changelog
 =========
 
-0.33.0 (Unreleased)
-===================
+0.33.0
+======
 
 This release eliminates all threading locks as all non-threadsafe operations
 now happen in the event loop.
