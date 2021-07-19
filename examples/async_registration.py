@@ -5,27 +5,32 @@ import argparse
 import asyncio
 import logging
 import socket
-import time
-from typing import List
+from typing import List, Optional
 
 from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
 
-async def register_services(infos: List[AsyncServiceInfo]) -> None:
-    tasks = [aiozc.async_register_service(info) for info in infos]
-    background_tasks = await asyncio.gather(*tasks)
-    await asyncio.gather(*background_tasks)
+class AsyncRunner:
+    def __init__(self, ip_version: IPVersion) -> None:
+        self.ip_version = ip_version
+        self.aiozc: Optional[AsyncZeroconf] = None
 
+    async def register_services(self, infos: List[AsyncServiceInfo]) -> None:
+        self.aiozc = AsyncZeroconf(ip_version=self.ip_version)
+        tasks = [self.aiozc.async_register_service(info) for info in infos]
+        background_tasks = await asyncio.gather(*tasks)
+        await asyncio.gather(*background_tasks)
+        print("Finished registration, press Ctrl-C to exit...")
+        while True:
+            await asyncio.sleep(1)
 
-async def unregister_services(infos: List[AsyncServiceInfo]) -> None:
-    tasks = [aiozc.async_unregister_service(info) for info in infos]
-    background_tasks = await asyncio.gather(*tasks)
-    await asyncio.gather(*background_tasks)
-
-
-async def close_aiozc(aiozc: AsyncZeroconf) -> None:
-    await aiozc.async_close()
+    async def unregister_services(self, infos: List[AsyncServiceInfo]) -> None:
+        assert self.aiozc is not None
+        tasks = [self.aiozc.async_unregister_service(info) for info in infos]
+        background_tasks = await asyncio.gather(*tasks)
+        await asyncio.gather(*background_tasks)
+        await self.aiozc.async_close()
 
 
 if __name__ == '__main__':
@@ -60,18 +65,10 @@ if __name__ == '__main__':
             )
         )
 
-    print("Registration of 250 services, press Ctrl-C to exit...")
-    aiozc = AsyncZeroconf(ip_version=ip_version)
+    print("Registration of 250 services...")
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(register_services(infos))
-    print("Registration complete.")
+    runner = AsyncRunner(ip_version)
     try:
-        while True:
-            time.sleep(0.1)
+        loop.run_until_complete(runner.register_services(infos))
     except KeyboardInterrupt:
-        pass
-    finally:
-        print("Unregistering...")
-        loop.run_until_complete(unregister_services(infos))
-        print("Unregistration complete.")
-        loop.run_until_complete(close_aiozc(aiozc))
+        loop.run_until_complete(runner.unregister_services(infos))
