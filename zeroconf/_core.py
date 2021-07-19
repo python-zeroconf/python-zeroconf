@@ -331,7 +331,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.transport = cast(asyncio.DatagramTransport, transport)
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
-        """Log connection lost.
+        """Handle connection lost and set the closed future.
 
         This should only happen at shutdown.
         """
