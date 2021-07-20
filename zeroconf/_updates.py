@@ -27,8 +27,7 @@ from ._dns import DNSRecord
 
 
 if TYPE_CHECKING:
-    # https://github.com/PyCQA/pylint/issues/3525
-    from ._core import Zeroconf  # pylint: disable=cyclic-import
+    from ._core import Zeroconf
 
 
 class RecordUpdate(NamedTuple):

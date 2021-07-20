@@ -51,8 +51,7 @@ from .const import (
 
 
 if TYPE_CHECKING:
-    # https://github.com/PyCQA/pylint/issues/3525
-    from ._cache import DNSCache  # pylint: disable=cyclic-import
+    from ._cache import DNSCache
 
 
 class DNSMessage:
