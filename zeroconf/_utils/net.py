@@ -211,7 +211,7 @@ def set_mdns_port_socket_options_for_ip_version(
         s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
 
 
-def new_socket(  # pylint: disable=too-many-branches
+def new_socket(
     bind_addr: Union[Tuple[str], Tuple[str, int, int]],
     port: int = _MDNS_PORT,
     ip_version: IPVersion = IPVersion.V4Only,

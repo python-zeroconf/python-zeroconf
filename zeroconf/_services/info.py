@@ -53,8 +53,7 @@ from ..const import (
 
 
 if TYPE_CHECKING:
-    # https://github.com/PyCQA/pylint/issues/3525
-    from .._core import Zeroconf  # pylint: disable=cyclic-import
+    from .._core import Zeroconf
 
 
 def instance_name_from_service_info(info: "ServiceInfo") -> str:

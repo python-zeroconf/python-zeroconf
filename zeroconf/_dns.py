@@ -48,8 +48,7 @@ _RECENT_TIME_MS = 250
 
 
 if TYPE_CHECKING:
-    # https://github.com/PyCQA/pylint/issues/3525
-    from ._protocol import DNSIncoming, DNSOutgoing  # pylint: disable=cyclic-import
+    from ._protocol import DNSIncoming, DNSOutgoing
 
 
 @enum.unique

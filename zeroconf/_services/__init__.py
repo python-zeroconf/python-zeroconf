@@ -25,8 +25,7 @@ from typing import Any, Callable, List, TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    # https://github.com/PyCQA/pylint/issues/3525
-    from .._core import Zeroconf  # pylint: disable=cyclic-import
+    from .._core import Zeroconf
 
 
 @enum.unique
