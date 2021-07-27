@@ -331,7 +331,7 @@ class RecordManager:
         updates: List[RecordUpdate] = []
         address_adds: List[DNSAddress] = []
         other_adds: List[DNSRecord] = []
-        removes: List[DNSRecord] = []
+        removes: Set[DNSRecord] = set()
         now = msg.now
         unique_types: Set[Tuple[str, int, int]] = set()
 
@@ -355,7 +355,7 @@ class RecordManager:
             # expired and exists in the cache
             elif maybe_entry is not None:
                 updates.append(RecordUpdate(record, maybe_entry))
-                removes.append(record)
+                removes.add(record)
 
         if unique_types:
             self._async_mark_unique_cached_records_older_than_1s_to_expire(unique_types, msg.answers, now)
