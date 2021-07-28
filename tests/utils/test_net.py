@@ -182,6 +182,14 @@ def test_add_multicast_member():
     with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
         assert netutils.add_multicast_member(sock, interface) is False
 
+    # ENODEV should raise for ipv4
+    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
+        netutils.add_multicast_member(sock, interface) is False
+
+    # ENODEV should return False for ipv6
+    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
+        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False
+
     # No error should return True
     with patch("socket.socket.setsockopt"):
         assert netutils.add_multicast_member(sock, interface) is True

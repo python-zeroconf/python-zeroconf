@@ -291,6 +291,13 @@ def add_multicast_member(
                 interface,
             )
             return False
+        if is_v6 and _errno == errno.ENODEV:
+            log.info(
+                'Address in use when adding %s to multicast group, '
+                'it is expected to happen when the device does not have ipv6',
+                interface,
+            )
+            return False
         raise
     return True
 
