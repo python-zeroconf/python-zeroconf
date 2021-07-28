@@ -140,6 +140,18 @@ See examples directory for more.
 Changelog
 =========
 
+0.33.2
+======
+
+* Handle duplicate goodbye answers in the same packet (#928) @bdraco
+
+  Solves an exception being thrown when we tried to remove the known answer
+  from the cache when the second goodbye answer in the same packet was processed
+
+  Fixed #926
+
+* Skip ipv6 interfaces that return ENODEV (#930) @bdraco
+
 0.33.1
 ======
 
