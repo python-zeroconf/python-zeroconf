@@ -1125,8 +1125,8 @@ async def test_guard_against_low_ptr_ttl():
 
 
 @pytest.mark.asyncio
-async def test_duplicate_answers_in_packet():
-    """Ensure we do not throw an exception when there are duplicate records in a packet."""
+async def test_duplicate_goodbye_answers_in_packet():
+    """Ensure we do not throw an exception when there are duplicate goodbye records in a packet."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     zc = aiozc.zeroconf
     answer_with_normal_ttl = r.DNSPointer(
@@ -1134,12 +1134,23 @@ async def test_duplicate_answers_in_packet():
         const._TYPE_PTR,
         const._CLASS_IN | const._CLASS_UNIQUE,
         const._DNS_OTHER_TTL,
-        'normal.local.',
+        'host.local.',
+    )
+    good_bye_answer = r.DNSPointer(
+        "myservicelow_tcp._tcp.local.",
+        const._TYPE_PTR,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        0,
+        'host.local.',
     )
     response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     response.add_answer_at_time(answer_with_normal_ttl, 0)
-    response.add_answer_at_time(answer_with_normal_ttl, 0)
-    response.add_answer_at_time(answer_with_normal_ttl, 0)
+    incoming = r.DNSIncoming(response.packets()[0])
+    zc.record_manager.async_updates_from_response(incoming)
+
+    response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    response.add_answer_at_time(good_bye_answer, 0)
+    response.add_answer_at_time(good_bye_answer, 0)
     incoming = r.DNSIncoming(response.packets()[0])
     zc.record_manager.async_updates_from_response(incoming)
     await aiozc.async_close()
