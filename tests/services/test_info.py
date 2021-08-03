@@ -192,6 +192,8 @@ class TestServiceInfo(unittest.TestCase):
         assert info.properties[b"ci"] == b"2"
         zc.close()
 
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_get_info_partial(self):
 
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
@@ -576,6 +578,8 @@ async def test_multiple_a_addresses():
     await aiozc.async_close()
 
 
+@unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+@unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
 def test_filter_address_by_type_from_service_info():
     """Verify dns_addresses can filter by ipversion."""
     desc = {'path': '/~paulsm/'}

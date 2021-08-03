@@ -4,6 +4,7 @@
 """ Unit tests for zeroconf._dns. """
 
 import logging
+import os
 import socket
 import time
 import unittest
@@ -17,6 +18,8 @@ from zeroconf import (
     DNSText,
     ServiceInfo,
 )
+
+from . import has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -52,6 +55,8 @@ class TestDunder(unittest.TestCase):
         pointer = r.DNSPointer('irrelevant', const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, '123')
         repr(pointer)
 
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_dns_address_repr(self):
         address = r.DNSAddress('irrelevant', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
         assert repr(address).endswith("b'a'")

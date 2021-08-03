@@ -5,6 +5,7 @@
 
 import copy
 import logging
+import os
 import socket
 import struct
 import unittest
@@ -17,6 +18,8 @@ from zeroconf import (
     DNSHinfo,
     DNSText,
 )
+
+from . import has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -468,6 +471,8 @@ class TestDnsIncoming(unittest.TestCase):
             )
         ).valid
 
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_incoming_ipv6(self):
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
         packed = socket.inet_pton(socket.AF_INET6, addr)
