@@ -763,6 +763,27 @@ def test_records_same_packet_share_fate():
             assert answer.created == first_time
 
 
+def test_dns_compression_invalid_skips_bad_name_compress_in_question():
+    """Test our wire parser can skip bad compression in questions."""
+    packet = (
+        b'\x00\x00\x00\x00\x00\x04\x00\x00\x00\x07\x00\x00\x11homeassistant1128\x05l'
+        b'ocal\x00\x00\xff\x00\x014homeassistant1128 [534a4794e5ed41879ecf012252d3e02'
+        b'a]\x0c_workstation\x04_tcp\xc0\x1e\x00\xff\x00\x014homeassistant1127 [534a47'
+        b'94e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1123 [534a479'
+        b'4e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1118 [534a4794'
+        b'e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x01\xc0\x0c\x00\x01\x80'
+        b'\x01\x00\x00\x00x\x00\x04\xc0\xa8<\xc3\xc0v\x00\x10\x80\x01\x00\x00\x00'
+        b'x\x00\x01\x00\xc0v\x00!\x80\x01\x00\x00\x00x\x00\x1f\x00\x00\x00\x00'
+        b'\x00\x00\x11homeassistant1127\x05local\x00\xc0\xb1\x00\x10\x80'
+        b'\x01\x00\x00\x00x\x00\x01\x00\xc0\xb1\x00!\x80\x01\x00\x00\x00x\x00\x1f'
+        b'\x00\x00\x00\x00\x00\x00\x11homeassistant1123\x05local\x00\xc0)\x00\x10\x80'
+        b'\x01\x00\x00\x00x\x00\x01\x00\xc0)\x00!\x80\x01\x00\x00\x00x\x00\x1f'
+        b'\x00\x00\x00\x00\x00\x00\x11homeassistant1128\x05local\x00'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.questions) == 4
+
+
 def test_dns_compression_invalid_skips_record():
     """Test our wire parser can skip records we do not know how to parse."""
     packet = (
