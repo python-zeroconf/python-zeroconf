@@ -48,7 +48,7 @@ _MDNS_ADDR6 = 'ff02::fb'
 try:
     _MDNS_ADDR6_BYTES = socket.inet_pton(socket.AF_INET6, _MDNS_ADDR6)
 except OSError:  # can't use AF_INET6, IPv6 is disabled
-    _MDNS_ADDR6_BYTES = b'\xff\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xfb'
+    _MDNS_ADDR6_BYTES = None
 _MDNS_PORT = 5353
 _DNS_PORT = 53
 _DNS_HOST_TTL = 120  # two minute for host records (A, SRV etc) as-per RFC6762
