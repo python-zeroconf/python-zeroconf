@@ -82,7 +82,6 @@ class DNSMessage:
         return (self.flags & _FLAGS_TC) == _FLAGS_TC
 
 
-
 class DNSIncoming(DNSMessage, QuietLogger):
 
     """Object representation of an incoming DNS packet"""
