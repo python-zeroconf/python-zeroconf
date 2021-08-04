@@ -632,6 +632,10 @@ def test_dns_compression_rollback_for_corruption():
         # ensure there is no corruption with the dns compression
         incoming = r.DNSIncoming(packet)
         assert incoming.valid is True
+        assert (
+            len(incoming.answers)
+            == incoming.num_answers + incoming.num_authorities + incoming.num_additionals
+        )
 
 
 def test_tc_bit_in_query_packet():
