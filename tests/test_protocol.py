@@ -795,6 +795,21 @@ def test_dns_compression_all_invalid():
     assert len(parsed.answers) == 0
 
 
+def test_invalid_next_name_ignored():
+    """Test our wire parser does not throw an an invalid next name.
+
+    The RFC states it should be ignored when used with mDNS.
+    """
+    packet = (
+        b'\x00\x00\x00\x00\x00\x01\x00\x02\x00\x00\x00\x00\x07Android\x05local\x00\x00'
+        b'\xff\x00\x01\xc0\x0c\x00/\x00\x01\x00\x00\x00x\x00\x08\xc02\x00\x04@'
+        b'\x00\x00\x08\xc0\x0c\x00\x01\x00\x01\x00\x00\x00x\x00\x04\xc0\xa8X<'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.questions) == 1
+    assert len(parsed.answers) == 2
+
+
 def test_dns_compression_invalid_skips_record():
     """Test our wire parser can skip records we do not know how to parse."""
     packet = (
