@@ -82,64 +82,6 @@ class DNSMessage:
         return (self.flags & _FLAGS_TC) == _FLAGS_TC
 
 
-class DnsNameReader:
-    """Read dns domain names from a packet."""
-
-    def __init__(self, packet: bytes) -> None:
-        """Init the record with the packet."""
-        self.packet = packet
-        self.packet_len = len(packet)
-        self.name_cache: Dict[int, List[str]] = {}
-        self.seen: Set[int] = set()
-
-    def read_name_at_offset(self, offset: int) -> Tuple[int, str]:
-        """Read a dns domain name at an offset in the packet."""
-        labels: List[str] = []
-        self.seen.clear()
-        new_offset = self._decode_labels_at_offset(offset, labels)
-        labels.append("")
-        name = ".".join(labels)
-        if len(name) > MAX_NAME_LENGTH:
-            raise IncomingDecodeError(f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH}")
-        return new_offset, name
-
-    def _decode_labels_at_offset(self, off: int, labels: List[str]) -> int:
-        # This is a tight loop that is called frequently, small optimizations can make a difference.
-        while off < self.packet_len:
-            length = self.packet[off]
-            if length == 0:
-                return off + DNS_COMPRESSION_HEADER_LEN
-
-            if length < 0x40:
-                label_idx = off + DNS_COMPRESSION_HEADER_LEN
-                labels.append(str(self.packet[label_idx : label_idx + length], 'utf-8', 'replace'))
-                off += DNS_COMPRESSION_HEADER_LEN + length
-                continue
-
-            if length < 0xC0:
-                raise IncomingDecodeError(f"DNS compression type {length} is unknown")
-
-            # We have a DNS compression pointer
-            link = (length & 0x3F) * 256 + self.packet[off + 1]
-            if link > self.packet_len:
-                raise IncomingDecodeError(f"DNS compression pointer at {off} points to {link} beyond packet")
-            if link == off:
-                raise IncomingDecodeError(f"DNS compression pointer at {off} points to itself")
-            if link in self.seen:
-                raise IncomingDecodeError(f"DNS compression pointer at {off} was seen again")
-            self.seen.add(link)
-            linked_labels = self.name_cache.get(link, [])
-            if not linked_labels:
-                self._decode_labels_at_offset(link, linked_labels)
-                self.name_cache[link] = linked_labels
-            labels.extend(linked_labels)
-            if len(labels) > MAX_DNS_LABELS:
-                raise IncomingDecodeError(f"Maximum dns labels reached while processing pointer at {off}")
-
-            return off + DNS_COMPRESSION_POINTER_LEN
-
-        raise IncomingDecodeError("Corrupt packet received while decoding name")
-
 
 class DNSIncoming(DNSMessage, QuietLogger):
 
@@ -150,6 +92,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
         super().__init__(0)
         self.offset = 0
         self.data = data
+        self.data_len = len(data)
+        self.name_cache: Dict[int, List[str]] = {}
+        self.seen_pointers: Set[int] = set()
         self.questions: List[DNSQuestion] = []
         self.answers: List[DNSRecord] = []
         self.id = 0
@@ -160,7 +105,6 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.valid = False
         self.now = now or current_time_millis()
         self.scope_id = scope_id
-        self.dnsname_reader = DnsNameReader(data)
 
         try:
             self.read_header()
@@ -319,8 +263,50 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
     def read_name(self) -> str:
         """Reads a domain name from the packet"""
-        self.offset, name = self.dnsname_reader.read_name_at_offset(self.offset)
+        labels: List[str] = []
+        self.seen_pointers.clear()
+        self.offset = self._decode_labels_at_offset(self.offset, labels)
+        labels.append("")
+        name = ".".join(labels)
+        if len(name) > MAX_NAME_LENGTH:
+            raise IncomingDecodeError(f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH}")
         return name
+
+    def _decode_labels_at_offset(self, off: int, labels: List[str]) -> int:
+        # This is a tight loop that is called frequently, small optimizations can make a difference.
+        while off < self.data_len:
+            length = self.data[off]
+            if length == 0:
+                return off + DNS_COMPRESSION_HEADER_LEN
+
+            if length < 0x40:
+                label_idx = off + DNS_COMPRESSION_HEADER_LEN
+                labels.append(str(self.data[label_idx : label_idx + length], 'utf-8', 'replace'))
+                off += DNS_COMPRESSION_HEADER_LEN + length
+                continue
+
+            if length < 0xC0:
+                raise IncomingDecodeError(f"DNS compression type {length} is unknown")
+
+            # We have a DNS compression pointer
+            link = (length & 0x3F) * 256 + self.data[off + 1]
+            if link > self.data_len:
+                raise IncomingDecodeError(f"DNS compression pointer at {off} points to {link} beyond packet")
+            if link == off:
+                raise IncomingDecodeError(f"DNS compression pointer at {off} points to itself")
+            if link in self.seen_pointers:
+                raise IncomingDecodeError(f"DNS compression pointer at {off} was seen again")
+            self.seen_pointers.add(link)
+            linked_labels = self.name_cache.get(link, [])
+            if not linked_labels:
+                self._decode_labels_at_offset(link, linked_labels)
+                self.name_cache[link] = linked_labels
+            labels.extend(linked_labels)
+            if len(labels) > MAX_DNS_LABELS:
+                raise IncomingDecodeError(f"Maximum dns labels reached while processing pointer at {off}")
+            return off + DNS_COMPRESSION_POINTER_LEN
+
+        raise IncomingDecodeError("Corrupt packet received while decoding name")
 
 
 class DNSOutgoing(DNSMessage):
