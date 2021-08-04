@@ -262,7 +262,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         return rdtypes
 
     def read_name(self) -> str:
-        """Reads a domain name from the packet"""
+        """Reads a domain name from the packet."""
         labels: List[str] = []
         self.seen_pointers.clear()
         self.offset = self._decode_labels_at_offset(self.offset, labels)
@@ -286,7 +286,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 continue
 
             if length < 0xC0:
-                raise IncomingDecodeError(f"DNS compression type {length} is unknown")
+                raise IncomingDecodeError(f"DNS compression type {length} is unknown at {off}")
 
             # We have a DNS compression pointer
             link = (length & 0x3F) * 256 + self.data[off + 1]

@@ -959,3 +959,31 @@ def test_dns_compression_loop_attack():
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.answers) == 0
+
+
+def test_txt_after_invalid_nsec_name_still_usable():
+    """Test that we can see the txt record after the invalid nsec record."""
+    packet = (
+        b'\x00\x00\x84\x00\x00\x00\x00\x06\x00\x00\x00\x00\x06_sonos\x04_tcp\x05loc'
+        b'al\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x15\x12Sonos-542A1BC9220E'
+        b'\xc0\x0c\x12Sonos-542A1BC9220E\xc0\x18\x00/\x80\x01\x00\x00\x00x\x00'
+        b'\x08\xc1t\x00\x04@\x00\x00\x08\xc0)\x00/\x80\x01\x00\x00\x11\x94\x00'
+        b'\t\xc0)\x00\x05\x00\x00\x80\x00@\xc0)\x00!\x80\x01\x00\x00\x00x'
+        b'\x00\x08\x00\x00\x00\x00\x05\xa3\xc0>\xc0>\x00\x01\x80\x01\x00\x00\x00x'
+        b'\x00\x04\xc0\xa8\x02:\xc0)\x00\x10\x80\x01\x00\x00\x11\x94\x01*2info=/api'
+        b'/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers=1.24.1\nbo'
+        b'otseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn9K9DLXJe0f3LP9'
+        b'747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:1400/xml/device_'
+        b'description.xml\x0csslport=1443\x0ehhsslport=1843\tvariant=2\x0emdnssequen'
+        b'ce=0'
+    )
+    parsed = r.DNSIncoming(packet)
+    # The NSEC record with the invalid name compression should be skipped
+    assert parsed.answers[4].text == (
+        b'2info=/api/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers'
+        b'=1.24.1\nbootseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn'
+        b'9K9DLXJe0f3LP9747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:14'
+        b'00/xml/device_description.xml\x0csslport=1443\x0ehhsslport=1843\tvarian'
+        b't=2\x0emdnssequence=0'
+    )
+    assert len(parsed.answers) == 5
