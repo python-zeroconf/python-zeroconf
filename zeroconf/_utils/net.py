@@ -260,6 +260,12 @@ def add_multicast_member(
     try:
         if is_v6:
             iface_bin = struct.pack('@I', cast(int, interface[1]))
+            if _MDNS_ADDR6_BYTES is None:
+                log.info(
+                    'Failed to add %s to multicast group, system has no IPv6 support',
+                    interface,
+                )
+                return False
             _value = _MDNS_ADDR6_BYTES + iface_bin
             listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, _value)
         else:

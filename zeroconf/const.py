@@ -22,6 +22,7 @@
 
 import re
 import socket
+from typing import Union
 
 # Some timing constants
 
@@ -46,7 +47,7 @@ _MDNS_ADDR = '224.0.0.251'
 _MDNS_ADDR_BYTES = socket.inet_aton(_MDNS_ADDR)
 _MDNS_ADDR6 = 'ff02::fb'
 try:
-    _MDNS_ADDR6_BYTES = socket.inet_pton(socket.AF_INET6, _MDNS_ADDR6)
+    _MDNS_ADDR6_BYTES = socket.inet_pton(socket.AF_INET6, _MDNS_ADDR6)  # type: Union[bytes, None]
 except OSError:  # can't use AF_INET6, IPv6 is disabled
     _MDNS_ADDR6_BYTES = None
 _MDNS_PORT = 5353
