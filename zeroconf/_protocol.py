@@ -178,6 +178,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
             domain = self.read_name()
             type_, class_, ttl, length = self.unpack(b'!HHiH')
             end = self.offset + length
+            rec = None
             try:
                 rec = self.read_record(domain, type_, class_, ttl, length)
             except DECODE_EXCEPTIONS:

@@ -784,6 +784,17 @@ def test_dns_compression_invalid_skips_bad_name_compress_in_question():
     assert len(parsed.questions) == 4
 
 
+def test_dns_compression_all_invalid():
+    """Test our wire parser can skip all invalid data."""
+    packet = (
+        b'\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00!roborock-vacuum-s5e_miio416'
+        b'112328\x00\x00/\x80\x01\x00\x00\x00x\x00\t\xc0P\x00\x05@\x00\x00\x00\x00'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.questions) == 0
+    assert len(parsed.answers) == 0
+
+
 def test_dns_compression_invalid_skips_record():
     """Test our wire parser can skip records we do not know how to parse."""
     packet = (
