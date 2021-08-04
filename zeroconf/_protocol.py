@@ -197,7 +197,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 self.answers.append(rec)
 
     def read_record(self, domain: str, type_: int, class_: int, ttl: int, length: int) -> Optional[DNSRecord]:
-        """Read known records types."""
+        """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
             return DNSAddress(domain, type_, class_, ttl, self.read_string(4), created=self.now)
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
