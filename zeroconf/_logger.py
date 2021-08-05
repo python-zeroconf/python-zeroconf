@@ -23,6 +23,7 @@
 import logging
 import sys
 from typing import Any, Dict, Union, cast
+from types import TracebackType
 
 log = logging.getLogger(__name__.split('.', maxsplit=1)[0])
 log.addHandler(logging.NullHandler())
@@ -63,7 +64,7 @@ class QuietLogger:
         logger(*args)
 
     @classmethod
-    def log_exception_once(cls, exc_info, *args: Any) -> None:
+    def log_exception_once(cls, exc_info: TracebackType, *args: Any) -> None:
         msg_str = args[0]
         if msg_str not in cls._seen_logs:
             cls._seen_logs[msg_str] = 0

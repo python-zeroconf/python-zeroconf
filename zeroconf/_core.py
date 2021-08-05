@@ -319,13 +319,13 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     @property
     def _socket_description(self) -> str:
         """A human readable description of the socket."""
+        assert self.transport is not None
         fileno = self.transport.get_extra_info('socket').fileno()
         sockname = self.transport.get_extra_info('sockname')
         return f"{fileno} ({sockname})"
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
-        assert self.transport is not None
         # We preformat the message string with the socket as we want
         # log_exception_once to log a warrning message once PER EACH
         # different socket in case there are problems with multiple
