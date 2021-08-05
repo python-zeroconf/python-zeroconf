@@ -22,7 +22,6 @@
 
 import logging
 import sys
-from types import TracebackType
 from typing import Any, Dict, Union, cast
 
 log = logging.getLogger(__name__.split('.', maxsplit=1)[0])
