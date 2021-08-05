@@ -321,7 +321,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         """A human readable description of the socket."""
         fileno = self.transport.get_extra_info('socket').fileno()
         sockname = self.transport.get_extra_info('sockname')
-        return f"{fileno} ({sockname}"
+        return f"{fileno} ({sockname})"
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
