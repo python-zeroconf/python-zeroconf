@@ -140,6 +140,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.33.3
+======
+
+* Added support for forward dns compression pointers (#934) @bdraco
+
+* Provide sockname when logging a protocol error (#935) @bdraco
+
 0.33.2
 ======
 
