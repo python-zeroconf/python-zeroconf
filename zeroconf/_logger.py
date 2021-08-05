@@ -64,7 +64,7 @@ class QuietLogger:
         logger(*args)
 
     @classmethod
-    def log_exception_once(cls, exc_info: TracebackType, *args: Any) -> None:
+    def log_exception_once(cls, exc: Exception, *args: Any) -> None:
         msg_str = args[0]
         if msg_str not in cls._seen_logs:
             cls._seen_logs[msg_str] = 0
@@ -72,4 +72,4 @@ class QuietLogger:
         else:
             logger = log.debug
         cls._seen_logs[msg_str] = cast(int, cls._seen_logs[msg_str]) + 1
-        logger(*args, exc_info=exc_info)
+        logger(*args, exc_info=exc)
