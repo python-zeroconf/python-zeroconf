@@ -632,6 +632,10 @@ def test_dns_compression_rollback_for_corruption():
         # ensure there is no corruption with the dns compression
         incoming = r.DNSIncoming(packet)
         assert incoming.valid is True
+        assert (
+            len(incoming.answers)
+            == incoming.num_answers + incoming.num_authorities + incoming.num_additionals
+        )
 
 
 def test_tc_bit_in_query_packet():
@@ -761,3 +765,225 @@ def test_records_same_packet_share_fate():
         first_time = dnsin.answers[0].created
         for answer in dnsin.answers:
             assert answer.created == first_time
+
+
+def test_dns_compression_invalid_skips_bad_name_compress_in_question():
+    """Test our wire parser can skip bad compression in questions."""
+    packet = (
+        b'\x00\x00\x00\x00\x00\x04\x00\x00\x00\x07\x00\x00\x11homeassistant1128\x05l'
+        b'ocal\x00\x00\xff\x00\x014homeassistant1128 [534a4794e5ed41879ecf012252d3e02'
+        b'a]\x0c_workstation\x04_tcp\xc0\x1e\x00\xff\x00\x014homeassistant1127 [534a47'
+        b'94e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1123 [534a479'
+        b'4e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1118 [534a4794'
+        b'e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x01\xc0\x0c\x00\x01\x80'
+        b'\x01\x00\x00\x00x\x00\x04\xc0\xa8<\xc3\xc0v\x00\x10\x80\x01\x00\x00\x00'
+        b'x\x00\x01\x00\xc0v\x00!\x80\x01\x00\x00\x00x\x00\x1f\x00\x00\x00\x00'
+        b'\x00\x00\x11homeassistant1127\x05local\x00\xc0\xb1\x00\x10\x80'
+        b'\x01\x00\x00\x00x\x00\x01\x00\xc0\xb1\x00!\x80\x01\x00\x00\x00x\x00\x1f'
+        b'\x00\x00\x00\x00\x00\x00\x11homeassistant1123\x05local\x00\xc0)\x00\x10\x80'
+        b'\x01\x00\x00\x00x\x00\x01\x00\xc0)\x00!\x80\x01\x00\x00\x00x\x00\x1f'
+        b'\x00\x00\x00\x00\x00\x00\x11homeassistant1128\x05local\x00'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.questions) == 4
+
+
+def test_dns_compression_all_invalid():
+    """Test our wire parser can skip all invalid data."""
+    packet = (
+        b'\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00!roborock-vacuum-s5e_miio416'
+        b'112328\x00\x00/\x80\x01\x00\x00\x00x\x00\t\xc0P\x00\x05@\x00\x00\x00\x00'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.questions) == 0
+    assert len(parsed.answers) == 0
+
+
+def test_invalid_next_name_ignored():
+    """Test our wire parser does not throw an an invalid next name.
+
+    The RFC states it should be ignored when used with mDNS.
+    """
+    packet = (
+        b'\x00\x00\x00\x00\x00\x01\x00\x02\x00\x00\x00\x00\x07Android\x05local\x00\x00'
+        b'\xff\x00\x01\xc0\x0c\x00/\x00\x01\x00\x00\x00x\x00\x08\xc02\x00\x04@'
+        b'\x00\x00\x08\xc0\x0c\x00\x01\x00\x01\x00\x00\x00x\x00\x04\xc0\xa8X<'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.questions) == 1
+    assert len(parsed.answers) == 2
+
+
+def test_dns_compression_invalid_skips_record():
+    """Test our wire parser can skip records we do not know how to parse."""
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x06\x00\x00\x00\x00\x04_hap\x04_tcp\x05local\x00\x00\x0c"
+        b"\x00\x01\x00\x00\x11\x94\x00\x16\x13eufy HomeBase2-2464\xc0\x0c\x04Eufy\xc0\x16\x00/"
+        b"\x80\x01\x00\x00\x00x\x00\x08\xc0\xa6\x00\x04@\x00\x00\x08\xc0'\x00/\x80\x01\x00\x00"
+        b"\x11\x94\x00\t\xc0'\x00\x05\x00\x00\x80\x00@\xc0=\x00\x01\x80\x01\x00\x00\x00x\x00\x04"
+        b"\xc0\xa8Dp\xc0'\x00!\x80\x01\x00\x00\x00x\x00\x08\x00\x00\x00\x00\xd1_\xc0=\xc0'\x00"
+        b"\x10\x80\x01\x00\x00\x11\x94\x00K\x04c#=1\x04ff=2\x14id=38:71:4F:6B:76:00\x08md=T8010"
+        b"\x06pv=1.1\x05s#=75\x04sf=1\x04ci=2\x0bsh=xaQk4g=="
+    )
+    parsed = r.DNSIncoming(packet)
+    answer = r.DNSNsec(
+        'eufy HomeBase2-2464._hap._tcp.local.',
+        const._TYPE_NSEC,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        const._DNS_OTHER_TTL,
+        'eufy HomeBase2-2464._hap._tcp.local.',
+        [const._TYPE_TXT, const._TYPE_SRV],
+    )
+    assert answer in parsed.answers
+
+
+def test_dns_compression_points_forward():
+    """Test our wire parser can unpack nsec records with compression."""
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x07\x00\x00\x00\x00\x0eTV Beneden (2)"
+        b"\x10_androidtvremote\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x11"
+        b"\x94\x00\x15\x14bt=D8:13:99:AC:98:F1\xc0\x0c\x00/\x80\x01\x00\x00\x11"
+        b"\x94\x00\t\xc0\x0c\x00\x05\x00\x00\x80\x00@\tAndroid-3\xc01\x00/\x80"
+        b"\x01\x00\x00\x00x\x00\x08\xc0\x9c\x00\x04@\x00\x00\x08\xc0l\x00\x01\x80"
+        b"\x01\x00\x00\x00x\x00\x04\xc0\xa8X\x0f\xc0\x0c\x00!\x80\x01\x00\x00\x00"
+        b"x\x00\x08\x00\x00\x00\x00\x19B\xc0l\xc0\x1b\x00\x0c\x00\x01\x00\x00\x11"
+        b"\x94\x00\x02\xc0\x0c\t_services\x07_dns-sd\x04_udp\xc01\x00\x0c\x00\x01"
+        b"\x00\x00\x11\x94\x00\x02\xc0\x1b"
+    )
+    parsed = r.DNSIncoming(packet)
+    answer = r.DNSNsec(
+        'TV Beneden (2)._androidtvremote._tcp.local.',
+        const._TYPE_NSEC,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        const._DNS_OTHER_TTL,
+        'TV Beneden (2)._androidtvremote._tcp.local.',
+        [const._TYPE_TXT, const._TYPE_SRV],
+    )
+    assert answer in parsed.answers
+
+
+def test_dns_compression_points_to_itself():
+    """Test our wire parser does not loop forever when a compression pointer points to itself."""
+    packet = (
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01"
+        b"\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\xc0(\x00\x01\x80\x01\x00\x00\x00"
+        b"\x01\x00\x04\xc0\xa8\xd0\x06"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.answers) == 1
+
+
+def test_dns_compression_points_beyond_packet():
+    """Test our wire parser does not fail when the compression pointer points beyond the packet."""
+    packet = (
+        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01'
+        b'\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\xe7\x0f\x00\x01\x80\x01\x00\x00'
+        b'\x00\x01\x00\x04\xc0\xa8\xd0\x06'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.answers) == 1
+
+
+def test_dns_compression_generic_failure():
+    """Test our wire parser does not loop forever when dns compression is corrupt."""
+    packet = (
+        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01'
+        b'\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05-\x0c\x00\x01\x80\x01\x00\x00'
+        b'\x00\x01\x00\x04\xc0\xa8\xd0\x06'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.answers) == 1
+
+
+def test_label_length_attack():
+    """Test our wire parser does not loop forever when the name exceeds 253 chars."""
+    packet = (
+        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
+        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x00\x00\x01\x80'
+        b'\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\xc0\x0c\x00\x01\x80\x01\x00\x00\x00'
+        b'\x01\x00\x04\xc0\xa8\xd0\x06'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.answers) == 0
+
+
+def test_label_compression_attack():
+    """Test our wire parser does not loop forever when exceeding the maximum number of labels."""
+    packet = (
+        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x03atk\x00\x00\x01\x80'
+        b'\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
+        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\xc0'
+        b'\x0c\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x06'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.answers) == 1
+
+
+def test_dns_compression_loop_attack():
+    """Test our wire parser does not loop forever when dns compression is in a loop."""
+    packet = (
+        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07\x03atk\x03dns\x05loc'
+        b'al\xc0\x10\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\x04a'
+        b'tk2\x04dns2\xc0\x14\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05'
+        b'\x04atk3\xc0\x10\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0'
+        b'\x05\x04atk4\x04dns5\xc0\x14\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0'
+        b'\xa8\xd0\x05\x04atk5\x04dns2\xc0^\x00\x01\x80\x01\x00\x00\x00\x01\x00'
+        b'\x04\xc0\xa8\xd0\x05\xc0s\x00\x01\x80\x01\x00\x00\x00\x01\x00'
+        b'\x04\xc0\xa8\xd0\x05\xc0s\x00\x01\x80\x01\x00\x00\x00\x01\x00'
+        b'\x04\xc0\xa8\xd0\x05'
+    )
+    parsed = r.DNSIncoming(packet)
+    assert len(parsed.answers) == 0
+
+
+def test_txt_after_invalid_nsec_name_still_usable():
+    """Test that we can see the txt record after the invalid nsec record."""
+    packet = (
+        b'\x00\x00\x84\x00\x00\x00\x00\x06\x00\x00\x00\x00\x06_sonos\x04_tcp\x05loc'
+        b'al\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x15\x12Sonos-542A1BC9220E'
+        b'\xc0\x0c\x12Sonos-542A1BC9220E\xc0\x18\x00/\x80\x01\x00\x00\x00x\x00'
+        b'\x08\xc1t\x00\x04@\x00\x00\x08\xc0)\x00/\x80\x01\x00\x00\x11\x94\x00'
+        b'\t\xc0)\x00\x05\x00\x00\x80\x00@\xc0)\x00!\x80\x01\x00\x00\x00x'
+        b'\x00\x08\x00\x00\x00\x00\x05\xa3\xc0>\xc0>\x00\x01\x80\x01\x00\x00\x00x'
+        b'\x00\x04\xc0\xa8\x02:\xc0)\x00\x10\x80\x01\x00\x00\x11\x94\x01*2info=/api'
+        b'/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers=1.24.1\nbo'
+        b'otseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn9K9DLXJe0f3LP9'
+        b'747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:1400/xml/device_'
+        b'description.xml\x0csslport=1443\x0ehhsslport=1843\tvariant=2\x0emdnssequen'
+        b'ce=0'
+    )
+    parsed = r.DNSIncoming(packet)
+    # The NSEC record with the invalid name compression should be skipped
+    assert parsed.answers[4].text == (
+        b'2info=/api/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers'
+        b'=1.24.1\nbootseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn'
+        b'9K9DLXJe0f3LP9747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:14'
+        b'00/xml/device_description.xml\x0csslport=1443\x0ehhsslport=1843\tvarian'
+        b't=2\x0emdnssequence=0'
+    )
+    assert len(parsed.answers) == 5
