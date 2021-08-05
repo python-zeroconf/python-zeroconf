@@ -226,10 +226,10 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         if self.suppress_duplicate_packet(data, now):
             # Guard against duplicate packets
             log.debug(
-                'Ignoring duplicate message received from %r:%r (socket %d) (%d bytes) as [%r]',
+                'Ignoring duplicate message received from %r:%r [socket %s] (%d bytes) as [%r]',
                 addr,
                 port,
-                self.transport.get_extra_info('socket').fileno(),
+                self._socket_description,
                 len(data),
                 data,
             )
@@ -249,20 +249,20 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         msg = DNSIncoming(data, scope, now)
         if msg.valid:
             log.debug(
-                'Received from %r:%r (socket %d): %r (%d bytes) as [%r]',
+                'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
                 addr,
                 port,
-                self.transport.get_extra_info('socket').fileno(),
+                self._socket_description,
                 msg,
                 len(data),
                 data,
             )
         else:
             log.debug(
-                'Received from %r:%r (socket %d): (%d bytes) [%r]',
+                'Received from %r:%r [socket %s]: (%d bytes) [%r]',
                 addr,
                 port,
-                self.transport.get_extra_info('socket').fileno(),
+                self._socket_description,
                 len(data),
                 data,
             )
@@ -316,12 +316,22 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
         self.zc.handle_assembled_query(packets, addr, port, v6_flow_scope)
 
+    @property
+    def _socket_description(self) -> str:
+        """A human readable description of the socket."""
+        assert self.transport is not None
+        fileno = self.transport.get_extra_info('socket').fileno()
+        sockname = self.transport.get_extra_info('sockname')
+        return f"{fileno} ({sockname})"
+
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
-        assert self.transport is not None
-        self.log_warning_once(
-            'Error with socket %d: %s', self.transport.get_extra_info('socket').fileno(), exc
-        )
+        # We preformat the message string with the socket as we want
+        # log_exception_once to log a warrning message once PER EACH
+        # different socket in case there are problems with multiple
+        # sockets
+        msg_str = f"Error with socket {self._socket_description}): %s"
+        self.log_exception_once(exc, msg_str, exc)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
