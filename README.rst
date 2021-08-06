@@ -140,6 +140,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.33.4
+======
+
+* Ensure zeroconf can be loaded when the system disables IPv6 (#933) @che0
+
 0.33.3
 ======
 
