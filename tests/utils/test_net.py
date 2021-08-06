@@ -190,6 +190,10 @@ def test_add_multicast_member():
     with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
         assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False
 
+    # No IPv6 support should return False for IPv6
+    with patch("socket.inet_pton", side_effect=OSError()):
+        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False
+
     # No error should return True
     with patch("socket.socket.setsockopt"):
         assert netutils.add_multicast_member(sock, interface) is True

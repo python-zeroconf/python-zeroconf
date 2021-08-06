@@ -5,6 +5,7 @@
 
 import asyncio
 import logging
+import os
 import socket
 import time
 import threading
@@ -32,7 +33,7 @@ import zeroconf._services.browser as _services_browser
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.time import current_time_millis
 
-from . import _clear_cache
+from . import _clear_cache, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -349,6 +350,9 @@ async def test_async_wait_unblocks_on_update() -> None:
 @pytest.mark.asyncio
 async def test_service_info_async_request() -> None:
     """Test registering services broadcasts and query with AsyncServceInfo.async_request."""
+    if not has_working_ipv6() or os.environ.get('SKIP_IPV6'):
+        pytest.skip('Requires IPv6')
+
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"

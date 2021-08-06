@@ -5,6 +5,7 @@
 
 import asyncio
 import logging
+import os
 import pytest
 import socket
 import time
@@ -19,7 +20,7 @@ from zeroconf._dns import DNSRRSet
 from zeroconf.asyncio import AsyncZeroconf
 
 
-from . import _clear_cache, _inject_response
+from . import _clear_cache, _inject_response, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -274,6 +275,8 @@ def test_ptr_optimization():
     zc.close()
 
 
+@unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+@unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
 def test_any_query_for_ptr():
     """Test that queries for ANY will return PTR records."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
@@ -301,6 +304,8 @@ def test_any_query_for_ptr():
     zc.close()
 
 
+@unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+@unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
 def test_aaaa_query():
     """Test that queries for AAAA records work."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
@@ -326,6 +331,8 @@ def test_aaaa_query():
     zc.close()
 
 
+@unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+@unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
 def test_a_and_aaaa_record_fate_sharing():
     """Test that queries for AAAA always return A records in the additionals."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
