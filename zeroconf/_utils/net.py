@@ -31,7 +31,7 @@ from typing import Any, List, Optional, Tuple, Union, cast
 import ifaddr
 
 from .._logger import log
-from ..const import _IPPROTO_IPV6, _MDNS_ADDR6_BYTES, _MDNS_ADDR_BYTES, _MDNS_PORT
+from ..const import _IPPROTO_IPV6, _MDNS_ADDR, _MDNS_ADDR6, _MDNS_PORT
 
 
 @enum.unique
@@ -259,17 +259,20 @@ def add_multicast_member(
     log.debug('Adding %r (socket %d) to multicast group', interface, listen_socket.fileno())
     try:
         if is_v6:
-            iface_bin = struct.pack('@I', cast(int, interface[1]))
-            if _MDNS_ADDR6_BYTES is None:
+            try:
+                mdns_addr6_bytes = socket.inet_pton(socket.AF_INET6, _MDNS_ADDR6)
+            except OSError:
                 log.info(
-                    'Failed to add %s to multicast group, system has no IPv6 support',
+                    'Unable to translate IPv6 address when adding %s to multicast group, '
+                    'this can happen if IPv6 is disabled on the system',
                     interface,
                 )
                 return False
-            _value = _MDNS_ADDR6_BYTES + iface_bin
+            iface_bin = struct.pack('@I', cast(int, interface[1]))
+            _value = mdns_addr6_bytes + iface_bin
             listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, _value)
         else:
-            _value = _MDNS_ADDR_BYTES + socket.inet_aton(cast(str, interface))
+            _value = socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(cast(str, interface))
             listen_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value)
     except socket.error as e:
         _errno = get_errno(e)
