@@ -128,10 +128,10 @@ class _QueryResponse:
         """Build the outgoing multicast response."""
         return self._construct_outgoing_from_record_set(self._mcast, True)
 
-    def delayed_answers(self) -> Tuple[Dict[DNSRecord, Set[DNSRecord]], Dict[DNSRecord, Set[DNSRecord]]]:
+    def delayed_answers(self) -> Tuple[_AnswerWithAdditionalsType, _AnswerWithAdditionalsType]:
         """Build the outgoing multicast response."""
-        delayed: Dict[DNSRecord, Set[DNSRecord]] = {}
-        delayed_mcast_last_second: Dict[DNSRecord, Set[DNSRecord]] = {}
+        delayed: _AnswerWithAdditionalsType = {}
+        delayed_mcast_last_second: _AnswerWithAdditionalsType = {}
 
         for record in self._mcast_delayed:
             if self._has_mcast_record_in_last_second(record):
@@ -276,7 +276,9 @@ class QueryHandler:
 
     def async_response(  # pylint: disable=unused-argument
         self, msgs: List[DNSIncoming], addr: Optional[str], port: int
-    ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
+    ) -> Tuple[
+        Optional[DNSOutgoing], Optional[DNSOutgoing], _AnswerWithAdditionalsType, _AnswerWithAdditionalsType
+    ]:
         """Deal with incoming query packets. Provides a response if possible.
 
         This function must be run in the event loop as it is not
@@ -467,9 +469,11 @@ class RecordManager:
 
 
 class AnswerGroup:
+    """A group of answers scheduled to be sent at the same time."""
+
     __slots__ = ('send_after', 'send_before', 'answers')
 
-    def __init__(self, send_after: float, send_before: float, answers: Set[DNSRecord]) -> None:
+    def __init__(self, send_after: float, send_before: float, answers: _AnswerWithAdditionalsType) -> None:
         self.send_after = send_after
         self.send_before = send_before
         self.answers = answers
@@ -481,11 +485,9 @@ class MulticastOutgoingQueue:
     def __init__(self, zeroconf: 'Zeroconf') -> None:
         self.zc = zeroconf
         self._cache = zeroconf.cache
-        self._queue = deque()
+        self._queue: deque = deque()
 
-    def async_add(
-        self, now: float, answers: Dict[DNSRecord, Set[DNSRecord]], mcast_last_second: bool
-    ) -> None:
+    def async_add(self, now: float, answers: _AnswerWithAdditionalsType, mcast_last_second: bool) -> None:
         assert self.zc.loop is not None
         delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL)
         send_after = now + delay
