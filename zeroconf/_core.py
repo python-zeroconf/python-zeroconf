@@ -27,12 +27,13 @@ import socket
 import sys
 import threading
 from types import TracebackType  # noqa # used in type hints
-from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Awaitable, Deque, Dict, List, Optional, Set, Tuple, Type, Union, cast
+from collections import deque
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
 from ._exceptions import NonUniqueNameException
-from ._handlers import QueryHandler, RecordManager
+from ._handlers import MulticastOutgoingQueue, QueryHandler, RecordManager
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol import DNSIncoming, DNSOutgoing
@@ -76,6 +77,8 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
+
+
 _CLOSE_TIMEOUT = 3000  # ms
 _REGISTER_BROADCASTS = 3
 
@@ -393,6 +396,8 @@ class Zeroconf(QuietLogger):
         self.notify_event: Optional[asyncio.Event] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
+
+        self.outgoing = MulticastOutgoingQueue(self)
 
         self.start()
 
@@ -717,11 +722,17 @@ class Zeroconf(QuietLogger):
         or the timer expires. If the TC bit is not set, a single
         packet will be in packets.
         """
-        unicast_out, multicast_out = self.query_handler.async_response(packets, addr, port)
+        unicast_out, multicast_out, delayed, delayed_mcast_last_second = self.query_handler.async_response(
+            packets, addr, port
+        )
         if unicast_out:
             self.async_send(unicast_out, addr, port, v6_flow_scope)
         if multicast_out:
-            self.async_send(multicast_out, None, _MDNS_PORT)
+            self.async_send(multicast_out)
+        if delayed:
+            self.outgoing.async_add(packets[0].now, delayed, False)
+        if delayed_mcast_last_second:
+            self.outgoing.async_add(packets[0].now, delayed_mcast_last_second, True)
 
     def send(
         self,
