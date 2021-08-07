@@ -763,7 +763,7 @@ class Zeroconf(QuietLogger):
                 s = transport.get_extra_info('socket')
                 if addr is None:
                     if s.family == socket.AF_INET6:
-                        #real_addr = _MDNS_ADDR6 if self.ip_version.V6Only else _MDNS_ADDR6_V4_COMPAT
+                        # real_addr = _MDNS_ADDR6 if self.ip_version.V6Only else _MDNS_ADDR6_V4_COMPAT
                         real_addr = _MDNS_ADDR6_V4_COMPAT
                     else:
                         real_addr = _MDNS_ADDR
