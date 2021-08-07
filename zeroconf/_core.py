@@ -397,7 +397,7 @@ class Zeroconf(QuietLogger):
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
 
-        self.outgoing = MulticastOutgoingQueue(self)
+        self._out_queue = MulticastOutgoingQueue(self)
 
         self.start()
 
@@ -730,9 +730,9 @@ class Zeroconf(QuietLogger):
         if multicast_out:
             self.async_send(multicast_out)
         if delayed:
-            self.outgoing.async_add(packets[0].now, delayed, False)
+            self._out_queue.async_add(packets[0].now, delayed, False)
         if delayed_mcast_last_second:
-            self.outgoing.async_add(packets[0].now, delayed_mcast_last_second, True)
+            self._out_queue.async_add(packets[0].now, delayed_mcast_last_second, True)
 
     def send(
         self,
