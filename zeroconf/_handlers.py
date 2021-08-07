@@ -91,6 +91,7 @@ class _QueryResponse:
         self._ucast: Set[DNSRecord] = set()
         self._mcast: Set[DNSRecord] = set()
         self._mcast_delayed: Set[DNSRecord] = set()
+        self._mcast_delayed_last_second: Set[DNSRecord] = set()
 
     def add_qu_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast QU query."""
@@ -111,10 +112,15 @@ class _QueryResponse:
     def add_mcast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast query."""
         self._additionals.update(answers)
-        if self._is_probe or len(self._msg.questions) == 1:
-            self._mcast.update(answers.keys())
-        else:
-            self._mcast_delayed.update(answers.keys())
+        for answer in answers:
+            if self._is_probe:
+                self._mcast.add(answer)
+            if self._has_mcast_record_in_last_second(answer):
+                self._mcast_delayed_last_second.add(answer)
+            elif len(self._msg.questions) == 1:
+                self._mcast.add(answer)
+            else:
+                self._mcast_delayed.add(answer)
 
     def outgoing_unicast(self) -> Optional[DNSOutgoing]:
         """Build the outgoing unicast response."""
@@ -130,16 +136,10 @@ class _QueryResponse:
         return self._construct_outgoing_from_record_set(self._mcast, True)
 
     def delayed_answers(self) -> Tuple[_AnswerWithAdditionalsType, _AnswerWithAdditionalsType]:
-        """Build the outgoing multicast response."""
-        delayed: _AnswerWithAdditionalsType = {}
-        delayed_mcast_last_second: _AnswerWithAdditionalsType = {}
-
-        for record in self._mcast_delayed:
-            if self._has_mcast_record_in_last_second(record):
-                delayed_mcast_last_second[record] = self._additionals[record]
-            else:
-                delayed[record] = self._additionals[record]
-        return delayed, delayed_mcast_last_second
+        """Return answer sets that will be queued."""
+        return {record: self._additionals[record] for record in self._mcast_delayed}, {
+            record: self._additionals[record] for record in self._mcast_delayed_last_second
+        }
 
     def _construct_outgoing_from_record_set(
         self, answers_rrset: Set[DNSRecord], multicast: bool
@@ -509,10 +509,10 @@ class MulticastOutgoingQueue:
             mcast_last_second,
         )
         self._queue.append(AnswerGroup(send_after, send_before, answers))
-        self.zc.loop.call_later(millis_to_seconds(delay), self._async_send_ready, send_after)
+        self.zc.loop.call_later(millis_to_seconds(delay), self._async_send_ready)
 
-    def _async_send_ready(self, now: float) -> None:
-        log.warning("!!!Called _async_send_ready at %s with %s", now, list(self._queue))
+    def _async_send_ready(self) -> None:
+        log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
         if self.zc.done:
             return
 
@@ -523,6 +523,7 @@ class MulticastOutgoingQueue:
         if queue_len > 1 and self._queue[1].send_after < self._queue[0].send_before:
             return
 
+        now = current_time_millis()
         send_set = set()
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=True)
         while len(self._queue) and self._queue[0].send_after >= now:
