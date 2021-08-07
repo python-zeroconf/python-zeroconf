@@ -20,7 +20,6 @@
     USA
 """
 
-import asyncio
 import itertools
 import random
 from collections import deque
