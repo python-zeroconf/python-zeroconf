@@ -60,6 +60,20 @@ _MAX_MULTICAST_DELAY = 500  # ms
 _ONE_SECOND = 1000  # ms
 
 
+def construct_outgoing_answers_and_additionals(
+    answers: Set[DNSRecord], additionals: Set[DNSRecord], multicast: bool, id_: int
+) -> DNSOutgoing:
+    """Add answers and additionals to a DNSOutgoing."""
+    # Find additionals and suppress any additionals that are already in answers
+    answers -= additionals
+    out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=id_)
+    for answer in answers:
+        out.add_answer_at_time(answer, 0)
+    for additional in additionals:
+        out.add_additional_answer(additional)
+    return out
+
+
 def sanitize_incoming_record(record: DNSRecord) -> None:
     """Protect zeroconf from records that can cause denial of service.
 
@@ -149,13 +163,9 @@ class _QueryResponse:
         additionals_rrset = self._additionals_from_answers_rrset(answers_rrset) - answers_rrset
         if not answers_rrset:
             return None
-
-        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=self._msg.id)
-        for answer in answers_rrset:
-            out.add_answer_at_time(answer, 0)
-        for additional in additionals_rrset:
-            out.add_additional_answer(additional)
-        return out
+        return construct_outgoing_answers_and_additionals(
+            answers_rrset, additionals_rrset, multicast, self._msg.id
+        )
 
     def _additionals_from_answers_rrset(self, rrset: Set[DNSRecord]) -> Set[DNSRecord]:
         additionals: Set[DNSRecord] = set()
@@ -513,31 +523,25 @@ class MulticastOutgoingQueue:
 
     def _async_send_ready(self) -> None:
         log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
-        if self.zc.done:
-            return
-
         queue_len = len(self._queue)
-        if queue_len == 0:
+        if (
+            self.zc.done
+            or queue_len == 0
+            or (queue_len > 1 and self._queue[1].send_after < self._queue[0].send_before)
+        ):
             return
-
-        if queue_len > 1 and self._queue[1].send_after < self._queue[0].send_before:
-            return
-
         now = current_time_millis()
-        send_set = set()
-        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=True)
+        answer_set = set()
+        additionals_set = set()
         while len(self._queue) and self._queue[0].send_after >= now:
             group = self._queue.popleft()
             for answer, additionals in group.answers.items():
-                out.add_answer_at_time(answer, 0)
-                send_set.add(answer)
-                for additional in additionals:
-                    out.add_additional_answer(additional)
+                answer_set.add(answer)
+                additionals_set.update(additionals)
 
         # If we have the same answer scheduled to go out, remove it
         for pending in self._queue:
-            for record in send_set:
+            for record in answer_set:
                 pending.answers.pop(record, None)
 
-        if out.answers:
-            self.zc.async_send(out)
+        self.zc.async_send(construct_outgoing_answers_and_additionals(answer_set, additionals_set, True, 0))
