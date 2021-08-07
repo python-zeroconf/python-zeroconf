@@ -69,6 +69,7 @@ from .const import (
     _MAX_MSG_ABSOLUTE,
     _MDNS_ADDR,
     _MDNS_ADDR6,
+    _MDNS_ADDR6_V4_COMPAT,
     _MDNS_PORT,
     _REGISTER_TIME,
     _TYPE_PTR,
@@ -371,6 +372,7 @@ class Zeroconf(QuietLogger):
         """
         if ip_version is None:
             ip_version = autodetect_ip_version(interfaces)
+        self.ip_version = ip_version
 
         # hook for threads
         self._GLOBAL_DONE = False
@@ -760,7 +762,10 @@ class Zeroconf(QuietLogger):
                     return
                 s = transport.get_extra_info('socket')
                 if addr is None:
-                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+                    if s.family == socket.AF_INET6:
+                        real_addr = _MDNS_ADDR6 if self.ip_version.V6Only else _MDNS_ADDR6_V4_COMPAT
+                    else:
+                        real_addr = _MDNS_ADDR
                 elif not can_send_to(s, addr):
                     continue
                 else:

@@ -43,6 +43,7 @@ _LOADED_SYSTEM_TIMEOUT = 10  # s
 # Some DNS constants
 
 _MDNS_ADDR = '224.0.0.251'
+_MDNS_ADDR6_V4_COMPAT = f"::ffff:{_MDNS_ADDR}"
 _MDNS_ADDR6 = 'ff02::fb'
 _MDNS_PORT = 5353
 _DNS_PORT = 53
