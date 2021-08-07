@@ -57,6 +57,7 @@ _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 
 _MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
 _MAX_MULTICAST_DELAY = 500  # ms
+_ONE_SECOND = 1000  # ms
 
 
 def sanitize_incoming_record(record: DNSRecord) -> None:
@@ -180,7 +181,7 @@ class _QueryResponse:
         https://datatracker.ietf.org/doc/html/rfc6762#section-14
         """
         maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
-        return bool(maybe_entry and self._now - maybe_entry.created < 1000)
+        return bool(maybe_entry and self._now - maybe_entry.created < _ONE_SECOND)
 
 
 class QueryHandler:
@@ -414,7 +415,7 @@ class RecordManager:
         answers_rrset = DNSRRSet(answers)
         for name, type_, class_ in unique_types:
             for entry in self.cache.async_all_by_details(name, type_, class_):
-                if (now - entry.created > 1000) and entry not in answers_rrset:
+                if (now - entry.created > _ONE_SECOND) and entry not in answers_rrset:
                     # Expire in 1s
                     entry.set_created_ttl(now, 1)
 
@@ -496,8 +497,8 @@ class MulticastOutgoingQueue:
             # https://datatracker.ietf.org/doc/html/rfc6762#section-14
             # If we broadcast it in the last second, we have to delay
             # at least a second before we send it again
-            send_after += 1000
-            send_before += 1000
+            send_after += _ONE_SECOND
+            send_before += _ONE_SECOND
 
         log.warning(
             "!!!Called async_add with now:%s send_after:%s, send_before:%s, answers:%s -- last_second: %s",
