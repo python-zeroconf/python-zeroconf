@@ -823,12 +823,16 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     assert question.unicast is True
     query.add_question(question)
 
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert multicast_out is None
-    assert a_record in unicast_out.additionals
-    assert unicast_out.answers[0][0] == ptr_record
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+
+    additionals = set().union(*question_answers.ucast.values())
+    assert a_record in additionals
+    assert ptr_record in question_answers.ucast
 
     # Remove the 50% A record and add a 100% A record
     zc.cache.async_remove_records([a_record])
@@ -843,12 +847,15 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     assert question.unicast is True
     query.add_question(question)
 
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert multicast_out is None
-    assert a_record in unicast_out.additionals
-    assert unicast_out.answers[0][0] == ptr_record
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    additionals = set().union(*question_answers.ucast.values())
+    assert a_record in additionals
+    assert ptr_record in question_answers.ucast
 
     # Remove the 100% PTR record and add a 50% PTR record
     zc.cache.async_remove_records([ptr_record])
@@ -863,15 +870,17 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     assert question.unicast is True
     query.add_question(question)
 
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert multicast_out.answers[0][0] == ptr_record
-    assert a_record in multicast_out.additionals
-    assert info.dns_text() in multicast_out.additionals
-    assert info.dns_service() in multicast_out.additionals
-
-    assert unicast_out is None
+    assert not question_answers.ucast
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    additionals = set().union(*question_answers.mcast_now.values())
+    assert a_record in additionals
+    assert info.dns_text() in additionals
+    assert info.dns_service() in additionals
+    assert ptr_record in question_answers.mcast_now
 
     # Ask 2 QU questions, with info the PTR is at 50%, with info2 the PTR is at 100%
     # We should get back a unicast reply for info2, but info should be multicasted since its within 75% of its TTL
@@ -889,18 +898,23 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     query.add_question(question)
     zc.cache.async_add_records([info2.dns_pointer()])  # Add 100% TTL for info2 to the cache
 
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert multicast_out.answers[0][0] == info.dns_pointer()
-    assert info.dns_addresses()[0] in multicast_out.additionals
-    assert info.dns_text() in multicast_out.additionals
-    assert info.dns_service() in multicast_out.additionals
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
-    assert unicast_out.answers[0][0] == info2.dns_pointer()
-    assert info2.dns_addresses()[0] in unicast_out.additionals
-    assert info2.dns_text() in unicast_out.additionals
-    assert info2.dns_service() in unicast_out.additionals
+    mcast_now_additionals = set().union(*question_answers.mcast_now.values())
+    assert a_record in mcast_now_additionals
+    assert info.dns_text() in mcast_now_additionals
+    assert info.dns_addresses()[0] in mcast_now_additionals
+    assert info.dns_pointer() in question_answers.mcast_now
+
+    ucast_additionals = set().union(*question_answers.ucast.values())
+    assert info2.dns_pointer() in question_answers.ucast
+    assert info2.dns_text() in ucast_additionals
+    assert info2.dns_service() in ucast_additionals
+    assert info2.dns_addresses()[0] in ucast_additionals
 
     # unregister
     zc.registry.async_remove(info)
