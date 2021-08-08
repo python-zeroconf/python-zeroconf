@@ -238,11 +238,15 @@ def test_ptr_optimization():
     # Verify we won't respond for 1s with the same multicast
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert unicast_out is None
-    assert multicast_out is None
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    # Since we sent the PTR in the last second, they
+    # should end up in the delayed at least one second bucket
+    assert question_answers.mcast_aggregate_last_second
 
     # Clear the cache to allow responding again
     _clear_cache(zc)
@@ -250,17 +254,17 @@ def test_ptr_optimization():
     # Verify we will now respond
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert multicast_out.id == query.id
-    assert unicast_out is None
-    assert multicast_out is not None
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate_last_second
     has_srv = has_txt = has_a = False
     nbr_additionals = 0
-    nbr_answers = len(multicast_out.answers)
-    nbr_authorities = len(multicast_out.authorities)
-    for answer in multicast_out.additionals:
+    nbr_answers = len(question_answers.mcast_aggregate)
+    additionals = set().union(*question_answers.mcast_aggregate.values())
+    for answer in additionals:
         nbr_additionals += 1
         if answer.type == const._TYPE_SRV:
             has_srv = True
@@ -268,7 +272,7 @@ def test_ptr_optimization():
             has_txt = True
         elif answer.type == const._TYPE_A:
             has_a = True
-    assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
+    assert nbr_answers == 1 and nbr_additionals == 3
     assert has_srv and has_txt and has_a
 
     # unregister
