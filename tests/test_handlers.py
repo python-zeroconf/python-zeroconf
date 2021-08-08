@@ -1269,7 +1269,8 @@ async def test_response_aggregation_timings():
 
         calls = send_mock.mock_calls
         assert len(calls) == 1
-        incoming = r.DNSIncoming(calls[0].args[0].packets()[0])
+        outgoing = send_mock.call_args[0][0]
+        incoming = r.DNSIncoming(outgoing.packets()[0])
         zc.handle_response(incoming)
         assert info.dns_pointer() in incoming.answers
         assert info2.dns_pointer() in incoming.answers
@@ -1290,7 +1291,8 @@ async def test_response_aggregation_timings():
         await asyncio.sleep(1.2)
         calls = send_mock.mock_calls
         assert len(calls) == 1
-        incoming = r.DNSIncoming(calls[0].args[0].packets()[0])
+        outgoing = send_mock.call_args[0][0]
+        incoming = r.DNSIncoming(outgoing.packets()[0])
         assert info.dns_pointer() in incoming.answers
 
     await aiozc.async_close()
