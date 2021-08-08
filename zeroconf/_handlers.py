@@ -518,7 +518,7 @@ class MulticastOutgoingQueue:
         assert self.zc.loop is not None
         now = current_time_millis()
 
-        if len(self.queue) and self.queue[0].send_before > now:
+        if len(self.queue) > 1 and self.queue[0].send_before > now:
             # There is more than one answer in the queue,
             # delay until we have to send it (first answer group reaches send_before)
             self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_before - now), self._async_ready)

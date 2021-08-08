@@ -1223,6 +1223,7 @@ async def test_response_aggregation_timings(run_isolated):
     """Verify multicast respones are aggregated."""
     type_ = "_mservice._tcp.local."
     type_2 = "_mservice2._tcp.local."
+    type_3 = "_mservice3._tcp.local."
 
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     await aiozc.zeroconf.async_wait_for_start()
@@ -1230,6 +1231,7 @@ async def test_response_aggregation_timings(run_isolated):
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
     registration_name2 = f"{name}.{type_2}"
+    registration_name3 = f"{name}.{type_3}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
@@ -1238,9 +1240,12 @@ async def test_response_aggregation_timings(run_isolated):
     info2 = ServiceInfo(
         type_2, registration_name2, 80, 0, 0, desc, "ash-4.local.", addresses=[socket.inet_aton("10.0.1.3")]
     )
-
+    info3 = ServiceInfo(
+        type_3, registration_name3, 80, 0, 0, desc, "ash-4.local.", addresses=[socket.inet_aton("10.0.1.3")]
+    )
     aiozc.zeroconf.registry.async_add(info)
     aiozc.zeroconf.registry.async_add(info2)
+    aiozc.zeroconf.registry.async_add(info3)
 
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
@@ -1251,22 +1256,23 @@ async def test_response_aggregation_timings(run_isolated):
     query2.add_question(question2)
 
     query3 = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
-    query3.add_question(question)
-    query3.add_question(question2)
+    question3 = r.DNSQuestion(info3.type, const._TYPE_PTR, const._CLASS_IN)
+    query3.add_question(question3)
+
+    query4 = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    query4.add_question(question)
+    query4.add_question(question2)
 
     zc = aiozc.zeroconf
     protocol = zc.engine.protocols[0]
 
     with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock:
         protocol.datagram_received(query.packets()[0], ('127.0.0.1', const._MDNS_PORT))
-        await asyncio.sleep(0.1)
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
-        await asyncio.sleep(0.1)
         protocol.datagram_received(query.packets()[0], ('127.0.0.1', const._MDNS_PORT))
-        await asyncio.sleep(0.1)
-        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.7)
 
+        # Should aggregate into a single answer with up to a 500ms + 120ms delay
         calls = send_mock.mock_calls
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
@@ -1276,10 +1282,23 @@ async def test_response_aggregation_timings(run_isolated):
         assert info2.dns_pointer() in incoming.answers
         send_mock.reset_mock()
 
+        protocol.datagram_received(query3.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        await asyncio.sleep(0.3)
+
+        # Should send within 120ms since there are no other
+        # answers to aggregate with
+        calls = send_mock.mock_calls
+        assert len(calls) == 1
+        outgoing = send_mock.call_args[0][0]
+        incoming = r.DNSIncoming(outgoing.packets()[0])
+        zc.handle_response(incoming)
+        assert info3.dns_pointer() in incoming.answers
+        send_mock.reset_mock()
+
         # Because the response was sent in the last second we need to make
         # sure the next answer is delayed at least a second
         aiozc.zeroconf.engine.protocols[0].datagram_received(
-            query3.packets()[0], ('127.0.0.1', const._MDNS_PORT)
+            query4.packets()[0], ('127.0.0.1', const._MDNS_PORT)
         )
         await asyncio.sleep(0.5)
 
