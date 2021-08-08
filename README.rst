@@ -140,6 +140,23 @@ See examples directory for more.
 Changelog
 =========
 
+0.34.0
+======
+
+* Implemented Multicast Response Aggregation (#940) @bdraco
+
+  Responses are now aggregated when possible per rules in RFC6762
+  section 6.4
+
+  Responses that trigger the protection against against excessive
+  packet flooding due to software bugs or malicious attack described
+  in RFC6762 section 6 are delayed instead of discarding as it was
+  causing responders that implement Passive Observation Of Failures
+  (POOF) to evict the records.
+
+  Probe responses are now always sent immediately as there were cases
+  where they would fail to be answered in time to defend a name.
+
 0.33.4
 ======
 
@@ -149,7 +166,6 @@ Changelog
 ======
 
 * Added support for forward dns compression pointers (#934) @bdraco
-
 * Provide sockname when logging a protocol error (#935) @bdraco
 
 0.33.2
@@ -161,7 +177,6 @@ Changelog
   from the cache when the second goodbye answer in the same packet was processed
 
   Fixed #926
-
 * Skip ipv6 interfaces that return ENODEV (#930) @bdraco
 
 0.33.1
