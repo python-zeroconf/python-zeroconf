@@ -9,7 +9,7 @@ import os
 import socket
 import time
 import threading
-from unittest.mock import patch
+from unittest.mock import ANY, call, patch, MagicMock
 
 
 import pytest
@@ -18,6 +18,7 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZerocon
 from zeroconf import (
     DNSIncoming,
     DNSOutgoing,
+    DNSQuestion,
     DNSPointer,
     DNSService,
     DNSAddress,
@@ -27,6 +28,7 @@ from zeroconf import (
     const,
 )
 from zeroconf.const import _LISTENER_TIME
+from zeroconf._core import AsyncListener
 from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
 from zeroconf._services import ServiceListener
 import zeroconf._services.browser as _services_browser
@@ -951,3 +953,35 @@ async def test_async_request_timeout():
     # 3000ms for the default timeout
     # 1000ms for loaded systems + schedule overhead
     assert (end_time - start_time) < 3000 + 1000
+
+
+@pytest.mark.asyncio
+async def test_legacy_unicast_response():
+    """Verify legacy unicast responses include questions and correct id."""
+    type_ = "_mservice._tcp.local."
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+
+    name = "xxxyyy"
+    registration_name = f"{name}.{type_}"
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+
+    aiozc.zeroconf.registry.async_add(info)
+    query = DNSOutgoing(const._FLAGS_QR_QUERY, multicast=False, id_=888)
+    question = DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    query.add_question(question)
+
+    with patch.object(aiozc.zeroconf, "async_send") as send_mock:
+        aiozc.zeroconf.engine.protocols[0].datagram_received(query.packets()[0], ('127.0.0.1', 6503))
+
+    calls = send_mock.mock_calls
+    assert calls == [call(ANY, '127.0.0.1', 6503, ())]
+    outgoing = calls[0].args[0]
+    assert isinstance(outgoing, DNSOutgoing)
+    assert outgoing.questions == [question]
+    assert outgoing.id == query.id
+    await aiozc.async_close()
