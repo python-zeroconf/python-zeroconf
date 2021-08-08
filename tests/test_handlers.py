@@ -207,7 +207,7 @@ class TestRegistrar(unittest.TestCase):
         out = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         out.add_question(r.DNSQuestion(type_.upper(), const._TYPE_PTR, const._CLASS_IN))
         zc.send(out)
-        time.sleep(0.5)
+        time.sleep(1)
         info = ServiceInfo(type_, registration_name)
         info.load_from_cache(zc)
         assert info.addresses == [socket.inet_pton(socket.AF_INET, "1.2.3.4")]

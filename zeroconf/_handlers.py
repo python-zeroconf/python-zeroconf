@@ -517,7 +517,7 @@ class MulticastOutgoingQueue:
         # There is more than one answer in the queue,
         # delay until we have to send it (first answer group
         # reaches send_before)
-        if len(self._queue) > 1 and self._queue[0].send_before > now:
+        if len(self._queue) and self._queue[0].send_before > now:
             self.zc.loop.call_later(
                 millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
             )
@@ -526,20 +526,21 @@ class MulticastOutgoingQueue:
         answers: _AnswerWithAdditionalsType = {}
         log.warning("Next send is %s and now=%s", self._queue[0].send_after, now)
         while len(self._queue) and self._queue[0].send_after <= now:
+            # Add all groups that can be sent now
             answers.update(self._queue.popleft().answers)
 
         if len(self._queue):
+            # If there are still groups in the queue that are not ready to send
+            # be sure we schedule them to go out later
             self.zc.loop.call_later(
                 millis_to_seconds(self._queue[0].send_after - now), self._async_check_ready
             )
-        log.warning("Ready: %s", answers)
 
-        if not answers:
-            return
+        if answers:
+            log.warning("Ready: %s", answers)
+            # If we have the same answer scheduled to go out, remove it
+            for pending in self._queue:
+                for record in answers:
+                    pending.answers.pop(record, None)
 
-        # If we have the same answer scheduled to go out, remove it
-        for pending in self._queue:
-            for record in answers:
-                pending.answers.pop(record, None)
-
-        self.zc.async_send(construct_outgoing_multicast_answers(answers))
+            self.zc.async_send(construct_outgoing_multicast_answers(answers))
