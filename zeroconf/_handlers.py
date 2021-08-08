@@ -526,7 +526,7 @@ class MulticastOutgoingQueue:
 
         if answers:
             # If we have the same answer scheduled to go out, remove it
-            for pending in self._queue:
+            for pending in self.queue:
                 for record in answers:
                     pending.answers.pop(record, None)
 
