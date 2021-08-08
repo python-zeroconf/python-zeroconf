@@ -491,7 +491,7 @@ class MulticastOutgoingQueue:
 
     def __init__(self, zeroconf: 'Zeroconf') -> None:
         self.zc = zeroconf
-        self._queue: deque = deque()
+        self.queue: deque = deque()
 
     def async_add(self, now: float, answers: _AnswerWithAdditionalsType, additional_delay: int) -> None:
         assert self.zc.loop is not None
@@ -506,7 +506,7 @@ class MulticastOutgoingQueue:
             answers,
             additional_delay,
         )
-        if not len(self._queue):
+        if not len(self.queue):
             self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_check_ready)
         self._queue.append(AnswerGroup(send_after, send_before, answers))
 
@@ -515,26 +515,24 @@ class MulticastOutgoingQueue:
         log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
         now = current_time_millis()
 
-        if len(self._queue) and self._queue[0].send_before > now:
+        if len(self.queue) and self.queue[0].send_before > now:
             # There is more than one answer in the queue,
             # delay until we have to send it (first answer group reaches send_before)
-            self.zc.loop.call_later(
-                millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
-            )
+            next_time = millis_to_seconds(self.queue[0].send_before - now)
+            self.zc.loop.call_later(next_time, self._async_check_ready)
             return
 
         answers: _AnswerWithAdditionalsType = {}
-        log.warning("Next send is %s and now=%s", self._queue[0].send_after, now)
+        log.warning("Next send is %s and now=%s", self.queue[0].send_after, now)
         # Add all groups that can be sent now
-        while len(self._queue) and self._queue[0].send_after <= now:
+        while len(self.queue) and self.queue[0].send_after <= now:
             answers.update(self._queue.popleft().answers)
 
-        if len(self._queue):
+        if len(self.queue):
             # If there are still groups in the queue that are not ready to send
             # be sure we schedule them to go out later
-            self.zc.loop.call_later(
-                millis_to_seconds(self._queue[0].send_after - now), self._async_check_ready
-            )
+            next_time = millis_to_seconds(self.queue[0].send_after - now)
+            self.zc.loop.call_later(next_time, self._async_check_ready)
 
         if answers:
             log.warning("Ready: %s", answers)
