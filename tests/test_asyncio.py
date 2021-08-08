@@ -956,7 +956,7 @@ async def test_async_request_timeout():
 
 
 @pytest.mark.asyncio
-async def test_legacy_unicast_response():
+async def test_legacy_unicast_response(run_isolated):
     """Verify legacy unicast responses include questions and correct id."""
     type_ = "_mservice._tcp.local."
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
