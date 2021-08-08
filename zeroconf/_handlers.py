@@ -129,7 +129,7 @@ class _QueryResponse:
         """Build a query response."""
         self._is_probe = any(msg.num_authorities > 0 for msg in msgs)
         self._msg = msgs[0]
-        self._now = current_time_millis()
+        self._now = self._msg.now
         self._cache = cache
         self._additionals: _AnswerWithAdditionalsType = {}
         self._ucast: Set[DNSRecord] = set()
