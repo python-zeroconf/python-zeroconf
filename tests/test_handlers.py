@@ -1216,3 +1216,81 @@ async def test_duplicate_goodbye_answers_in_packet():
     incoming = r.DNSIncoming(response.packets()[0])
     zc.record_manager.async_updates_from_response(incoming)
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_response_aggregation_timings():
+    """Verify multicast respones are aggregated."""
+    type_ = "_mservice._tcp.local."
+    type_2 = "_mservice2._tcp.local."
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+
+    name = "xxxyyy"
+    registration_name = f"{name}.{type_}"
+    registration_name2 = f"{name}.{type_2}"
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info2 = ServiceInfo(
+        type_2, registration_name2, 80, 0, 0, desc, "ash-4.local.", addresses=[socket.inet_aton("10.0.1.3")]
+    )
+
+    aiozc.zeroconf.registry.async_add(info)
+    aiozc.zeroconf.registry.async_add(info2)
+
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    query.add_question(question)
+
+    query2 = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    question2 = r.DNSQuestion(info2.type, const._TYPE_PTR, const._CLASS_IN)
+    query2.add_question(question2)
+
+    query3 = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    query3.add_question(question)
+    query3.add_question(question2)
+
+    zc = aiozc.zeroconf
+    protocol = zc.engine.protocols[0]
+
+    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock:
+        protocol.datagram_received(query.packets()[0], ('127.0.0.1', 5353))
+        await asyncio.sleep(0.1)
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', 5353))
+        await asyncio.sleep(0.1)
+        protocol.datagram_received(query.packets()[0], ('127.0.0.1', 5353))
+        await asyncio.sleep(0.1)
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', 5353))
+        await asyncio.sleep(0.3)
+
+        calls = send_mock.mock_calls
+        assert len(calls) == 1
+        incoming = r.DNSIncoming(calls[0].args[0].packets()[0])
+        zc.handle_response(incoming)
+        assert info.dns_pointer() in incoming.answers
+        assert info2.dns_pointer() in incoming.answers
+        send_mock.reset_mock()
+
+        # Because the response was sent in the last second we need to make
+        # sure the next answer is delayed at least a second
+        aiozc.zeroconf.engine.protocols[0].datagram_received(query3.packets()[0], ('127.0.0.1', 5353))
+        await asyncio.sleep(0.5)
+
+        # After 0.5 seconds it should not have been sent
+        # Protect the network against excessive packet flooding
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-14
+        calls = send_mock.mock_calls
+        assert len(calls) == 0
+        send_mock.reset_mock()
+
+        await asyncio.sleep(1.2)
+        calls = send_mock.mock_calls
+        assert len(calls) == 1
+        incoming = r.DNSIncoming(calls[0].args[0].packets()[0])
+        assert info.dns_pointer() in incoming.answers
+
+    await aiozc.async_close()
