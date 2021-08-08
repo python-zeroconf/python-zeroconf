@@ -501,7 +501,7 @@ class MulticastOutgoingQueue:
         send_before = now + _MAX_MULTICAST_DELAY + additional_delay
         if not len(self.queue):
             self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_ready)
-        self._queue.append(AnswerGroup(send_after, send_before, answers))
+        self.queue.append(AnswerGroup(send_after, send_before, answers))
 
     def _async_ready(self) -> None:
         """Process anything in the queue that is ready."""
