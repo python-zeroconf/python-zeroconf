@@ -538,6 +538,7 @@ class MulticastOutgoingQueue:
                     "There is more in the queue, delaying until send_before: %s",
                     millis_to_seconds(self._queue[0].send_before - now),
                 )
+                assert self.zc.loop is not None
                 self.zc.loop.call_later(
                     millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
                 )
