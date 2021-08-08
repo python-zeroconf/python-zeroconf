@@ -544,7 +544,7 @@ class MulticastOutgoingQueue:
             self.zc.loop.call_later(
                 millis_to_seconds(self._queue[0].send_after - now), self._async_check_ready
             )
-        log.log("Ready: %s & %s", answer_set)
+        log.log("Ready: %s", answer_set)
 
         if not answer_set:
             return
