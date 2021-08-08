@@ -27,8 +27,7 @@ import socket
 import sys
 import threading
 from types import TracebackType  # noqa # used in type hints
-from typing import Awaitable, Deque, Dict, List, Optional, Set, Tuple, Type, Union, cast
-from collections import deque
+from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
