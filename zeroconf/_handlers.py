@@ -514,10 +514,10 @@ class MulticastOutgoingQueue:
         assert self.zc.loop is not None
         log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
         now = current_time_millis()
-        # There is more than one answer in the queue,
-        # delay until we have to send it (first answer group
-        # reaches send_before)
+
         if len(self._queue) and self._queue[0].send_before > now:
+            # There is more than one answer in the queue,
+            # delay until we have to send it (first answer group reaches send_before)
             self.zc.loop.call_later(
                 millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
             )
@@ -525,8 +525,8 @@ class MulticastOutgoingQueue:
 
         answers: _AnswerWithAdditionalsType = {}
         log.warning("Next send is %s and now=%s", self._queue[0].send_after, now)
+        # Add all groups that can be sent now
         while len(self._queue) and self._queue[0].send_after <= now:
-            # Add all groups that can be sent now
             answers.update(self._queue.popleft().answers)
 
         if len(self._queue):
