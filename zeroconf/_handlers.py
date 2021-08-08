@@ -23,7 +23,7 @@
 import itertools
 import random
 from collections import deque
-from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
@@ -60,6 +60,21 @@ _MAX_MULTICAST_DELAY = 500  # ms
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_SRV, _TYPE_A, _TYPE_AAAA}
 
 
+class QuestionAnswers(NamedTuple):
+    ucast: _AnswerWithAdditionalsType
+    mcast_now: _AnswerWithAdditionalsType
+    mcast_aggregate: _AnswerWithAdditionalsType
+    mcast_aggregate_last_second: _AnswerWithAdditionalsType
+
+
+class AnswerGroup(NamedTuple):
+    """A group of answers scheduled to be sent at the same time."""
+
+    send_after: float  # Must be sent after this time
+    send_before: float  # Must be sent before this time
+    answers: _AnswerWithAdditionalsType
+
+
 def construct_outgoing_multicast_answers(answers: _AnswerWithAdditionalsType) -> DNSOutgoing:
     """Add answers and additionals to a DNSOutgoing."""
     out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=True)
@@ -80,7 +95,7 @@ def construct_outgoing_unicast_answers(
     return out
 
 
-def _add_answers_additionals(out: DNSOutgoing, answers: Set[DNSRecord], additionals: Set[DNSRecord]) -> None:
+def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
     additionals: Set[DNSRecord] = set(*(answers.values()))
     additionals -= answers.keys()
@@ -157,9 +172,9 @@ class _QueryResponse:
 
     def answers(
         self,
-    ) -> Tuple[_AnswerWithAdditionalsType, _AnswerWithAdditionalsType, _AnswerWithAdditionalsType]:
+    ) -> QuestionAnswers:
         """Return answer sets that will be queued."""
-        return (
+        return QuestionAnswers(
             self._generate_answers_with_additionals(self._ucast),
             self._generate_answers_with_additionals(self._mcast_now),
             self._generate_answers_with_additionals(self._mcast_aggregate),
@@ -282,9 +297,7 @@ class QueryHandler:
 
     def async_response(  # pylint: disable=unused-argument
         self, msgs: List[DNSIncoming], ucast_source: bool
-    ) -> Tuple[
-        Optional[DNSOutgoing], Optional[DNSOutgoing], _AnswerWithAdditionalsType, _AnswerWithAdditionalsType
-    ]:
+    ) -> QuestionAnswers:
         """Deal with incoming query packets. Provides a response if possible.
 
         This function must be run in the event loop as it is not
@@ -473,18 +486,6 @@ class RecordManager:
             log.exception('Failed to remove listener: %r', e)
 
 
-class AnswerGroup:
-    """A group of answers scheduled to be sent at the same time."""
-
-    __slots__ = ('send_after', 'send_before', 'answers')
-
-    def __init__(self, send_after: float, send_before: float, answers: _AnswerWithAdditionalsType) -> None:
-        """A group of answers that will be sent at the same time."""
-        self.send_after = send_after  # Must be sent after this time
-        self.send_before = send_before  # Must be sent before this time
-        self.answers = answers
-
-
 class MulticastOutgoingQueue:
     """An outgoing queue used to aggregate multicast responses."""
 
@@ -544,7 +545,7 @@ class MulticastOutgoingQueue:
             self.zc.loop.call_later(
                 millis_to_seconds(self._queue[0].send_after - now), self._async_check_ready
             )
-        log.log("Ready: %s", answer_set)
+        log.warning("Ready: %s", answer_set)
 
         if not answer_set:
             return

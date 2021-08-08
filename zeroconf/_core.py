@@ -731,27 +731,22 @@ class Zeroconf(QuietLogger):
         """
         now = packets[0].now
         ucast_source = port != _MDNS_PORT
-        (
-            ucast_now,
-            mcast_now,
-            mcast_aggregate,
-            mcast_aggregate_last_second,
-        ) = self.query_handler.async_response(packets, ucast_source)
-        if ucast_now:
+        question_answers = self.query_handler.async_response(packets, ucast_source)
+        if question_answers.ucast:
             questions = packets[0].questions
             id_ = packets[0].id
-            out = construct_outgoing_unicast_answers(ucast_now, ucast_source, questions, id_)
+            out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
             self.async_send(out, addr, port, v6_flow_scope)
-        if mcast_now:
-            out = construct_outgoing_multicast_answers(mcast_aggregate)
+        if question_answers.mcast_now:
+            out = construct_outgoing_multicast_answers(question_answers.mcast_aggregate)
             self.async_send(out)
-        if mcast_aggregate:
-            self._out_queue.async_add(now, mcast_aggregate, 0)
-        if mcast_aggregate_last_second:
+        if question_answers.mcast_aggregate:
+            self._out_queue.async_add(now, question_answers.mcast_aggregate, 0)
+        if question_answers.mcast_aggregate_last_second:
             # https://datatracker.ietf.org/doc/html/rfc6762#section-14
             # If we broadcast it in the last second, we have to delay
             # at least a second before we send it again
-            self._out_queue.async_add(now, mcast_aggregate_last_second, _ONE_SECOND)
+            self._out_queue.async_add(now, question_answers.mcast_aggregate_last_second, _ONE_SECOND)
 
     def send(
         self,
