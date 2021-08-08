@@ -534,15 +534,14 @@ class MulticastOutgoingQueue:
 
         now = current_time_millis()
         if queue_len > 1 and self._queue[0].send_before > now:
-            if now > self._queue[1].send_after:
-                log.warning(
-                    "There is more in the queue, delaying until send_before: %s",
-                    millis_to_seconds(self._queue[0].send_before - now),
-                )
-                assert self.zc.loop is not None
-                self.zc.loop.call_later(
-                    millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
-                )
+            log.warning(
+                "There is more in the queue, delaying until send_before: %s",
+                millis_to_seconds(self._queue[0].send_before - now),
+            )
+            assert self.zc.loop is not None
+            self.zc.loop.call_later(
+                millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
+            )
             return
 
         answer_set = set()
