@@ -16,8 +16,7 @@ from typing import List
 import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
-from zeroconf._dns import DNSRRSet
-from zeroconf._handlers import construct_outgoing_multicast_answers, construct_outgoing_unicast_answers
+from zeroconf._handlers import construct_outgoing_multicast_answers
 from zeroconf.asyncio import AsyncZeroconf
 
 
@@ -102,10 +101,10 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        multicast_out = zc.query_handler.async_response(
-            [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
-        )[1]
-        _process_outgoing_packet(multicast_out)
+        question_answers = zc.query_handler.async_response(
+            [r.DNSIncoming(packet) for packet in query.packets()], False
+        )
+        _process_outgoing_packet(construct_outgoing_multicast_answers(question_answers.mcast_aggregate))
 
         # The additonals should all be suppresed since they are all in the answers section
         #
@@ -139,11 +138,10 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
-        _process_outgoing_packet(
-            zc.query_handler.async_response(
-                [r.DNSIncoming(packet) for packet in query.packets()], None, const._MDNS_PORT
-            )[1]
+        question_answers = zc.query_handler.async_response(
+            [r.DNSIncoming(packet) for packet in query.packets()], False
         )
+        _process_outgoing_packet(construct_outgoing_multicast_answers(question_answers.mcast_aggregate))
         assert nbr_answers == 4 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -1060,11 +1058,11 @@ async def test_questions_query_handler_populates_the_question_history_from_qm_qu
     generated.add_answer_at_time(known_answer, 0)
     now = r.current_time_millis()
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is None
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
     assert zc.question_history.suppresses(question, now, {known_answer})
 
     await aiozc.async_close()
@@ -1087,11 +1085,11 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     generated.add_answer_at_time(known_answer, 0)
     now = r.current_time_millis()
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is None
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
     assert not zc.question_history.suppresses(question, now, {known_answer})
 
     await aiozc.async_close()
