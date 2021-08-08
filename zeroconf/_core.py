@@ -767,6 +767,8 @@ class Zeroconf(QuietLogger):
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Sends an outgoing packet."""
+        if self._GLOBAL_DONE:
+            return
         for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
@@ -781,8 +783,6 @@ class Zeroconf(QuietLogger):
                 packet,
             )
             for transport in self.engine.senders:
-                if self._GLOBAL_DONE:
-                    return
                 s = transport.get_extra_info('socket')
                 if addr is None:
                     real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR

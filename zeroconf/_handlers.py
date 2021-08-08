@@ -495,8 +495,8 @@ class MulticastOutgoingQueue:
 
     def async_add(self, now: float, answers: _AnswerWithAdditionalsType, additional_delay: int) -> None:
         assert self.zc.loop is not None
-        delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + additional_delay
-        send_after = now + delay + additional_delay
+        random_delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + additional_delay
+        send_after = now + random_delay
         send_before = now + _MAX_MULTICAST_DELAY + additional_delay
         log.warning(
             "!!!Called async_add with now:%s send_after:%s, send_before:%s, answers:%s -- last_second: %s",
@@ -507,24 +507,17 @@ class MulticastOutgoingQueue:
             additional_delay,
         )
         if not len(self._queue):
-            self.zc.loop.call_later(millis_to_seconds(delay), self._async_check_ready)
+            self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_check_ready)
         self._queue.append(AnswerGroup(send_after, send_before, answers))
 
     def _async_check_ready(self) -> None:
         assert self.zc.loop is not None
         log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
-        if self.zc.done:
-            return
-
-        queue_len = len(self._queue)
-        if queue_len == 0:
-            return
-
         now = current_time_millis()
         # There is more than one answer in the queue,
         # delay until we have to send it (first answer group
         # reaches send_before)
-        if queue_len > 1 and self._queue[0].send_before > now:
+        if len(self._queue) > 1 and self._queue[0].send_before > now:
             self.zc.loop.call_later(
                 millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
             )
