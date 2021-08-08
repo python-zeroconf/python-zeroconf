@@ -129,7 +129,7 @@ class _QueryResponse:
             if self._is_probe:
                 self._ucast.add(record)
             if not self._has_mcast_within_one_quarter_ttl(record):
-                self._mcast.add(record)
+                self._mcast_now.add(record)
             elif not self._is_probe:
                 self._ucast.add(record)
 
