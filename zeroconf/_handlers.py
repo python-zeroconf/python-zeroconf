@@ -519,8 +519,9 @@ class MulticastOutgoingQueue:
             answers,
             mcast_last_second,
         )
+        if not len(self._queue):
+            self.zc.loop.call_later(millis_to_seconds(delay), self._async_check_ready)
         self._queue.append(AnswerGroup(send_after, send_before, answers))
-        self.zc.loop.call_later(millis_to_seconds(delay), self._async_check_ready)
 
     def _async_check_ready(self) -> None:
         log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
@@ -553,6 +554,11 @@ class MulticastOutgoingQueue:
                 answer_set.add(answer)
                 additionals_set.update(additionals)
 
+        if len(self._queue):
+            assert self.zc.loop is not None
+            self.zc.loop.call_later(
+                millis_to_seconds(self._queue[0].send_after - now), self._async_check_ready
+            )
         log.warning("Ready: %s & %s", answer_set, additionals_set)
 
         if not answer_set:
