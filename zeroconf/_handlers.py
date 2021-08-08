@@ -75,7 +75,7 @@ class AnswerGroup(NamedTuple):
     answers: _AnswerWithAdditionalsType
 
 
-def _message_is_probe(msg: DNSIncoming):
+def _message_is_probe(msg: DNSIncoming) -> bool:
     return msg.num_authorities > 0
 
 
@@ -101,7 +101,7 @@ def construct_outgoing_unicast_answers(
 
 def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
-    additionals: Set[DNSRecord] = set().union(*answers.values())
+    additionals: Set[DNSRecord] = set().union(*answers.values())  # type: ignore
     additionals -= answers.keys()
     for answer in answers:
         out.add_answer_at_time(answer, 0)
@@ -273,7 +273,7 @@ class QueryHandler:
         question: DNSQuestion,
         known_answers: DNSRRSet,
         now: float,
-    ) -> None:
+    ) -> _AnswerWithAdditionalsType:
         answer_set: _AnswerWithAdditionalsType = {}
 
         if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
