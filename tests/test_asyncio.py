@@ -615,10 +615,10 @@ async def test_async_zeroconf_service_types():
     await asyncio.sleep(0.2)
     _clear_cache(zeroconf_registrar.zeroconf)
     try:
-        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=['127.0.0.1'], timeout=0.5)
+        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=['127.0.0.1'], timeout=1)
         assert type_ in service_types
         _clear_cache(zeroconf_registrar.zeroconf)
-        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=0.5)
+        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=1)
         assert type_ in service_types
 
     finally:

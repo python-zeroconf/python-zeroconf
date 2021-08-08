@@ -97,7 +97,7 @@ def construct_outgoing_unicast_answers(
 
 def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
-    additionals: Set[DNSRecord] = set(*(answers.values()))
+    additionals: Set[DNSRecord] = set().union(*answers.values())
     additionals -= answers.keys()
     for answer in answers:
         out.add_answer_at_time(answer, 0)
