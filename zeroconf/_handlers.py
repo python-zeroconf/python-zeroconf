@@ -58,6 +58,7 @@ _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 _MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
 _MAX_MULTICAST_DELAY = 500  # ms
 _ONE_SECOND = 1000  # ms
+_RESPOND_IMMEDIATE_TYPES = {_TYPE_SRV, _TYPE_A, _TYPE_AAAA}
 
 
 def construct_outgoing_answers_and_additionals(
@@ -131,7 +132,7 @@ class _QueryResponse:
                 self._mcast.add(answer)
             if self._has_mcast_record_in_last_second(answer):
                 self._mcast_delayed_last_second.add(answer)
-            elif len(self._msg.questions) == 1:
+            elif len(self._msg.questions) == 1 and self._msg.questions[0].type in _RESPOND_IMMEDIATE_TYPES:
                 self._mcast.add(answer)
             else:
                 self._mcast_delayed.add(answer)
