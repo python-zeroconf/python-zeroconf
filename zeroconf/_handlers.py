@@ -494,36 +494,27 @@ class MulticastOutgoingQueue:
         self.queue: deque = deque()
 
     def async_add(self, now: float, answers: _AnswerWithAdditionalsType, additional_delay: int) -> None:
+        """Add a group of answers with additionals to the outgoing queue."""
         assert self.zc.loop is not None
         random_delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + additional_delay
         send_after = now + random_delay
         send_before = now + _MAX_MULTICAST_DELAY + additional_delay
-        log.warning(
-            "!!!Called async_add with now:%s send_after:%s, send_before:%s, answers:%s -- last_second: %s",
-            now,
-            send_after,
-            send_before,
-            answers,
-            additional_delay,
-        )
         if not len(self.queue):
-            self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_check_ready)
+            self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_ready)
         self._queue.append(AnswerGroup(send_after, send_before, answers))
 
-    def _async_check_ready(self) -> None:
+    def _async_ready(self) -> None:
+        """Process anything in the queue that is ready."""
         assert self.zc.loop is not None
-        log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
         now = current_time_millis()
 
         if len(self.queue) and self.queue[0].send_before > now:
             # There is more than one answer in the queue,
             # delay until we have to send it (first answer group reaches send_before)
-            next_time = millis_to_seconds(self.queue[0].send_before - now)
-            self.zc.loop.call_later(next_time, self._async_check_ready)
+            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_before - now), self._async_ready)
             return
 
         answers: _AnswerWithAdditionalsType = {}
-        log.warning("Next send is %s and now=%s", self.queue[0].send_after, now)
         # Add all groups that can be sent now
         while len(self.queue) and self.queue[0].send_after <= now:
             answers.update(self._queue.popleft().answers)
@@ -531,11 +522,9 @@ class MulticastOutgoingQueue:
         if len(self.queue):
             # If there are still groups in the queue that are not ready to send
             # be sure we schedule them to go out later
-            next_time = millis_to_seconds(self.queue[0].send_after - now)
-            self.zc.loop.call_later(next_time, self._async_check_ready)
+            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_after - now), self._async_ready)
 
         if answers:
-            log.warning("Ready: %s", answers)
             # If we have the same answer scheduled to go out, remove it
             for pending in self._queue:
                 for record in answers:
