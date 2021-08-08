@@ -491,19 +491,13 @@ class MulticastOutgoingQueue:
 
     def __init__(self, zeroconf: 'Zeroconf') -> None:
         self.zc = zeroconf
-        self._cache = zeroconf.cache
         self._queue: deque = deque()
 
     def async_add(self, now: float, answers: _AnswerWithAdditionalsType, additional_delay: int) -> None:
         assert self.zc.loop is not None
-        delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL)
-        send_after = now + delay
-        send_before = now + _MAX_MULTICAST_DELAY
-        if additional_delay:
-            delay += additional_delay
-            send_after += additional_delay
-            send_before += additional_delay
-
+        delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + additional_delay
+        send_after = now + delay + additional_delay
+        send_before = now + _MAX_MULTICAST_DELAY + additional_delay
         log.warning(
             "!!!Called async_add with now:%s send_after:%s, send_before:%s, answers:%s -- last_second: %s",
             now,
