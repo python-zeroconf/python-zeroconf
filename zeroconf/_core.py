@@ -33,7 +33,13 @@ from collections import deque
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
 from ._exceptions import NonUniqueNameException
-from ._handlers import MulticastOutgoingQueue, QueryHandler, RecordManager
+from ._handlers import (
+    MulticastOutgoingQueue,
+    QueryHandler,
+    RecordManager,
+    construct_outgoing_multicast_answers,
+    construct_outgoing_unicast_answers,
+)
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol import DNSIncoming, DNSOutgoing
@@ -71,6 +77,7 @@ from .const import (
     _MDNS_ADDR,
     _MDNS_ADDR6,
     _MDNS_PORT,
+    _ONE_SECOND,
     _REGISTER_TIME,
     _TYPE_PTR,
     _UNREGISTER_TIME,
@@ -722,17 +729,29 @@ class Zeroconf(QuietLogger):
         or the timer expires. If the TC bit is not set, a single
         packet will be in packets.
         """
-        unicast_out, multicast_out, delayed, delayed_mcast_last_second = self.query_handler.async_response(
-            packets, addr, port
-        )
-        if unicast_out:
-            self.async_send(unicast_out, addr, port, v6_flow_scope)
-        if multicast_out:
-            self.async_send(multicast_out)
-        if delayed:
-            self._out_queue.async_add(packets[0].now, delayed, False)
-        if delayed_mcast_last_second:
-            self._out_queue.async_add(packets[0].now, delayed_mcast_last_second, True)
+        now = packets[0].now
+        (
+            ucast_now,
+            mcast_now,
+            mcast_aggregate,
+            mcast_aggregate_last_second,
+        ) = self.query_handler.async_response(packets, addr, port)
+        if ucast_now:
+            unicast_source = port != _MDNS_PORT
+            questions = packets[0].questions
+            id_ = packets[0].id
+            out = construct_outgoing_unicast_answers(ucast_now, unicast_source, questions, id_)
+            self.async_send(out, addr, port, v6_flow_scope)
+        if mcast_now:
+            out = construct_outgoing_multicast_answers(mcast_aggregate)
+            self.async_send(out)
+        if mcast_aggregate:
+            self._out_queue.async_add(now, mcast_aggregate, 0)
+        if mcast_aggregate_last_second:
+            # https://datatracker.ietf.org/doc/html/rfc6762#section-14
+            # If we broadcast it in the last second, we have to delay
+            # at least a second before we send it again
+            self._out_queue.async_add(now, mcast_aggregate_last_second, _ONE_SECOND)
 
     def send(
         self,
