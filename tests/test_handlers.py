@@ -403,16 +403,15 @@ def test_unicast_response():
     # query
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", 1234
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], True
     )
-    for out in (unicast_out, multicast_out):
-        assert out.id == query.id
+    for answers in (question_answers.ucast, question_answers.mcast_aggregate):
         has_srv = has_txt = has_a = False
         nbr_additionals = 0
-        nbr_answers = len(out.answers)
-        nbr_authorities = len(out.authorities)
-        for answer in out.additionals:
+        nbr_answers = len(answers)
+        additionals = set().union(*answers.values())
+        for answer in additionals:
             nbr_additionals += 1
             if answer.type == const._TYPE_SRV:
                 has_srv = True
@@ -420,7 +419,7 @@ def test_unicast_response():
                 has_txt = True
             elif answer.type == const._TYPE_A:
                 has_a = True
-        assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
+        assert nbr_answers == 1 and nbr_additionals == 3
         assert has_srv and has_txt and has_a
 
     # unregister
