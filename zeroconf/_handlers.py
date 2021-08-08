@@ -75,6 +75,10 @@ class AnswerGroup(NamedTuple):
     answers: _AnswerWithAdditionalsType
 
 
+def _message_is_probe(msg: DNSIncoming):
+    return msg.num_authorities > 0
+
+
 def construct_outgoing_multicast_answers(answers: _AnswerWithAdditionalsType) -> DNSOutgoing:
     """Add answers and additionals to a DNSOutgoing."""
     out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=True)
@@ -127,7 +131,7 @@ class _QueryResponse:
 
     def __init__(self, cache: DNSCache, msgs: List[DNSIncoming]) -> None:
         """Build a query response."""
-        self._is_probe = any(msg.num_authorities > 0 for msg in msgs)
+        self._is_probe = any(_message_is_probe(msg) for msg in msgs)
         self._msg = msgs[0]
         self._now = self._msg.now
         self._cache = cache
@@ -159,6 +163,8 @@ class _QueryResponse:
         for answer in answers:
             if self._is_probe:
                 self._mcast_now.add(answer)
+                continue
+
             if self._has_mcast_record_in_last_second(answer):
                 self._mcast_aggregate_last_second.add(answer)
             elif len(self._msg.questions) == 1 and self._msg.questions[0].type in _RESPOND_IMMEDIATE_TYPES:
@@ -265,13 +271,14 @@ class QueryHandler:
     def _answer_question(
         self,
         question: DNSQuestion,
-        answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
         now: float,
     ) -> None:
+        answer_set: _AnswerWithAdditionalsType = {}
+
         if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
             self._add_service_type_enumeration_query_answers(answer_set, known_answers, now)
-            return
+            return answer_set
 
         type_ = question.type
 
@@ -295,6 +302,8 @@ class QueryHandler:
                     if not known_answers.suppresses(dns_text):
                         answer_set[dns_text] = set()
 
+        return answer_set
+
     def async_response(  # pylint: disable=unused-argument
         self, msgs: List[DNSIncoming], ucast_source: bool
     ) -> QuestionAnswers:
@@ -303,15 +312,16 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        known_answers = DNSRRSet(itertools.chain(*(msg.answers for msg in msgs)))
+        known_answers = DNSRRSet(
+            itertools.chain(*(msg.answers for msg in msgs if not _message_is_probe(msg)))
+        )
         query_res = _QueryResponse(self.cache, msgs)
 
         for msg in msgs:
             for question in msg.questions:
                 if not question.unicast:
                     self.question_history.add_question_at_time(question, msg.now, set(known_answers.lookup))
-                answer_set: _AnswerWithAdditionalsType = {}
-                self._answer_question(question, answer_set, known_answers, msg.now)
+                answer_set = self._answer_question(question, known_answers, msg.now)
                 if not ucast_source and question.unicast:
                     query_res.add_qu_question_response(answer_set)
                     continue

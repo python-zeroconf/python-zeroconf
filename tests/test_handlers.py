@@ -425,6 +425,48 @@ def test_unicast_response():
     zc.close()
 
 
+@pytest.mark.asyncio
+async def test_probe_answered_immediately():
+    """Verify probes are responded to immediately."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # service definition
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = f"{name}.{type_}"
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.async_add(info)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    query.add_question(question)
+    query.add_authorative_answer(info.dns_pointer())
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
+    )
+    assert not question_answers.ucast
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    assert question_answers.mcast_now
+
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unicast = True
+    query.add_question(question)
+    query.add_authorative_answer(info.dns_pointer())
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
+    )
+    assert question_answers.ucast
+    assert question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    zc.close()
+
+
 def test_qu_response():
     """Handle multicast incoming with the QU bit set."""
     # instantiate a zeroconf instance
