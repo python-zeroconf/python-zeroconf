@@ -730,17 +730,17 @@ class Zeroconf(QuietLogger):
         packet will be in packets.
         """
         now = packets[0].now
+        ucast_source = port != _MDNS_PORT
         (
             ucast_now,
             mcast_now,
             mcast_aggregate,
             mcast_aggregate_last_second,
-        ) = self.query_handler.async_response(packets, addr, port)
+        ) = self.query_handler.async_response(packets, ucast_source)
         if ucast_now:
-            unicast_source = port != _MDNS_PORT
             questions = packets[0].questions
             id_ = packets[0].id
-            out = construct_outgoing_unicast_answers(ucast_now, unicast_source, questions, id_)
+            out = construct_outgoing_unicast_answers(ucast_now, ucast_source, questions, id_)
             self.async_send(out, addr, port, v6_flow_scope)
         if mcast_now:
             out = construct_outgoing_multicast_answers(mcast_aggregate)

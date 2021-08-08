@@ -281,7 +281,7 @@ class QueryHandler:
                         answer_set[dns_text] = set()
 
     def async_response(  # pylint: disable=unused-argument
-        self, msgs: List[DNSIncoming], addr: Optional[str], port: int
+        self, msgs: List[DNSIncoming], ucast_source: bool
     ) -> Tuple[
         Optional[DNSOutgoing], Optional[DNSOutgoing], _AnswerWithAdditionalsType, _AnswerWithAdditionalsType
     ]:
