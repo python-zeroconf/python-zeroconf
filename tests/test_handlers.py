@@ -17,6 +17,7 @@ import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
 from zeroconf._dns import DNSRRSet
+from zeroconf._handlers import construct_outgoing_multicast_answers, construct_outgoing_unicast_answers
 from zeroconf.asyncio import AsyncZeroconf
 
 
@@ -459,21 +460,20 @@ def test_qu_response():
     # register
     zc.register_service(info)
 
-    def _validate_complete_response(query, out):
-        assert out.id == query.id
+    def _validate_complete_response(answers):
         has_srv = has_txt = has_a = False
-        nbr_additionals = 0
-        nbr_answers = len(out.answers)
-        nbr_authorities = len(out.authorities)
-        for answer in out.additionals:
-            nbr_additionals += 1
+        nbr_answers = len(answers.keys())
+        additionals = set().union(*answers.values())
+        nbr_additionals = len(additionals)
+
+        for answer in additionals:
             if answer.type == const._TYPE_SRV:
                 has_srv = True
             elif answer.type == const._TYPE_TXT:
                 has_txt = True
             elif answer.type == const._TYPE_A:
                 has_a = True
-        assert nbr_answers == 1 and nbr_additionals == 3 and nbr_authorities == 0
+        assert nbr_answers == 1 and nbr_additionals == 3
         assert has_srv and has_txt and has_a
 
     # With QU should respond to only unicast when the answer has been recently multicast
@@ -483,11 +483,13 @@ def test_qu_response():
     assert question.unicast is True
     query.add_question(question)
 
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert multicast_out is None
-    _validate_complete_response(query, unicast_out)
+    _validate_complete_response(question_answers.ucast)
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     _clear_cache(zc)
     # With QU should respond to only multicast since the response hasn't been seen since 75% of the ttl
@@ -496,11 +498,13 @@ def test_qu_response():
     question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert unicast_out is None
-    _validate_complete_response(query, multicast_out)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate
+    _validate_complete_response(question_answers.mcast_now)
 
     # With QU set and an authorative answer (probe) should respond to both unitcast and multicast since the response hasn't been seen since 75% of the ttl
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -509,24 +513,28 @@ def test_qu_response():
     assert question.unicast is True
     query.add_question(question)
     query.add_authorative_answer(info2.dns_pointer())
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    _validate_complete_response(query, unicast_out)
-    _validate_complete_response(query, multicast_out)
+    _validate_complete_response(question_answers.ucast)
+    _validate_complete_response(question_answers.mcast_now)
 
-    _inject_response(zc, r.DNSIncoming(multicast_out.packets()[0]))
+    _inject_response(
+        zc, r.DNSIncoming(construct_outgoing_multicast_answers(question_answers.mcast_now).packets()[0])
+    )
     # With the cache repopulated; should respond to only unicast when the answer has been recently multicast
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unicast = True  # Set the QU bit
     assert question.unicast is True
     query.add_question(question)
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in query.packets()], "1.2.3.4", const._MDNS_PORT
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
     )
-    assert multicast_out is None
-    _validate_complete_response(query, unicast_out)
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    _validate_complete_response(question_answers.ucast)
     # unregister
     zc.unregister_service(info)
     zc.close()
