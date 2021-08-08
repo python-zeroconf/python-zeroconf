@@ -517,7 +517,7 @@ class MulticastOutgoingQueue:
         answers: _AnswerWithAdditionalsType = {}
         # Add all groups that can be sent now
         while len(self.queue) and self.queue[0].send_after <= now:
-            answers.update(self._queue.popleft().answers)
+            answers.update(self.queue.popleft().answers)
 
         if len(self.queue):
             # If there are still groups in the queue that are not ready to send
