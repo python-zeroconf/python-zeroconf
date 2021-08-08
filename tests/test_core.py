@@ -696,10 +696,10 @@ def test_guard_against_oversized_packets():
     listener = _core.AsyncListener(zc)
     listener.transport = unittest.mock.MagicMock()
 
-    listener.datagram_received(ok_packet, ('127.0.0.1', 5353))
+    listener.datagram_received(ok_packet, ('127.0.0.1', const._MDNS_PORT))
     assert zc.cache.async_get_unique(okpacket_record) is not None
 
-    listener.datagram_received(over_sized_packet, ('127.0.0.1', 5353))
+    listener.datagram_received(over_sized_packet, ('127.0.0.1', const._MDNS_PORT))
     assert (
         zc.cache.async_get_unique(
             r.DNSText(

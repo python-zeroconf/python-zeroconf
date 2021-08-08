@@ -1219,7 +1219,7 @@ async def test_duplicate_goodbye_answers_in_packet():
 
 
 @pytest.mark.asyncio
-async def test_response_aggregation_timings():
+async def test_response_aggregation_timings(run_isolated):
     """Verify multicast respones are aggregated."""
     type_ = "_mservice._tcp.local."
     type_2 = "_mservice2._tcp.local."
@@ -1258,13 +1258,13 @@ async def test_response_aggregation_timings():
     protocol = zc.engine.protocols[0]
 
     with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock:
-        protocol.datagram_received(query.packets()[0], ('127.0.0.1', 5353))
+        protocol.datagram_received(query.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         await asyncio.sleep(0.1)
-        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', 5353))
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         await asyncio.sleep(0.1)
-        protocol.datagram_received(query.packets()[0], ('127.0.0.1', 5353))
+        protocol.datagram_received(query.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         await asyncio.sleep(0.1)
-        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', 5353))
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         await asyncio.sleep(0.3)
 
         calls = send_mock.mock_calls
@@ -1278,7 +1278,9 @@ async def test_response_aggregation_timings():
 
         # Because the response was sent in the last second we need to make
         # sure the next answer is delayed at least a second
-        aiozc.zeroconf.engine.protocols[0].datagram_received(query3.packets()[0], ('127.0.0.1', 5353))
+        aiozc.zeroconf.engine.protocols[0].datagram_received(
+            query3.packets()[0], ('127.0.0.1', const._MDNS_PORT)
+        )
         await asyncio.sleep(0.5)
 
         # After 0.5 seconds it should not have been sent
