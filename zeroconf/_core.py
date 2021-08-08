@@ -32,7 +32,13 @@ from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union, cast
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
 from ._exceptions import NonUniqueNameException
-from ._handlers import QueryHandler, RecordManager
+from ._handlers import (
+    MulticastOutgoingQueue,
+    QueryHandler,
+    RecordManager,
+    construct_outgoing_multicast_answers,
+    construct_outgoing_unicast_answers,
+)
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol import DNSIncoming, DNSOutgoing
@@ -70,12 +76,15 @@ from .const import (
     _MDNS_ADDR,
     _MDNS_ADDR6,
     _MDNS_PORT,
+    _ONE_SECOND,
     _REGISTER_TIME,
     _TYPE_PTR,
     _UNREGISTER_TIME,
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
+
+
 _CLOSE_TIMEOUT = 3000  # ms
 _REGISTER_BROADCASTS = 3
 
@@ -393,6 +402,8 @@ class Zeroconf(QuietLogger):
         self.notify_event: Optional[asyncio.Event] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
+
+        self._out_queue = MulticastOutgoingQueue(self)
 
         self.start()
 
@@ -717,11 +728,24 @@ class Zeroconf(QuietLogger):
         or the timer expires. If the TC bit is not set, a single
         packet will be in packets.
         """
-        unicast_out, multicast_out = self.query_handler.async_response(packets, addr, port)
-        if unicast_out:
-            self.async_send(unicast_out, addr, port, v6_flow_scope)
-        if multicast_out:
-            self.async_send(multicast_out, None, _MDNS_PORT)
+        now = packets[0].now
+        ucast_source = port != _MDNS_PORT
+        question_answers = self.query_handler.async_response(packets, ucast_source)
+        if question_answers.ucast:
+            questions = packets[0].questions
+            id_ = packets[0].id
+            out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
+            self.async_send(out, addr, port, v6_flow_scope)
+        if question_answers.mcast_now:
+            out = construct_outgoing_multicast_answers(question_answers.mcast_aggregate)
+            self.async_send(out)
+        if question_answers.mcast_aggregate:
+            self._out_queue.async_add(now, question_answers.mcast_aggregate, 0)
+        if question_answers.mcast_aggregate_last_second:
+            # https://datatracker.ietf.org/doc/html/rfc6762#section-14
+            # If we broadcast it in the last second, we have to delay
+            # at least a second before we send it again
+            self._out_queue.async_add(now, question_answers.mcast_aggregate_last_second, _ONE_SECOND)
 
     def send(
         self,
@@ -742,6 +766,9 @@ class Zeroconf(QuietLogger):
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Sends an outgoing packet."""
+        if self._GLOBAL_DONE:
+            return
+
         for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
@@ -756,8 +783,6 @@ class Zeroconf(QuietLogger):
                 packet,
             )
             for transport in self.engine.senders:
-                if self._GLOBAL_DONE:
-                    return
                 s = transport.get_extra_info('socket')
                 if addr is None:
                     real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR

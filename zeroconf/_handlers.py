@@ -21,7 +21,9 @@
 """
 
 import itertools
-from typing import Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+import random
+from collections import deque
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
@@ -30,14 +32,14 @@ from ._logger import log
 from ._protocol import DNSIncoming, DNSOutgoing
 from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener
-from ._utils.time import current_time_millis
+from ._utils.time import current_time_millis, millis_to_seconds
 from .const import (
     _CLASS_IN,
     _DNS_OTHER_TTL,
     _DNS_PTR_MIN_TTL,
     _FLAGS_AA,
     _FLAGS_QR_RESPONSE,
-    _MDNS_PORT,
+    _ONE_SECOND,
     _SERVICE_TYPE_ENUMERATION_NAME,
     _TYPE_A,
     _TYPE_AAAA,
@@ -52,6 +54,59 @@ if TYPE_CHECKING:
 
 
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
+
+_MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
+_MAX_MULTICAST_DELAY = 500  # ms
+_RESPOND_IMMEDIATE_TYPES = {_TYPE_SRV, _TYPE_A, _TYPE_AAAA}
+
+
+class QuestionAnswers(NamedTuple):
+    ucast: _AnswerWithAdditionalsType
+    mcast_now: _AnswerWithAdditionalsType
+    mcast_aggregate: _AnswerWithAdditionalsType
+    mcast_aggregate_last_second: _AnswerWithAdditionalsType
+
+
+class AnswerGroup(NamedTuple):
+    """A group of answers scheduled to be sent at the same time."""
+
+    send_after: float  # Must be sent after this time
+    send_before: float  # Must be sent before this time
+    answers: _AnswerWithAdditionalsType
+
+
+def _message_is_probe(msg: DNSIncoming) -> bool:
+    return msg.num_authorities > 0
+
+
+def construct_outgoing_multicast_answers(answers: _AnswerWithAdditionalsType) -> DNSOutgoing:
+    """Add answers and additionals to a DNSOutgoing."""
+    out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=True)
+    _add_answers_additionals(out, answers)
+    return out
+
+
+def construct_outgoing_unicast_answers(
+    answers: _AnswerWithAdditionalsType, ucast_source: bool, questions: List[DNSQuestion], id_: int
+) -> DNSOutgoing:
+    """Add answers and additionals to a DNSOutgoing."""
+    out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=id_)
+    # Adding the questions back when the source is legacy unicast behavior
+    if ucast_source:
+        for question in questions:
+            out.add_question(question)
+    _add_answers_additionals(out, answers)
+    return out
+
+
+def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
+    # Find additionals and suppress any additionals that are already in answers
+    additionals: Set[DNSRecord] = set().union(*answers.values())  # type: ignore
+    additionals -= answers.keys()
+    for answer in answers:
+        out.add_answer_at_time(answer, 0)
+    for additional in additionals:
+        out.add_additional_answer(additional)
 
 
 def sanitize_incoming_record(record: DNSRecord) -> None:
@@ -74,16 +129,17 @@ def sanitize_incoming_record(record: DNSRecord) -> None:
 class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
 
-    def __init__(self, cache: DNSCache, msg: DNSIncoming, ucast_source: bool) -> None:
+    def __init__(self, cache: DNSCache, msgs: List[DNSIncoming]) -> None:
         """Build a query response."""
-        self._msg = msg
-        self._is_probe = msg.num_authorities > 0
-        self._ucast_source = ucast_source
-        self._now = current_time_millis()
+        self._is_probe = any(_message_is_probe(msg) for msg in msgs)
+        self._msg = msgs[0]
+        self._now = self._msg.now
         self._cache = cache
         self._additionals: _AnswerWithAdditionalsType = {}
         self._ucast: Set[DNSRecord] = set()
-        self._mcast: Set[DNSRecord] = set()
+        self._mcast_now: Set[DNSRecord] = set()
+        self._mcast_aggregate: Set[DNSRecord] = set()
+        self._mcast_aggregate_last_second: Set[DNSRecord] = set()
 
     def add_qu_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast QU query."""
@@ -92,7 +148,7 @@ class _QueryResponse:
             if self._is_probe:
                 self._ucast.add(record)
             if not self._has_mcast_within_one_quarter_ttl(record):
-                self._mcast.add(record)
+                self._mcast_now.add(record)
             elif not self._is_probe:
                 self._ucast.add(record)
 
@@ -104,46 +160,32 @@ class _QueryResponse:
     def add_mcast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast query."""
         self._additionals.update(answers)
-        self._mcast.update(answers.keys())
+        for answer in answers:
+            if self._is_probe:
+                self._mcast_now.add(answer)
+                continue
 
-    def outgoing_unicast(self) -> Optional[DNSOutgoing]:
-        """Build the outgoing unicast response."""
-        ucastout = self._construct_outgoing_from_record_set(self._ucast, False)
-        # Adding the questions back when the source is legacy unicast behavior
-        if ucastout and self._ucast_source:
-            for question in self._msg.questions:
-                ucastout.add_question(question)
-        return ucastout
+            if self._has_mcast_record_in_last_second(answer):
+                self._mcast_aggregate_last_second.add(answer)
+            elif len(self._msg.questions) == 1 and self._msg.questions[0].type in _RESPOND_IMMEDIATE_TYPES:
+                self._mcast_now.add(answer)
+            else:
+                self._mcast_aggregate.add(answer)
 
-    def outgoing_multicast(self) -> Optional[DNSOutgoing]:
-        """Build the outgoing multicast response."""
-        if not self._is_probe:
-            self._suppress_mcasts_from_last_second(self._mcast)
-        return self._construct_outgoing_from_record_set(self._mcast, True)
+    def _generate_answers_with_additionals(self, rrset: Set[DNSRecord]) -> _AnswerWithAdditionalsType:
+        """Create answers with additionals from an rrset."""
+        return {record: self._additionals[record] for record in rrset}
 
-    def _construct_outgoing_from_record_set(
-        self, answers_rrset: Set[DNSRecord], multicast: bool
-    ) -> Optional[DNSOutgoing]:
-        """Add answers and additionals to a DNSOutgoing."""
-        # Find additionals and suppress any additionals that are already in answers
-        additionals_rrset = self._additionals_from_answers_rrset(answers_rrset) - answers_rrset
-        if not answers_rrset:
-            return None
-
-        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=multicast, id_=self._msg.id)
-        for answer in answers_rrset:
-            out.add_answer_at_time(answer, 0)
-        for additional in additionals_rrset:
-            out.add_additional_answer(additional)
-        return out
-
-    def _additionals_from_answers_rrset(self, rrset: Set[DNSRecord]) -> Set[DNSRecord]:
-        additionals: Set[DNSRecord] = set()
-        return additionals.union(*(self._additionals[record] for record in rrset))
-
-    def _suppress_mcasts_from_last_second(self, rrset: Set[DNSRecord]) -> None:
-        """Remove any records that were already sent in the last second."""
-        rrset -= {record for record in rrset if self._has_mcast_record_in_last_second(record)}
+    def answers(
+        self,
+    ) -> QuestionAnswers:
+        """Return answer sets that will be queued."""
+        return QuestionAnswers(
+            self._generate_answers_with_additionals(self._ucast),
+            self._generate_answers_with_additionals(self._mcast_now),
+            self._generate_answers_with_additionals(self._mcast_aggregate),
+            self._generate_answers_with_additionals(self._mcast_aggregate_last_second),
+        )
 
     def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord) -> bool:
         """Check to see if a record has been mcasted recently.
@@ -160,12 +202,12 @@ class _QueryResponse:
         return bool(maybe_entry and maybe_entry.is_recent(self._now))
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
-        """Remove answers that were just broadcast
+        """Check if an answer was seen in the last second.
         Protect the network against excessive packet flooding
         https://datatracker.ietf.org/doc/html/rfc6762#section-14
         """
         maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
-        return bool(maybe_entry and self._now - maybe_entry.created < 1000)
+        return bool(maybe_entry and self._now - maybe_entry.created < _ONE_SECOND)
 
 
 class QueryHandler:
@@ -229,13 +271,14 @@ class QueryHandler:
     def _answer_question(
         self,
         question: DNSQuestion,
-        answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
         now: float,
-    ) -> None:
+    ) -> _AnswerWithAdditionalsType:
+        answer_set: _AnswerWithAdditionalsType = {}
+
         if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
             self._add_service_type_enumeration_query_answers(answer_set, known_answers, now)
-            return
+            return answer_set
 
         type_ = question.type
 
@@ -259,24 +302,26 @@ class QueryHandler:
                     if not known_answers.suppresses(dns_text):
                         answer_set[dns_text] = set()
 
+        return answer_set
+
     def async_response(  # pylint: disable=unused-argument
-        self, msgs: List[DNSIncoming], addr: Optional[str], port: int
-    ) -> Tuple[Optional[DNSOutgoing], Optional[DNSOutgoing]]:
+        self, msgs: List[DNSIncoming], ucast_source: bool
+    ) -> QuestionAnswers:
         """Deal with incoming query packets. Provides a response if possible.
 
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        ucast_source = port != _MDNS_PORT
-        known_answers = DNSRRSet(itertools.chain(*(msg.answers for msg in msgs)))
-        query_res = _QueryResponse(self.cache, msgs[0], ucast_source)
+        known_answers = DNSRRSet(
+            itertools.chain(*(msg.answers for msg in msgs if not _message_is_probe(msg)))
+        )
+        query_res = _QueryResponse(self.cache, msgs)
 
         for msg in msgs:
             for question in msg.questions:
                 if not question.unicast:
                     self.question_history.add_question_at_time(question, msg.now, set(known_answers.lookup))
-                answer_set: _AnswerWithAdditionalsType = {}
-                self._answer_question(question, answer_set, known_answers, msg.now)
+                answer_set = self._answer_question(question, known_answers, msg.now)
                 if not ucast_source and question.unicast:
                     query_res.add_qu_question_response(answer_set)
                     continue
@@ -286,7 +331,7 @@ class QueryHandler:
                 # source as long as we haven't done it recently (75% of ttl)
                 query_res.add_mcast_question_response(answer_set)
 
-        return query_res.outgoing_unicast(), query_res.outgoing_multicast()
+        return query_res.answers()
 
 
 class RecordManager:
@@ -397,7 +442,7 @@ class RecordManager:
         answers_rrset = DNSRRSet(answers)
         for name, type_, class_ in unique_types:
             for entry in self.cache.async_all_by_details(name, type_, class_):
-                if (now - entry.created > 1000) and entry not in answers_rrset:
+                if (now - entry.created > _ONE_SECOND) and entry not in answers_rrset:
                     # Expire in 1s
                     entry.set_created_ttl(now, 1)
 
@@ -449,3 +494,50 @@ class RecordManager:
             self.zc.async_notify_all()
         except ValueError as e:
             log.exception('Failed to remove listener: %r', e)
+
+
+class MulticastOutgoingQueue:
+    """An outgoing queue used to aggregate multicast responses."""
+
+    def __init__(self, zeroconf: 'Zeroconf') -> None:
+        self.zc = zeroconf
+        self.queue: deque = deque()
+
+    def async_add(self, now: float, answers: _AnswerWithAdditionalsType, additional_delay: int) -> None:
+        """Add a group of answers with additionals to the outgoing queue."""
+        assert self.zc.loop is not None
+        random_delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + additional_delay
+        send_after = now + random_delay
+        send_before = now + _MAX_MULTICAST_DELAY + additional_delay
+        if not len(self.queue):
+            self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_ready)
+        self.queue.append(AnswerGroup(send_after, send_before, answers))
+
+    def _async_ready(self) -> None:
+        """Process anything in the queue that is ready."""
+        assert self.zc.loop is not None
+        now = current_time_millis()
+
+        if len(self.queue) > 1 and self.queue[0].send_before > now:
+            # There is more than one answer in the queue,
+            # delay until we have to send it (first answer group reaches send_before)
+            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_before - now), self._async_ready)
+            return
+
+        answers: _AnswerWithAdditionalsType = {}
+        # Add all groups that can be sent now
+        while len(self.queue) and self.queue[0].send_after <= now:
+            answers.update(self.queue.popleft().answers)
+
+        if len(self.queue):
+            # If there are still groups in the queue that are not ready to send
+            # be sure we schedule them to go out later
+            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_after - now), self._async_ready)
+
+        if answers:
+            # If we have the same answer scheduled to go out, remove it
+            for pending in self.queue:
+                for record in answers:
+                    pending.answers.pop(record, None)
+
+            self.zc.async_send(construct_outgoing_multicast_answers(answers))

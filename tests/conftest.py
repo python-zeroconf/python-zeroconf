@@ -7,6 +7,10 @@ import threading
 
 import pytest
 
+import unittest
+
+from zeroconf import _core, const
+
 
 @pytest.fixture(autouse=True)
 def verify_threads_ended():
@@ -15,3 +19,12 @@ def verify_threads_ended():
     yield
     threads = frozenset(threading.enumerate()) - threads_before
     assert not threads
+
+
+@pytest.fixture
+def run_isolated():
+    """Change the mDNS port to run the test in isolation."""
+    with unittest.mock.patch.object(_core, "_MDNS_PORT", 5454), unittest.mock.patch.object(
+        const, "_MDNS_PORT", 5454
+    ):
+        yield
