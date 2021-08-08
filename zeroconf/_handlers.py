@@ -507,6 +507,7 @@ class MulticastOutgoingQueue:
             # https://datatracker.ietf.org/doc/html/rfc6762#section-14
             # If we broadcast it in the last second, we have to delay
             # at least a second before we send it again
+            delay += _ONE_SECOND
             send_after += _ONE_SECOND
             send_before += _ONE_SECOND
 
@@ -519,25 +520,42 @@ class MulticastOutgoingQueue:
             mcast_last_second,
         )
         self._queue.append(AnswerGroup(send_after, send_before, answers))
-        self.zc.loop.call_later(millis_to_seconds(delay), self._async_send_ready)
+        self.zc.loop.call_later(millis_to_seconds(delay), self._async_check_ready)
 
-    def _async_send_ready(self) -> None:
+    def _async_check_ready(self) -> None:
         log.warning("!!!Called _async_send_ready at %s with %s", current_time_millis(), list(self._queue))
-        queue_len = len(self._queue)
-        if (
-            self.zc.done
-            or queue_len == 0
-            or (queue_len > 1 and self._queue[1].send_after < self._queue[0].send_before)
-        ):
+        if self.zc.done:
             return
+
+        queue_len = len(self._queue)
+        if queue_len == 0:
+            return
+
         now = current_time_millis()
+        if queue_len > 1 and self._queue[0].send_before > now:
+            if now > self._queue[1].send_after:
+                log.warning(
+                    "There is more in the queue, delaying until send_before: %s",
+                    millis_to_seconds(self._queue[0].send_before - now),
+                )
+                self.zc.loop.call_later(
+                    millis_to_seconds(self._queue[0].send_before - now), self._async_check_ready
+                )
+            return
+
         answer_set = set()
         additionals_set = set()
-        while len(self._queue) and self._queue[0].send_after >= now:
+        log.warning("Next send is %s and now=%s", self._queue[0].send_after, now)
+        while len(self._queue) and self._queue[0].send_after <= now:
             group = self._queue.popleft()
             for answer, additionals in group.answers.items():
                 answer_set.add(answer)
                 additionals_set.update(additionals)
+
+        log.warning("Ready: %s & %s", answer_set, additionals_set)
+
+        if not answer_set:
+            return
 
         # If we have the same answer scheduled to go out, remove it
         for pending in self._queue:
