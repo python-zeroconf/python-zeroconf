@@ -530,23 +530,23 @@ class MulticastOutgoingQueue:
             )
             return
 
-        answer_set: _AnswerWithAdditionalsType = {}
+        answers: _AnswerWithAdditionalsType = {}
         log.warning("Next send is %s and now=%s", self._queue[0].send_after, now)
         while len(self._queue) and self._queue[0].send_after <= now:
-            answer_set.update(self._queue.popleft().answers)
+            answers.update(self._queue.popleft().answers)
 
         if len(self._queue):
             self.zc.loop.call_later(
                 millis_to_seconds(self._queue[0].send_after - now), self._async_check_ready
             )
-        log.warning("Ready: %s", answer_set)
+        log.warning("Ready: %s", answers)
 
-        if not answer_set:
+        if not answers:
             return
 
         # If we have the same answer scheduled to go out, remove it
         for pending in self._queue:
-            for record in answer_set:
+            for record in answers:
                 pending.answers.pop(record, None)
 
-        self.zc.async_send(construct_outgoing_multicast_answers(answer_set))
+        self.zc.async_send(construct_outgoing_multicast_answers(answers))
