@@ -554,34 +554,33 @@ def test_known_answer_supression():
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is not None and multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
     generated.add_answer_at_time(info.dns_pointer(), now)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    # If the answer is suppressed, the additional should be suppresed as well
-    assert not multicast_out or not multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     # Test A supression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is not None and multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
@@ -589,56 +588,55 @@ def test_known_answer_supression():
     for dns_address in info.dns_addresses():
         generated.add_answer_at_time(dns_address, now)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert not multicast_out or not multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     # Test SRV supression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_SRV, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is not None and multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_SRV, const._CLASS_IN)
     generated.add_question(question)
     generated.add_answer_at_time(info.dns_service(), now)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    # If the answer is suppressed, the additional should be suppresed as well
-    assert not multicast_out or not multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     # Test TXT supression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_TXT, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is not None and multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_TXT, const._CLASS_IN)
     generated.add_question(question)
     generated.add_answer_at_time(info.dns_text(), now)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert not multicast_out or not multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     # unregister
     zc.registry.async_remove(info)
@@ -687,11 +685,11 @@ def test_multi_packet_known_answer_supression():
     generated.add_answer_at_time(info3.dns_pointer(), now)
     packets = generated.packets()
     assert len(packets) > 1
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is None
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
     # unregister
     zc.registry.async_remove(info)
     zc.registry.async_remove(info2)
@@ -728,11 +726,11 @@ def test_known_answer_supression_service_type_enumeration_query():
     question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert multicast_out is not None and multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME, const._TYPE_PTR, const._CLASS_IN)
@@ -758,11 +756,11 @@ def test_known_answer_supression_service_type_enumeration_query():
         now,
     )
     packets = generated.packets()
-    unicast_out, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert unicast_out is None
-    assert not multicast_out or not multicast_out.answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
 
     # unregister
     zc.registry.async_remove(info)
