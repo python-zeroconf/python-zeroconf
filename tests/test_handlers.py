@@ -283,7 +283,7 @@ def test_ptr_optimization():
 @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
 @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
 def test_any_query_for_ptr():
-    """Test that queries for ANY will return PTR records."""
+    """Test that queries for ANY will return PTR records and the response is aggregated."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_anyptr._tcp.local."
     name = "knownname"
@@ -299,11 +299,10 @@ def test_any_query_for_ptr():
     question = r.DNSQuestion(type_, const._TYPE_ANY, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert multicast_out.answers[0][0].name == type_
-    assert multicast_out.answers[0][0].alias == registration_name
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    mcast_answers = list(question_answers.mcast_aggregate)
+    assert mcast_answers[0].name == type_
+    assert mcast_answers[0].alias == registration_name
     # unregister
     zc.registry.async_remove(info)
     zc.close()
@@ -312,7 +311,7 @@ def test_any_query_for_ptr():
 @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
 @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
 def test_aaaa_query():
-    """Test that queries for AAAA records work."""
+    """Test that queries for AAAA records work and should respond right away."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_knownaaaservice._tcp.local."
     name = "knownname"
@@ -327,10 +326,9 @@ def test_aaaa_query():
     question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    assert multicast_out.answers[0][0].address == ipv6_address
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    mcast_answers = list(question_answers.mcast_now)
+    assert mcast_answers[0].address == ipv6_address
     # unregister
     zc.registry.async_remove(info)
     zc.close()
@@ -339,7 +337,7 @@ def test_aaaa_query():
 @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
 @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
 def test_a_and_aaaa_record_fate_sharing():
-    """Test that queries for AAAA always return A records in the additionals."""
+    """Test that queries for AAAA always return A records in the additionals and should respond right away."""
     zc = Zeroconf(interfaces=['127.0.0.1'])
     type_ = "_a-and-aaaa-service._tcp.local."
     name = "knownname"
@@ -361,31 +359,25 @@ def test_a_and_aaaa_record_fate_sharing():
     question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    answers = DNSRRSet([answer[0] for answer in multicast_out.answers])
-    additionals = DNSRRSet(multicast_out.additionals)
-    assert aaaa_record in answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    additionals = set().union(*question_answers.mcast_now.values())
+    assert aaaa_record in question_answers.mcast_now
     assert a_record in additionals
-    assert len(multicast_out.answers) == 1
-    assert len(multicast_out.additionals) == 1
+    assert len(question_answers.mcast_now) == 1
+    assert len(additionals) == 1
 
     # Test A query
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
-    _, multicast_out, delayed, delayed_mcast_last_second = zc.query_handler.async_response(
-        [r.DNSIncoming(packet) for packet in packets], "1.2.3.4", const._MDNS_PORT
-    )
-    answers = DNSRRSet([answer[0] for answer in multicast_out.answers])
-    additionals = DNSRRSet(multicast_out.additionals)
-
-    assert a_record in answers
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    additionals = set().union(*question_answers.mcast_now.values())
+    assert a_record in question_answers.mcast_now
     assert aaaa_record in additionals
-    assert len(multicast_out.answers) == 1
-    assert len(multicast_out.additionals) == 1
+    assert len(question_answers.mcast_now) == 1
+    assert len(additionals) == 1
+
     # unregister
     zc.registry.async_remove(info)
     zc.close()
