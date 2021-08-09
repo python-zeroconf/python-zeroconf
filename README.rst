@@ -140,6 +140,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.34.3
+======
+
+* Fix sending immediate multicast responses (#949) @bdraco
+
 0.34.2
 ======
 
