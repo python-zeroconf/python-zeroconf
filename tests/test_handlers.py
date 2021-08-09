@@ -1321,7 +1321,9 @@ async def test_response_aggregation_timings(run_isolated):
 
 @pytest.mark.asyncio
 async def test_response_aggregation_timings_multiple(run_isolated):
-    """Verify multicast responses that are aggregated do not take longer than 500ms to send."""
+    """Verify multicast responses that are aggregated do not take longer than 620ms to send.
+    
+    620ms is the maximum random delay of 120ms and 500ms additional for aggregation."""
     type_2 = "_mservice2._tcp.local."
 
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
