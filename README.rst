@@ -140,6 +140,19 @@ See examples directory for more.
 Changelog
 =========
 
+0.34.1
+======
+
+* Ensure multicast aggregation sends responses within 620ms (#942) @bdraco
+
+  Responses that trigger the protection against against excessive
+  packet flooding due to software bugs or malicious attack described
+  in RFC6762 section 6 could cause the multicast aggregation response
+  to be delayed longer than 620ms (The maximum random delay of 120ms
+  and 500ms additional for aggregation).
+
+  Only responses that trigger the protection are delayed longer than 620ms
+
 0.34.0
 ======
 
