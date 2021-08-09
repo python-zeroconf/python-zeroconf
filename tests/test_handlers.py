@@ -1373,16 +1373,18 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         # The delay should increase with two packets and
-        await asyncio.sleep(0.7)
+        # 900ms is beyond the maximum aggregation delay
+        # when there is no network protection delay
+        await asyncio.sleep(0.9)
         calls = send_mock.mock_calls
         assert len(calls) == 0
 
         # 1000ms  (1s network protection delays)
-        # - 700ms (already slept)
+        # - 900ms (already slept)
         # + 120ms (maximum random delay)
-        # + 500ms (maximum aggrgation delay)
+        # + 500ms (maximum aggregation delay)
         # +  20ms (execution time)
-        await asyncio.sleep(millis_to_seconds(1000 - 700 + 120 + 500 + 20))
+        await asyncio.sleep(millis_to_seconds(1000 - 900 + 120 + 500 + 20))
         calls = send_mock.mock_calls
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
