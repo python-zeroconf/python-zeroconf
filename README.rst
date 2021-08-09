@@ -140,6 +140,25 @@ See examples directory for more.
 Changelog
 =========
 
+0.34.2
+======
+
+* Coalesce aggregated multicast answers (#945) @bdraco
+
+  When the random delay is shorter than the last scheduled response,
+  answers are now added to the same outgoing time group.
+
+  This reduces traffic when we already know we will be sending a group of answers
+  inside the random delay window described in
+  datatracker.ietf.org/doc/html/rfc6762#section-6.3
+* Ensure ServiceInfo requests can be answered inside the default timeout with network protection (#946) @bdraco
+
+  Adjust the time windows to ensure responses that have triggered the
+  protection against against excessive packet flooding due to
+  software bugs or malicious attack described in RFC6762 section 6
+  can respond in under 1350ms to ensure ServiceInfo can ask two
+  questions within the default timeout of 3000ms
+
 0.34.1
 ======
 
