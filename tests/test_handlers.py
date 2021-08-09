@@ -17,6 +17,7 @@ import zeroconf as r
 from zeroconf import _handlers, ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
 from zeroconf._handlers import construct_outgoing_multicast_answers, MulticastOutgoingQueue
+from zeroconf._utils.time import millis_to_seconds
 from zeroconf.asyncio import AsyncZeroconf
 
 
@@ -1371,12 +1372,17 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
-        # The delay should increase with two packets
-        await asyncio.sleep(1.2)
+        # The delay should increase with two packets and
+        await asyncio.sleep(0.7)
         calls = send_mock.mock_calls
         assert len(calls) == 0
 
-        await asyncio.sleep(0.63)  # 620ms + 10ms for execution time
+        # 1000ms  (1s network protection delays)
+        # - 700ms (already slept)
+        # + 120ms (maximum random delay)
+        # + 500ms (maximum aggrgation delay)
+        # +  20ms (execution time)
+        await asyncio.sleep(millis_to_seconds(1000 - 700 + 120 + 500 + 20))
         calls = send_mock.mock_calls
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
