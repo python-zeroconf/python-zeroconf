@@ -751,8 +751,7 @@ class Zeroconf(QuietLogger):
             out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
             self.async_send(out, addr, port, v6_flow_scope)
         if question_answers.mcast_now:
-            out = construct_outgoing_multicast_answers(question_answers.mcast_aggregate)
-            self.async_send(out)
+            self.async_send(construct_outgoing_multicast_answers(question_answers.mcast_now))
         if question_answers.mcast_aggregate:
             self._out_queue.async_add(now, question_answers.mcast_aggregate)
         if question_answers.mcast_aggregate_last_second:
