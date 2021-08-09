@@ -1317,3 +1317,69 @@ async def test_response_aggregation_timings(run_isolated):
         assert info.dns_pointer() in incoming.answers
 
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_response_aggregation_timings_multiple(run_isolated):
+    """Verify multicast responses that are aggregated do not take longer than 620ms to send.
+
+    620ms is the maximum random delay of 120ms and 500ms additional for aggregation."""
+    type_2 = "_mservice2._tcp.local."
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+
+    name = "xxxyyy"
+    registration_name2 = f"{name}.{type_2}"
+
+    desc = {'path': '/~paulsm/'}
+    info2 = ServiceInfo(
+        type_2, registration_name2, 80, 0, 0, desc, "ash-4.local.", addresses=[socket.inet_aton("10.0.1.3")]
+    )
+    aiozc.zeroconf.registry.async_add(info2)
+
+    query2 = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    question2 = r.DNSQuestion(info2.type, const._TYPE_PTR, const._CLASS_IN)
+    query2.add_question(question2)
+
+    zc = aiozc.zeroconf
+    protocol = zc.engine.protocols[0]
+
+    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock, unittest.mock.patch.object(
+        protocol, "suppress_duplicate_packet", return_value=False
+    ):
+        send_mock.reset_mock()
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        await asyncio.sleep(0.2)
+        calls = send_mock.mock_calls
+        assert len(calls) == 1
+        outgoing = send_mock.call_args[0][0]
+        incoming = r.DNSIncoming(outgoing.packets()[0])
+        zc.handle_response(incoming)
+        assert info2.dns_pointer() in incoming.answers
+
+        send_mock.reset_mock()
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        await asyncio.sleep(1.2)
+        calls = send_mock.mock_calls
+        assert len(calls) == 1
+        outgoing = send_mock.call_args[0][0]
+        incoming = r.DNSIncoming(outgoing.packets()[0])
+        zc.handle_response(incoming)
+        assert info2.dns_pointer() in incoming.answers
+
+        send_mock.reset_mock()
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        # The delay should increase with two packets
+        await asyncio.sleep(1.2)
+        calls = send_mock.mock_calls
+        assert len(calls) == 0
+
+        await asyncio.sleep(0.63)  # 620ms + 10ms for execution time
+        calls = send_mock.mock_calls
+        assert len(calls) == 1
+        outgoing = send_mock.call_args[0][0]
+        incoming = r.DNSIncoming(outgoing.packets()[0])
+        zc.handle_response(incoming)
+        assert info2.dns_pointer() in incoming.answers

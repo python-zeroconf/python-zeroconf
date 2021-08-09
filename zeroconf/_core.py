@@ -403,7 +403,8 @@ class Zeroconf(QuietLogger):
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
 
-        self._out_queue = MulticastOutgoingQueue(self)
+        self._out_queue = MulticastOutgoingQueue(self, 0)
+        self._out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND)
 
         self.start()
 
@@ -740,12 +741,12 @@ class Zeroconf(QuietLogger):
             out = construct_outgoing_multicast_answers(question_answers.mcast_aggregate)
             self.async_send(out)
         if question_answers.mcast_aggregate:
-            self._out_queue.async_add(now, question_answers.mcast_aggregate, 0)
+            self._out_queue.async_add(now, question_answers.mcast_aggregate)
         if question_answers.mcast_aggregate_last_second:
             # https://datatracker.ietf.org/doc/html/rfc6762#section-14
             # If we broadcast it in the last second, we have to delay
             # at least a second before we send it again
-            self._out_queue.async_add(now, question_answers.mcast_aggregate_last_second, _ONE_SECOND)
+            self._out_delay_queue.async_add(now, question_answers.mcast_aggregate_last_second)
 
     def send(
         self,

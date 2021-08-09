@@ -499,16 +499,17 @@ class RecordManager:
 class MulticastOutgoingQueue:
     """An outgoing queue used to aggregate multicast responses."""
 
-    def __init__(self, zeroconf: 'Zeroconf') -> None:
+    def __init__(self, zeroconf: 'Zeroconf', additional_delay: int) -> None:
         self.zc = zeroconf
         self.queue: deque = deque()
+        self.additional_delay = additional_delay
 
-    def async_add(self, now: float, answers: _AnswerWithAdditionalsType, additional_delay: int) -> None:
+    def async_add(self, now: float, answers: _AnswerWithAdditionalsType) -> None:
         """Add a group of answers with additionals to the outgoing queue."""
         assert self.zc.loop is not None
-        random_delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + additional_delay
+        random_delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + self.additional_delay
         send_after = now + random_delay
-        send_before = now + _MAX_MULTICAST_DELAY + additional_delay
+        send_before = now + _MAX_MULTICAST_DELAY + self.additional_delay
         if not len(self.queue):
             self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_ready)
         self.queue.append(AnswerGroup(send_after, send_before, answers))
