@@ -18,12 +18,18 @@ class AsyncRunner:
 
     async def test_mcast(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=self.ip_version)
-        info = await self.aiozc.async_get_service_info(
-            "_home-assistant._tcp.local.", "Defend-2._home-assistant._tcp.local.", timeout=5000
-        )
-        import pprint
+        zc = self.aiozc.zeroconf
+        for i in range(1000):
+            info = await self.aiozc.async_get_service_info(
+                "_home-assistant._tcp.local.", "Defend-2._home-assistant._tcp.local."
+            )
+            import pprint
 
-        pprint.pprint(info)
+            pprint.pprint(info)
+            assert info is not None
+            zc.cache.cache.clear()
+            zc.question_history._history.clear()
+
         await self.aiozc.async_close()
 
 
