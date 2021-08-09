@@ -1376,7 +1376,7 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         calls = send_mock.mock_calls
         assert len(calls) == 0
 
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(0.63)  # 620ms + 10ms for execution time
         calls = send_mock.mock_calls
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
