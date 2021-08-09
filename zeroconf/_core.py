@@ -83,7 +83,20 @@ from .const import (
 )
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
-
+# The maximum amont of time to delay a multicast
+# response in order to aggregate answers
+_AGGREGATION_DELAY = 500  # ms
+# The maximum amont of time to delay a multicast
+# response in order to aggregate answers after
+# it has already been delayed to protect the network
+# from excessive traffic. We use a shorter time
+# window here as we want to _try_ to answer all
+# queries in under 1350ms while protecting
+# the network from excessive traffic to ensure
+# a service info request with two questions
+# can be answered in the default timeout of
+# 3000ms
+_PROTECTED_AGGREGATION_DELAY = 200  # ms
 
 _CLOSE_TIMEOUT = 3000  # ms
 _REGISTER_BROADCASTS = 3
@@ -403,8 +416,8 @@ class Zeroconf(QuietLogger):
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
 
-        self._out_queue = MulticastOutgoingQueue(self, 0)
-        self._out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND)
+        self._out_queue = MulticastOutgoingQueue(self, 0, _AGGREGATION_DELAY)
+        self._out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY)
 
         self.start()
 

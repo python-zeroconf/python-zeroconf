@@ -1382,9 +1382,9 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         # 1000ms  (1s network protection delays)
         # - 900ms (already slept)
         # + 120ms (maximum random delay)
-        # + 500ms (maximum aggregation delay)
+        # + 200ms (maximum protected aggregation delay)
         # +  20ms (execution time)
-        await asyncio.sleep(millis_to_seconds(1000 - 900 + 120 + 500 + 20))
+        await asyncio.sleep(millis_to_seconds(1000 - 900 + 120 + 200 + 20))
         calls = send_mock.mock_calls
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
@@ -1430,7 +1430,7 @@ async def test_response_aggregation_random_delay():
         type_5, registration_name5, 80, 0, 0, desc, "ash-5.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
     mocked_zc = unittest.mock.MagicMock()
-    outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0)
+    outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 500)
 
     now = current_time_millis()
     with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (500, 600)):
