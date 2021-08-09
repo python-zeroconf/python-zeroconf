@@ -1397,7 +1397,7 @@ async def test_response_aggregation_timings_multiple(run_isolated):
 async def test_response_aggregation_random_delay():
     """Verify the random delay for outgoing multicast will coalesce into a single group
 
-    When the random delay is shorter than the next outgoing group,
+    When the random delay is shorter than the last outgoing group,
     the groups should be combined.
     """
     type_ = "_mservice._tcp.local."
