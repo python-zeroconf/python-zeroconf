@@ -14,9 +14,9 @@ import unittest.mock
 from typing import List
 
 import zeroconf as r
-from zeroconf import ServiceInfo, Zeroconf, current_time_millis
+from zeroconf import _handlers, ServiceInfo, Zeroconf, current_time_millis
 from zeroconf import const
-from zeroconf._handlers import construct_outgoing_multicast_answers
+from zeroconf._handlers import construct_outgoing_multicast_answers, MulticastOutgoingQueue
 from zeroconf.asyncio import AsyncZeroconf
 
 
@@ -1383,3 +1383,72 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         incoming = r.DNSIncoming(outgoing.packets()[0])
         zc.handle_response(incoming)
         assert info2.dns_pointer() in incoming.answers
+
+
+@pytest.mark.asyncio
+async def test_response_aggregation_random_delay():
+    """Verify the random delay for outgoing multicast will coalesce into a single group
+
+    When the random delay is shorter than the next outgoing group,
+    the groups should be combined.
+    """
+    type_ = "_mservice._tcp.local."
+    type_2 = "_mservice2._tcp.local."
+    type_3 = "_mservice3._tcp.local."
+    type_4 = "_mservice4._tcp.local."
+    type_5 = "_mservice5._tcp.local."
+
+    name = "xxxyyy"
+    registration_name = f"{name}.{type_}"
+    registration_name2 = f"{name}.{type_2}"
+    registration_name3 = f"{name}.{type_3}"
+    registration_name4 = f"{name}.{type_4}"
+    registration_name5 = f"{name}.{type_5}"
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-1.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info2 = ServiceInfo(
+        type_2, registration_name2, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.3")]
+    )
+    info3 = ServiceInfo(
+        type_3, registration_name3, 80, 0, 0, desc, "ash-3.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info4 = ServiceInfo(
+        type_4, registration_name4, 80, 0, 0, desc, "ash-4.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    info5 = ServiceInfo(
+        type_5, registration_name5, 80, 0, 0, desc, "ash-5.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    mocked_zc = unittest.mock.MagicMock()
+    outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0)
+
+    now = current_time_millis()
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (500, 600)):
+        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+
+    # The second group should always be coalesced into first group since it will always come before
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (300, 400)):
+        outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
+
+    # The third group should always be coalesced into first group since it will always come before
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (100, 200)):
+        outgoing_queue.async_add(now, {info3.dns_pointer(): set(), info4.dns_pointer(): set()})
+
+    assert len(outgoing_queue.queue) == 1
+    assert info.dns_pointer() in outgoing_queue.queue[0].answers
+    assert info2.dns_pointer() in outgoing_queue.queue[0].answers
+    assert info3.dns_pointer() in outgoing_queue.queue[0].answers
+    assert info4.dns_pointer() in outgoing_queue.queue[0].answers
+
+    # The forth group should not be coalesced because its scheduled after the last group in the queue
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (700, 800)):
+        outgoing_queue.async_add(now, {info5.dns_pointer(): set()})
+
+    assert len(outgoing_queue.queue) == 2
+    assert info.dns_pointer() not in outgoing_queue.queue[1].answers
+    assert info2.dns_pointer() not in outgoing_queue.queue[1].answers
+    assert info3.dns_pointer() not in outgoing_queue.queue[1].answers
+    assert info4.dns_pointer() not in outgoing_queue.queue[1].answers
+    assert info5.dns_pointer() in outgoing_queue.queue[1].answers
