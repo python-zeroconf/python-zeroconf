@@ -56,7 +56,6 @@ if TYPE_CHECKING:
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 
 _MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
-_MAX_MULTICAST_DELAY = 500  # ms
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_SRV, _TYPE_A, _TYPE_AAAA}
 
 
@@ -499,17 +498,21 @@ class RecordManager:
 class MulticastOutgoingQueue:
     """An outgoing queue used to aggregate multicast responses."""
 
-    def __init__(self, zeroconf: 'Zeroconf', additional_delay: int) -> None:
+    def __init__(self, zeroconf: 'Zeroconf', additional_delay: int, max_aggregation_delay: int) -> None:
         self.zc = zeroconf
         self.queue: deque = deque()
+        # Additional delay is used to implement
+        # Protect the network against excessive packet flooding
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-14
         self.additional_delay = additional_delay
+        self.aggregation_delay = max_aggregation_delay
 
     def async_add(self, now: float, answers: _AnswerWithAdditionalsType) -> None:
         """Add a group of answers with additionals to the outgoing queue."""
         assert self.zc.loop is not None
         random_delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + self.additional_delay
         send_after = now + random_delay
-        send_before = now + _MAX_MULTICAST_DELAY + self.additional_delay
+        send_before = now + self.aggregation_delay + self.additional_delay
         if len(self.queue):
             # If we calculate a random delay for the send after time
             # that is less than the last group scheduled to go out,
