@@ -510,7 +510,16 @@ class MulticastOutgoingQueue:
         random_delay = random.randint(*_MULTICAST_DELAY_RANDOM_INTERVAL) + self.additional_delay
         send_after = now + random_delay
         send_before = now + _MAX_MULTICAST_DELAY + self.additional_delay
-        if not len(self.queue):
+        if len(self.queue):
+            # If we calculate a random delay for the send after time
+            # that is less than the last group scheduled to go out,
+            # we instead add the answers to the last group as this
+            # allows aggregating additonal responses
+            last_group = self.queue[-1]
+            if send_after <= last_group.send_after:
+                last_group.answers.update(answers)
+                return
+        else:
             self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_ready)
         self.queue.append(AnswerGroup(send_after, send_before, answers))
 
