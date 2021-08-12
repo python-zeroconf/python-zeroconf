@@ -234,6 +234,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
         assert self.transport is not None
+        assert self._sock_fileno is not None
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
@@ -778,7 +779,7 @@ class Zeroconf(QuietLogger):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-        sock_fileno: int = None,
+        sock_fileno: Optional[int] = None,
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
@@ -790,7 +791,7 @@ class Zeroconf(QuietLogger):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-        sock_fileno: int = None,
+        sock_fileno: Optional[int] = None,
     ) -> None:
         """Sends an outgoing packet."""
         if self._GLOBAL_DONE:
@@ -805,13 +806,13 @@ class Zeroconf(QuietLogger):
                 if sock_fileno is not None and not self.unicast and sock_fileno != s.fileno():
                     continue
                 log.debug(
-                    'Sending to (%s, %d) (%d bytes #%d) %r via %s as %r...',
+                    'Sending to (%s, %d) via %s (%d bytes #%d) %r as %r...',
                     addr,
                     port,
+                    transport.get_extra_info('sockname'),
                     len(packet),
                     packet_num + 1,
                     out,
-                    transport.get_extra_info('sockname'),
                     packet,
                 )
                 if addr is None:
