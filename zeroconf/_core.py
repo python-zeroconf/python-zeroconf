@@ -803,12 +803,21 @@ class Zeroconf(QuietLogger):
             for transport in self.engine.senders:
                 s = transport.get_extra_info('socket')
                 fileno = s.fileno()
-                if sock_fileno is not None and not self.unicast and sock_fileno != fileno:
+                if addr is None:
+                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+                else:
+                    real_addr = addr
+                if (
+                    sock_fileno is not None
+                    and not self.unicast
+                    and sock_fileno != fileno
+                    or not can_send_to(s, addr)
+                ):
                     continue
                 log.debug(
                     'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
-                    addr,
-                    port,
+                    real_addr,
+                    port or _MDNS_PORT,
                     fileno,
                     transport.get_extra_info('sockname'),
                     len(packet),
@@ -816,12 +825,6 @@ class Zeroconf(QuietLogger):
                     out,
                     packet,
                 )
-                if addr is None:
-                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
-                elif not can_send_to(s, addr):
-                    continue
-                else:
-                    real_addr = addr
                 transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
     def _close(self) -> None:
