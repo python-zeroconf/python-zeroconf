@@ -480,28 +480,28 @@ def test_tc_bit_defers():
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
-    assert protocol._deferred[source_ip] == expected_deferred
-    assert source_ip in protocol._timers
-
-    next_packet = r.DNSIncoming(packets.pop(0))
-    expected_deferred.append(next_packet)
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
+    assert protocol._deferred[source_ip] == expected_deferred
+    assert source_ip in protocol._timers
+
+    next_packet = r.DNSIncoming(packets.pop(0))
+    expected_deferred.append(next_packet)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert source_ip not in protocol._deferred
     assert source_ip not in protocol._timers
 
@@ -559,13 +559,13 @@ def test_tc_bit_defers_last_response_missing():
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     timer1 = protocol._timers[source_ip]
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     timer2 = protocol._timers[source_ip]
     if sys.version_info >= (3, 7):
@@ -573,7 +573,7 @@ def test_tc_bit_defers_last_response_missing():
     assert timer2 != timer1
 
     # Send the same packet again to similar multi interfaces
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
     timer3 = protocol._timers[source_ip]
@@ -583,7 +583,7 @@ def test_tc_bit_defers_last_response_missing():
 
     next_packet = r.DNSIncoming(packets.pop(0))
     expected_deferred.append(next_packet)
-    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT)
+    threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
     timer4 = protocol._timers[source_ip]

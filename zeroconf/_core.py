@@ -215,7 +215,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
-
+        self._sock_name: Optional[str] = None
+        self._sock_fileno: Optional[int] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
 
@@ -294,15 +295,20 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.zc.handle_response(msg)
             return
 
-        self.handle_query_or_defer(msg, addr, port, v6_flow_scope)
+        self.handle_query_or_defer(msg, addr, port, self._sock_fileno, v6_flow_scope)
 
     def handle_query_or_defer(
-        self, msg: DNSIncoming, addr: str, port: int, v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
+        self,
+        msg: DNSIncoming,
+        addr: str,
+        port: int,
+        sock_fileno: int,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
         if not msg.truncated:
-            self._respond_query(msg, addr, port, v6_flow_scope)
+            self._respond_query(msg, addr, port, sock_fileno, v6_flow_scope)
             return
 
         deferred = self._deferred.setdefault(addr, [])
@@ -315,7 +321,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         assert self.zc.loop is not None
         self._cancel_any_timers_for_addr(addr)
         self._timers[addr] = self.zc.loop.call_later(
-            delay, self._respond_query, None, addr, port, v6_flow_scope
+            delay, self._respond_query, None, addr, port, sock_fileno, v6_flow_scope
         )
 
     def _cancel_any_timers_for_addr(self, addr: str) -> None:
@@ -328,6 +334,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         msg: Optional[DNSIncoming],
         addr: str,
         port: int,
+        sock_fileno: int,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Respond to a query and reassemble any truncated deferred packets."""
@@ -336,15 +343,13 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         if msg:
             packets.append(msg)
 
-        self.zc.handle_assembled_query(packets, addr, port, v6_flow_scope)
+        self.zc.handle_assembled_query(packets, addr, port, sock_fileno, v6_flow_scope)
 
     @property
     def _socket_description(self) -> str:
         """A human readable description of the socket."""
         assert self.transport is not None
-        fileno = self.transport.get_extra_info('socket').fileno()
-        sockname = self.transport.get_extra_info('sockname')
-        return f"{fileno} ({sockname})"
+        return f"{self._sock_fileno} ({self._sock_name})"
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
@@ -357,6 +362,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
+        self._sock_name = self.transport.get_extra_info('sockname')
+        self._sock_fileno = self.transport.get_extra_info('socket').fileno()
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
@@ -400,6 +407,7 @@ class Zeroconf(QuietLogger):
         if apple_p2p and sys.platform != 'darwin':
             raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
 
+        self.unicast = unicast
         listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
         log.debug('Listen socket %s, respond sockets %s', listen_socket, respond_sockets)
 
@@ -732,6 +740,7 @@ class Zeroconf(QuietLogger):
         packets: List[DNSIncoming],
         addr: str,
         port: int,
+        sock_fileno: int,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Respond to a (re)assembled query.
@@ -749,7 +758,10 @@ class Zeroconf(QuietLogger):
             questions = packets[0].questions
             id_ = packets[0].id
             out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
-            self.async_send(out, addr, port, v6_flow_scope)
+            # When sending unicast, only send back the reply
+            # via the same socket that it was recieved from
+            # as we know its reachable from that socket
+            self.async_send(out, addr, port, v6_flow_scope, sock_fileno)
         if question_answers.mcast_now:
             self.async_send(construct_outgoing_multicast_answers(question_answers.mcast_now))
         if question_answers.mcast_aggregate:
@@ -766,10 +778,11 @@ class Zeroconf(QuietLogger):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+        sock_fileno: int = None,
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope)
+        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, sock_fileno)
 
     def async_send(
         self,
@@ -777,6 +790,7 @@ class Zeroconf(QuietLogger):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+        sock_fileno: int = None,
     ) -> None:
         """Sends an outgoing packet."""
         if self._GLOBAL_DONE:
@@ -786,17 +800,20 @@ class Zeroconf(QuietLogger):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
-            log.debug(
-                'Sending to (%s, %d) (%d bytes #%d) %r as %r...',
-                addr,
-                port,
-                len(packet),
-                packet_num + 1,
-                out,
-                packet,
-            )
             for transport in self.engine.senders:
                 s = transport.get_extra_info('socket')
+                if sock_fileno is not None and not self.unicast and sock_fileno != s.fileno():
+                    continue
+                log.debug(
+                    'Sending to (%s, %d) (%d bytes #%d) %r via %s as %r...',
+                    addr,
+                    port,
+                    len(packet),
+                    packet_num + 1,
+                    out,
+                    transport.get_extra_info('sockname'),
+                    packet,
+                )
                 if addr is None:
                     real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
                 elif not can_send_to(s, addr):
