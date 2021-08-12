@@ -234,7 +234,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
         assert self.transport is not None
-        assert self.sock_fileno is not None
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
@@ -296,20 +295,20 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.zc.handle_response(msg)
             return
 
-        self.handle_query_or_defer(msg, addr, port, self.sock_fileno, v6_flow_scope)
+        self.handle_query_or_defer(msg, addr, port, self.transport, v6_flow_scope)
 
     def handle_query_or_defer(
         self,
         msg: DNSIncoming,
         addr: str,
         port: int,
-        sock_fileno: int,
+        transport: asyncio.DatagramTransport,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
         if not msg.truncated:
-            self._respond_query(msg, addr, port, sock_fileno, v6_flow_scope)
+            self._respond_query(msg, addr, port, transport, v6_flow_scope)
             return
 
         deferred = self._deferred.setdefault(addr, [])
@@ -322,7 +321,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         assert self.zc.loop is not None
         self._cancel_any_timers_for_addr(addr)
         self._timers[addr] = self.zc.loop.call_later(
-            delay, self._respond_query, None, addr, port, sock_fileno, v6_flow_scope
+            delay, self._respond_query, None, addr, port, transport, v6_flow_scope
         )
 
     def _cancel_any_timers_for_addr(self, addr: str) -> None:
@@ -335,7 +334,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         msg: Optional[DNSIncoming],
         addr: str,
         port: int,
-        sock_fileno: int,
+        transport: asyncio.DatagramTransport,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Respond to a query and reassemble any truncated deferred packets."""
@@ -344,7 +343,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         if msg:
             packets.append(msg)
 
-        self.zc.handle_assembled_query(packets, addr, port, sock_fileno, v6_flow_scope)
+        self.zc.handle_assembled_query(packets, addr, port, transport, v6_flow_scope)
 
     @property
     def _socket_description(self) -> str:
@@ -740,7 +739,7 @@ class Zeroconf(QuietLogger):
         packets: List[DNSIncoming],
         addr: str,
         port: int,
-        sock_fileno: int,
+        transport: asyncio.DatagramTransport,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         """Respond to a (re)assembled query.
@@ -761,7 +760,7 @@ class Zeroconf(QuietLogger):
             # When sending unicast, only send back the reply
             # via the same socket that it was recieved from
             # as we know its reachable from that socket
-            self.async_send(out, addr, port, v6_flow_scope, sock_fileno)
+            self.async_send(out, addr, port, v6_flow_scope, transport)
         if question_answers.mcast_now:
             self.async_send(construct_outgoing_multicast_answers(question_answers.mcast_now))
         if question_answers.mcast_aggregate:
@@ -778,11 +777,11 @@ class Zeroconf(QuietLogger):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-        sock_fileno: Optional[int] = None,
+        transport: Optional[asyncio.DatagramTransport] = None,
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, sock_fileno)
+        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
 
     def async_send(
         self,
@@ -790,39 +789,52 @@ class Zeroconf(QuietLogger):
         addr: Optional[str] = None,
         port: int = _MDNS_PORT,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-        sock_fileno: Optional[int] = None,
+        transport: Optional[asyncio.DatagramTransport] = None,
     ) -> None:
         """Sends an outgoing packet."""
         if self._GLOBAL_DONE:
             return
 
+        # If no transport is specified, we send to all the ones
+        # with the same address family
+        transports = [transport] if transport else self.engine.senders
+
         for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
-            for transport in self.engine.senders:
-                s = transport.get_extra_info('socket')
-                fileno = s.fileno()
-                if addr is None:
-                    real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
-                else:
-                    real_addr = addr
-                if not can_send_to(s, real_addr):
-                    continue
-                if not self.unicast and sock_fileno is not None and sock_fileno != fileno:
-                    continue
-                log.debug(
-                    'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
-                    real_addr,
-                    port or _MDNS_PORT,
-                    fileno,
-                    transport.get_extra_info('sockname'),
-                    len(packet),
-                    packet_num + 1,
-                    out,
-                    packet,
-                )
-                transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
+            for send_transport in transports:
+                self._async_send_transport(send_transport, packet, packet_num, out, addr, port, v6_flow_scope)
+
+    def _async_send_transport(
+        self,
+        transport: asyncio.DatagramTransport,
+        packet: bytes,
+        packet_num: int,
+        out: DNSOutgoing,
+        addr: Optional[str],
+        port: int,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    ) -> None:
+        s = transport.get_extra_info('socket')
+        if addr is None:
+            real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+        else:
+            real_addr = addr
+        if not can_send_to(s, real_addr):
+            return
+        log.debug(
+            'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
+            real_addr,
+            port or _MDNS_PORT,
+            s.fileno(),
+            transport.get_extra_info('sockname'),
+            len(packet),
+            packet_num + 1,
+            out,
+            packet,
+        )
+        transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
     def _close(self) -> None:
         """Set global done and remove all service listeners."""
