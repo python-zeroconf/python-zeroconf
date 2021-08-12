@@ -349,7 +349,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     @property
     def _socket_description(self) -> str:
         """A human readable description of the socket."""
-        assert self.transport is not None
         return f"{self._sock_fileno} ({self._sock_name})"
 
     def error_received(self, exc: Exception) -> None:
@@ -803,12 +802,14 @@ class Zeroconf(QuietLogger):
                 return
             for transport in self.engine.senders:
                 s = transport.get_extra_info('socket')
-                if sock_fileno is not None and not self.unicast and sock_fileno != s.fileno():
+                fileno = s.fileno()
+                if sock_fileno is not None and not self.unicast and sock_fileno != fileno:
                     continue
                 log.debug(
-                    'Sending to (%s, %d) via %s (%d bytes #%d) %r as %r...',
+                    'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
                     addr,
                     port,
+                    fileno,
                     transport.get_extra_info('sockname'),
                     len(packet),
                     packet_num + 1,
