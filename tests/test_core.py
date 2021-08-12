@@ -695,6 +695,7 @@ def test_guard_against_oversized_packets():
     # will guard against the oversized packet and we won't see it.
     listener = _core.AsyncListener(zc)
     listener.transport = unittest.mock.MagicMock()
+    listener.sock_fileno = 1
 
     listener.datagram_received(ok_packet, ('127.0.0.1', const._MDNS_PORT))
     assert zc.cache.async_get_unique(okpacket_record) is not None

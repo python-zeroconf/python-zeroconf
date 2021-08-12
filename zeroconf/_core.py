@@ -215,8 +215,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
-        self._sock_name: Optional[str] = None
-        self._sock_fileno: Optional[int] = None
+        self.sock_name: Optional[str] = None
+        self.sock_fileno: Optional[int] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
 
@@ -234,7 +234,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
         assert self.transport is not None
-        assert self._sock_fileno is not None
+        assert self.sock_fileno is not None
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
@@ -296,7 +296,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.zc.handle_response(msg)
             return
 
-        self.handle_query_or_defer(msg, addr, port, self._sock_fileno, v6_flow_scope)
+        self.handle_query_or_defer(msg, addr, port, self.sock_fileno, v6_flow_scope)
 
     def handle_query_or_defer(
         self,
@@ -349,7 +349,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     @property
     def _socket_description(self) -> str:
         """A human readable description of the socket."""
-        return f"{self._sock_fileno} ({self._sock_name})"
+        return f"{self.sock_fileno} ({self.sock_name})"
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
@@ -362,8 +362,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
-        self._sock_name = self.transport.get_extra_info('sockname')
-        self._sock_fileno = self.transport.get_extra_info('socket').fileno()
+        self.sock_name = self.transport.get_extra_info('sockname')
+        self.sock_fileno = self.transport.get_extra_info('socket').fileno()
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
