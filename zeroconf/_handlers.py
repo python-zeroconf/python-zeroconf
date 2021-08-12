@@ -100,12 +100,13 @@ def construct_outgoing_unicast_answers(
 
 def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
-    additionals: Set[DNSRecord] = set().union(*answers.values())  # type: ignore
-    additionals -= answers.keys()
-    for answer in answers:
+    sending: Set[DNSRecord] = set(answers.keys())
+    for answer, additionals in sorted(answers.items(), key=lambda kv: kv[0].name):
         out.add_answer_at_time(answer, 0)
-    for additional in additionals:
-        out.add_additional_answer(additional)
+        for additional in additionals:
+            if additional not in sending:
+                out.add_additional_answer(additional)
+                sending.add(additional)
 
 
 def sanitize_incoming_record(record: DNSRecord) -> None:
