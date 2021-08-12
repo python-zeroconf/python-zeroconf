@@ -807,12 +807,9 @@ class Zeroconf(QuietLogger):
                     real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
                 else:
                     real_addr = addr
-                if (
-                    sock_fileno is not None
-                    and not self.unicast
-                    and sock_fileno != fileno
-                    or not can_send_to(s, addr)
-                ):
+                if not can_send_to(s, real_addr):
+                    continue
+                if not self.unicast and sock_fileno is not None and sock_fileno != fileno:
                     continue
                 log.debug(
                     'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
