@@ -101,6 +101,9 @@ def construct_outgoing_unicast_answers(
 def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
     sending: Set[DNSRecord] = set(answers.keys())
+    # Answers are sorted to group names together to increase the chance
+    # that similar names will end up in the same packet and can reduce the
+    # overall size of the outgoing response via name compression
     for answer, additionals in sorted(answers.items(), key=lambda kv: kv[0].name):
         out.add_answer_at_time(answer, 0)
         for additional in additionals:
