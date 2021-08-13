@@ -974,12 +974,14 @@ async def test_legacy_unicast_response(run_isolated):
     query = DNSOutgoing(const._FLAGS_QR_QUERY, multicast=False, id_=888)
     question = DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     query.add_question(question)
+    protocol = aiozc.zeroconf.engine.protocols[0]
 
     with patch.object(aiozc.zeroconf, "async_send") as send_mock:
-        aiozc.zeroconf.engine.protocols[0].datagram_received(query.packets()[0], ('127.0.0.1', 6503))
+        protocol.datagram_received(query.packets()[0], ('127.0.0.1', 6503))
 
     calls = send_mock.mock_calls
-    assert calls == [call(ANY, '127.0.0.1', 6503, (), ANY)]
+    # Verify the response is sent back on the socket it was recieved from
+    assert calls == [call(ANY, '127.0.0.1', 6503, (), protocol.transport)]
     outgoing = send_mock.call_args[0][0]
     assert isinstance(outgoing, DNSOutgoing)
     assert outgoing.questions == [question]
