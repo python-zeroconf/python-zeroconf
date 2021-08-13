@@ -754,3 +754,25 @@ def test_request_timeout():
     # 3000ms for the default timeout
     # 1000ms for loaded systems + schedule overhead
     assert (end_time - start_time) < 3000 + 1000
+
+
+@pytest.mark.asyncio
+async def test_we_try_four_times_with_random_delay():
+    """Verify we try four times even with the random delay."""
+    type_ = "_typethatisnothere._tcp.local."
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+
+    # we are going to patch the zeroconf send to check query transmission
+    request_count = 0
+    def async_send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+        """Sends an outgoing packet."""
+        nonlocal request_count
+        request_count += 1
+
+    # patch the zeroconf send
+    with patch.object(aiozc.zeroconf, "async_send", async_send):
+        await aiozc.async_get_service_info(f"willnotbefound.{type_}", type_)
+
+    await aiozc.async_close()
+
+    assert request_count == 4
