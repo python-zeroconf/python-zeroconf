@@ -21,6 +21,7 @@
 """
 
 import ipaddress
+import random
 import socket
 from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
 
@@ -51,6 +52,16 @@ from ..const import (
     _TYPE_TXT,
 )
 
+
+# https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+# The most common case for calling ServiceInfo is from a
+# ServiceBrowser. After the first request we add a few random
+# milliseconds to the delay between requests to reduce the chance
+# that there are multiple ServiceBrowser callbacks running on
+# the network that are firing at the same time when they
+# see the same multicast response and decide to refresh
+# the A/AAAA/SRV records for a host.
+_AVOID_SYNC_DELAY_RANDOM_INTERVAL = (20, 120)
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -455,6 +466,7 @@ class ServiceInfo(RecordUpdateListener):
                     zc.async_send(out)
                     next_ = now + delay
                     delay *= 2
+                    next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
 
                 await zc.async_wait(min(next_, last) - now)
                 now = current_time_millis()
