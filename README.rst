@@ -140,6 +140,27 @@ See examples directory for more.
 Changelog
 =========
 
+0.35.0
+======
+
+* Reduced chance of accidental synchronization of ServiceInfo requests (#955) @bdraco
+* Sort aggregated responses to increase chance of name compression (#954) @bdraco
+
+Technically backwards incompatible:
+
+* Send unicast replies on the same socket the query was received (#952) @bdraco
+
+  When replying to a QU question, we do not know if the sending host is reachable
+  from all of the sending sockets. We now avoid this problem by replying via
+  the receiving socket. This was the existing behavior when `InterfaceChoice.Default`
+  is set.
+
+  This change extends the unicast relay behavior to used with `InterfaceChoice.Default`
+  to apply when `InterfaceChoice.All` or interfaces are explicitly passed when
+  instantiating a `Zeroconf` instance.
+
+  Fixes #951
+
 0.34.3
 ======
 
