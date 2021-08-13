@@ -518,11 +518,17 @@ class MulticastOutgoingQueue:
         send_after = now + random_delay
         send_before = now + self.aggregation_delay + self.additional_delay
         if len(self.queue):
+            last_group = self.queue[-1]
+            # If the last query generated answers, already in the queue,
+            # there is nothing to do since the answers will already go out.
+            # This generally happens when there there are multiple browsers
+            # asking about _services._dns-sd._udp.local.
+            if set(answers).issubset(last_group.answers):
+                return
             # If we calculate a random delay for the send after time
             # that is less than the last group scheduled to go out,
             # we instead add the answers to the last group as this
             # allows aggregating additonal responses
-            last_group = self.queue[-1]
             if send_after <= last_group.send_after:
                 last_group.answers.update(answers)
                 return
