@@ -163,6 +163,33 @@ class TestDunder(unittest.TestCase):
         assert record.is_recent(now + (8 * 1000)) is False
 
 
+def test_dns_question_hashablity():
+    """Test DNSQuestions are hashable."""
+
+    record1 = r.DNSQuestion('irrelevant', const._TYPE_A, const._CLASS_IN)
+    record2 = r.DNSQuestion('irrelevant', const._TYPE_A, const._CLASS_IN)
+
+    record_set = {record1, record2}
+    assert len(record_set) == 1
+
+    record_set.add(record1)
+    assert len(record_set) == 1
+
+    record3_dupe = r.DNSQuestion('irrelevant', const._TYPE_A, const._CLASS_IN)
+    assert record2 == record3_dupe
+    assert record2.__hash__() == record3_dupe.__hash__()
+
+    record_set.add(record3_dupe)
+    assert len(record_set) == 1
+
+    record4_dupe = r.DNSQuestion('notsame', const._TYPE_A, const._CLASS_IN)
+    assert record2 != record4_dupe
+    assert record2.__hash__() != record4_dupe.__hash__()
+
+    record_set.add(record4_dupe)
+    assert len(record_set) == 2
+
+
 def test_dns_record_hashablity_does_not_consider_ttl():
     """Test DNSRecord are hashable."""
 

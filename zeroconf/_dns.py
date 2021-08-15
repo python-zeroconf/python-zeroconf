@@ -22,7 +22,7 @@
 
 import enum
 import socket
-from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
@@ -81,10 +81,6 @@ class DNSEntry:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
-    def _entry_tuple(self) -> Tuple[str, int, int]:
-        """Entry Tuple for DNSEntry."""
-        return (self.key, self.type, self.class_)
-
     def __eq__(self, other: Any) -> bool:
         """Equality test on key (lowercase name), type, and class"""
         return dns_entry_matches(other, self.key, self.type, self.class_) and isinstance(other, DNSEntry)
@@ -115,12 +111,22 @@ class DNSQuestion(DNSEntry):
 
     """A DNS question entry"""
 
+    __slots__ = ('_hash',)
+
+    def __init__(self, name: str, type_: int, class_: int) -> None:
+        super().__init__(name, type_, class_)
+        self._hash = hash((self.key, type_, class_))
+
     def answered_by(self, rec: 'DNSRecord') -> bool:
         """Returns true if the question is answered by the record"""
         return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
 
     def __hash__(self) -> int:
-        return hash((self.name, self.class_, self.type))
+        return self._hash
+
+    def __eq__(self, other: Any) -> bool:
+        """Tests equality on dns question."""
+        return isinstance(other, DNSQuestion) and DNSEntry.__eq__(self, other)
 
     @property
     def max_size(self) -> int:
@@ -225,7 +231,7 @@ class DNSAddress(DNSRecord):
 
     """A DNS address record"""
 
-    __slots__ = ('address', 'scope_id')
+    __slots__ = ('_hash', 'address', 'scope_id')
 
     def __init__(
         self,
@@ -241,6 +247,7 @@ class DNSAddress(DNSRecord):
         super().__init__(name, type_, class_, ttl, created)
         self.address = address
         self.scope_id = scope_id
+        self._hash = hash((self.key, type_, class_, address, scope_id))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -257,7 +264,7 @@ class DNSAddress(DNSRecord):
 
     def __hash__(self) -> int:
         """Hash to compare like DNSAddresses."""
-        return hash((*self._entry_tuple(), self.address, self.scope_id))
+        return self._hash
 
     def __repr__(self) -> str:
         """String representation"""
@@ -275,7 +282,7 @@ class DNSHinfo(DNSRecord):
 
     """A DNS host information record"""
 
-    __slots__ = ('cpu', 'os')
+    __slots__ = ('_hash', 'cpu', 'os')
 
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, cpu: str, os: str, created: Optional[float] = None
@@ -283,6 +290,7 @@ class DNSHinfo(DNSRecord):
         super().__init__(name, type_, class_, ttl, created)
         self.cpu = cpu
         self.os = os
+        self._hash = hash((self.key, type_, class_, cpu, os))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -300,7 +308,7 @@ class DNSHinfo(DNSRecord):
 
     def __hash__(self) -> int:
         """Hash to compare like DNSHinfo."""
-        return hash((*self._entry_tuple(), self.cpu, self.os))
+        return self._hash
 
     def __repr__(self) -> str:
         """String representation"""
@@ -311,13 +319,14 @@ class DNSPointer(DNSRecord):
 
     """A DNS pointer record"""
 
-    __slots__ = ('alias',)
+    __slots__ = ('_hash', 'alias')
 
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, alias: str, created: Optional[float] = None
     ) -> None:
         super().__init__(name, type_, class_, ttl, created)
         self.alias = alias
+        self._hash = hash((self.key, type_, class_, alias))
 
     @property
     def max_size_compressed(self) -> int:
@@ -339,7 +348,7 @@ class DNSPointer(DNSRecord):
 
     def __hash__(self) -> int:
         """Hash to compare like DNSPointer."""
-        return hash((*self._entry_tuple(), self.alias))
+        return self._hash
 
     def __repr__(self) -> str:
         """String representation"""
@@ -350,7 +359,7 @@ class DNSText(DNSRecord):
 
     """A DNS text record"""
 
-    __slots__ = ('text',)
+    __slots__ = ('_hash', 'text')
 
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, text: bytes, created: Optional[float] = None
@@ -358,6 +367,7 @@ class DNSText(DNSRecord):
         assert isinstance(text, (bytes, type(None)))
         super().__init__(name, type_, class_, ttl, created)
         self.text = text
+        self._hash = hash((self.key, type_, class_, text))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -365,7 +375,7 @@ class DNSText(DNSRecord):
 
     def __hash__(self) -> int:
         """Hash to compare like DNSText."""
-        return hash((*self._entry_tuple(), self.text))
+        return self._hash
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on text"""
@@ -382,7 +392,7 @@ class DNSService(DNSRecord):
 
     """A DNS service record"""
 
-    __slots__ = ('priority', 'weight', 'port', 'server')
+    __slots__ = ('_hash', 'priority', 'weight', 'port', 'server')
 
     def __init__(
         self,
@@ -401,6 +411,7 @@ class DNSService(DNSRecord):
         self.weight = weight
         self.port = port
         self.server = server
+        self._hash = hash((self.key, type_, class_, priority, weight, port, server))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -422,7 +433,7 @@ class DNSService(DNSRecord):
 
     def __hash__(self) -> int:
         """Hash to compare like DNSService."""
-        return hash((*self._entry_tuple(), self.priority, self.weight, self.port, self.server))
+        return self._hash
 
     def __repr__(self) -> str:
         """String representation"""
@@ -433,7 +444,7 @@ class DNSNsec(DNSRecord):
 
     """A DNS NSEC record"""
 
-    __slots__ = ('next_name', 'rdtypes')
+    __slots__ = ('_hash', 'next_name', 'rdtypes')
 
     def __init__(
         self,
@@ -448,6 +459,7 @@ class DNSNsec(DNSRecord):
         super().__init__(name, type_, class_, ttl, created)
         self.next_name = next_name
         self.rdtypes = rdtypes
+        self._hash = hash((self.key, type_, class_, next_name, *self.rdtypes))
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on cpu and os"""
@@ -460,7 +472,7 @@ class DNSNsec(DNSRecord):
 
     def __hash__(self) -> int:
         """Hash to compare like DNSNSec."""
-        return hash((*self._entry_tuple(), self.next_name, *self.rdtypes))
+        return self._hash
 
     def __repr__(self) -> str:
         """String representation"""

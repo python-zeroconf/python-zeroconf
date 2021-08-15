@@ -579,6 +579,7 @@ async def test_async_unregister_all_services() -> None:
     assert results[1] is not None
 
     await aiozc.async_unregister_all_services()
+    _clear_cache(aiozc.zeroconf)
 
     tasks = []
     tasks.append(aiozc.async_get_service_info(type_, registration_name))
