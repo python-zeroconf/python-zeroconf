@@ -764,6 +764,7 @@ async def test_we_try_four_times_with_random_delay():
 
     # we are going to patch the zeroconf send to check query transmission
     request_count = 0
+
     def async_send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
         """Sends an outgoing packet."""
         nonlocal request_count

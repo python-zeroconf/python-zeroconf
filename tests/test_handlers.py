@@ -1460,3 +1460,42 @@ async def test_response_aggregation_random_delay():
     assert info3.dns_pointer() not in outgoing_queue.queue[1].answers
     assert info4.dns_pointer() not in outgoing_queue.queue[1].answers
     assert info5.dns_pointer() in outgoing_queue.queue[1].answers
+
+
+@pytest.mark.asyncio
+async def test_future_answers_are_removed_on_send():
+    """Verify any future answers scheduled to be sent are removed when we send."""
+    type_ = "_mservice._tcp.local."
+    name = "xxxyyy"
+    registration_name = f"{name}.{type_}"
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-1.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    mocked_zc = unittest.mock.MagicMock()
+    outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 0)
+
+    now = current_time_millis()
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (10, 10)):
+        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+
+    assert len(outgoing_queue.queue) == 1
+
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (20, 20)):
+        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+
+    assert len(outgoing_queue.queue) == 2
+
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (200, 200)):
+        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+
+    assert len(outgoing_queue.queue) == 3
+
+    await asyncio.sleep(0.1)
+    outgoing_queue.async_ready()
+
+    assert len(outgoing_queue.queue) == 1
+    # The answers should all get removed because we just sent them
+    assert len(outgoing_queue.queue[0].answers) == 0
