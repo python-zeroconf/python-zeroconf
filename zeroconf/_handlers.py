@@ -527,10 +527,16 @@ class MulticastOutgoingQueue:
                 last_group.answers.update(answers)
                 return
         else:
-            self.zc.loop.call_later(millis_to_seconds(random_delay), self._async_ready)
+            self.zc.loop.call_later(millis_to_seconds(random_delay), self.async_ready)
         self.queue.append(AnswerGroup(send_after, send_before, answers))
 
-    def _async_ready(self) -> None:
+    def _remove_answers_from_queue(self, answers: _AnswerWithAdditionalsType) -> None:
+        """Remove a set of answers from the outgoing queue."""
+        for pending in self.queue:
+            for record in answers:
+                pending.answers.pop(record, None)
+
+    def async_ready(self) -> None:
         """Process anything in the queue that is ready."""
         assert self.zc.loop is not None
         now = current_time_millis()
@@ -538,7 +544,7 @@ class MulticastOutgoingQueue:
         if len(self.queue) > 1 and self.queue[0].send_before > now:
             # There is more than one answer in the queue,
             # delay until we have to send it (first answer group reaches send_before)
-            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_before - now), self._async_ready)
+            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_before - now), self.async_ready)
             return
 
         answers: _AnswerWithAdditionalsType = {}
@@ -549,12 +555,9 @@ class MulticastOutgoingQueue:
         if len(self.queue):
             # If there are still groups in the queue that are not ready to send
             # be sure we schedule them to go out later
-            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_after - now), self._async_ready)
+            self.zc.loop.call_later(millis_to_seconds(self.queue[0].send_after - now), self.async_ready)
 
         if answers:
-            # If we have the same answer scheduled to go out, remove it
-            for pending in self.queue:
-                for record in answers:
-                    pending.answers.pop(record, None)
-
+            # If we have the same answer scheduled to go out, remove them
+            self._remove_answers_from_queue(answers)
             self.zc.async_send(construct_outgoing_multicast_answers(answers))
