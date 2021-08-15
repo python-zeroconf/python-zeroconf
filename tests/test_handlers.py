@@ -1482,23 +1482,23 @@ async def test_future_answers_are_removed_on_send():
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 0)
 
     now = current_time_millis()
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (10, 10)):
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (1, 1)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
 
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (20, 20)):
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (2, 2)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
 
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (200, 200)):
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (1000, 1000)):
         outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 3
 
-    await asyncio.sleep(0.15)
+    await asyncio.sleep(0.1)
     outgoing_queue.async_ready()
 
     assert len(outgoing_queue.queue) == 1
