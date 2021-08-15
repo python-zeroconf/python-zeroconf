@@ -224,11 +224,12 @@ class QueryScheduler:
         next_time = min(self._next_time.values())
         return 0 if next_time <= now else next_time - now
 
-    def reschedule_type(self, type_: str, next_time: float) -> None:
+    def reschedule_type(self, type_: str, next_time: float) -> bool:
         """Reschedule the query for a type to happen sooner."""
         if next_time >= self._next_time[type_]:
-            return
+            return False
         self._next_time[type_] = next_time
+        return True
 
     def process_ready_types(self, now: float) -> List[str]:
         """Generate a list of ready types that is due and schedule the next time."""
@@ -449,7 +450,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
     async def _async_start_query_sender(self) -> None:
         """Start scheduling queries."""
         await self.zc.async_wait_for_start()
-        self._async_send_ready_queries_schedule_next()
+        self._async_send_ready_queries()
+        self._async_schedule_next()
 
     def _cancel_send_timer(self) -> None:
         """Cancel the next send."""
@@ -458,16 +460,13 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     def reschedule_type(self, type_: str, next_time: float) -> None:
         """Reschedule a type to be refreshed in the future."""
-        self.query_scheduler.reschedule_type(type_, next_time)
-        self.schedule_changed()
+        if self.query_scheduler.reschedule_type(type_, next_time):
+            self._cancel_send_timer()
+            self._async_schedule_next()
+        self._async_send_ready_queries()
 
-    def schedule_changed(self) -> None:
-        """Called when the schedule has changed."""
-        self._cancel_send_timer()
-        self._async_send_ready_queries_schedule_next()
-
-    def _async_send_ready_queries_schedule_next(self) -> None:
-        """Send any ready queries and scheule the next time."""
+    def _async_send_ready_queries(self) -> None:
+        """Send any ready queries."""
         if self.done or self.zc.done:
             return
 
@@ -477,6 +476,13 @@ class _ServiceBrowserBase(RecordUpdateListener):
             for out in outs:
                 self.zc.async_send(out, addr=self.addr, port=self.port)
 
+    def _async_send_ready_queries_schedule_next(self) -> None:
+        """Send ready queries and schedule next one."""
+        self._async_send_ready_queries()
+        self._async_schedule_next()
+
+    def _async_schedule_next(self) -> None:
+        """Scheule the next time."""
         assert self.zc.loop is not None
         delay = millis_to_seconds(self.query_scheduler.millis_to_wait(current_time_millis()))
         self._next_send_timer = self.zc.loop.call_later(delay, self._async_send_ready_queries_schedule_next)

@@ -496,7 +496,7 @@ def test_backoff():
                 else:
                     assert not got_query.is_set()
                 time_offset += initial_query_interval
-                zeroconf_browser.loop.call_soon_threadsafe(browser.schedule_changed)
+                zeroconf_browser.loop.call_soon_threadsafe(browser._async_send_ready_queries_schedule_next)
 
         finally:
             browser.cancel()
