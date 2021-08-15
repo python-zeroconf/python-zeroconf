@@ -1466,29 +1466,34 @@ async def test_response_aggregation_random_delay():
 async def test_future_answers_are_removed_on_send():
     """Verify any future answers scheduled to be sent are removed when we send."""
     type_ = "_mservice._tcp.local."
+    type_2 = "_mservice2._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
+    registration_name2 = f"{name}.{type_2}"
 
     desc = {'path': '/~paulsm/'}
     info = ServiceInfo(
         type_, registration_name, 80, 0, 0, desc, "ash-1.local.", addresses=[socket.inet_aton("10.0.1.2")]
     )
+    info2 = ServiceInfo(
+        type_2, registration_name2, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.3")]
+    )
     mocked_zc = unittest.mock.MagicMock()
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 0)
 
     now = current_time_millis()
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (10, 10)):
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (1, 1)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
 
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (20, 20)):
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (2, 2)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
 
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (200, 200)):
-        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (1000, 1000)):
+        outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 3
@@ -1497,5 +1502,8 @@ async def test_future_answers_are_removed_on_send():
     outgoing_queue.async_ready()
 
     assert len(outgoing_queue.queue) == 1
-    # The answers should all get removed because we just sent them
-    assert len(outgoing_queue.queue[0].answers) == 0
+    # The answer should get removed because we just sent it
+    assert info.dns_pointer() not in outgoing_queue.queue[0].answers
+
+    # But the one we have not sent yet shoudl still go out later
+    assert info2.dns_pointer() in outgoing_queue.queue[0].answers
