@@ -144,10 +144,12 @@ Changelog
 ======
 
 * Only reschedule types if the send next time changes (#958) @bdraco
+
   When the PTR response was seen again, the timer was being canceled and
   rescheduled even if the timer was for the same time. While this did
   not cause any breakage, it is quite inefficient.
 * Cache DNS record and question hashes (#960) @bdraco
+
   The hash was being recalculated every time the object
   was being used in a set or dict. Since the hashes are
   effectively immutable, we only calculate them once now.
