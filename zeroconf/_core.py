@@ -834,6 +834,11 @@ class Zeroconf(QuietLogger):
             out,
             packet,
         )
+        # Get flowinfo and scopeid for the IPV6 socket to create a complete IPv6
+        # address tuple: https://docs.python.org/3.6/library/socket.html#socket-families
+        if s.family == socket.AF_INET6 and not v6_flow_scope:
+            _, _, sock_flowinfo, sock_scopeid = s.getsockname()
+            v6_flow_scope = (sock_flowinfo, sock_scopeid)
         transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
     def _close(self) -> None:
