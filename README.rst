@@ -138,6 +138,15 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.0
+======
+
+Technically backwards incompatible:
+
+* Fill incomplete IPv6 tuples to avoid WinError on windows (#965) @lokesh2019
+
+  Fixed #932
+
 0.35.1
 ======
 
