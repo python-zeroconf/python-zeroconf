@@ -211,6 +211,21 @@ def test_dns_record_hashablity_does_not_consider_ttl():
     assert len(record_set) == 1
 
 
+def test_dns_record_hashablity_does_not_consider_unique():
+    """Test DNSRecord are hashable and unique is ignored."""
+
+    # Verify the unique value is not considered in the hash
+    record1 = r.DNSAddress(
+        'irrelevant', const._TYPE_A, const._CLASS_IN | const._CLASS_UNIQUE, const._DNS_OTHER_TTL, b'same'
+    )
+    record2 = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, const._DNS_OTHER_TTL, b'same')
+
+    assert record1.class_ == record2.class_
+    assert record1.__hash__() == record2.__hash__()
+    record_set = {record1, record2}
+    assert len(record_set) == 1
+
+
 def test_dns_address_record_hashablity():
     """Test DNSAddress are hashable."""
     address1 = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 1, b'a')
