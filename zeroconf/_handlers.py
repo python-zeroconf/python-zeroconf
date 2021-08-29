@@ -82,7 +82,7 @@ def _message_is_probe(msg: DNSIncoming) -> bool:
     return msg.num_authorities > 0
 
 
-def construct_nsec_record(name: str, types: list[int], now: float) -> DNSNsec:
+def construct_nsec_record(name: str, types: List[int], now: float) -> DNSNsec:
     """Construct an NSEC record for name and a list of dns types."""
     return DNSNsec(name, _TYPE_NSEC, _CLASS_IN | _CLASS_UNIQUE, _DNS_OTHER_TTL, name, types, created=now)
 
@@ -259,7 +259,7 @@ class QueryHandler:
             additionals |= self._get_address_and_nsec_records(service, now)
             answer_set[dns_pointer] = additionals
 
-    def _get_address_and_nsec_records(self, service: ServiceInfo, now: float):
+    def _get_address_and_nsec_records(self, service: ServiceInfo, now: float) -> Set[DNSRecord]:
         """Build a set of address records and NSEC records for non-present record types."""
         seen_types: Set[int] = set()
         records: Set[DNSRecord] = set()
