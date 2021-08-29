@@ -115,7 +115,7 @@ class DNSQuestion(DNSEntry):
 
     def __init__(self, name: str, type_: int, class_: int) -> None:
         super().__init__(name, type_, class_)
-        self._hash = hash((self.key, type_, class_))
+        self._hash = hash((self.key, type_, self.class_))
 
     def answered_by(self, rec: 'DNSRecord') -> bool:
         """Returns true if the question is answered by the record"""
@@ -247,7 +247,7 @@ class DNSAddress(DNSRecord):
         super().__init__(name, type_, class_, ttl, created)
         self.address = address
         self.scope_id = scope_id
-        self._hash = hash((self.key, type_, class_, address, scope_id))
+        self._hash = hash((self.key, type_, self.class_, address, scope_id))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -290,7 +290,7 @@ class DNSHinfo(DNSRecord):
         super().__init__(name, type_, class_, ttl, created)
         self.cpu = cpu
         self.os = os
-        self._hash = hash((self.key, type_, class_, cpu, os))
+        self._hash = hash((self.key, type_, self.class_, cpu, os))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -326,7 +326,7 @@ class DNSPointer(DNSRecord):
     ) -> None:
         super().__init__(name, type_, class_, ttl, created)
         self.alias = alias
-        self._hash = hash((self.key, type_, class_, alias))
+        self._hash = hash((self.key, type_, self.class_, alias))
 
     @property
     def max_size_compressed(self) -> int:
@@ -367,7 +367,7 @@ class DNSText(DNSRecord):
         assert isinstance(text, (bytes, type(None)))
         super().__init__(name, type_, class_, ttl, created)
         self.text = text
-        self._hash = hash((self.key, type_, class_, text))
+        self._hash = hash((self.key, type_, self.class_, text))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -411,7 +411,7 @@ class DNSService(DNSRecord):
         self.weight = weight
         self.port = port
         self.server = server
-        self._hash = hash((self.key, type_, class_, priority, weight, port, server))
+        self._hash = hash((self.key, type_, self.class_, priority, weight, port, server))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -459,7 +459,7 @@ class DNSNsec(DNSRecord):
         super().__init__(name, type_, class_, ttl, created)
         self.next_name = next_name
         self.rdtypes = rdtypes
-        self._hash = hash((self.key, type_, class_, next_name, *self.rdtypes))
+        self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on cpu and os"""
