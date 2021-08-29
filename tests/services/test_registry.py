@@ -28,6 +28,29 @@ class TestServiceRegistry(unittest.TestCase):
         registry.async_remove(info)
         registry.async_add(info)
 
+    def test_register_same_server(self):
+        type_ = "_test-srvc-type._tcp.local."
+        name = "xxxyyy"
+        name2 = "xxxyyy2"
+        registration_name = "%s.%s" % (name, type_)
+        registration_name2 = "%s.%s" % (name2, type_)
+
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "same.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        )
+        info2 = ServiceInfo(
+            type_, registration_name2, 80, 0, 0, desc, "same.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        )
+        registry = r.ServiceRegistry()
+        registry.async_add(info)
+        registry.async_add(info2)
+        assert registry.async_get_infos_server("same.local.") == [info, info2]
+        registry.async_remove(info)
+        assert registry.async_get_infos_server("same.local.") == [info2]
+        registry.async_remove(info2)
+        assert registry.async_get_infos_server("same.local.") == []
+
     def test_unregister_multiple_times(self):
         """Verify we can unregister a service multiple times.
 
