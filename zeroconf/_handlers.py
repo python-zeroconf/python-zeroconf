@@ -295,10 +295,13 @@ class QueryHandler:
                 elif not known_answers.suppresses(dns_address):
                     answers.append(dns_address)
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
-            if missing_types:
-                additionals.add(construct_nsec_record(service.server, list(missing_types), now))
-            for answer in answers:
-                answer_set[answer] = additionals
+            if answers:
+                if missing_types:
+                    additionals.add(construct_nsec_record(service.server, list(missing_types), now))
+                for answer in answers:
+                    answer_set[answer] = additionals
+            elif missing_types:
+                answer_set[construct_nsec_record(service.server, list(missing_types), now)] = set()
 
     def _answer_question(
         self,
