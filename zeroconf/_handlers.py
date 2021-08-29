@@ -284,12 +284,7 @@ class QueryHandler:
         type_: int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
-        services = self.registry.async_get_infos_server(name)
-        if not services:
-            answer_set[construct_nsec_record(name, list(_ADDRESS_RECORD_TYPES), now)] = set()
-            return
-
-        for service in services:
+        for service in self.registry.async_get_infos_server(name):
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             seen_types: Set[int] = set()
