@@ -240,7 +240,6 @@ async def test_async_service_registration_same_server_different_ports() -> None:
     ]
 
 
-
 @pytest.mark.asyncio
 async def test_async_service_registration_same_server_same_ports() -> None:
     """Test registering services with the same server with the exact same srv record."""
@@ -306,6 +305,7 @@ async def test_async_service_registration_same_server_same_ports() -> None:
         ('remove', type_, registration_name),
         ('remove', type_, registration_name2),
     ]
+
 
 @pytest.mark.asyncio
 async def test_async_service_registration() -> None:
