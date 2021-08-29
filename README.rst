@@ -138,6 +138,20 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.1
+======
+
+* Skip goodbye packets for addresses when there is another service registered with the same name (#968) @bdraco
+
+  If a ServiceInfo that used the same server name as another ServiceInfo
+  was unregistered, goodbye packets would be sent for the addresses and
+  would cause the other service to be seen as offline.
+* Fixed equality and hash for dns records with the unique bit (#969) @bdraco
+
+  These records should have the same hash and equality since
+  the unique bit (cache flush bit) is not considered when adding or removing
+  the records from the cache.
+
 0.36.0
 ======
 
