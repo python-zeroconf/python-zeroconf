@@ -648,14 +648,9 @@ class Zeroconf(QuietLogger):
         # goodbye packets for the address records
 
         entries = self.registry.async_get_infos_server(info.server)
-        broadcast_service = True
+        record = info.dns_service()
+        broadcast_service = not any(entry == record for entry in entries)
         broadcast_addresses = not bool(entries)
-        if entries:
-            record = info.dns_service()
-            for entry in entries:
-                if entry == record:
-                    broadcast_service = False
-                    break
         return asyncio.ensure_future(
             self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses, broadcast_service)
         )
