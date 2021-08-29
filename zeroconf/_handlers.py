@@ -60,7 +60,7 @@ _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 
 _MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
 _ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
-_RESPOND_IMMEDIATE_TYPES = {_TYPE_SRV, *_ADDRESS_RECORD_TYPES}
+_RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
 
 class QuestionAnswers(NamedTuple):
@@ -83,7 +83,11 @@ def _message_is_probe(msg: DNSIncoming) -> bool:
 
 
 def construct_nsec_record(name: str, types: List[int], now: float) -> DNSNsec:
-    """Construct an NSEC record for name and a list of dns types."""
+    """Construct an NSEC record for name and a list of dns types.
+
+    This function should only be used for SRV/A/AAAA records
+    which have a TTL of _DNS_OTHER_TTL
+    """
     return DNSNsec(name, _TYPE_NSEC, _CLASS_IN | _CLASS_UNIQUE, _DNS_OTHER_TTL, name, types, created=now)
 
 
@@ -280,7 +284,12 @@ class QueryHandler:
         type_: int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
-        for service in self.registry.async_get_infos_server(name):
+        services = self.registry.async_get_infos_server(name)
+        if not services:
+            answer_set[construct_nsec_record(name, list(_ADDRESS_RECORD_TYPES), now)] = set()
+            return
+
+        for service in services:
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             seen_types: Set[int] = set()
