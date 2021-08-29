@@ -214,7 +214,7 @@ async def test_async_service_registration_same_server() -> None:
     info2 = ServiceInfo(
         type_,
         registration_name2,
-        80,
+        81,
         0,
         0,
         desc,
@@ -225,13 +225,16 @@ async def test_async_service_registration_same_server() -> None:
     tasks.append(await aiozc.async_register_service(info))
     tasks.append(await aiozc.async_register_service(info2))
     await asyncio.gather(*tasks)
-    await aiozc.async_close()
 
+    task = await aiozc.async_unregister_service(info)
+    await task
+    entries = aiozc.zeroconf.cache.async_entries_with_server("ash-2.local.")
+    assert len(entries) == 1
+    assert info2.dns_service() in entries
+    await aiozc.async_close()
     assert calls == [
         ('add', type_, registration_name),
-        ('update', type_, registration_name),
         ('add', type_, registration_name2),
-        ('update', type_, registration_name2),
         ('remove', type_, registration_name),
         ('remove', type_, registration_name2),
     ]
