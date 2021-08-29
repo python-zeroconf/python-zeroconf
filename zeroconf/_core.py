@@ -577,26 +577,22 @@ class Zeroconf(QuietLogger):
         interval: int,
         ttl: Optional[int],
         broadcast_addresses: bool = True,
-        broadcast_service: bool = True,
     ) -> None:
         """Send a broadcasts to announce a service at intervals."""
         for i in range(_REGISTER_BROADCASTS):
             if i != 0:
                 await asyncio.sleep(millis_to_seconds(interval))
-            self.async_send(
-                self.generate_service_broadcast(info, ttl, broadcast_addresses, broadcast_service)
-            )
+            self.async_send(self.generate_service_broadcast(info, ttl, broadcast_addresses))
 
     def generate_service_broadcast(
         self,
         info: ServiceInfo,
         ttl: Optional[int],
         broadcast_addresses: bool = True,
-        broadcast_service: bool = True,
     ) -> DNSOutgoing:
         """Generate a broadcast to announce a service."""
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-        self._add_broadcast_answer(out, info, ttl, broadcast_addresses, broadcast_service)
+        self._add_broadcast_answer(out, info, ttl, broadcast_addresses)
         return out
 
     def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:  # pylint: disable=no-self-use
@@ -620,15 +616,13 @@ class Zeroconf(QuietLogger):
         info: ServiceInfo,
         override_ttl: Optional[int],
         broadcast_addresses: bool = True,
-        broadcast_service: bool = True,
     ) -> None:
         """Add answers to broadcast a service."""
         now = current_time_millis()
         other_ttl = info.other_ttl if override_ttl is None else override_ttl
         host_ttl = info.host_ttl if override_ttl is None else override_ttl
         out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl, created=now), 0)
-        if broadcast_service:
-            out.add_answer_at_time(info.dns_service(override_ttl=host_ttl, created=now), 0)
+        out.add_answer_at_time(info.dns_service(override_ttl=host_ttl, created=now), 0)
         out.add_answer_at_time(info.dns_text(override_ttl=other_ttl, created=now), 0)
         if broadcast_addresses:
             for dns_address in info.dns_addresses(override_ttl=host_ttl, created=now):
@@ -648,11 +642,9 @@ class Zeroconf(QuietLogger):
         # goodbye packets for the address records
 
         entries = self.registry.async_get_infos_server(info.server)
-        record = info.dns_service()
-        broadcast_service = not any(entry == record for entry in entries)
         broadcast_addresses = not bool(entries)
         return asyncio.ensure_future(
-            self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses, broadcast_service)
+            self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
         )
 
     def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
