@@ -91,7 +91,7 @@ class TestRegistrar(unittest.TestCase):
             _process_outgoing_packet(zc.generate_service_query(info))
         zc.registry.async_add(info)
         for _ in range(3):
-            _process_outgoing_packet(zc.generate_service_broadcast(info, None))
+            _process_outgoing_packet(zc.generate_service_broadcast(info, None, True))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -116,7 +116,7 @@ class TestRegistrar(unittest.TestCase):
         expected_ttl = 0
         zc.registry.async_remove(info)
         for _ in range(3):
-            _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
+            _process_outgoing_packet(zc.generate_service_broadcast(info, 0, True))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -128,7 +128,7 @@ class TestRegistrar(unittest.TestCase):
         expected_ttl = const._DNS_HOST_TTL * 2
         assert expected_ttl != const._DNS_HOST_TTL
         for _ in range(3):
-            _process_outgoing_packet(zc.generate_service_broadcast(info, expected_ttl))
+            _process_outgoing_packet(zc.generate_service_broadcast(info, expected_ttl, True))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
@@ -150,7 +150,7 @@ class TestRegistrar(unittest.TestCase):
         expected_ttl = 0
         zc.registry.async_remove(info)
         for _ in range(3):
-            _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
+            _process_outgoing_packet(zc.generate_service_broadcast(info, 0, True))
         assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
         zc.close()

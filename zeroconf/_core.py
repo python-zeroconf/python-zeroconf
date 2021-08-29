@@ -571,17 +571,21 @@ class Zeroconf(QuietLogger):
         self.registry.async_update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
-    async def _async_broadcast_service(self, info: ServiceInfo, interval: int, ttl: Optional[int]) -> None:
+    async def _async_broadcast_service(
+        self, info: ServiceInfo, interval: int, ttl: Optional[int], broadcast_addresses: bool = True
+    ) -> None:
         """Send a broadcasts to announce a service at intervals."""
         for i in range(_REGISTER_BROADCASTS):
             if i != 0:
                 await asyncio.sleep(millis_to_seconds(interval))
-            self.async_send(self.generate_service_broadcast(info, ttl))
+            self.async_send(self.generate_service_broadcast(info, ttl, broadcast_addresses))
 
-    def generate_service_broadcast(self, info: ServiceInfo, ttl: Optional[int]) -> DNSOutgoing:
+    def generate_service_broadcast(
+        self, info: ServiceInfo, ttl: Optional[int], broadcast_addresses: bool
+    ) -> DNSOutgoing:
         """Generate a broadcast to announce a service."""
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-        self._add_broadcast_answer(out, info, ttl)
+        self._add_broadcast_answer(out, info, ttl, broadcast_addresses)
         return out
 
     def generate_service_query(self, info: ServiceInfo) -> DNSOutgoing:  # pylint: disable=no-self-use
@@ -600,7 +604,7 @@ class Zeroconf(QuietLogger):
         return out
 
     def _add_broadcast_answer(  # pylint: disable=no-self-use
-        self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int]
+        self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int], broadcast_addresses: bool
     ) -> None:
         """Add answers to broadcast a service."""
         now = current_time_millis()
@@ -609,8 +613,9 @@ class Zeroconf(QuietLogger):
         out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl, created=now), 0)
         out.add_answer_at_time(info.dns_service(override_ttl=host_ttl, created=now), 0)
         out.add_answer_at_time(info.dns_text(override_ttl=other_ttl, created=now), 0)
-        for dns_address in info.dns_addresses(override_ttl=host_ttl, created=now):
-            out.add_answer_at_time(dns_address, 0)
+        if broadcast_addresses:
+            for dns_address in info.dns_addresses(override_ttl=host_ttl, created=now):
+                out.add_answer_at_time(dns_address, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service."""
@@ -622,7 +627,12 @@ class Zeroconf(QuietLogger):
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
         """Unregister a service."""
         self.registry.async_remove(info)
-        return asyncio.ensure_future(self._async_broadcast_service(info, _UNREGISTER_TIME, 0))
+        # If another server uses the same addresses, we do not want to send
+        # goodbye packets for the address records
+        broadcast_addresses = not bool(self.registry.async_get_infos_server(info.server))
+        return asyncio.ensure_future(
+            self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
+        )
 
     def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
         """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
@@ -631,7 +641,7 @@ class Zeroconf(QuietLogger):
             return None
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
         for info in service_infos:
-            self._add_broadcast_answer(out, info, 0)
+            self._add_broadcast_answer(out, info, 0, True)
         self.registry.async_remove(service_infos)
         return out
 
