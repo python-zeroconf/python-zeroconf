@@ -458,8 +458,24 @@ class DNSNsec(DNSRecord):
     ) -> None:
         super().__init__(name, type_, class_, ttl, created)
         self.next_name = next_name
-        self.rdtypes = rdtypes
+        self.rdtypes = sorted(rdtypes)
         self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
+
+    def write(self, out: 'DNSOutgoing') -> None:
+        """Used in constructing an outgoing packet."""
+        bitmap = bytearray(b'\0' * 32)
+        for rdtype in self.rdtypes:
+            if rdtype > 255:  # mDNS only supports window 0
+                continue
+            offset = rdtype % 256
+            byte = offset // 8
+            total_octets = byte + 1
+            bitmap[byte] |= 0x80 >> (offset % 8)
+        out_bytes = bytes(bitmap[0:total_octets])
+        out.write_name(self.next_name)
+        out.write_short(0)
+        out.write_short(len(out_bytes))
+        out.write_string(out_bytes)
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on cpu and os"""

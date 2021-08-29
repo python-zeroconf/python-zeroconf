@@ -54,6 +54,35 @@ class PacketGeneration(unittest.TestCase):
         generated.add_question(r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN))
         r.DNSIncoming(generated.packets()[0])
 
+    def test_parse_own_packet_nsec(self):
+        answer = r.DNSNsec(
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            [const._TYPE_TXT, const._TYPE_SRV],
+        )
+
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(answer, 0)
+        parsed = r.DNSIncoming(generated.packets()[0])
+        assert answer in parsed.answers
+
+        # Types > 255 should be ignored
+        answer_invalid_types = r.DNSNsec(
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            [const._TYPE_TXT, const._TYPE_SRV, 1000],
+        )
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(answer_invalid_types, 0)
+        parsed = r.DNSIncoming(generated.packets()[0])
+        assert answer in parsed.answers
+
     def test_parse_own_packet_response(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(
