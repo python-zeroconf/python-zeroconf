@@ -268,7 +268,7 @@ class QueryHandler:
             records.add(dns_address)
         missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
         if missing_types:
-            records.add(construct_nsec_record(service.name, list(missing_types), now))
+            records.add(construct_nsec_record(service.server, list(missing_types), now))
         return records
 
     def _add_address_answers(
@@ -292,7 +292,7 @@ class QueryHandler:
                     answers.append(dns_address)
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
             if missing_types:
-                additionals.add(construct_nsec_record(service.name, list(missing_types), now))
+                additionals.add(construct_nsec_record(service.server, list(missing_types), now))
             for answer in answers:
                 answer_set[answer] = additionals
 
