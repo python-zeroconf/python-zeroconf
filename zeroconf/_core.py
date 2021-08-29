@@ -572,16 +572,27 @@ class Zeroconf(QuietLogger):
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def _async_broadcast_service(
-        self, info: ServiceInfo, interval: int, ttl: Optional[int], broadcast_addresses: bool = True, broadcast_service: bool = True
+        self,
+        info: ServiceInfo,
+        interval: int,
+        ttl: Optional[int],
+        broadcast_addresses: bool = True,
+        broadcast_service: bool = True,
     ) -> None:
         """Send a broadcasts to announce a service at intervals."""
         for i in range(_REGISTER_BROADCASTS):
             if i != 0:
                 await asyncio.sleep(millis_to_seconds(interval))
-            self.async_send(self.generate_service_broadcast(info, ttl, broadcast_addresses, broadcast_service))
+            self.async_send(
+                self.generate_service_broadcast(info, ttl, broadcast_addresses, broadcast_service)
+            )
 
     def generate_service_broadcast(
-        self, info: ServiceInfo, ttl: Optional[int], broadcast_addresses: bool = True, broadcast_service: bool = True
+        self,
+        info: ServiceInfo,
+        ttl: Optional[int],
+        broadcast_addresses: bool = True,
+        broadcast_service: bool = True,
     ) -> DNSOutgoing:
         """Generate a broadcast to announce a service."""
         out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
@@ -604,7 +615,12 @@ class Zeroconf(QuietLogger):
         return out
 
     def _add_broadcast_answer(  # pylint: disable=no-self-use
-        self, out: DNSOutgoing, info: ServiceInfo, override_ttl: Optional[int], broadcast_addresses: bool = True, broadcast_service: bool = True
+        self,
+        out: DNSOutgoing,
+        info: ServiceInfo,
+        override_ttl: Optional[int],
+        broadcast_addresses: bool = True,
+        broadcast_service: bool = True,
     ) -> None:
         """Add answers to broadcast a service."""
         now = current_time_millis()
