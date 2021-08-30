@@ -300,7 +300,7 @@ class QueryHandler:
                     additionals.add(construct_nsec_record(service.server, list(missing_types), now))
                 for answer in answers:
                     answer_set[answer] = additionals
-            elif missing_types:
+            elif type_ in missing_types:
                 answer_set[construct_nsec_record(service.server, list(missing_types), now)] = set()
 
     def _answer_question(
