@@ -424,9 +424,9 @@ def test_unicast_response():
             elif answer.type == const._TYPE_A:
                 has_a = True
             elif answer.type == const._TYPE_AAAA:
-                has_aaaa = True     
+                has_aaaa = True
             elif answer.type == const._TYPE_NSEC:
-                has_nsec = True                             
+                has_nsec = True
         # There will be one NSEC additional to indicate the lack of AAAA record
         assert nbr_answers == 1 and nbr_additionals == 4
         assert has_srv and has_txt and has_a and has_nsec
@@ -521,9 +521,9 @@ def test_qu_response():
             elif answer.type == const._TYPE_A:
                 has_a = True
             elif answer.type == const._TYPE_AAAA:
-                has_aaaa = True     
+                has_aaaa = True
             elif answer.type == const._TYPE_NSEC:
-                has_nsec = True  
+                has_nsec = True
         assert nbr_answers == 1 and nbr_additionals == 4
         assert has_srv and has_txt and has_a and has_nsec
         assert not has_aaaa
