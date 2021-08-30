@@ -138,6 +138,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.2
+======
+
+* Include NSEC records for non-existent types when responding with addresses (#972) (#971) @bdraco
+  Implements RFC6762 sec 6.2 (http://datatracker.ietf.org/doc/html/rfc6762#section-6.2)
+
 0.36.1
 ======
 
