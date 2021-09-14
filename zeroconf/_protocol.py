@@ -28,7 +28,6 @@ from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from ._exceptions import IncomingDecodeError, NamePartTooLongException
 from ._logger import QuietLogger, log
-from ._utils.struct import int2byte
 from ._utils.time import current_time_millis
 from .const import (
     _CLASS_UNIQUE,
@@ -437,7 +436,7 @@ class DNSOutgoing(DNSMessage):
 
     def _write_byte(self, value: int) -> None:
         """Writes a single byte to the packet"""
-        self._pack(b'!c', int2byte(value))
+        self._pack(b'!c', bytes((value,)))
 
     def _insert_short_at_start(self, value: int) -> None:
         """Inserts an unsigned short at the start of the packet"""
