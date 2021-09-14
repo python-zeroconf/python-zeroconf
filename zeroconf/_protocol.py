@@ -64,6 +64,8 @@ if TYPE_CHECKING:
 class DNSMessage:
     """A base class for DNS messages."""
 
+    __slots__ = ('flags',)
+
     def __init__(self, flags: int) -> None:
         """Construct a DNS message."""
         self.flags = flags
