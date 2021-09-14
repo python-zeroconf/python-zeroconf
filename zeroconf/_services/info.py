@@ -36,7 +36,6 @@ from .._utils.net import (
     _encode_address,
     _is_v6_address,
 )
-from .._utils.struct import int2byte
 from .._utils.time import current_time_millis
 from ..const import (
     _CLASS_IN,
@@ -239,7 +238,7 @@ class ServiceInfo(RecordUpdateListener):
                 record += b'=' + value
             list_.append(record)
         for item in list_:
-            result = b''.join((result, int2byte(len(item)), item))
+            result = b''.join((result, bytes((len(item),)), item))
         self.text = result
 
     def _set_text(self, text: bytes) -> None:

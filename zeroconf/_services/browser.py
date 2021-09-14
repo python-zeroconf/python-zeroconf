@@ -352,21 +352,19 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self, now: float, record: DNSRecord, old_record: Optional[DNSRecord]
     ) -> None:
         """Process a single record update from a batch of updates."""
-        expired = record.is_expired(now)
-
         if isinstance(record, DNSPointer):
             if record.name not in self.types:
                 return
             if old_record is None:
                 self._enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
-            elif expired:
+            elif record.is_expired(now):
                 self._enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
             else:
                 self.reschedule_type(record.name, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
             return
 
         # If its expired or already exists in the cache it cannot be updated.
-        if expired or old_record:
+        if old_record or record.is_expired(now):
             return
 
         if isinstance(record, DNSAddress):

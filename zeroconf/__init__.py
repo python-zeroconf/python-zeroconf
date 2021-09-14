@@ -75,7 +75,6 @@ from ._utils.net import (  # noqa # import needed for backwards compat
     IPVersion,
     get_all_addresses,
 )
-from ._utils.struct import int2byte  # noqa # import needed for backwards compat
 from ._utils.time import current_time_millis, millis_to_seconds  # noqa # import needed for backwards compat
 
 __author__ = 'Paul Scott-Murphy, William McBrine'

@@ -28,7 +28,6 @@ from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
 from ._exceptions import IncomingDecodeError, NamePartTooLongException
 from ._logger import QuietLogger, log
-from ._utils.struct import int2byte
 from ._utils.time import current_time_millis
 from .const import (
     _CLASS_UNIQUE,
@@ -63,6 +62,8 @@ if TYPE_CHECKING:
 
 class DNSMessage:
     """A base class for DNS messages."""
+
+    __slots__ = ('flags',)
 
     def __init__(self, flags: int) -> None:
         """Construct a DNS message."""
@@ -128,11 +129,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
             ]
         )
 
-    def unpack(self, format_: bytes) -> tuple:
-        length = struct.calcsize(format_)
-        info = struct.unpack(format_, self.data[self.offset : self.offset + length])
+    def unpack(self, format_: bytes, length: int) -> tuple:
         self.offset += length
-        return info
+        return struct.unpack(format_, self.data[self.offset - length : self.offset])
 
     def read_header(self) -> None:
         """Reads header portion of packet"""
@@ -143,16 +142,14 @@ class DNSIncoming(DNSMessage, QuietLogger):
             self.num_answers,
             self.num_authorities,
             self.num_additionals,
-        ) = self.unpack(b'!6H')
+        ) = self.unpack(b'!6H', 12)
 
     def read_questions(self) -> None:
         """Reads questions section of packet"""
         for _ in range(self.num_questions):
             name = self.read_name()
-            type_, class_ = self.unpack(b'!HH')
-
-            question = DNSQuestion(name, type_, class_)
-            self.questions.append(question)
+            type_, class_ = self.unpack(b'!HH', 4)
+            self.questions.append(DNSQuestion(name, type_, class_))
 
     def read_character_string(self) -> bytes:
         """Reads a character string from the packet"""
@@ -168,7 +165,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
     def read_unsigned_short(self) -> int:
         """Reads an unsigned short from the packet"""
-        return cast(int, self.unpack(b'!H')[0])
+        return cast(int, self.unpack(b'!H', 2)[0])
 
     def read_others(self) -> None:
         """Reads the answers, authorities and additionals section of the
@@ -176,7 +173,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         n = self.num_answers + self.num_authorities + self.num_additionals
         for _ in range(n):
             domain = self.read_name()
-            type_, class_, ttl, length = self.unpack(b'!HHiH')
+            type_, class_, ttl, length = self.unpack(b'!HHiH', 10)
             end = self.offset + length
             rec = None
             try:
@@ -266,8 +263,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         labels: List[str] = []
         self.seen_pointers.clear()
         self.offset = self._decode_labels_at_offset(self.offset, labels)
-        labels.append("")
-        name = ".".join(labels)
+        name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
             raise IncomingDecodeError(f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH}")
         return name
@@ -440,7 +436,7 @@ class DNSOutgoing(DNSMessage):
 
     def _write_byte(self, value: int) -> None:
         """Writes a single byte to the packet"""
-        self._pack(b'!c', int2byte(value))
+        self._pack(b'!c', bytes((value,)))
 
     def _insert_short_at_start(self, value: int) -> None:
         """Inserts an unsigned short at the start of the packet"""
