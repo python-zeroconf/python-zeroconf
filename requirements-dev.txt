@@ -3,8 +3,7 @@ black;implementation_name=="cpython"
 bump2version
 coveralls
 coverage
-# Version restricted because of https://github.com/PyCQA/pycodestyle/issues/741 - is fixed
-flake8>=3.6.0
+flake8
 flake8-import-order
 ifaddr
 mypy;implementation_name=="cpython"
