@@ -22,7 +22,7 @@
 
 import enum
 import struct
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Set, Sequence, TYPE_CHECKING, Tuple, Union, cast
 
 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
@@ -586,7 +586,7 @@ class DNSOutgoing(DNSMessage):
             answers_written += 1
         return answers_written
 
-    def _write_records_from_offset(self, records: List[DNSRecord], offset: int) -> int:
+    def _write_records_from_offset(self, records: Sequence[DNSRecord], offset: int) -> int:
         records_written = 0
         for record in records[offset:]:
             if not self._write_record(record, 0):
