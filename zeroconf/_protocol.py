@@ -430,13 +430,13 @@ class DNSOutgoing(DNSMessage):
         for cached_entry in cached_entries:
             self.add_answer_at_time(cached_entry, now)
 
-    def _pack(self, format_: Union[bytes, str], value: Any) -> None:
+    def _pack(self, format_: Union[bytes, str], size: int, value: Any) -> None:
         self.data.append(struct.pack(format_, value))
-        self.size += struct.calcsize(format_)
+        self.size += size
 
     def _write_byte(self, value: int) -> None:
         """Writes a single byte to the packet"""
-        self._pack(b'!c', bytes((value,)))
+        self._pack(b'!c', 1, bytes((value,)))
 
     def _insert_short_at_start(self, value: int) -> None:
         """Inserts an unsigned short at the start of the packet"""
@@ -448,11 +448,11 @@ class DNSOutgoing(DNSMessage):
 
     def write_short(self, value: int) -> None:
         """Writes an unsigned short to the packet"""
-        self._pack(b'!H', value)
+        self._pack(b'!H', 2, value)
 
     def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self._pack(b'!I', int(value))
+        self._pack(b'!I', 4, int(value))
 
     def write_string(self, value: bytes) -> None:
         """Writes a string to the packet"""
