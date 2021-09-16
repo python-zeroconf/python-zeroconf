@@ -496,7 +496,8 @@ class DNSOutgoing(DNSMessage):
         if not labels[-1]:
             labels.pop()
 
-        # construct each suffix
+        # Write each new label or a pointer to the existing
+        # on in the packet
         start_size = self.size
         for count in range(len(labels)):
             label = '.'.join(labels[count:])
