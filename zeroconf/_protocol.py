@@ -22,7 +22,7 @@
 
 import enum
 import struct
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Set, TYPE_CHECKING, Tuple, Union, cast
 
 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
@@ -586,21 +586,13 @@ class DNSOutgoing(DNSMessage):
             answers_written += 1
         return answers_written
 
-    def _write_authorities_from_offset(self, authority_offset: int) -> int:
-        authorities_written = 0
-        for authority in self.authorities[authority_offset:]:
-            if not self._write_record(authority, 0):
+    def _write_records_from_offset(self, records: Sequence[DNSRecord], offset: int) -> int:
+        records_written = 0
+        for record in records[offset:]:
+            if not self._write_record(record, 0):
                 break
-            authorities_written += 1
-        return authorities_written
-
-    def _write_additionals_from_offset(self, additional_offset: int) -> int:
-        additionals_written = 0
-        for additional in self.additionals[additional_offset:]:
-            if not self._write_record(additional, 0):
-                break
-            additionals_written += 1
-        return additionals_written
+            records_written += 1
+        return records_written
 
     def _has_more_to_add(
         self, questions_offset: int, answer_offset: int, authority_offset: int, additional_offset: int
@@ -654,8 +646,8 @@ class DNSOutgoing(DNSMessage):
 
             questions_written = self._write_questions_from_offset(questions_offset)
             answers_written = self._write_answers_from_offset(answer_offset)
-            authorities_written = self._write_authorities_from_offset(authority_offset)
-            additionals_written = self._write_additionals_from_offset(additional_offset)
+            authorities_written = self._write_records_from_offset(self.authorities, authority_offset)
+            additionals_written = self._write_records_from_offset(self.additionals, additional_offset)
 
             self._insert_short_at_start(additionals_written)
             self._insert_short_at_start(authorities_written)
