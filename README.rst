@@ -142,7 +142,7 @@ Changelog
 ======
 
 * Improved performance of constructing outgoing packets (#978) (#979) @bdraco
-* Defered parsing of incoming packets when it can be avoided (#983) @bdraco
+* Deferred parsing of incoming packets when it can be avoided (#983) @bdraco
 
 0.36.3
 ======
