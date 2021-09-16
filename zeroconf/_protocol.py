@@ -502,7 +502,8 @@ class DNSOutgoing(DNSMessage):
         for count in range(len(labels)):
             label = '.'.join(labels[count:])
             if label in self.names:
-                # If we wrote part of the name, create a pointer to the rest
+                # If part of the name already exists in the packet,
+                # create a pointer to it
                 index = self.names[label]
                 self._write_byte((index >> 8) | 0xC0)
                 self._write_byte(index & 0xFF)
