@@ -498,7 +498,6 @@ class DNSOutgoing(DNSMessage):
 
         # construct each suffix
         start_size = self.size
-        index = None
         for count in range(len(labels)):
             label = '.'.join(labels[count:])
             if label in self.names:
