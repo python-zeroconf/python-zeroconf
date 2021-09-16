@@ -430,13 +430,13 @@ class DNSOutgoing(DNSMessage):
         for cached_entry in cached_entries:
             self.add_answer_at_time(cached_entry, now)
 
-    def _pack(self, format_: Union[bytes, str], value: Any) -> None:
+    def _pack(self, format_: Union[bytes, str], size: int, value: Any) -> None:
         self.data.append(struct.pack(format_, value))
-        self.size += struct.calcsize(format_)
+        self.size += size
 
     def _write_byte(self, value: int) -> None:
         """Writes a single byte to the packet"""
-        self._pack(b'!c', bytes((value,)))
+        self._pack(b'!c', 1, bytes((value,)))
 
     def _insert_short_at_start(self, value: int) -> None:
         """Inserts an unsigned short at the start of the packet"""
@@ -448,11 +448,11 @@ class DNSOutgoing(DNSMessage):
 
     def write_short(self, value: int) -> None:
         """Writes an unsigned short to the packet"""
-        self._pack(b'!H', value)
+        self._pack(b'!H', 2, value)
 
     def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self._pack(b'!I', int(value))
+        self._pack(b'!I', 4, int(value))
 
     def write_string(self, value: bytes) -> None:
         """Writes a string to the packet"""
@@ -491,38 +491,29 @@ class DNSOutgoing(DNSMessage):
         """
 
         # split name into each label
-        parts = name.split('.')
-        if not parts[-1]:
-            parts.pop()
+        name_length = None
+        if name.endswith('.'):
+            name = name[: len(name) - 1]
+        labels = name.split('.')
+        # Write each new label or a pointer to the existing
+        # on in the packet
+        start_size = self.size
+        for count in range(len(labels)):
+            label = name if count == 0 else '.'.join(labels[count:])
+            index = self.names.get(label)
+            if index:
+                # If part of the name already exists in the packet,
+                # create a pointer to it
+                self._write_byte((index >> 8) | 0xC0)
+                self._write_byte(index & 0xFF)
+                return
+            if name_length is None:
+                name_length = len(name.encode('utf-8'))
+            self.names[label] = start_size + name_length - len(label.encode('utf-8'))
+            self._write_utf(labels[count])
 
-        # construct each suffix
-        name_suffices = ['.'.join(parts[i:]) for i in range(len(parts))]
-
-        # look for an existing name or suffix
-        for count, sub_name in enumerate(name_suffices):
-            if sub_name in self.names:
-                break
-        else:
-            count = len(name_suffices)
-
-        # note the new names we are saving into the packet
-        name_length = len(name.encode('utf-8'))
-        for suffix in name_suffices[:count]:
-            self.names[suffix] = self.size + name_length - len(suffix.encode('utf-8')) - 1
-
-        # write the new names out.
-        for part in parts[:count]:
-            self._write_utf(part)
-
-        # if we wrote part of the name, create a pointer to the rest
-        if count != len(name_suffices):
-            # Found substring in packet, create pointer
-            index = self.names[name_suffices[count]]
-            self._write_byte((index >> 8) | 0xC0)
-            self._write_byte(index & 0xFF)
-        else:
-            # this is the end of a name
-            self._write_byte(0)
+        # this is the end of a name
+        self._write_byte(0)
 
     def _write_question(self, question: DNSQuestion) -> bool:
         """Writes a question to the packet"""
