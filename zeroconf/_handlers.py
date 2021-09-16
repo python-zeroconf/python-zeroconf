@@ -348,7 +348,7 @@ class QueryHandler:
         threadsafe.
         """
         known_answers = DNSRRSet(
-            itertools.chain(*(msg.answers for msg in msgs if not _message_is_probe(msg)))
+            itertools.chain.from_iterable(msg.answers for msg in msgs if not _message_is_probe(msg))
         )
         query_res = _QueryResponse(self.cache, msgs)
 

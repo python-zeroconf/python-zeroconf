@@ -22,7 +22,7 @@
 
 import enum
 import struct
-from typing import Any, Dict, List, Optional, Sequence, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, TYPE_CHECKING, Tuple, Union, cast
 
 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
@@ -96,23 +96,39 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.name_cache: Dict[int, List[str]] = {}
         self.seen_pointers: Set[int] = set()
         self.questions: List[DNSQuestion] = []
-        self.answers: List[DNSRecord] = []
+        self._answers: List[DNSRecord] = []
         self.id = 0
         self.num_questions = 0
         self.num_answers = 0
         self.num_authorities = 0
         self.num_additionals = 0
         self.valid = False
+        self._read_others = False
         self.now = now or current_time_millis()
         self.scope_id = scope_id
+        self._parse_data(self._initial_parse)
 
-        try:
-            self.read_header()
-            self.read_questions()
+    def _initial_parse(self) -> None:
+        """Parse the data needed to initalize the packet object."""
+        self.read_header()
+        self.read_questions()
+        if not self.num_questions:
             self.read_others()
-            self.valid = True
+        self.valid = True
+
+    def _parse_data(self, parser_call: Callable) -> None:
+        """Parse part of the packet and catch exceptions."""
+        try:
+            parser_call()
         except DECODE_EXCEPTIONS:
-            self.log_exception_warning('Choked at offset %d while unpacking %r', self.offset, data)
+            self.log_exception_warning('Choked at offset %d while unpacking %r', self.offset, self.data)
+
+    @property
+    def answers(self) -> List[DNSRecord]:
+        """Answers in the packet."""
+        if not self._read_others:
+            self._parse_data(self.read_others)
+        return self._answers
 
     def __repr__(self) -> str:
         return '<DNSIncoming:{%s}>' % ', '.join(
@@ -170,6 +186,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
     def read_others(self) -> None:
         """Reads the answers, authorities and additionals section of the
         packet"""
+        self._read_others = True
         n = self.num_answers + self.num_authorities + self.num_additionals
         for _ in range(n):
             domain = self.read_name()
@@ -192,7 +209,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
                     exc_info=True,
                 )
             if rec is not None:
-                self.answers.append(rec)
+                self._answers.append(rec)
 
     def read_record(self, domain: str, type_: int, class_: int, ttl: int, length: int) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
