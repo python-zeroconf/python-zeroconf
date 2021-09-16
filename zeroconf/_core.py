@@ -400,7 +400,6 @@ class Zeroconf(QuietLogger):
         if ip_version is None:
             ip_version = autodetect_ip_version(interfaces)
 
-        # hook for threads
         self.done = False
 
         if apple_p2p and sys.platform != 'darwin':
