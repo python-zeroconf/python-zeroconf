@@ -491,33 +491,26 @@ class DNSOutgoing(DNSMessage):
         """
 
         # split name into each label
-        parts = name.split('.')
-        if not parts[-1]:
-            parts.pop()
+        name_length = None
+        labels = name.split('.')
+        if not labels[-1]:
+            labels.pop()
 
         # construct each suffix
-        name_suffices = ['.'.join(parts[i:]) for i in range(len(parts))]
-
-        # look for an existing name or suffix
-        for count, sub_name in enumerate(name_suffices):
-            if sub_name in self.names:
+        start_size = self.size
+        index = None
+        for count in range(len(labels)):
+            label = '.'.join(labels[count:])
+            if label in self.names:
+                index = self.names[label]
                 break
-        else:
-            count = len(name_suffices)
+            if name_length is None:
+                name_length = len(name.encode('utf-8'))
+            self.names[label] = start_size + name_length - len(label.encode('utf-8')) - 1
+            self._write_utf(labels[count])
 
-        # note the new names we are saving into the packet
-        name_length = len(name.encode('utf-8'))
-        for suffix in name_suffices[:count]:
-            self.names[suffix] = self.size + name_length - len(suffix.encode('utf-8')) - 1
-
-        # write the new names out.
-        for part in parts[:count]:
-            self._write_utf(part)
-
-        # if we wrote part of the name, create a pointer to the rest
-        if count != len(name_suffices):
-            # Found substring in packet, create pointer
-            index = self.names[name_suffices[count]]
+        if index:
+            # If we wrote part of the name, create a pointer to the rest
             self._write_byte((index >> 8) | 0xC0)
             self._write_byte(index & 0xFF)
         else:
