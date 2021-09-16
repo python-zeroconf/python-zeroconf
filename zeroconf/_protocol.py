@@ -22,7 +22,7 @@
 
 import enum
 import struct
-from typing import Any, Dict, List, Optional, Set, Sequence, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Set, TYPE_CHECKING, Tuple, Union, cast
 
 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
