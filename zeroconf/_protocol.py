@@ -492,10 +492,9 @@ class DNSOutgoing(DNSMessage):
 
         # split name into each label
         name_length = None
+        if name.endswith('.'):
+            name = name[: len(name) - 1]
         labels = name.split('.')
-        if not labels[-1]:
-            labels.pop()
-
         # Write each new label or a pointer to the existing
         # on in the packet
         start_size = self.size
@@ -510,7 +509,7 @@ class DNSOutgoing(DNSMessage):
                 return
             if name_length is None:
                 name_length = len(name.encode('utf-8'))
-            self.names[label] = start_size + name_length - len(label.encode('utf-8')) - 1
+            self.names[label] = start_size + name_length - len(label.encode('utf-8'))
             self._write_utf(labels[count])
 
         # this is the end of a name
