@@ -401,7 +401,7 @@ class Zeroconf(QuietLogger):
             ip_version = autodetect_ip_version(interfaces)
 
         # hook for threads
-        self._GLOBAL_DONE = False
+        self.done = False
 
         if apple_p2p and sys.platform != 'darwin':
             raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
@@ -455,10 +455,6 @@ class Zeroconf(QuietLogger):
     async def async_wait_for_start(self) -> None:
         """Wait for start up."""
         await self.engine.async_wait_for_start()
-
-    @property
-    def done(self) -> bool:
-        return self._GLOBAL_DONE
 
     @property
     def listeners(self) -> List[RecordUpdateListener]:
@@ -815,7 +811,7 @@ class Zeroconf(QuietLogger):
         transport: Optional[asyncio.DatagramTransport] = None,
     ) -> None:
         """Sends an outgoing packet."""
-        if self._GLOBAL_DONE:
+        if self.done:
             return
 
         # If no transport is specified, we send to all the ones
@@ -866,10 +862,10 @@ class Zeroconf(QuietLogger):
 
     def _close(self) -> None:
         """Set global done and remove all service listeners."""
-        if self._GLOBAL_DONE:
+        if self.done:
             return
         self.remove_all_service_listeners()
-        self._GLOBAL_DONE = True
+        self.done = True
 
     def _shutdown_threads(self) -> None:
         """Shutdown any threads."""
