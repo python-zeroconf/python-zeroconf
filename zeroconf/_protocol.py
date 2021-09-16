@@ -22,7 +22,7 @@
 
 import enum
 import struct
-from typing import Any, Dict, List, Optional, Sequence, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, TYPE_CHECKING, Tuple, Union, cast
 
 
 from ._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
@@ -106,24 +106,28 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self._read_others = False
         self.now = now or current_time_millis()
         self.scope_id = scope_id
+        self._parse_data(self._initial_parse)
 
+    def _initial_parse(self) -> None:
+        """Parse the data needed to initalize the packet object."""
+        self.read_header()
+        self.read_questions()
+        if not self.num_questions:
+            self.read_others()
+        self.valid = True
+
+    def _parse_data(self, parser_call: Callable) -> None:
+        """Parse part of the packet and catch exceptions."""
         try:
-            self.read_header()
-            self.read_questions()
-            if not self.num_questions:
-                self.read_others()
-            self.valid = True
+            parser_call()
         except DECODE_EXCEPTIONS:
-            self.log_exception_warning('Choked at offset %d while unpacking %r', self.offset, data)
+            self.log_exception_warning('Choked at offset %d while unpacking %r', self.offset, self.data)
 
     @property
     def answers(self) -> List[DNSRecord]:
         """Answers in the packet."""
         if not self._read_others:
-            try:
-                self.read_others()
-            except DECODE_EXCEPTIONS:
-                self.log_exception_warning('Choked at offset %d while unpacking %r', self.offset, data)
+            self._parse_data(self.read_others)
         return self._answers
 
     def __repr__(self) -> str:
