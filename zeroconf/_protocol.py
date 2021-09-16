@@ -502,20 +502,18 @@ class DNSOutgoing(DNSMessage):
         for count in range(len(labels)):
             label = '.'.join(labels[count:])
             if label in self.names:
+                # If we wrote part of the name, create a pointer to the rest
                 index = self.names[label]
-                break
+                self._write_byte((index >> 8) | 0xC0)
+                self._write_byte(index & 0xFF)
+                return
             if name_length is None:
                 name_length = len(name.encode('utf-8'))
             self.names[label] = start_size + name_length - len(label.encode('utf-8')) - 1
             self._write_utf(labels[count])
 
-        if index:
-            # If we wrote part of the name, create a pointer to the rest
-            self._write_byte((index >> 8) | 0xC0)
-            self._write_byte(index & 0xFF)
-        else:
-            # this is the end of a name
-            self._write_byte(0)
+        # this is the end of a name
+        self._write_byte(0)
 
     def _write_question(self, question: DNSQuestion) -> bool:
         """Writes a question to the packet"""
