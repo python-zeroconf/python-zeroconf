@@ -1,3 +1,5 @@
+# version: 1.0
+
 .PHONY: all virtualenv
 MAX_LINE_LENGTH=110
 PYTHON_IMPLEMENTATION:=$(shell python -c "import sys;import platform;sys.stdout.write(platform.python_implementation())")
