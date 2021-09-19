@@ -67,7 +67,6 @@ from ._updates import RecordUpdate, RecordUpdateListener  # noqa # import needed
 from ._utils.name import service_type_name  # noqa # import needed for backwards compat
 from ._utils.net import (  # noqa # import needed for backwards compat
     add_multicast_member,
-    can_send_to,
     autodetect_ip_version,
     create_sockets,
     get_all_addresses_v6,
