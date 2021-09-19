@@ -341,6 +341,22 @@ class DNSOutgoing(DNSMessage):
 
     """Object representation of an outgoing packet"""
 
+    __slots__ = (
+        'finished',
+        'id',
+        'multicast',
+        'packets_data',
+        'names',
+        'data',
+        'size',
+        'allow_long',
+        'state',
+        'questions',
+        'answers',
+        'authorities',
+        'additionals',
+    )
+
     def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:
         super().__init__(flags)
         self.finished = False
