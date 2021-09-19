@@ -25,6 +25,7 @@ import struct
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from . import DNSMessage
+from .incoming import DNSIncoming
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import NamePartTooLongException
 from .._logger import log
@@ -36,7 +37,6 @@ from ..const import (
     _MAX_MSG_ABSOLUTE,
     _MAX_MSG_TYPICAL,
 )
-from .incoming import DNSIncoming
 
 
 class DNSOutgoing(DNSMessage):
