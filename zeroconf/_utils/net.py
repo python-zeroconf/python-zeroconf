@@ -379,9 +379,13 @@ def get_errno(e: Exception) -> int:
     return cast(int, e.args[0])
 
 
-def can_send_to(sock: socket.socket, address: str) -> bool:
-    addr = ipaddress.ip_address(address)
-    return cast(bool, addr.version == 6 if sock.family == socket.AF_INET6 else addr.version == 4)
+def can_send_to(ipv6_socket: bool, address: str) -> bool:
+    """Check if the address type matches the socket type.
+
+    This function does not validate if the address is a valid
+    ipv6 or ipv4 address.
+    """
+    return ":" in address if ipv6_socket else ":" not in address
 
 
 def autodetect_ip_version(interfaces: InterfacesType) -> IPVersion:

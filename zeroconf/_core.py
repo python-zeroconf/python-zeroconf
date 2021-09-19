@@ -836,12 +836,13 @@ class Zeroconf(QuietLogger):
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
         s = transport.get_extra_info('socket')
+        ipv6_socket = s.family == socket.AF_INET6
         if addr is None:
-            real_addr = _MDNS_ADDR6 if s.family == socket.AF_INET6 else _MDNS_ADDR
+            real_addr = _MDNS_ADDR6 if ipv6_socket else _MDNS_ADDR
         else:
             real_addr = addr
-        if not can_send_to(s, real_addr):
-            return
+            if not can_send_to(ipv6_socket, real_addr):
+                return
         log.debug(
             'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
             real_addr,
@@ -855,7 +856,7 @@ class Zeroconf(QuietLogger):
         )
         # Get flowinfo and scopeid for the IPV6 socket to create a complete IPv6
         # address tuple: https://docs.python.org/3.6/library/socket.html#socket-families
-        if s.family == socket.AF_INET6 and not v6_flow_scope:
+        if ipv6_socket and not v6_flow_scope:
             _, _, sock_flowinfo, sock_scopeid = s.getsockname()
             v6_flow_scope = (sock_flowinfo, sock_scopeid)
         transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
