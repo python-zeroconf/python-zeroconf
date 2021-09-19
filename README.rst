@@ -138,6 +138,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.5
+======
+
+* Reduced memory usage for incoming and outgoing packets (#987) @bdraco
+
 0.36.4
 ======
 
