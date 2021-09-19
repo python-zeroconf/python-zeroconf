@@ -141,7 +141,7 @@ Changelog
 0.36.6
 ======
 
-* Improve performance of sending outgoing packets (#990) @bdraco
+* Improved performance of sending outgoing packets (#990) @bdraco
 
 0.36.5
 ======
