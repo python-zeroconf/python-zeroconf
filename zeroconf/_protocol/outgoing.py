@@ -28,7 +28,6 @@ from . import DNSMessage
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import NamePartTooLongException
 from .._logger import log
-from .._utils.time import current_time_millis
 from .._cache import DNSCache
 from ..const import (
     _CLASS_UNIQUE,
