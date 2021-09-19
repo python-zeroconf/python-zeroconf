@@ -87,6 +87,23 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
     """Object representation of an incoming DNS packet"""
 
+    __slots__ = (
+        'offset',
+        'data',
+        'data_len',
+        'name_cache',
+        'questions',
+        '_answers',
+        'id',
+        'num_questions',
+        'num_answers',
+        'num_authorities',
+        'num_additionals',
+        'valid',
+        'now',
+        'scope_id',
+    )
+
     def __init__(self, data: bytes, scope_id: Optional[int] = None, now: Optional[float] = None) -> None:
         """Constructor from string holding bytes of packet"""
         super().__init__(0)
@@ -94,7 +111,6 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.data = data
         self.data_len = len(data)
         self.name_cache: Dict[int, List[str]] = {}
-        self.seen_pointers: Set[int] = set()
         self.questions: List[DNSQuestion] = []
         self._answers: List[DNSRecord] = []
         self.id = 0
@@ -162,10 +178,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
     def read_questions(self) -> None:
         """Reads questions section of packet"""
-        for _ in range(self.num_questions):
-            name = self.read_name()
-            type_, class_ = self.unpack(b'!HH', 4)
-            self.questions.append(DNSQuestion(name, type_, class_))
+        self.questions = [
+            DNSQuestion(self.read_name(), *self.unpack(b'!HH', 4)) for _ in range(self.num_questions)
+        ]
 
     def read_character_string(self) -> bytes:
         """Reads a character string from the packet"""
@@ -278,14 +293,14 @@ class DNSIncoming(DNSMessage, QuietLogger):
     def read_name(self) -> str:
         """Reads a domain name from the packet."""
         labels: List[str] = []
-        self.seen_pointers.clear()
-        self.offset = self._decode_labels_at_offset(self.offset, labels)
+        seen_pointers: Set[int] = set()
+        self.offset = self._decode_labels_at_offset(self.offset, labels, seen_pointers)
         name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
             raise IncomingDecodeError(f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH}")
         return name
 
-    def _decode_labels_at_offset(self, off: int, labels: List[str]) -> int:
+    def _decode_labels_at_offset(self, off: int, labels: List[str], seen_pointers: Set[int]) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
         while off < self.data_len:
             length = self.data[off]
@@ -307,12 +322,12 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 raise IncomingDecodeError(f"DNS compression pointer at {off} points to {link} beyond packet")
             if link == off:
                 raise IncomingDecodeError(f"DNS compression pointer at {off} points to itself")
-            if link in self.seen_pointers:
+            if link in seen_pointers:
                 raise IncomingDecodeError(f"DNS compression pointer at {off} was seen again")
-            self.seen_pointers.add(link)
+            seen_pointers.add(link)
             linked_labels = self.name_cache.get(link, [])
             if not linked_labels:
-                self._decode_labels_at_offset(link, linked_labels)
+                self._decode_labels_at_offset(link, linked_labels, seen_pointers)
                 self.name_cache[link] = linked_labels
             labels.extend(linked_labels)
             if len(labels) > MAX_DNS_LABELS:
@@ -325,6 +340,22 @@ class DNSIncoming(DNSMessage, QuietLogger):
 class DNSOutgoing(DNSMessage):
 
     """Object representation of an outgoing packet"""
+
+    __slots__ = (
+        'finished',
+        'id',
+        'multicast',
+        'packets_data',
+        'names',
+        'data',
+        'size',
+        'allow_long',
+        'state',
+        'questions',
+        'answers',
+        'authorities',
+        'additionals',
+    )
 
     def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:
         super().__init__(flags)
