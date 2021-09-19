@@ -26,10 +26,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from . import DNSMessage
 from .incoming import DNSIncoming
+from .._cache import DNSCache
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import NamePartTooLongException
 from .._logger import log
-from .._cache import DNSCache
 from ..const import (
     _CLASS_UNIQUE,
     _DNS_PACKET_HEADER_LEN,
