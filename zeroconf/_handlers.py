@@ -29,7 +29,8 @@ from ._cache import DNSCache, _UniqueRecordsType
 from ._dns import DNSAddress, DNSNsec, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
 from ._history import QuestionHistory
 from ._logger import log
-from ._protocol import DNSIncoming, DNSOutgoing
+from ._protocol.incoming import DNSIncoming
+from ._protocol.outgoing import DNSOutgoing
 from ._services.info import ServiceInfo
 from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener

@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
-from .._protocol import DNSOutgoing
+from .._protocol.outgoing import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.asyncio import get_running_loop, run_coro_with_timeout
 from .._utils.name import service_type_name

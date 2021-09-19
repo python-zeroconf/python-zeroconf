@@ -41,7 +41,8 @@ from ._handlers import (
 )
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
-from ._protocol import DNSIncoming, DNSOutgoing
+from ._protocol.incoming import DNSIncoming
+from ._protocol.outgoing import DNSOutgoing
 from ._services import ServiceListener
 from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info

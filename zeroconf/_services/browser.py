@@ -30,7 +30,7 @@ from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Un
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
-from .._protocol import DNSOutgoing
+from .._protocol.outgoing import DNSOutgoing
 from .._services import (
     ServiceListener,
     ServiceStateChange,

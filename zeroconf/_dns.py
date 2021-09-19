@@ -48,7 +48,8 @@ _RECENT_TIME_MS = 250
 
 
 if TYPE_CHECKING:
-    from ._protocol import DNSIncoming, DNSOutgoing
+    from ._protocol.incoming import DNSIncoming
+    from ._protocol.outgoing import DNSOutgoing
 
 
 @enum.unique
