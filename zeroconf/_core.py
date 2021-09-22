@@ -238,7 +238,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     ) -> None:
         assert self.transport is not None
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
-        debug_log = log.isEnabledFor(logging.DEBUG)
+        data_len = len(data)
 
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
@@ -247,58 +247,54 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         else:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs  # type: ignore
-            if debug_log:
-                log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
+            log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
 
         now = current_time_millis()
         if self.suppress_duplicate_packet(data, now):
             # Guard against duplicate packets
-            if debug_log:
-                log.debug(
-                    'Ignoring duplicate message received from %r:%r [socket %s] (%d bytes) as [%r]',
-                    addr,
-                    port,
-                    self.sock_description,
-                    len(data),
-                    data,
-                )
+            log.debug(
+                'Ignoring duplicate message received from %r:%r [socket %s] (%d bytes) as [%r]',
+                addr,
+                port,
+                self.sock_description,
+                data_len,
+                data,
+            )
             return
 
         if len(data) > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
             # the system.
-            if debug_log:
-                log.debug(
-                    "Discarding incoming packet with length %s, which is larger "
-                    "than the absolute maximum size of %s",
-                    len(data),
-                    _MAX_MSG_ABSOLUTE,
-                )
+            log.debug(
+                "Discarding incoming packet with length %s, which is larger "
+                "than the absolute maximum size of %s",
+                data_len,
+                _MAX_MSG_ABSOLUTE,
+            )
             return
 
         msg = DNSIncoming(data, scope, now)
-        if debug_log:
-            if msg.valid:
-                log.debug(
-                    'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
-                    addr,
-                    port,
-                    self.sock_description,
-                    msg,
-                    len(data),
-                    data,
-                )
-            else:
-                log.debug(
-                    'Received from %r:%r [socket %s]: (%d bytes) [%r]',
-                    addr,
-                    port,
-                    self.sock_description,
-                    len(data),
-                    data,
-                )
-                return
+        if msg.valid:
+            log.debug(
+                'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
+                addr,
+                port,
+                self.sock_description,
+                msg,
+                data_len,
+                data,
+            )
+        else:
+            log.debug(
+                'Received from %r:%r [socket %s]: (%d bytes) [%r]',
+                addr,
+                port,
+                self.sock_description,
+                data_len,
+                data,
+            )
+            return
 
         if not msg.is_query():
             self.zc.handle_response(msg)
