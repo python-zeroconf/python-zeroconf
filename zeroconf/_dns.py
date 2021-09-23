@@ -127,7 +127,7 @@ class DNSQuestion(DNSEntry):
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on dns question."""
-        return isinstance(other, DNSQuestion) and DNSEntry.__eq__(self, other)
+        return isinstance(other, DNSQuestion) and dns_entry_matches(other, self.key, self.type, self.class_)
 
     @property
     def max_size(self) -> int:
@@ -260,7 +260,7 @@ class DNSAddress(DNSRecord):
             isinstance(other, DNSAddress)
             and self.address == other.address
             and self.scope_id == other.scope_id
-            and DNSEntry.__eq__(self, other)
+            and dns_entry_matches(other, self.key, self.type, self.class_)
         )
 
     def __hash__(self) -> int:
@@ -304,7 +304,7 @@ class DNSHinfo(DNSRecord):
             isinstance(other, DNSHinfo)
             and self.cpu == other.cpu
             and self.os == other.os
-            and DNSEntry.__eq__(self, other)
+            and dns_entry_matches(other, self.key, self.type, self.class_)
         )
 
     def __hash__(self) -> int:
@@ -345,7 +345,11 @@ class DNSPointer(DNSRecord):
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on alias"""
-        return isinstance(other, DNSPointer) and self.alias == other.alias and DNSEntry.__eq__(self, other)
+        return (
+            isinstance(other, DNSPointer)
+            and self.alias == other.alias
+            and dns_entry_matches(other, self.key, self.type, self.class_)
+        )
 
     def __hash__(self) -> int:
         """Hash to compare like DNSPointer."""
@@ -380,7 +384,11 @@ class DNSText(DNSRecord):
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on text"""
-        return isinstance(other, DNSText) and self.text == other.text and DNSEntry.__eq__(self, other)
+        return (
+            isinstance(other, DNSText)
+            and self.text == other.text
+            and dns_entry_matches(other, self.key, self.type, self.class_)
+        )
 
     def __repr__(self) -> str:
         """String representation"""
@@ -429,7 +437,7 @@ class DNSService(DNSRecord):
             and self.weight == other.weight
             and self.port == other.port
             and self.server == other.server
-            and DNSEntry.__eq__(self, other)
+            and dns_entry_matches(other, self.key, self.type, self.class_)
         )
 
     def __hash__(self) -> int:
@@ -484,7 +492,7 @@ class DNSNsec(DNSRecord):
             isinstance(other, DNSNsec)
             and self.next_name == other.next_name
             and self.rdtypes == other.rdtypes
-            and DNSEntry.__eq__(self, other)
+            and dns_entry_matches(other, self.key, self.type, self.class_)
         )
 
     def __hash__(self) -> int:
