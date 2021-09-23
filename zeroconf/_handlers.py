@@ -227,6 +227,19 @@ class _QueryResponse:
         return bool(maybe_entry and self._now - maybe_entry.created < _ONE_SECOND)
 
 
+def _get_address_and_nsec_records(service: ServiceInfo, now: float) -> Set[DNSRecord]:
+    """Build a set of address records and NSEC records for non-present record types."""
+    seen_types: Set[int] = set()
+    records: Set[DNSRecord] = set()
+    for dns_address in service.dns_addresses(created=now):
+        seen_types.add(dns_address.type)
+        records.add(dns_address)
+    missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
+    if missing_types:
+        records.add(construct_nsec_record(service.server, list(missing_types), now))
+    return records
+
+
 class QueryHandler:
     """Query the ServiceRegistry."""
 
@@ -261,20 +274,8 @@ class QueryHandler:
             if known_answers.suppresses(dns_pointer):
                 continue
             additionals: Set[DNSRecord] = {service.dns_service(created=now), service.dns_text(created=now)}
-            additionals |= self._get_address_and_nsec_records(service, now)
+            additionals |= _get_address_and_nsec_records(service, now)
             answer_set[dns_pointer] = additionals
-
-    def _get_address_and_nsec_records(self, service: ServiceInfo, now: float) -> Set[DNSRecord]:
-        """Build a set of address records and NSEC records for non-present record types."""
-        seen_types: Set[int] = set()
-        records: Set[DNSRecord] = set()
-        for dns_address in service.dns_addresses(created=now):
-            seen_types.add(dns_address.type)
-            records.add(dns_address)
-        missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
-        if missing_types:
-            records.add(construct_nsec_record(service.server, list(missing_types), now))
-        return records
 
     def _add_address_answers(
         self,
@@ -332,7 +333,7 @@ class QueryHandler:
                     # https://tools.ietf.org/html/rfc6763#section-12.2.
                     dns_service = service.dns_service(created=now)
                     if not known_answers.suppresses(dns_service):
-                        answer_set[dns_service] = self._get_address_and_nsec_records(service, now)
+                        answer_set[dns_service] = _get_address_and_nsec_records(service, now)
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
                     dns_text = service.dns_text(created=now)
                     if not known_answers.suppresses(dns_text):
