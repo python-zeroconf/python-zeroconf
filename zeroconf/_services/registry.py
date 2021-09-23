@@ -69,15 +69,15 @@ class ServiceRegistry:
 
     def async_get_infos_type(self, type_: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching type."""
-        return self._async_get_by_index("types", type_)
+        return self._async_get_by_index(self.types, type_)
 
     def async_get_infos_server(self, server: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching server."""
-        return self._async_get_by_index("servers", server)
+        return self._async_get_by_index(self.servers, server)
 
-    def _async_get_by_index(self, attr: str, key: str) -> List[ServiceInfo]:
+    def _async_get_by_index(self, records: Dict[str, List], key: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
-        return [self._services[name] for name in getattr(self, attr).get(key.lower(), [])]
+        return [self._services[name] for name in records.get(key.lower(), [])]
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
