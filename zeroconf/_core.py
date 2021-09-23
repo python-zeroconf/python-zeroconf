@@ -22,6 +22,7 @@
 
 import asyncio
 import itertools
+import logging
 import random
 import socket
 import sys
@@ -217,6 +218,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
         self.sock_name: Optional[str] = None
+        self.sock_description: Optional[str] = None
         self.sock_fileno: Optional[int] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
@@ -236,6 +238,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     ) -> None:
         assert self.transport is not None
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
+        data_len = len(data)
+
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
@@ -253,19 +257,19 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
                 'Ignoring duplicate message received from %r:%r [socket %s] (%d bytes) as [%r]',
                 addr,
                 port,
-                self._socket_description,
-                len(data),
+                self.sock_description,
+                data_len,
                 data,
             )
             return
 
-        if len(data) > _MAX_MSG_ABSOLUTE:
+        if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
             # the system.
             log.debug(
                 "Discarding incoming packet with length %s, which is larger "
                 "than the absolute maximum size of %s",
-                len(data),
+                data_len,
                 _MAX_MSG_ABSOLUTE,
             )
             return
@@ -276,9 +280,9 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
                 'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
                 addr,
                 port,
-                self._socket_description,
+                self.sock_description,
                 msg,
-                len(data),
+                data_len,
                 data,
             )
         else:
@@ -286,8 +290,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
                 'Received from %r:%r [socket %s]: (%d bytes) [%r]',
                 addr,
                 port,
-                self._socket_description,
-                len(data),
+                self.sock_description,
+                data_len,
                 data,
             )
             return
@@ -346,24 +350,20 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
         self.zc.handle_assembled_query(packets, addr, port, transport, v6_flow_scope)
 
-    @property
-    def _socket_description(self) -> str:
-        """A human readable description of the socket."""
-        return f"{self.sock_fileno} ({self.sock_name})"
-
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
         # We preformat the message string with the socket as we want
         # log_exception_once to log a warrning message once PER EACH
         # different socket in case there are problems with multiple
         # sockets
-        msg_str = f"Error with socket {self._socket_description}): %s"
+        msg_str = f"Error with socket {self.sock_description}): %s"
         self.log_exception_once(exc, msg_str, exc)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
         self.sock_name = self.transport.get_extra_info('sockname')
         self.sock_fileno = self.transport.get_extra_info('socket').fileno()
+        self.sock_description = f"{self.sock_fileno} ({self.sock_name})"
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
@@ -817,16 +817,20 @@ class Zeroconf(QuietLogger):
         # If no transport is specified, we send to all the ones
         # with the same address family
         transports = [transport] if transport else self.engine.senders
+        log_debug = log.isEnabledFor(logging.DEBUG)
 
         for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
             for send_transport in transports:
-                self._async_send_transport(send_transport, packet, packet_num, out, addr, port, v6_flow_scope)
+                self._async_send_transport(
+                    log_debug, send_transport, packet, packet_num, out, addr, port, v6_flow_scope
+                )
 
     def _async_send_transport(
         self,
+        log_debug: bool,
         transport: asyncio.DatagramTransport,
         packet: bytes,
         packet_num: int,
@@ -843,17 +847,18 @@ class Zeroconf(QuietLogger):
             real_addr = addr
             if not can_send_to(ipv6_socket, real_addr):
                 return
-        log.debug(
-            'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
-            real_addr,
-            port or _MDNS_PORT,
-            s.fileno(),
-            transport.get_extra_info('sockname'),
-            len(packet),
-            packet_num + 1,
-            out,
-            packet,
-        )
+        if log_debug:
+            log.debug(
+                'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
+                real_addr,
+                port or _MDNS_PORT,
+                s.fileno(),
+                transport.get_extra_info('sockname'),
+                len(packet),
+                packet_num + 1,
+                out,
+                packet,
+            )
         # Get flowinfo and scopeid for the IPV6 socket to create a complete IPv6
         # address tuple: https://docs.python.org/3.6/library/socket.html#socket-families
         if ipv6_socket and not v6_flow_scope:
