@@ -212,17 +212,16 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     It requires registration with an Engine object in order to have
     the read() method called when a socket is available for reading."""
 
+    __slots__ = ('zc', 'data', 'last_time', 'transport', 'sock_description', '_deferred', '_timers')
+
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.transport: Optional[asyncio.DatagramTransport] = None
-        self.sock_name: Optional[str] = None
         self.sock_description: Optional[str] = None
-        self.sock_fileno: Optional[int] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
-
         super().__init__()
 
     def suppress_duplicate_packet(self, data: bytes, now: float) -> bool:
@@ -361,12 +360,50 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         self.transport = cast(asyncio.DatagramTransport, transport)
-        self.sock_name = self.transport.get_extra_info('sockname')
-        self.sock_fileno = self.transport.get_extra_info('socket').fileno()
-        self.sock_description = f"{self.sock_fileno} ({self.sock_name})"
+        sock_name = self.transport.get_extra_info('sockname')
+        sock_fileno = self.transport.get_extra_info('socket').fileno()
+        self.sock_description = f"{sock_fileno} ({sock_name})"
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
+
+
+def async_send_with_transport(
+    log_debug: bool,
+    transport: asyncio.DatagramTransport,
+    packet: bytes,
+    packet_num: int,
+    out: DNSOutgoing,
+    addr: Optional[str],
+    port: int,
+    v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+) -> None:
+    s = transport.get_extra_info('socket')
+    ipv6_socket = s.family == socket.AF_INET6
+    if addr is None:
+        real_addr = _MDNS_ADDR6 if ipv6_socket else _MDNS_ADDR
+    else:
+        real_addr = addr
+        if not can_send_to(ipv6_socket, real_addr):
+            return
+    if log_debug:
+        log.debug(
+            'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
+            real_addr,
+            port or _MDNS_PORT,
+            s.fileno(),
+            transport.get_extra_info('sockname'),
+            len(packet),
+            packet_num + 1,
+            out,
+            packet,
+        )
+    # Get flowinfo and scopeid for the IPV6 socket to create a complete IPv6
+    # address tuple: https://docs.python.org/3.6/library/socket.html#socket-families
+    if ipv6_socket and not v6_flow_scope:
+        _, _, sock_flowinfo, sock_scopeid = s.getsockname()
+        v6_flow_scope = (sock_flowinfo, sock_scopeid)
+    transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
 
 class Zeroconf(QuietLogger):
@@ -824,47 +861,9 @@ class Zeroconf(QuietLogger):
                 self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
                 return
             for send_transport in transports:
-                self._async_send_transport(
+                async_send_with_transport(
                     log_debug, send_transport, packet, packet_num, out, addr, port, v6_flow_scope
                 )
-
-    def _async_send_transport(
-        self,
-        log_debug: bool,
-        transport: asyncio.DatagramTransport,
-        packet: bytes,
-        packet_num: int,
-        out: DNSOutgoing,
-        addr: Optional[str],
-        port: int,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-    ) -> None:
-        s = transport.get_extra_info('socket')
-        ipv6_socket = s.family == socket.AF_INET6
-        if addr is None:
-            real_addr = _MDNS_ADDR6 if ipv6_socket else _MDNS_ADDR
-        else:
-            real_addr = addr
-            if not can_send_to(ipv6_socket, real_addr):
-                return
-        if log_debug:
-            log.debug(
-                'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
-                real_addr,
-                port or _MDNS_PORT,
-                s.fileno(),
-                transport.get_extra_info('sockname'),
-                len(packet),
-                packet_num + 1,
-                out,
-                packet,
-            )
-        # Get flowinfo and scopeid for the IPV6 socket to create a complete IPv6
-        # address tuple: https://docs.python.org/3.6/library/socket.html#socket-families
-        if ipv6_socket and not v6_flow_scope:
-            _, _, sock_flowinfo, sock_scopeid = s.getsockname()
-            v6_flow_scope = (sock_flowinfo, sock_scopeid)
-        transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
     def _close(self) -> None:
         """Set global done and remove all service listeners."""
