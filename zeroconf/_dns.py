@@ -89,12 +89,12 @@ class DNSEntry:
     @staticmethod
     def get_class_(class_: int) -> str:
         """Class accessor"""
-        return _CLASSES.get(class_, "?(%s)" % class_)
+        return _CLASSES.get(class_, f"?({class_})")
 
     @staticmethod
     def get_type(t: int) -> str:
         """Type accessor"""
-        return _TYPES.get(t, "?(%s)" % t)
+        return _TYPES.get(t, f"?({t})")
 
     def entry_to_string(self, hdr: str, other: Optional[Union[bytes, str]]) -> str:
         """String representation with additional information"""
