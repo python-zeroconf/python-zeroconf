@@ -158,7 +158,7 @@ class DNSOutgoing(DNSMessage):
         self.additionals.append(record)
 
     def add_question_or_one_cache(
-        self, cache: 'DNSCache', now: float, name: str, type_: int, class_: int
+        self, cache: DNSCache, now: float, name: str, type_: int, class_: int
     ) -> None:
         """Add a question if it is not already cached."""
         cached_entry = cache.get_by_details(name, type_, class_)
@@ -168,7 +168,7 @@ class DNSOutgoing(DNSMessage):
             self.add_answer_at_time(cached_entry, now)
 
     def add_question_or_all_cache(
-        self, cache: 'DNSCache', now: float, name: str, type_: int, class_: int
+        self, cache: DNSCache, now: float, name: str, type_: int, class_: int
     ) -> None:
         """Add a question if it is not already cached.
         This is currently only used for IPv6 addresses.
