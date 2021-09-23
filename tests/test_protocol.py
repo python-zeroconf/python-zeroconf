@@ -822,15 +822,17 @@ def test_dns_compression_invalid_skips_bad_name_compress_in_question():
     assert len(parsed.questions) == 4
 
 
-def test_dns_compression_all_invalid():
+def test_dns_compression_all_invalid(caplog):
     """Test our wire parser can skip all invalid data."""
     packet = (
         b'\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00!roborock-vacuum-s5e_miio416'
         b'112328\x00\x00/\x80\x01\x00\x00\x00x\x00\t\xc0P\x00\x05@\x00\x00\x00\x00'
     )
-    parsed = r.DNSIncoming(packet)
+    parsed = r.DNSIncoming(packet, ("2.4.5.4", 5353))
     assert len(parsed.questions) == 0
     assert len(parsed.answers) == 0
+
+    assert " Unable to parse; skipping record" in caplog.text
 
 
 def test_invalid_next_name_ignored():
@@ -918,15 +920,16 @@ def test_dns_compression_points_beyond_packet():
     assert len(parsed.answers) == 1
 
 
-def test_dns_compression_generic_failure():
+def test_dns_compression_generic_failure(caplog):
     """Test our wire parser does not loop forever when dns compression is corrupt."""
     packet = (
         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01'
         b'\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05-\x0c\x00\x01\x80\x01\x00\x00'
         b'\x00\x01\x00\x04\xc0\xa8\xd0\x06'
     )
-    parsed = r.DNSIncoming(packet)
+    parsed = r.DNSIncoming(packet, ("1.2.3.4", 5353))
     assert len(parsed.answers) == 1
+    assert "Received invalid packet from ('1.2.3.4', 5353)" in caplog.text
 
 
 def test_label_length_attack():
