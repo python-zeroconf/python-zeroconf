@@ -467,7 +467,6 @@ def test_sending_unicast():
 
 
 def test_tc_bit_defers():
-
     zc = Zeroconf(interfaces=['127.0.0.1'])
     _wait_for_start(zc)
     type_ = "_tcbitdefer._tcp.local."
