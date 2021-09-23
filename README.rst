@@ -138,6 +138,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.7
+======
+
+* Improved performance of responding to queries (#994) (#996) (#997) @bdraco
+* Improved log message when receiving an invalid or corrupt packet (#998) @bdraco
+
 0.36.6
 ======
 
