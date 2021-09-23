@@ -263,7 +263,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             )
             return
 
-        if len(data) > _MAX_MSG_ABSOLUTE:
+        if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
             # the system.
             log.debug(
