@@ -405,8 +405,8 @@ def test_logging_packets(caplog):
     zc = Zeroconf(interfaces=['127.0.0.1'])
 
     # start a browser
-    type_ = "_homeassistant._tcp.local."
-    name = "MyTestHome"
+    type_ = "_logging._tcp.local."
+    name = "TLD"
     info_service = r.ServiceInfo(
         type_,
         f'{name}.{type_}',
