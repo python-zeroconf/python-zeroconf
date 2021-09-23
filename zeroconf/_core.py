@@ -274,7 +274,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             )
             return
 
-        msg = DNSIncoming(data, scope, now)
+        msg = DNSIncoming(data, (addr, port), scope, now)
         if msg.valid:
             log.debug(
                 'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',

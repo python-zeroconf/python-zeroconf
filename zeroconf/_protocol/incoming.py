@@ -21,7 +21,7 @@
 """
 
 import struct
-from typing import Callable, Dict, List, Optional, Set, cast
+from typing import Callable, Dict, List, Optional, Set, Tuple, cast
 
 from . import DNSMessage
 from .._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
@@ -67,9 +67,16 @@ class DNSIncoming(DNSMessage, QuietLogger):
         'valid',
         'now',
         'scope_id',
+        'source',
     )
 
-    def __init__(self, data: bytes, scope_id: Optional[int] = None, now: Optional[float] = None) -> None:
+    def __init__(
+        self,
+        data: bytes,
+        source: Optional[Tuple[str, int]] = None,
+        scope_id: Optional[int] = None,
+        now: Optional[float] = None,
+    ) -> None:
         """Constructor from string holding bytes of packet"""
         super().__init__(0)
         self.offset = 0
@@ -86,6 +93,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.valid = False
         self._read_others = False
         self.now = now or current_time_millis()
+        self.source = source
         self.scope_id = scope_id
         self._parse_data(self._initial_parse)
 
@@ -102,7 +110,12 @@ class DNSIncoming(DNSMessage, QuietLogger):
         try:
             parser_call()
         except DECODE_EXCEPTIONS:
-            self.log_exception_warning('Choked at offset %d while unpacking %r', self.offset, self.data)
+            self.log_exception_warning(
+                'Received invalid packet from %s at offset %d while unpacking %r',
+                self.source,
+                self.offset,
+                self.data,
+            )
 
     @property
     def answers(self) -> List[DNSRecord]:
