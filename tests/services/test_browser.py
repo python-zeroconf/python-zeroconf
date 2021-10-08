@@ -442,7 +442,7 @@ def test_backoff():
     old_send = zeroconf_browser.async_send
 
     time_offset = 0.0
-    start_time = time.time() * 1000
+    start_time = time.monotonic() * 1000
     initial_query_interval = _services_browser._BROWSER_TIME / 1000
 
     def current_time_millis():

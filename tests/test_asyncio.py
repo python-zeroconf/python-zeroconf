@@ -850,7 +850,7 @@ async def test_integration():
 
     def _new_current_time_millis():
         """Current system time in milliseconds"""
-        return (time.time() * 1000) + (time_offset * 1000)
+        return (time.monotonic() * 1000) + (time_offset * 1000)
 
     expected_ttl = const._DNS_HOST_TTL
     nbr_answers = 0
