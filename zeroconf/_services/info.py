@@ -220,7 +220,7 @@ class ServiceInfo(RecordUpdateListener):
 
         ll_addrs = list(filter(is_link_local, self.parsed_addresses(version)))
         other_addrs = list(filter(lambda addr: not is_link_local(addr), self.parsed_addresses(version)))
-        return ["{}%{}".format(addr, self.interface_index) for addr in ll_addrs] + other_addrs
+        return [f"{addr}%{self.interface_index}" for addr in ll_addrs] + other_addrs
 
     def _set_properties(self, properties: Dict) -> None:
         """Sets properties and text of this info from a dictionary"""
@@ -494,10 +494,10 @@ class ServiceInfo(RecordUpdateListener):
 
     def __repr__(self) -> str:
         """String representation"""
-        return '%s(%s)' % (
+        return '{}({})'.format(
             type(self).__name__,
             ', '.join(
-                '%s=%r' % (name, getattr(self, name))
+                '{}={!r}'.format(name, getattr(self, name))
                 for name in (
                     'type',
                     'name',

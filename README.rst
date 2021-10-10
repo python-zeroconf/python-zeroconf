@@ -44,8 +44,8 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 Python compatibility
 --------------------
 
-* CPython 3.6+
-* PyPy3 7.2+
+* CPython 3.7+
+* PyPy3.7 7.3+
 
 Versioning
 ----------

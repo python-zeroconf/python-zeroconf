@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """Unit tests for zeroconf._services.registry."""
@@ -15,7 +14,7 @@ class TestServiceRegistry(unittest.TestCase):
     def test_only_register_once(self):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
@@ -32,8 +31,8 @@ class TestServiceRegistry(unittest.TestCase):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
         name2 = "xxxyyy2"
-        registration_name = "%s.%s" % (name, type_)
-        registration_name2 = "%s.%s" % (name2, type_)
+        registration_name = f"{name}.{type_}"
+        registration_name2 = f"{name2}.{type_}"
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
@@ -61,7 +60,7 @@ class TestServiceRegistry(unittest.TestCase):
         """
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
@@ -77,7 +76,7 @@ class TestServiceRegistry(unittest.TestCase):
     def test_lookups(self):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
@@ -96,7 +95,7 @@ class TestServiceRegistry(unittest.TestCase):
     def test_lookups_upper_case_by_lower_case(self):
         type_ = "_test-SRVC-type._tcp.local."
         name = "Xxxyyy"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
@@ -115,7 +114,7 @@ class TestServiceRegistry(unittest.TestCase):
     def test_lookups_lower_case_by_upper_case(self):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"
-        registration_name = "%s.%s" % (name, type_)
+        registration_name = f"{name}.{type_}"
 
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(

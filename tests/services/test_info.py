@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._services.info. """
@@ -574,7 +573,7 @@ async def test_multiple_a_addresses():
     # New kwarg way
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
     info.load_from_cache(aiozc.zeroconf)
-    assert set(info.addresses) == set([b'a', b'b'])
+    assert set(info.addresses) == {b'a', b'b'}
     await aiozc.async_close()
 
 
@@ -585,7 +584,7 @@ def test_filter_address_by_type_from_service_info():
     desc = {'path': '/~paulsm/'}
     type_ = "_homeassistant._tcp.local."
     name = "MyTestHome"
-    registration_name = "%s.%s" % (name, type_)
+    registration_name = f"{name}.{type_}"
     ipv4 = socket.inet_aton("10.0.1.2")
     ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6])
@@ -605,7 +604,7 @@ def test_changing_name_updates_serviceinfo_key():
     name = "MyTestHome"
     info_service = ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,
@@ -627,7 +626,7 @@ def test_serviceinfo_address_updates():
     with pytest.raises(TypeError):
         info_service = ServiceInfo(
             type_,
-            '%s.%s' % (name, type_),
+            f'{name}.{type_}',
             80,
             0,
             0,
@@ -639,7 +638,7 @@ def test_serviceinfo_address_updates():
 
     info_service = ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,
@@ -658,12 +657,12 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
     addresses = [socket.inet_aton("10.0.1.2")]
     server_name = "ash-2.local."
     info_service = ServiceInfo(
-        type_, '%s.%s' % (name, type_), 80, 0, 0, {b'path': b'/~paulsm/'}, server_name, addresses=addresses
+        type_, f'{name}.{type_}', 80, 0, 0, {b'path': b'/~paulsm/'}, server_name, addresses=addresses
     )
     assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
     info_service = ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,
@@ -674,7 +673,7 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
     assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
     info_service = ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,
@@ -685,7 +684,7 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
     assert info_service.dns_text().text == b'\x0epath=/~paulsm/'
     info_service = ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,

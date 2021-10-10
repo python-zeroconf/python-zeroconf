@@ -92,7 +92,7 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
         trailer = type_[-len(_LOCAL_TRAILER) + 1 :]
         has_protocol = False
     else:
-        raise BadTypeInNameException("Type '%s' must end with '%s'" % (type_, _LOCAL_TRAILER))
+        raise BadTypeInNameException(f"Type '{type_}' must end with '{_LOCAL_TRAILER}'")
 
     if strict or has_protocol:
         service_name = remaining.pop()
