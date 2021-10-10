@@ -138,6 +138,11 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.8
+======
+
+* Fixed ServiceBrowser infinite loop when zeroconf is closed before it is canceled (#1008) @bdraco
+
 0.36.7
 ======
 
