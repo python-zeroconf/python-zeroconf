@@ -465,9 +465,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     def _async_send_ready_queries(self) -> None:
         """Send any ready queries."""
-        if self.done or self.zc.done:
-            return
-
         outs = self._generate_ready_queries(self._first_request)
         if outs:
             self._first_request = False
@@ -476,6 +473,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     def _async_send_ready_queries_schedule_next(self) -> None:
         """Send ready queries and schedule next one."""
+        if self.done or self.zc.done:
+            return
         self._async_send_ready_queries()
         self._async_schedule_next()
 
