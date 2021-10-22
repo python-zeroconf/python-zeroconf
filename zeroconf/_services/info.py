@@ -180,8 +180,8 @@ class ServiceInfo(RecordUpdateListener):
                 addr = ipaddress.ip_address(address)
             except ValueError:
                 raise TypeError(
-                    'Addresses must either be IPv4 or IPv6 strings, bytes, or integers;'
-                    f' got {address}. Hint: convert string addresses with socket.inet_pton'
+                    "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
+                    f" got %s. Hint: convert string addresses with socket.inet_pton"  # type: ignore
                 )
             if addr.version == 4:
                 self._ipv4_addresses.append(addr)
@@ -444,7 +444,7 @@ class ServiceInfo(RecordUpdateListener):
     @property
     def _is_complete(self) -> bool:
         """The ServiceInfo has all expected properties."""
-        return self.text is not None and (self._ipv4_addresses or self._ipv6_addresses)
+        return bool(self.text is not None and (self._ipv4_addresses or self._ipv6_addresses))
 
     def request(
         self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None
