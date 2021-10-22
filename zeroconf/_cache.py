@@ -34,7 +34,7 @@ from ._dns import (
     dns_entry_matches,
 )
 from ._utils.time import current_time_millis
-from .const import _OTHER_TYPES, _MIN_HOST_RECORD_EXPUNGE_TIME, _TYPE_PTR
+from .const import _MIN_HOST_RECORD_EXPUNGE_TIME, _OTHER_TYPES, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]

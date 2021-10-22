@@ -48,8 +48,13 @@ _MDNS_ADDR = '224.0.0.251'
 _MDNS_ADDR6 = 'ff02::fb'
 _MDNS_PORT = 5353
 _DNS_PORT = 53
+
+
 _DNS_HOST_TTL = 120  # s - two minute for host records (A, SRV etc) as-per RFC6762
 _DNS_OTHER_TTL = 4500  # s - 75 minutes for non-host records (PTR, TXT etc) as-per RFC6762
+# We need to keep the corresponing A, SRV, etc records in the cache
+# for at least as long as their PTR, TXT, etc records to avoid
+# excessive callbacks
 _MIN_HOST_RECORD_EXPUNGE_TIME = _DNS_OTHER_TTL * 1000  # ms
 
 # Currently we enforce a minimum TTL for PTR records to avoid
@@ -105,6 +110,8 @@ _TYPE_AAAA = 28
 _TYPE_SRV = 33
 _TYPE_NSEC = 47
 _TYPE_ANY = 255
+
+_OTHER_TYPES = {_TYPE_PTR, _TYPE_TXT}
 
 # Mapping constants to names
 
