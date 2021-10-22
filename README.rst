@@ -141,7 +141,7 @@ Changelog
 0.36.9
 ======
 
-* Ensure ServiceInfo orders newest addresess first (#1012) @bdraco
+* Ensure ServiceInfo orders newest addresses first (#1012) @bdraco
 
   This change effectively restored the behavior before 1s cache flush
   expire behavior described in rfc6762 section 10.2 was added for callers that rely on this.
