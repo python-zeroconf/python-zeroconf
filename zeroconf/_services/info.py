@@ -181,7 +181,7 @@ class ServiceInfo(RecordUpdateListener):
             except ValueError:
                 raise TypeError(
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
-                    f" got %s. Hint: convert string addresses with socket.inet_pton"  # type: ignore
+                    f" got {address}. Hint: convert string addresses with socket.inet_pton"  # type: ignore
                 )
             if addr.version == 4:
                 self._ipv4_addresses.append(addr)
