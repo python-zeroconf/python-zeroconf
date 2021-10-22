@@ -162,7 +162,7 @@ class DNSOutgoing(DNSMessage):
     ) -> None:
         """Add a question if it is not already cached."""
         cached_entry = cache.get_by_details(name, type_, class_)
-        if not cached_entry:
+        if not cached_entry or cached_entry.is_stale(now):
             self.add_question(DNSQuestion(name, type_, class_))
         else:
             self.add_answer_at_time(cached_entry, now)
@@ -174,11 +174,12 @@ class DNSOutgoing(DNSMessage):
         This is currently only used for IPv6 addresses.
         """
         cached_entries = cache.get_all_by_details(name, type_, class_)
-        if not cached_entries:
+        if not cached_entries or any(entry.is_stale(now) for entry in cached_entries):
             self.add_question(DNSQuestion(name, type_, class_))
             return
         for cached_entry in cached_entries:
-            self.add_answer_at_time(cached_entry, now)
+            if not cached_entry.is_stale(now):
+                self.add_answer_at_time(cached_entry, now)
 
     def _pack(self, format_: Union[bytes, str], size: int, value: Any) -> None:
         self.data.append(struct.pack(format_, value))
