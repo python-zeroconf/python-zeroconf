@@ -560,7 +560,27 @@ def test_multiple_addresses():
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
 @pytest.mark.asyncio
-async def test_multiple_a_addresses():
+async def test_multiple_a_addresses_newest_address_first():
+    """Test that info.addresses returns the newest seen address first."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiarec.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    cache = aiozc.zeroconf.cache
+    host = "multahost.local."
+    record1 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'\x7f\x00\x00\x01')
+    record2 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b'\x7f\x00\x00\x02')
+    cache.async_add_records([record1, record2])
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    info.load_from_cache(aiozc.zeroconf)
+    assert info.addresses == [b'\x7f\x00\x00\x02', b'\x7f\x00\x00\x01']
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_invalid_a_addresses(caplog):
     type_ = "_http._tcp.local."
     registration_name = "multiarec.%s" % type_
     desc = {'path': '/~paulsm/'}
@@ -574,7 +594,9 @@ async def test_multiple_a_addresses():
     # New kwarg way
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
     info.load_from_cache(aiozc.zeroconf)
-    assert set(info.addresses) == set([b'a', b'b'])
+    assert not info.addresses
+    assert "Encountered invalid address while processing record" in caplog.text
+
     await aiozc.async_close()
 
 
