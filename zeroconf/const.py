@@ -50,9 +50,7 @@ _MDNS_PORT = 5353
 _DNS_PORT = 53
 _DNS_HOST_TTL = 120  # s - two minute for host records (A, SRV etc) as-per RFC6762
 _DNS_OTHER_TTL = 4500  # s - 75 minutes for non-host records (PTR, TXT etc) as-per RFC6762
-# _MIN_RECORD_EXPUNGE_TIME must never exceed 50% of _DNS_OTHER_TTL to ensure
-# ServiceStateChange.Removed are always sent
-_MIN_RECORD_EXPUNGE_TIME = _DNS_HOST_TTL * 2 * 1000  # ms
+_MIN_HOST_RECORD_EXPUNGE_TIME = _DNS_OTHER_TTL * 1000  # ms
 
 # Currently we enforce a minimum TTL for PTR records to avoid
 # ServiceBrowsers generating excessive queries refresh queries.

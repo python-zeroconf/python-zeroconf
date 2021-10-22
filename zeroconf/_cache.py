@@ -34,7 +34,7 @@ from ._dns import (
     dns_entry_matches,
 )
 from ._utils.time import current_time_millis
-from .const import _MIN_RECORD_EXPUNGE_TIME, _TYPE_PTR
+from .const import _OTHER_TYPES, _MIN_HOST_RECORD_EXPUNGE_TIME, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
@@ -106,12 +106,14 @@ class DNSCache:
 
         This function must be run in from event loop.
         """
+
         to_expunge = [
             record
             for record in itertools.chain(*self.cache.values())
             #
-            # We want to avoid expuning records in the cache for at least
-            # _MIN_RECORD_EXPUNGE_TIME so we know they existed to avoid
+            # We want to avoid expuning host records in the cache for at least
+            # _MIN_HOST_RECORD_EXPUNGE_TIME before their corresponding PTR
+            # records expire so we know they existed to avoid
             # triggering floods of ServiceStateChange.Updated callbacks
             # when the records really have not changed but were not refreshed
             # by any consumer on the network in time to prevent it from
@@ -121,7 +123,8 @@ class DNSCache:
             # it fetching from the cache are not expired unless it intends to check
             # expired records.
             #
-            if now - record.created > _MIN_RECORD_EXPUNGE_TIME and record.is_expired(now)
+            if record.is_expired(now)
+            and (record.type in _OTHER_TYPES or now - record.created > _MIN_HOST_RECORD_EXPUNGE_TIME)
         ]
         self.async_remove_records(to_expunge)
         return to_expunge
