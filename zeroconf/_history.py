@@ -59,8 +59,8 @@ class QuestionHistory:
             return False
         return True
 
-    def async_expire(self, now: float) -> None:
-        """Expire the history of old questions."""
+    def async_expunge(self, now: float) -> None:
+        """Expunge the history of old questions."""
         removes = [
             question
             for question, now_known_answers in self._history.items()

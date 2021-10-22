@@ -32,7 +32,7 @@ _LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 1000  # ms
 _DUPLICATE_QUESTION_INTERVAL = _BROWSER_TIME - 1  # ms
 _BROWSER_BACKOFF_LIMIT = 3600  # s
-_CACHE_CLEANUP_INTERVAL = 10000  # ms
+_CACHE_CLEANUP_INTERVAL = 60000  # ms
 _LOADED_SYSTEM_TIMEOUT = 10  # s
 _ONE_SECOND = 1000  # ms
 
@@ -50,6 +50,10 @@ _MDNS_PORT = 5353
 _DNS_PORT = 53
 _DNS_HOST_TTL = 120  # two minute for host records (A, SRV etc) as-per RFC6762
 _DNS_OTHER_TTL = 4500  # 75 minutes for non-host records (PTR, TXT etc) as-per RFC6762
+# _MIN_RECORD_EXPUNGE_TIME must never exceed 50% of _DNS_OTHER_TTL to ensure
+# ServiceStateChange.Removed are always sent
+_MIN_RECORD_EXPUNGE_TIME = _DNS_HOST_TTL * 2
+
 # Currently we enforce a minimum TTL for PTR records to avoid
 # ServiceBrowsers generating excessive queries refresh queries.
 # Apple uses a 15s minimum TTL, however we do not have the same

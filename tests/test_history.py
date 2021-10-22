@@ -57,12 +57,12 @@ def test_question_expire():
     # Verify the question is suppressed if the known answers are the same
     assert history.suppresses(question, now, other_known_answers)
 
-    history.async_expire(now)
+    history.async_expunge(now)
 
     # Verify the question is suppressed if the known answers are the same since the cache hasn't expired
     assert history.suppresses(question, now, other_known_answers)
 
-    history.async_expire(now + 1000)
+    history.async_expunge(now + 1000)
 
     # Verify the question not longer suppressed since the cache has expired
     assert not history.suppresses(question, now, other_known_answers)

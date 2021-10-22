@@ -169,9 +169,9 @@ class AsyncEngine:
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
         now = current_time_millis()
-        self.zc.question_history.async_expire(now)
+        self.zc.question_history.async_expunge(now)
         self.zc.record_manager.async_updates(
-            now, [RecordUpdate(record, None) for record in self.zc.cache.async_expire(now)]
+            now, [RecordUpdate(record, None) for record in self.zc.cache.async_expunge(now)]
         )
         self.zc.record_manager.async_updates_complete()
         assert self.loop is not None

@@ -34,7 +34,7 @@ from ._dns import (
     dns_entry_matches,
 )
 from ._utils.time import current_time_millis
-from .const import _TYPE_PTR
+from .const import _MIN_RECORD_EXPUNGE_TIME, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
@@ -101,14 +101,30 @@ class DNSCache:
         for entry in entries:
             self._async_remove(entry)
 
-    def async_expire(self, now: float) -> List[DNSRecord]:
-        """Purge expired entries from the cache.
+    def async_expunge(self, now: float) -> List[DNSRecord]:
+        """Expunge entries from the cache.
 
         This function must be run in from event loop.
         """
-        expired = [record for record in itertools.chain(*self.cache.values()) if record.is_expired(now)]
-        self.async_remove_records(expired)
-        return expired
+        to_expunge = [
+            record
+            for record in itertools.chain(*self.cache.values())
+            #
+            # We want to avoid expuning records in the cache for at least
+            # _MIN_RECORD_EXPUNGE_TIME so we know they existed to avoid
+            # triggering floods of ServiceStateChange.Updated callbacks
+            # when the records really have not changed but were not refreshed
+            # by any consumer on the network in time to prevent it from
+            # being expunged from the cache.
+            #
+            # It it important that all code that uses the cache verifies the records
+            # it fetching from the cache are not expired unless it intends to check
+            # expired records.
+            #
+            if now - record.created > _MIN_RECORD_EXPUNGE_TIME and record.is_expired(now)
+        ]
+        self.async_remove_records(to_expunge)
+        return to_expunge
 
     def async_get_unique(self, entry: _UniqueRecordsType) -> Optional[DNSRecord]:
         """Gets a unique entry by key.  Will return None if there is no

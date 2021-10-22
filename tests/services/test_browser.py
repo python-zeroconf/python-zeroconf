@@ -960,7 +960,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
     outs = _services_browser.generate_service_query(zc, now, [name], multicast=False)
     assert outs
 
-    zc.question_history.async_expire(now + 2000)
+    zc.question_history.async_expunge(now + 2000)
     # No suppression after clearing the history
     outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
     assert outs
