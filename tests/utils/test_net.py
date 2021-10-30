@@ -39,6 +39,7 @@ def test_ip6_to_address_and_index():
     """Test we can extract from mocked adapters."""
     adapters = _generate_mock_adapters()
     assert netutils.ip6_to_address_and_index(adapters, "2001:db8::") == (('2001:db8::', 1, 1), 1)
+    assert netutils.ip6_to_address_and_index(adapters, "2001:db8::%1") == (('2001:db8::', 1, 1), 1)
     with pytest.raises(RuntimeError):
         assert netutils.ip6_to_address_and_index(adapters, "2005:db8::")
 
