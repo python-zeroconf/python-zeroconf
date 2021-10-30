@@ -138,6 +138,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.11
+=======
+
+No functional changes from 0.36.10. This release corrects an error in the README.rst file
+that prevented the build from uploading to PyPI
+
 0.36.10
 =======
 
