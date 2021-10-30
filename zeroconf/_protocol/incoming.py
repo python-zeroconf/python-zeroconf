@@ -287,7 +287,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
             if length < 0x40:
                 label_idx = off + DNS_COMPRESSION_HEADER_LEN
-                labels.append(str(self.data[label_idx : label_idx + length], 'utf-8', 'replace'))
+                labels.append(self.data[label_idx : label_idx + length].decode('utf-8', 'replace'))
                 off += DNS_COMPRESSION_HEADER_LEN + length
                 continue
 
@@ -302,9 +302,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 raise IncomingDecodeError(f"DNS compression pointer at {off} points to itself")
             if link in seen_pointers:
                 raise IncomingDecodeError(f"DNS compression pointer at {off} was seen again")
-            seen_pointers.add(link)
             linked_labels = self.name_cache.get(link, [])
             if not linked_labels:
+                seen_pointers.add(link)
                 self._decode_labels_at_offset(link, linked_labels, seen_pointers)
                 self.name_cache[link] = linked_labels
             labels.extend(linked_labels)
