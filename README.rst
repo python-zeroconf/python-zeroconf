@@ -139,11 +139,11 @@ Changelog
 =========
 
 0.36.10
-======
+=======
 
 * scope_id is now stripped from IPv6 addresses if given (#1020) @StevenLooman
 
-  cpython 3.9 allows a scope_id in the ipv6 address. This caused an error
+  cpython 3.9 allows a suffix %scope_id in IPv6Address. This caused an error
   with the existing code if it was not stripped
 * Optimized decoding labels from incoming packets (#1019) @bdraco
 
