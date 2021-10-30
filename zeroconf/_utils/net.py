@@ -83,6 +83,8 @@ def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
 
 
 def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, int, int], int]:
+    if '%' in ip:
+        ip = ip[: ip.index('%')]  # Strip scope_id.
     ipaddr = ipaddress.ip_address(ip)
     for adapter in adapters:
         for adapter_ip in adapter.ips:
