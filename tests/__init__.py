@@ -59,6 +59,7 @@ def has_working_ipv6():
     if not socket.has_ipv6:
         return False
 
+    sock = None
     try:
         sock = socket.socket(socket.AF_INET6)
         sock.bind(('::1', 0))
