@@ -26,7 +26,7 @@ import time
 
 def current_time_millis() -> float:
     """Current system time in milliseconds"""
-    return time.time() * 1000
+    return time.monotonic() * 1000
 
 
 def millis_to_seconds(millis: float) -> float:
