@@ -138,6 +138,13 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.12
+=======
+
+*  Prevent service lookups from deadlocking if time abruptly moves backwards (#1006) @bdraco
+
+   The typical reason time moves backwards is via an ntp update
+
 0.36.11
 =======
 
