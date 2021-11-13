@@ -110,7 +110,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         try:
             parser_call()
         except DECODE_EXCEPTIONS:
-            self.log_exception_warning(
+            self.log_exception_debug(
                 'Received invalid packet from %s at offset %d while unpacking %r',
                 self.source,
                 self.offset,

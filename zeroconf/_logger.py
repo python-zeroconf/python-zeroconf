@@ -52,6 +52,20 @@ class QuietLogger:
         logger(*(logger_data or ['Exception occurred']), exc_info=True)
 
     @classmethod
+    def log_exception_debug(cls, *logger_data: Any) -> None:
+        log_exc_info = False
+        exc_info = sys.exc_info()
+        exc_str = str(exc_info[1])
+        import pprint
+
+        pprint.pprint(cls._seen_logs)
+        if exc_str not in cls._seen_logs:
+            # log the trace only on the first time
+            cls._seen_logs[exc_str] = exc_info
+            log_exc_info = True
+        log.debug(*(logger_data or ['Exception occurred']), exc_info=log_exc_info)
+
+    @classmethod
     def log_warning_once(cls, *args: Any) -> None:
         msg_str = args[0]
         if msg_str not in cls._seen_logs:
