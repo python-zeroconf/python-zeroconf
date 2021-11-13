@@ -138,10 +138,19 @@ See examples directory for more.
 Changelog
 =========
 
+0.36.13
+=======
+
+*  Unavailable interfaces are now skipped during socket bind (#1028) @bdraco
+*  Downgraded incoming corrupt packet logging to debug (#1029) @bdraco
+
+   Warning about network traffic we have no control over is confusing
+   to users as they think there is something wrong with zeroconf
+
 0.36.12
 =======
 
-*  Prevent service lookups from deadlocking if time abruptly moves backwards (#1006) @bdraco
+*  Prevented service lookups from deadlocking if time abruptly moves backwards (#1006) @bdraco
 
    The typical reason time moves backwards is via an ntp update
 
