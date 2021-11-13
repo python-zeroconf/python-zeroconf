@@ -249,8 +249,7 @@ def new_socket(
     except OSError as ex:
         if ex.errno == errno.EADDRNOTAVAIL:
             log.warning(
-                'Address not available when binding to %s, '
-                'it is expected to happen on some systems',
+                'Address not available when binding to %s, ' 'it is expected to happen on some systems',
                 bind_tup,
             )
             return None
