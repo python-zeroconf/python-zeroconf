@@ -3,7 +3,7 @@
 
 
 """Unit tests for zeroconf._utils.net."""
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import errno
 import ifaddr
@@ -198,3 +198,26 @@ def test_add_multicast_member():
     # No error should return True
     with patch("socket.socket.setsockopt"):
         assert netutils.add_multicast_member(sock, interface) is True
+
+
+def test_bind_raises_skips_address():
+    """Test bind failing in new_socket returns None on EADDRNOTAVAIL."""
+    err = errno.EADDRNOTAVAIL
+
+    def _mock_socket(*args, **kwargs):
+        sock = MagicMock()
+        sock.bind = MagicMock(side_effect=OSError(err, "Error: {}".format(err)))
+        return sock
+
+    with patch("socket.socket", _mock_socket):
+        assert netutils.new_socket(("0.0.0.0", 0)) is None
+
+    err = errno.EAGAIN
+    with pytest.raises(OSError), patch("socket.socket", _mock_socket):
+        netutils.new_socket(("0.0.0.0", 0))
+
+
+def test_new_respond_socket_new_socket_returns_none():
+    """Test new_respond_socket returns None if new_socket returns None."""
+    with patch.object(netutils, "new_socket", return_value=None):
+        assert netutils.new_respond_socket(("0.0.0.0", 0)) is None
