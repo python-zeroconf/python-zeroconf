@@ -218,7 +218,7 @@ def new_socket(
     port: int = _MDNS_PORT,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
-) -> socket.socket:
+) -> Optional[socket.socket]:
     log.debug(
         'Creating new socket with port %s, ip_version %s, apple_p2p %s and bind_addr %r',
         port,
@@ -243,7 +243,17 @@ def new_socket(
         # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
         s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
 
-    s.bind((bind_addr[0], port, *bind_addr[1:]))
+    bind_tup = (bind_addr[0], port, *bind_addr[1:])
+    try:
+        s.bind(bind_tup)
+    except OSError as ex:
+        if ex.errno == errno.EADDRNOTAVAIL:
+            log.warning(
+                'Address not available when binding to %s, ' 'it is expected to happen on some systems',
+                bind_tup,
+            )
+            return None
+        raise
     log.debug('Created socket %s', s)
     return s
 
@@ -323,6 +333,8 @@ def new_respond_socket(
         apple_p2p=apple_p2p,
         bind_addr=cast(Tuple[Tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
     )
+    if not respond_socket:
+        return None
     log.debug('Configuring socket %s with multicast interface %s', respond_socket, interface)
     if is_v6:
         iface_bin = struct.pack('@I', cast(int, interface[1]))
