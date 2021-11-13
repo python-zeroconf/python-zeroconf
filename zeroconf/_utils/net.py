@@ -218,7 +218,7 @@ def new_socket(
     port: int = _MDNS_PORT,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
-) -> socket.socket:
+) -> Optional[socket.socket]:
     log.debug(
         'Creating new socket with port %s, ip_version %s, apple_p2p %s and bind_addr %r',
         port,
