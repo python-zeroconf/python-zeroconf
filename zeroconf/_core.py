@@ -494,6 +494,7 @@ class Zeroconf(QuietLogger):
         """Wait for start up."""
         if self.done:  # If the instance was shutdown from under us, raise immediately
             raise NotRunningException
+        assert self.engine.running_event is not None
         await wait_event_or_timeout(self.engine.running_event, timeout=_STARTUP_TIMEOUT)
         if not self.engine.running_event.is_set() or self.done:
             raise NotRunningException
