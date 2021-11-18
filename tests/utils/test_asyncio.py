@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
+from zeroconf import EventLoopBlocked
 from zeroconf._core import _CLOSE_TIMEOUT
 from zeroconf._utils import asyncio as aioutils
 from zeroconf.const import _LOADED_SYSTEM_TIMEOUT
@@ -112,3 +113,14 @@ def test_cumulative_timeouts_less_than_close_plus_buffer():
     assert (
         aioutils._TASK_AWAIT_TIMEOUT + aioutils._GET_ALL_TASKS_TIMEOUT + aioutils._WAIT_FOR_LOOP_TASKS_TIMEOUT
     ) < 1 + _CLOSE_TIMEOUT + _LOADED_SYSTEM_TIMEOUT
+
+
+async def test_run_coro_with_timeout() -> None:
+    """Test running a coroutine with a timeout raises EventLoopBlocked."""
+    loop = asyncio.get_event_loop()
+
+    def _run_in_loop():
+        aioutils.run_coro_with_timeout(asyncio.sleep(0.3), loop, 0.1)
+
+    with pytest.raises(EventLoopBlocked), patch.object(aioutils, "_LOADED_SYSTEM_TIMEOUT", 0.0):
+        await loop.run_in_executor(None, _run_in_loop)

@@ -41,6 +41,7 @@ from ._exceptions import (  # noqa # import needed for backwards compat
     AbstractMethodException,
     BadTypeInNameException,
     Error,
+    EventLoopBlocked,
     IncomingDecodeError,
     NamePartTooLongException,
     NonUniqueNameException,
