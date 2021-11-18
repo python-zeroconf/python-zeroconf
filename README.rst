@@ -138,6 +138,23 @@ See examples directory for more.
 Changelog
 =========
 
+0.37.0
+======
+
+Technically backwards incompatible:
+
+* Adding a listener that does not inherit from RecordUpdateListener now logs an error (#1034) @bdraco
+* The NotRunningException exception is now thrown when Zeroconf is not running (#1033) @bdraco
+
+  Before this change the consumer would get a timeout or an EventLoopBlocked
+  exception when calling `ServiceInfo.*request` when the instance had already been shutdown
+  or had failed to startup.
+
+* The EventLoopBlocked exception is now thrown when a coroutine times out (#1032) @bdraco
+
+  Previously `concurrent.futures.TimeoutError` would have been raised
+  instead. This is never expected to happen during normal operation.
+
 0.36.13
 =======
 
