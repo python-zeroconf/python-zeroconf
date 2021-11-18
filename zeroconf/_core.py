@@ -491,7 +491,11 @@ class Zeroconf(QuietLogger):
         loop_thread_ready.wait()
 
     async def async_wait_for_start(self) -> None:
-        """Wait for start up."""
+        """Wait for start up for actions that require a running Zeroconf instance.
+        
+        Throws NotRunningException if the instance is not running or could
+        not be started.
+        """
         if self.done:  # If the instance was shutdown from under us, raise immediately
             raise NotRunningException
         assert self.engine.running_event is not None
