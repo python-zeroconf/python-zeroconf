@@ -44,6 +44,7 @@ from ._exceptions import (
     IncomingDecodeError,
     NamePartTooLongException,
     NonUniqueNameException,
+    NotRunningException,
     ServiceNameAlreadyRegistered,
 )
 from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
@@ -101,6 +102,7 @@ __all__ = [
     "IncomingDecodeError",
     "NamePartTooLongException",
     "NonUniqueNameException",
+    "NotRunningException",
     "ServiceNameAlreadyRegistered",
 ]
 

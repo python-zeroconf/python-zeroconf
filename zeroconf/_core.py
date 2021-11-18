@@ -492,7 +492,7 @@ class Zeroconf(QuietLogger):
 
     async def async_wait_for_start(self) -> None:
         """Wait for start up for actions that require a running Zeroconf instance.
-        
+
         Throws NotRunningException if the instance is not running or could
         not be started.
         """
