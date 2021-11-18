@@ -1538,3 +1538,25 @@ async def test_future_answers_are_removed_on_send():
 
     # But the one we have not sent yet shoudl still go out later
     assert info2.dns_pointer() in outgoing_queue.queue[0].answers
+
+
+@pytest.mark.asyncio
+async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
+    """Log when a listener is added that is not using RecordUpdateListener as a base class."""
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc: Zeroconf = aiozc.zeroconf
+    updated = []
+
+    class MyListener:
+        """A RecordUpdateListener that does not implement update_records."""
+
+        def async_update_records(self, zc: 'Zeroconf', now: float, records: List[r.RecordUpdate]) -> None:
+            """Update multiple records in one shot."""
+            updated.extend(records)
+
+    zc.add_listener(MyListener(), None)
+    await asyncio.sleep(0)  # flush out any call soons
+    assert "listeners passed to async_add_listener must inherit from RecordUpdateListener" in caplog.text
+
+    await aiozc.async_close()

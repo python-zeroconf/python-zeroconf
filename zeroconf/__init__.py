@@ -94,6 +94,9 @@ __all__ = [
     "ServiceStateChange",
     "IPVersion",
     "ZeroconfServiceTypes",
+    "RecordUpdate",
+    "RecordUpdateListener",
+    "current_time_millis",
     # Exceptions
     "Error",
     "AbstractMethodException",
