@@ -57,3 +57,11 @@ class EventLoopBlocked(Error):
     when the cpu is maxed out or there is something blocking
     the event loop.
     """
+
+
+class NotRunningException(Error):
+    """Exception when an action is called with a zeroconf instance that is not running.
+
+    The instance may not be running because it was already shutdown
+    or startup has failed in some unexpected way.
+    """
