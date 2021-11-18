@@ -63,7 +63,7 @@ from ._services.info import (  # noqa # import needed for backwards compat
 )
 from ._services.registry import ServiceRegistry  # noqa # import needed for backwards compat
 from ._services.types import ZeroconfServiceTypes
-from ._updates import RecordUpdate, RecordUpdateListener  # noqa # import needed for backwards compat
+from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.name import service_type_name  # noqa # import needed for backwards compat
 from ._utils.net import (  # noqa # import needed for backwards compat
     add_multicast_member,
@@ -94,6 +94,9 @@ __all__ = [
     "ServiceStateChange",
     "IPVersion",
     "ZeroconfServiceTypes",
+    "RecordUpdate",
+    "RecordUpdateListener",
+    "current_time_millis",
     # Exceptions
     "Error",
     "AbstractMethodException",

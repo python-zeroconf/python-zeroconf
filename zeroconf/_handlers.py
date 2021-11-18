@@ -492,6 +492,12 @@ class RecordManager:
 
         This function is not threadsafe and must be called in the eventloop.
         """
+        if not isinstance(listener, RecordUpdateListener):
+            log.error(
+                "listeners passed to async_add_listener must inherit from RecordUpdateListener;"
+                " In the future this will fail"
+            )
+
         self.listeners.append(listener)
 
         if question is None:

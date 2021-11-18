@@ -36,6 +36,12 @@ class RecordUpdate(NamedTuple):
 
 
 class RecordUpdateListener:
+    """Base call for all record listeners.
+
+    All listeners passed to async_add_listener should use RecordUpdateListener
+    as a base class. In the future it will be required.
+    """
+
     def update_record(  # pylint: disable=no-self-use
         self, zc: 'Zeroconf', now: float, record: DNSRecord
     ) -> None:
