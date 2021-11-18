@@ -32,7 +32,7 @@ from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
-from ._exceptions import NotRunningException, NonUniqueNameException
+from ._exceptions import NonUniqueNameException, NotRunningException
 from ._handlers import (
     MulticastOutgoingQueue,
     QueryHandler,
