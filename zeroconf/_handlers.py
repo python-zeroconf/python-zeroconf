@@ -494,7 +494,8 @@ class RecordManager:
         """
         if not isinstance(listener, RecordUpdateListener):
             log.error(
-                "listeners passed to async_add_listener must inherit from RecordUpdateListener; In the future this will fail"
+                "listeners passed to async_add_listener must inherit from RecordUpdateListener;"
+                " In the future this will fail"
             )
 
         self.listeners.append(listener)
