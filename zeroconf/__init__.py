@@ -23,7 +23,7 @@
 import sys
 
 from ._cache import DNSCache  # noqa # import needed for backwards compat
-from ._core import Zeroconf  # noqa # import needed for backwards compat
+from ._core import Zeroconf
 from ._dns import (  # noqa # import needed for backwards compat
     DNSAddress,
     DNSEntry,
@@ -36,16 +36,17 @@ from ._dns import (  # noqa # import needed for backwards compat
     DNSText,
     DNSQuestionType,
 )
-from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
-from ._exceptions import (  # noqa # import needed for backwards compat
+from ._exceptions import (
     AbstractMethodException,
     BadTypeInNameException,
     Error,
+    EventLoopBlocked,
     IncomingDecodeError,
     NamePartTooLongException,
     NonUniqueNameException,
     ServiceNameAlreadyRegistered,
 )
+from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
 from ._protocol.incoming import DNSIncoming  # noqa # import needed for backwards compat
 from ._protocol.outgoing import DNSOutgoing  # noqa # import needed for backwards compat
 from ._services import (  # noqa # import needed for backwards compat
@@ -54,9 +55,7 @@ from ._services import (  # noqa # import needed for backwards compat
     ServiceListener,
     ServiceStateChange,
 )
-from ._services.browser import (  # noqa # import needed for backwards compat
-    ServiceBrowser,
-)
+from ._services.browser import ServiceBrowser
 from ._services.info import (  # noqa # import needed for backwards compat
     instance_name_from_service_info,
     ServiceInfo,
@@ -85,16 +84,24 @@ __license__ = 'LGPL'
 
 __all__ = [
     "__version__",
-    "DNSQuestionType",
     "Zeroconf",
     "ServiceInfo",
     "ServiceBrowser",
     "ServiceListener",
-    "Error",
+    "DNSQuestionType",
     "InterfaceChoice",
     "ServiceStateChange",
     "IPVersion",
     "ZeroconfServiceTypes",
+    # Exceptions
+    "Error",
+    "AbstractMethodException",
+    "BadTypeInNameException",
+    "EventLoopBlocked",
+    "IncomingDecodeError",
+    "NamePartTooLongException",
+    "NonUniqueNameException",
+    "ServiceNameAlreadyRegistered",
 ]
 
 if sys.version_info <= (3, 6):  # pragma: no cover

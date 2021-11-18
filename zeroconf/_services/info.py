@@ -451,6 +451,10 @@ class ServiceInfo(RecordUpdateListener):
     ) -> bool:
         """Returns true if the service could be discovered on the
         network, and updates this object with details discovered.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_request` cannot be completed.
         """
         assert zc.loop is not None and zc.loop.is_running()
         if zc.loop == get_running_loop():

@@ -21,11 +21,13 @@
 """
 
 import asyncio
+import concurrent.futures
 import contextlib
 import queue
 from typing import Any, Awaitable, Coroutine, List, Optional, Set, cast
 
 from .time import millis_to_seconds
+from .._exceptions import EventLoopBlocked
 from ..const import _LOADED_SYSTEM_TIMEOUT
 
 # The combined timeouts should be lower than _CLOSE_TIMEOUT + _WAIT_FOR_LOOP_TASKS_TIMEOUT
@@ -91,10 +93,22 @@ async def await_awaitable(aw: Awaitable) -> None:
 
 
 def run_coro_with_timeout(aw: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float) -> Any:
-    """Run a coroutine with a timeout."""
-    return asyncio.run_coroutine_threadsafe(aw, loop).result(
-        millis_to_seconds(timeout) + _LOADED_SYSTEM_TIMEOUT
-    )
+    """Run a coroutine with a timeout.
+
+    The timeout should only be used as a safeguard to prevent
+    the program from blocking forever. The timeout should
+    never be expected to be reached during normal operation.
+
+    While not expected during normal operations, the
+    function raises `EventLoopBlocked` if the coroutine takes
+    longer to complete than the timeout.
+    """
+    try:
+        return asyncio.run_coroutine_threadsafe(aw, loop).result(
+            millis_to_seconds(timeout) + _LOADED_SYSTEM_TIMEOUT
+        )
+    except concurrent.futures.TimeoutError as ex:
+        raise EventLoopBlocked from ex
 
 
 def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:

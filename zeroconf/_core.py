@@ -192,7 +192,12 @@ class AsyncEngine:
             transport.close()
 
     def close(self) -> None:
-        """Close from sync context."""
+        """Close from sync context.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `_async_close` cannot be completed.
+        """
         assert self.loop is not None
         # Guard against Zeroconf.close() being called from the eventloop
         if get_running_loop() == self.loop:
@@ -554,7 +559,12 @@ class Zeroconf(QuietLogger):
         service.  The name of the service may be changed if needed to make
         it unique on the network. Additionally multiple cooperating responders
         can register the same service on the network for resilience
-        (if you want this behavior set `cooperating_responders` to `True`)."""
+        (if you want this behavior set `cooperating_responders` to `True`).
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `register_service` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(
@@ -591,7 +601,12 @@ class Zeroconf(QuietLogger):
     def update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
-        service."""
+        service.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_update_service` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(self.async_update_service(info)), self.loop, _REGISTER_TIME * _REGISTER_BROADCASTS
@@ -662,7 +677,12 @@ class Zeroconf(QuietLogger):
                 out.add_answer_at_time(dns_address, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
-        """Unregister a service."""
+        """Unregister a service.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_unregister_service` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             self.async_unregister_service(info), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS
@@ -708,7 +728,12 @@ class Zeroconf(QuietLogger):
             self.async_send(out)
 
     def unregister_all_services(self) -> None:
-        """Unregister all registered services."""
+        """Unregister all registered services.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_unregister_all_services` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             self.async_unregister_all_services(), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS
