@@ -324,9 +324,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
 
-    def _names_matching_types(self, names: Set[str]) -> List[Tuple[str, str]]:
+    def _names_matching_types(self, names: Set[str]) -> Set[Tuple[str, str]]:
         """Return the type and name for records matching the types we are browsing."""
-        return [(type_, name) for type_ in self.types for name in names if name.endswith(f".{type_}")]
+        return {(type_, name) for type_ in self.types for name in names if name.endswith(f".{type_}")}
 
     def _enqueue_callback(
         self,
@@ -353,14 +353,17 @@ class _ServiceBrowserBase(RecordUpdateListener):
         """Process a single record update from a batch of updates."""
         if isinstance(record, DNSPointer):
             name = record.name
-            if name not in self.types and not self._names_matching_types({name}):
-                return
-            if old_record is None:
-                self._enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
-            elif record.is_expired(now):
-                self._enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
-            else:
-                self.reschedule_type(record.name, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
+            alias = record.alias
+            matches = self._names_matching_types({alias})
+            if name in self.types:
+                matches.add((name, alias))
+            for type_, name in matches:
+                if old_record is None:
+                    self._enqueue_callback(ServiceStateChange.Added, type_, name)
+                elif record.is_expired(now):
+                    self._enqueue_callback(ServiceStateChange.Removed, type_, name)
+                else:
+                    self.reschedule_type(type_, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
             return
 
         # If its expired or already exists in the cache it cannot be updated.
