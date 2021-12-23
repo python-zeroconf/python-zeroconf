@@ -76,6 +76,8 @@ class Exceptions(unittest.TestCase):
 
     def test_good_instance_names(self):
         assert r.service_type_name('.._x._tcp.local.') == '_x._tcp.local.'
+        assert r.service_type_name('x.y._http._tcp.local.') == '_http._tcp.local.'
+        assert r.service_type_name('1.2.3._mqtt._tcp.local.') == '_mqtt._tcp.local.'
         assert r.service_type_name('x.sub._http._tcp.local.') == '_http._tcp.local.'
         assert (
             r.service_type_name('6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local.')
