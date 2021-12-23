@@ -326,7 +326,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     def _record_matching_type(self, record: DNSRecord) -> Optional[str]:
         """Return the type if the record matches one of the types we are browsing."""
-        return next((type_ for type_ in self.types if record.name.endswith('.' + type_)), None)
+        return next((type_ for type_ in self.types if record.name.endswith(f".{type_}")), None)
 
     def _enqueue_callback(
         self,
