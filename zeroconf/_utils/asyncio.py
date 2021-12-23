@@ -23,8 +23,7 @@
 import asyncio
 import concurrent.futures
 import contextlib
-import queue
-from typing import Any, Awaitable, Coroutine, List, Optional, Set, cast
+from typing import Any, Awaitable, Coroutine, Optional, Set
 
 from .time import millis_to_seconds
 from .._exceptions import EventLoopBlocked
@@ -34,13 +33,6 @@ from ..const import _LOADED_SYSTEM_TIMEOUT
 _TASK_AWAIT_TIMEOUT = 1
 _GET_ALL_TASKS_TIMEOUT = 3
 _WAIT_FOR_LOOP_TASKS_TIMEOUT = 3  # Must be larger than _TASK_AWAIT_TIMEOUT
-
-
-def get_best_available_queue() -> queue.Queue:
-    """Create the best available queue type."""
-    if hasattr(queue, "SimpleQueue"):
-        return queue.SimpleQueue()  # type: ignore  # pylint: disable=all
-    return queue.Queue()
 
 
 # Switch to asyncio.wait_for once https://bugs.python.org/issue39032 is fixed
@@ -67,7 +59,7 @@ async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
             await event_wait
 
 
-async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> List[asyncio.Task]:
+async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> Set[asyncio.Task]:
     """Return all tasks running."""
     await asyncio.sleep(0)  # flush out any call_soon_threadsafe
     # If there are multiple event loops running, all_tasks is not
@@ -75,10 +67,8 @@ async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> List[asyncio.
     # under PyPy so we have to try a few times.
     for _ in range(3):
         with contextlib.suppress(RuntimeError):
-            if hasattr(asyncio, 'all_tasks'):
-                return asyncio.all_tasks(loop)  # type: ignore  # pylint: disable=no-member
-            return asyncio.Task.all_tasks(loop)  # type: ignore  # pylint: disable=no-member
-    return []
+            return asyncio.all_tasks(loop)
+    return set()
 
 
 async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
@@ -116,7 +106,7 @@ def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
     pending_tasks = set(
         asyncio.run_coroutine_threadsafe(_async_get_all_tasks(loop), loop).result(_GET_ALL_TASKS_TIMEOUT)
     )
-    pending_tasks -= set(task for task in pending_tasks if task.done())
+    pending_tasks -= {task for task in pending_tasks if task.done()}
     if pending_tasks:
         asyncio.run_coroutine_threadsafe(_wait_for_loop_tasks(pending_tasks), loop).result(
             _WAIT_FOR_LOOP_TASKS_TIMEOUT
@@ -128,10 +118,5 @@ def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
 def get_running_loop() -> Optional[asyncio.AbstractEventLoop]:
     """Check if an event loop is already running."""
     with contextlib.suppress(RuntimeError):
-        if hasattr(asyncio, "get_running_loop"):
-            return cast(
-                asyncio.AbstractEventLoop,
-                asyncio.get_running_loop(),  # type: ignore  # pylint: disable=no-member  # noqa
-            )
-        return asyncio._get_running_loop()  # pylint: disable=no-member,protected-access
+        return asyncio.get_running_loop()
     return None

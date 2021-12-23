@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """ Unit tests for zeroconf._services.browser. """
@@ -682,7 +681,7 @@ def test_legacy_record_update_listener():
 
     info_service = ServiceInfo(
         type_,
-        '%s.%s' % (name, type_),
+        f'{name}.{type_}',
         80,
         0,
         0,
@@ -902,7 +901,7 @@ def test_group_ptr_queries_with_known_answers():
     now = current_time_millis()
     for i in range(120):
         name = f"_hap{i}._tcp._local."
-        questions_with_known_answers[DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)] = set(
+        questions_with_known_answers[DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)] = {
             DNSPointer(
                 name,
                 const._TYPE_PTR,
@@ -911,7 +910,7 @@ def test_group_ptr_queries_with_known_answers():
                 f"zoo{counter}.{name}",
             )
             for counter in range(i)
-        )
+        }
     outs = _services_browser._group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
     for out in outs:
         packets = out.packets()
@@ -937,7 +936,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
         10000,
         f'known-to-other.{name}',
     )
-    other_known_answers = set([answer])
+    other_known_answers = {answer}
     zc.question_history.add_question_at_time(question, now, other_known_answers)
     assert zc.question_history.suppresses(question, now, other_known_answers)
 
@@ -976,7 +975,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
 @pytest.mark.asyncio
 async def test_query_scheduler():
     delay = const._BROWSER_TIME
-    types_ = set(["_hap._tcp.local.", "_http._tcp.local."])
+    types_ = {"_hap._tcp.local.", "_http._tcp.local."}
     query_scheduler = _services_browser.QueryScheduler(types_, delay, (0, 0))
 
     now = current_time_millis()
@@ -984,8 +983,8 @@ async def test_query_scheduler():
 
     # Test query interval is increasing
     assert query_scheduler.millis_to_wait(now - 1) == 1
-    assert query_scheduler.millis_to_wait(now) is 0
-    assert query_scheduler.millis_to_wait(now + 1) is 0
+    assert query_scheduler.millis_to_wait(now) == 0
+    assert query_scheduler.millis_to_wait(now + 1) == 0
 
     assert set(query_scheduler.process_ready_types(now)) == types_
     assert set(query_scheduler.process_ready_types(now)) == set()
@@ -1013,8 +1012,8 @@ async def test_query_scheduler():
     assert set(query_scheduler.process_ready_types(now + delay * 15)) == set()
 
     # Test if we reschedule 1 second later... and its ready for processing
-    assert set(query_scheduler.process_ready_types(now + delay * 16)) == set(["_hap._tcp.local."])
+    assert set(query_scheduler.process_ready_types(now + delay * 16)) == {"_hap._tcp.local."}
     assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 31, 0.00001)
     assert set(query_scheduler.process_ready_types(now + delay * 20)) == set()
 
-    assert set(query_scheduler.process_ready_types(now + delay * 31)) == set(["_http._tcp.local."])
+    assert set(query_scheduler.process_ready_types(now + delay * 31)) == {"_http._tcp.local."}

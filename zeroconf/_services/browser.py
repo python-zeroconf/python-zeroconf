@@ -38,7 +38,6 @@ from .._services import (
     SignalRegistrationInterface,
 )
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.asyncio import get_best_available_queue
 from .._utils.name import service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
@@ -145,11 +144,11 @@ def generate_service_query(
     for type_ in types_:
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
         question.unicast = qu_question
-        known_answers = set(
+        known_answers = {
             cast(DNSPointer, record)
             for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             if not record.is_stale(now)
-        )
+        }
         if not qu_question and zc.question_history.suppresses(
             question, now, cast(Set[DNSRecord], known_answers)
         ):
@@ -293,7 +292,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
         self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
-        self.queue: Optional[queue.Queue] = None
+        self.queue: Optional[queue.SimpleQueue] = None
         self.done = False
         self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
@@ -511,11 +510,11 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         # Add the queue before the listener is installed in _setup
         # to ensure that events run in the dedicated thread and do
         # not block the event loop
-        self.queue = get_best_available_queue()
+        self.queue = queue.SimpleQueue()
         self.daemon = True
         self.start()
         zc.loop.call_soon_threadsafe(self._async_start)
-        self.name = "zeroconf-ServiceBrowser-%s-%s" % (
+        self.name = "zeroconf-ServiceBrowser-{}-{}".format(
             '-'.join([type_[:-7] for type_ in self.types]),
             getattr(self, 'native_id', self.ident),
         )

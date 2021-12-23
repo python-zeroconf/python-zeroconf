@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 """Unit tests for zeroconf._utils.net."""
@@ -87,7 +86,7 @@ def test_normalize_interface_choice_errors():
 def test_add_multicast_member_socket_errors(errno, expected_result):
     """Test we handle socket errors when adding multicast members."""
     if errno:
-        setsockopt_mock = unittest.mock.Mock(side_effect=OSError(errno, "Error: {}".format(errno)))
+        setsockopt_mock = unittest.mock.Mock(side_effect=OSError(errno, f"Error: {errno}"))
     else:
         setsockopt_mock = unittest.mock.Mock()
     fileno_mock = unittest.mock.PropertyMock(return_value=10)

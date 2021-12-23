@@ -71,14 +71,14 @@ def _encode_address(address: str) -> bytes:
 
 
 def get_all_addresses() -> List[str]:
-    return list(set(addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4))
+    return list({addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})
 
 
 def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     # TODO: What about multi-address interfaces?
     return list(
-        set((addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6)
+        {(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6}
     )
 
 
@@ -203,7 +203,7 @@ def set_mdns_port_socket_options_for_ip_version(
         try:
             s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
             s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
-        except socket.error as e:
+        except OSError as e:
             if bind_addr[0] != '' or get_errno(e) != errno.EINVAL:  # Fails to set on MacOS
                 raise
 
@@ -286,7 +286,7 @@ def add_multicast_member(
         else:
             _value = socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(cast(str, interface))
             listen_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value)
-    except socket.error as e:
+    except OSError as e:
         _errno = get_errno(e)
         if _errno == errno.EADDRINUSE:
             log.info(
