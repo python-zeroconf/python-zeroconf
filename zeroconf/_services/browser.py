@@ -324,9 +324,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
 
-    def _record_matching_type(self, record: DNSRecord) -> Optional[str]:
-        """Return the type if the record matches one of the types we are browsing."""
-        return next((type_ for type_ in self.types if record.name.endswith(f".{type_}")), None)
+    def _names_matching_types(self, names: Set[str]) -> List[Tuple[str, str]]:
+        """Return the type and name for records matching the types we are browsing."""
+        return [(type_, name) for type_ in self.types for name in names if name.endswith(f".{type_}")]
 
     def _enqueue_callback(
         self,
@@ -352,7 +352,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
     ) -> None:
         """Process a single record update from a batch of updates."""
         if isinstance(record, DNSPointer):
-            if record.name not in self.types:
+            name = record.name
+            if name not in self.types and not self._names_matching_types({name}):
                 return
             if old_record is None:
                 self._enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
@@ -368,17 +369,14 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         if isinstance(record, DNSAddress):
             # Iterate through the DNSCache and callback any services that use this address
-            for service in self.zc.cache.async_entries_with_server(record.name):
-                type_ = self._record_matching_type(service)
-                if type_:
-                    self._enqueue_callback(ServiceStateChange.Updated, type_, service.name)
-                    break
-
+            for type_, name in self._names_matching_types(
+                {service.name for service in self.zc.cache.async_entries_with_server(record.name)}
+            ):
+                self._enqueue_callback(ServiceStateChange.Updated, type_, name)
             return
 
-        type_ = self._record_matching_type(record)
-        if type_:
-            self._enqueue_callback(ServiceStateChange.Updated, type_, record.name)
+        for type_, name in self._names_matching_types({record.name}):
+            self._enqueue_callback(ServiceStateChange.Updated, type_, name)
 
     def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Callback invoked by Zeroconf when new information arrives.
