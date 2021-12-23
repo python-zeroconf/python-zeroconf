@@ -42,6 +42,11 @@ jobs:
           python -m venv env
           ${{ matrix.venvcmd }}
           pip install --upgrade -r requirements-dev.txt pytest-github-actions-annotate-failures
+      - name: Validate readme
+        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy3' }}
+        run: |
+          ${{ matrix.venvcmd }}
+          python -m readme_renderer README.rst -o -
       - name: Run flake8
         if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy3' }}
         run: |

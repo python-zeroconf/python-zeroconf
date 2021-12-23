@@ -23,6 +23,7 @@ from zeroconf import (
     DNSService,
     DNSAddress,
     DNSText,
+    NotRunningException,
     ServiceStateChange,
     Zeroconf,
     const,
@@ -850,7 +851,7 @@ async def test_integration():
 
     def _new_current_time_millis():
         """Current system time in milliseconds"""
-        return (time.time() * 1000) + (time_offset * 1000)
+        return (time.monotonic() * 1000) + (time_offset * 1000)
 
     expected_ttl = const._DNS_HOST_TTL
     nbr_answers = 0
@@ -1088,6 +1089,15 @@ async def test_async_request_timeout():
     # 3000ms for the default timeout
     # 1000ms for loaded systems + schedule overhead
     assert (end_time - start_time) < 3000 + 1000
+
+
+@pytest.mark.asyncio
+async def test_async_request_non_running_instance():
+    """Test that the async_request throws when zeroconf is not running."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.async_close()
+    with pytest.raises(NotRunningException):
+        await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.")
 
 
 @pytest.mark.asyncio

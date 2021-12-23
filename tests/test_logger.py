@@ -4,7 +4,7 @@
 """Unit tests for logger.py."""
 
 import logging
-from unittest.mock import patch
+from unittest.mock import call, patch
 from zeroconf._logger import QuietLogger, set_logger_level_if_unset
 
 
@@ -25,6 +25,7 @@ def test_loading_logger():
 
 def test_log_warning_once():
     """Test we only log with warning level once."""
+    QuietLogger._seen_logs = {}
     quiet_logger = QuietLogger()
     with patch("zeroconf._logger.log.warning") as mock_log_warning, patch(
         "zeroconf._logger.log.debug"
@@ -45,6 +46,7 @@ def test_log_warning_once():
 
 def test_log_exception_warning():
     """Test we only log with warning level once."""
+    QuietLogger._seen_logs = {}
     quiet_logger = QuietLogger()
     with patch("zeroconf._logger.log.warning") as mock_log_warning, patch(
         "zeroconf._logger.log.debug"
@@ -63,8 +65,24 @@ def test_log_exception_warning():
     assert mock_log_debug.mock_calls
 
 
+def test_llog_exception_debug():
+    """Test we only log with a trace once."""
+    QuietLogger._seen_logs = {}
+    quiet_logger = QuietLogger()
+    with patch("zeroconf._logger.log.debug") as mock_log_debug:
+        quiet_logger.log_exception_debug("the exception")
+
+    assert mock_log_debug.mock_calls == [call('the exception', exc_info=True)]
+
+    with patch("zeroconf._logger.log.debug") as mock_log_debug:
+        quiet_logger.log_exception_debug("the exception")
+
+    assert mock_log_debug.mock_calls == [call('the exception', exc_info=False)]
+
+
 def test_log_exception_once():
     """Test we only log with warning level once."""
+    QuietLogger._seen_logs = {}
     quiet_logger = QuietLogger()
     exc = Exception()
     with patch("zeroconf._logger.log.warning") as mock_log_warning, patch(

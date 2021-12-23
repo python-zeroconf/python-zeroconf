@@ -23,7 +23,7 @@
 import sys
 
 from ._cache import DNSCache  # noqa # import needed for backwards compat
-from ._core import Zeroconf  # noqa # import needed for backwards compat
+from ._core import Zeroconf
 from ._dns import (  # noqa # import needed for backwards compat
     DNSAddress,
     DNSEntry,
@@ -36,16 +36,18 @@ from ._dns import (  # noqa # import needed for backwards compat
     DNSText,
     DNSQuestionType,
 )
-from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
-from ._exceptions import (  # noqa # import needed for backwards compat
+from ._exceptions import (
     AbstractMethodException,
     BadTypeInNameException,
     Error,
+    EventLoopBlocked,
     IncomingDecodeError,
     NamePartTooLongException,
     NonUniqueNameException,
+    NotRunningException,
     ServiceNameAlreadyRegistered,
 )
+from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
 from ._protocol.incoming import DNSIncoming  # noqa # import needed for backwards compat
 from ._protocol.outgoing import DNSOutgoing  # noqa # import needed for backwards compat
 from ._services import (  # noqa # import needed for backwards compat
@@ -54,16 +56,14 @@ from ._services import (  # noqa # import needed for backwards compat
     ServiceListener,
     ServiceStateChange,
 )
-from ._services.browser import (  # noqa # import needed for backwards compat
-    ServiceBrowser,
-)
+from ._services.browser import ServiceBrowser
 from ._services.info import (  # noqa # import needed for backwards compat
     instance_name_from_service_info,
     ServiceInfo,
 )
 from ._services.registry import ServiceRegistry  # noqa # import needed for backwards compat
 from ._services.types import ZeroconfServiceTypes
-from ._updates import RecordUpdate, RecordUpdateListener  # noqa # import needed for backwards compat
+from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.name import service_type_name  # noqa # import needed for backwards compat
 from ._utils.net import (  # noqa # import needed for backwards compat
     add_multicast_member,
@@ -79,22 +79,34 @@ from ._utils.time import current_time_millis, millis_to_seconds  # noqa # import
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.36.7'
+__version__ = '0.37.0'
 __license__ = 'LGPL'
 
 
 __all__ = [
     "__version__",
-    "DNSQuestionType",
     "Zeroconf",
     "ServiceInfo",
     "ServiceBrowser",
     "ServiceListener",
-    "Error",
+    "DNSQuestionType",
     "InterfaceChoice",
     "ServiceStateChange",
     "IPVersion",
     "ZeroconfServiceTypes",
+    "RecordUpdate",
+    "RecordUpdateListener",
+    "current_time_millis",
+    # Exceptions
+    "Error",
+    "AbstractMethodException",
+    "BadTypeInNameException",
+    "EventLoopBlocked",
+    "IncomingDecodeError",
+    "NamePartTooLongException",
+    "NonUniqueNameException",
+    "NotRunningException",
+    "ServiceNameAlreadyRegistered",
 ]
 
 if sys.version_info <= (3, 6):  # pragma: no cover

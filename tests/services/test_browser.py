@@ -441,7 +441,7 @@ def test_backoff():
     old_send = zeroconf_browser.async_send
 
     time_offset = 0.0
-    start_time = time.time() * 1000
+    start_time = time.monotonic() * 1000
     initial_query_interval = _services_browser._BROWSER_TIME / 1000
 
     def current_time_millis():
@@ -988,32 +988,32 @@ async def test_query_scheduler():
 
     assert set(query_scheduler.process_ready_types(now)) == types_
     assert set(query_scheduler.process_ready_types(now)) == set()
-    assert query_scheduler.millis_to_wait(now) == delay
+    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay, 0.00001)
 
     assert set(query_scheduler.process_ready_types(now + delay)) == types_
     assert set(query_scheduler.process_ready_types(now + delay)) == set()
-    assert query_scheduler.millis_to_wait(now) == delay * 3
+    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 3, 0.00001)
 
     assert set(query_scheduler.process_ready_types(now + delay * 3)) == types_
     assert set(query_scheduler.process_ready_types(now + delay * 3)) == set()
-    assert query_scheduler.millis_to_wait(now) == delay * 7
+    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 7, 0.00001)
 
     assert set(query_scheduler.process_ready_types(now + delay * 7)) == types_
     assert set(query_scheduler.process_ready_types(now + delay * 7)) == set()
-    assert query_scheduler.millis_to_wait(now) == delay * 15
+    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 15, 0.00001)
 
     assert set(query_scheduler.process_ready_types(now + delay * 15)) == types_
     assert set(query_scheduler.process_ready_types(now + delay * 15)) == set()
 
     # Test if we reschedule 1 second later, the millis_to_wait goes up by 1
     query_scheduler.reschedule_type("_hap._tcp.local.", now + delay * 16)
-    assert query_scheduler.millis_to_wait(now) == delay * 16
+    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 16, 0.00001)
 
     assert set(query_scheduler.process_ready_types(now + delay * 15)) == set()
 
     # Test if we reschedule 1 second later... and its ready for processing
     assert set(query_scheduler.process_ready_types(now + delay * 16)) == {"_hap._tcp.local."}
-    assert query_scheduler.millis_to_wait(now) == delay * 31
+    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 31, 0.00001)
     assert set(query_scheduler.process_ready_types(now + delay * 20)) == set()
 
     assert set(query_scheduler.process_ready_types(now + delay * 31)) == {"_http._tcp.local."}

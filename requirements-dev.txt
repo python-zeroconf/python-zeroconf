@@ -14,3 +14,4 @@ pytest
 pytest-asyncio
 pytest-cov
 pytest-timeout
+readme_renderer

@@ -141,11 +141,11 @@ class Exceptions(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        bad = ('127.0.0.1', '::1', 42)
+        bad = (b'127.0.0.1', b'::1')
         for addr in bad:
             self.assertRaisesRegex(
                 TypeError,
-                'Addresses must be bytes',
+                'Addresses must either ',
                 ServiceInfo,
                 type_,
                 registration_name,

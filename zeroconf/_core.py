@@ -32,7 +32,7 @@ from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union, cast
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
-from ._exceptions import NonUniqueNameException
+from ._exceptions import NonUniqueNameException, NotRunningException
 from ._handlers import (
     MulticastOutgoingQueue,
     QueryHandler,
@@ -80,6 +80,7 @@ from .const import (
     _MDNS_PORT,
     _ONE_SECOND,
     _REGISTER_TIME,
+    _STARTUP_TIMEOUT,
     _TYPE_PTR,
     _UNREGISTER_TIME,
 )
@@ -118,15 +119,15 @@ class AsyncEngine:
         self.protocols: List[AsyncListener] = []
         self.readers: List[asyncio.DatagramTransport] = []
         self.senders: List[asyncio.DatagramTransport] = []
+        self.running_event: Optional[asyncio.Event] = None
         self._listen_socket = listen_socket
         self._respond_sockets = respond_sockets
         self._cleanup_timer: Optional[asyncio.TimerHandle] = None
-        self._running_event: Optional[asyncio.Event] = None
 
     def setup(self, loop: asyncio.AbstractEventLoop, loop_thread_ready: Optional[threading.Event]) -> None:
         """Set up the instance."""
         self.loop = loop
-        self._running_event = asyncio.Event()
+        self.running_event = asyncio.Event()
         self.loop.create_task(self._async_setup(loop_thread_ready))
 
     async def _async_setup(self, loop_thread_ready: Optional[threading.Event]) -> None:
@@ -136,15 +137,10 @@ class AsyncEngine:
             millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
         )
         await self._async_create_endpoints()
-        assert self._running_event is not None
-        self._running_event.set()
+        assert self.running_event is not None
+        self.running_event.set()
         if loop_thread_ready:
             loop_thread_ready.set()
-
-    async def async_wait_for_start(self) -> None:
-        """Wait for start up."""
-        assert self._running_event is not None
-        await self._running_event.wait()
 
     async def _async_create_endpoints(self) -> None:
         """Create endpoints to send and receive."""
@@ -192,7 +188,12 @@ class AsyncEngine:
             transport.close()
 
     def close(self) -> None:
-        """Close from sync context."""
+        """Close from sync context.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `_async_close` cannot be completed.
+        """
         assert self.loop is not None
         # Guard against Zeroconf.close() being called from the eventloop
         if get_running_loop() == self.loop:
@@ -490,8 +491,17 @@ class Zeroconf(QuietLogger):
         loop_thread_ready.wait()
 
     async def async_wait_for_start(self) -> None:
-        """Wait for start up."""
-        await self.engine.async_wait_for_start()
+        """Wait for start up for actions that require a running Zeroconf instance.
+
+        Throws NotRunningException if the instance is not running or could
+        not be started.
+        """
+        if self.done:  # If the instance was shutdown from under us, raise immediately
+            raise NotRunningException
+        assert self.engine.running_event is not None
+        await wait_event_or_timeout(self.engine.running_event, timeout=_STARTUP_TIMEOUT)
+        if not self.engine.running_event.is_set() or self.done:
+            raise NotRunningException
 
     @property
     def listeners(self) -> List[RecordUpdateListener]:
@@ -554,7 +564,12 @@ class Zeroconf(QuietLogger):
         service.  The name of the service may be changed if needed to make
         it unique on the network. Additionally multiple cooperating responders
         can register the same service on the network for resilience
-        (if you want this behavior set `cooperating_responders` to `True`)."""
+        (if you want this behavior set `cooperating_responders` to `True`).
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `register_service` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(
@@ -591,7 +606,12 @@ class Zeroconf(QuietLogger):
     def update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
-        service."""
+        service.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_update_service` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(self.async_update_service(info)), self.loop, _REGISTER_TIME * _REGISTER_BROADCASTS
@@ -662,7 +682,12 @@ class Zeroconf(QuietLogger):
                 out.add_answer_at_time(dns_address, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
-        """Unregister a service."""
+        """Unregister a service.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_unregister_service` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             self.async_unregister_service(info), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS
@@ -708,7 +733,12 @@ class Zeroconf(QuietLogger):
             self.async_send(out)
 
     def unregister_all_services(self) -> None:
-        """Unregister all registered services."""
+        """Unregister all registered services.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_unregister_all_services` cannot be completed.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             self.async_unregister_all_services(), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS

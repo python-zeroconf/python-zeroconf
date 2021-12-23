@@ -138,6 +138,67 @@ See examples directory for more.
 Changelog
 =========
 
+0.37.0
+======
+
+Technically backwards incompatible:
+
+* Adding a listener that does not inherit from RecordUpdateListener now logs an error (#1034) @bdraco
+* The NotRunningException exception is now thrown when Zeroconf is not running (#1033) @bdraco
+
+  Before this change the consumer would get a timeout or an EventLoopBlocked
+  exception when calling `ServiceInfo.*request` when the instance had already been shutdown
+  or had failed to startup.
+
+* The EventLoopBlocked exception is now thrown when a coroutine times out (#1032) @bdraco
+
+  Previously `concurrent.futures.TimeoutError` would have been raised
+  instead. This is never expected to happen during normal operation.
+
+0.36.13
+=======
+
+*  Unavailable interfaces are now skipped during socket bind (#1028) @bdraco
+*  Downgraded incoming corrupt packet logging to debug (#1029) @bdraco
+
+   Warning about network traffic we have no control over is confusing
+   to users as they think there is something wrong with zeroconf
+
+0.36.12
+=======
+
+*  Prevented service lookups from deadlocking if time abruptly moves backwards (#1006) @bdraco
+
+   The typical reason time moves backwards is via an ntp update
+
+0.36.11
+=======
+
+No functional changes from 0.36.10. This release corrects an error in the README.rst file
+that prevented the build from uploading to PyPI
+
+0.36.10
+=======
+
+* scope_id is now stripped from IPv6 addresses if given (#1020) @StevenLooman
+
+  cpython 3.9 allows a suffix %scope_id in IPv6Address. This caused an error
+  with the existing code if it was not stripped
+* Optimized decoding labels from incoming packets (#1019) @bdraco
+
+0.36.9
+======
+
+* Ensure ServiceInfo orders newest addresses first (#1012) @bdraco
+
+  This change effectively restored the behavior before 1s cache flush
+  expire behavior described in rfc6762 section 10.2 was added for callers that rely on this.
+
+0.36.8
+======
+
+* Fixed ServiceBrowser infinite loop when zeroconf is closed before it is canceled (#1008) @bdraco
+
 0.36.7
 ======
 
