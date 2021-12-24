@@ -20,6 +20,7 @@
     USA
 """
 
+from typing import Set
 from .._exceptions import BadTypeInNameException
 from ..const import (
     _HAS_ASCII_CONTROL_CHARS,
@@ -155,3 +156,16 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
             )
 
     return service_name + trailer
+
+
+def possible_types(name: str) -> Set[str]:
+    """Build a set of all possible types from a fully qualified name."""
+    labels = name.split('.')
+    label_count = len(labels)
+    types = set()
+    for count in range(label_count):
+        parts = labels[label_count - count - 4 :]
+        if not parts[0].startswith('_'):
+            break
+        types.add('.'.join(parts))
+    return types

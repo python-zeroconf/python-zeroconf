@@ -38,7 +38,7 @@ from .._services import (
     SignalRegistrationInterface,
 )
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.name import service_type_name
+from .._utils.name import service_type_name, possible_types
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
@@ -326,7 +326,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     def _names_matching_types(self, names: Iterable[str]) -> List[Tuple[str, str]]:
         """Return the type and name for records matching the types we are browsing."""
-        return [(type_, name) for type_ in self.types for name in names if name.endswith(f".{type_}")]
+        return [(type_, name) for name in names for type_ in self.types.intersection(possible_types(name))]
 
     def _enqueue_callback(
         self,
@@ -352,16 +352,11 @@ class _ServiceBrowserBase(RecordUpdateListener):
     ) -> None:
         """Process a single record update from a batch of updates."""
         if isinstance(record, DNSPointer):
-            name = record.name
-            alias = record.alias
-            matches = self._names_matching_types((alias,))
-            if name in self.types:
-                matches.append((name, alias))
-            for type_, name in matches:
+            for type_ in self.types.intersection(possible_types(record.name)):
                 if old_record is None:
-                    self._enqueue_callback(ServiceStateChange.Added, type_, name)
+                    self._enqueue_callback(ServiceStateChange.Added, type_, record.alias)
                 elif record.is_expired(now):
-                    self._enqueue_callback(ServiceStateChange.Removed, type_, name)
+                    self._enqueue_callback(ServiceStateChange.Removed, type_, record.alias)
                 else:
                     self.reschedule_type(type_, now, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
             return
