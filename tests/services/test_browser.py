@@ -1028,7 +1028,7 @@ def test_service_browser_matching():
     type_ = "_http._tcp.local."
     registration_name = "xxxyyy.%s" % type_
     not_match_type_ = "_asustor-looksgood_http._tcp.local."
-    not_match_registration_name = "xxxyyy.%s" % not_match_type_    
+    not_match_registration_name = "xxxyyy.%s" % not_match_type_
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1055,7 +1055,9 @@ def test_service_browser_matching():
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
-    should_not_match = ServiceInfo(not_match_type_, not_match_registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    should_not_match = ServiceInfo(
+        not_match_type_, not_match_registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
+    )
 
     def mock_incoming_msg(records) -> r.DNSIncoming:
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -1069,8 +1071,15 @@ def test_service_browser_matching():
     )
     _inject_response(
         zc,
-        mock_incoming_msg([should_not_match.dns_pointer(), should_not_match.dns_service(), should_not_match.dns_text(), *should_not_match.dns_addresses()]),
-    )    
+        mock_incoming_msg(
+            [
+                should_not_match.dns_pointer(),
+                should_not_match.dns_service(),
+                should_not_match.dns_text(),
+                *should_not_match.dns_addresses(),
+            ]
+        ),
+    )
     time.sleep(0.2)
     info.port = 400
     _inject_response(
@@ -1081,7 +1090,7 @@ def test_service_browser_matching():
     _inject_response(
         zc,
         mock_incoming_msg([should_not_match.dns_service()]),
-    )    
+    )
     time.sleep(0.2)
 
     assert callbacks == [
