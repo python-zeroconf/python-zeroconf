@@ -38,7 +38,7 @@ from .._services import (
     SignalRegistrationInterface,
 )
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.name import service_type_name, possible_types
+from .._utils.name import possible_types, service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,

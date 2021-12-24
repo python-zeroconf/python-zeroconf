@@ -21,6 +21,7 @@
 """
 
 from typing import Set
+
 from .._exceptions import BadTypeInNameException
 from ..const import (
     _HAS_ASCII_CONTROL_CHARS,
