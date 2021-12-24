@@ -923,7 +923,7 @@ async def test_integration():
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
                 now = _new_current_time_millis()
-                browser.reschedule_type(type_, now)
+                browser.reschedule_type(type_, now, now)
                 sleep_count += 1
                 await asyncio.wait_for(got_query.wait(), 1)
                 got_query.clear()

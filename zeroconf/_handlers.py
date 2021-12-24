@@ -326,7 +326,7 @@ class QueryHandler:
             self._add_address_answers(question.name, answer_set, known_answers, now, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
-            service = self.registry.async_get_info_name(question.name)  # type: ignore
+            service = self.registry.async_get_info_name(question.name)
             if service is not None:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     # Add recommended additional answers according to
