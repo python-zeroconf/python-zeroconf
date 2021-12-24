@@ -138,6 +138,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.38.1
+======
+
+* Improve performance of query scheduler (#1043) @bdraco
+* Avoid linear type searches in ServiceBrowsers (#1044) @bdraco
+
 0.38.0
 ======
 
