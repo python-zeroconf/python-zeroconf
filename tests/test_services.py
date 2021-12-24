@@ -42,7 +42,7 @@ class ListenerTest(unittest.TestCase):
         service_added = Event()
         service_removed = Event()
         sub_service_updated = Event()
-        service_updated2 = Event()
+        duplicate_service_added = Event()
 
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
@@ -59,7 +59,17 @@ class ListenerTest(unittest.TestCase):
                 service_removed.set()
 
             def update_service(self, zeroconf, type, name):
-                service_updated2.set()
+                pass
+
+        class DuplicateListener(r.ServiceListener):
+            def add_service(self, zeroconf, type, name):
+                duplicate_service_added.set()
+
+            def remove_service(self, zeroconf, type, name):
+                pass
+
+            def update_service(self, zeroconf, type, name):
+                pass
 
         class MySubListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
@@ -108,6 +118,11 @@ class ListenerTest(unittest.TestCase):
 
                 # short pause to allow multicast timers to expire
                 time.sleep(3)
+
+                zeroconf_browser.add_service_listener(type_, DuplicateListener())
+                duplicate_service_added.wait(
+                    1
+                )  # Ensure a listener for the same type calls back right away from cache
 
                 # clear the answer cache to force query
                 _clear_cache(zeroconf_browser)
