@@ -27,6 +27,9 @@ def test_service_type_name_overlong_full_name():
 
 def test_possible_types():
     """Test possible types from name."""
+    assert nameutils.possible_types('.') == set()
+    assert nameutils.possible_types('local.') == set()
+    assert nameutils.possible_types('_tcp.local.') == set()
     assert nameutils.possible_types('_test-srvc-type._tcp.local.') == {'_test-srvc-type._tcp.local.'}
     assert nameutils.possible_types('_any._tcp.local.') == {'_any._tcp.local.'}
     assert nameutils.possible_types('.._x._tcp.local.') == {'_x._tcp.local.'}
