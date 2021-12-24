@@ -26,7 +26,7 @@ import random
 import threading
 import warnings
 from collections import OrderedDict
-from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Callable, Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
@@ -324,9 +324,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
 
-    def _names_matching_types(self, names: Set[str]) -> Set[Tuple[str, str]]:
+    def _names_matching_types(self, names: Iterable[str]) -> List[Tuple[str, str]]:
         """Return the type and name for records matching the types we are browsing."""
-        return {(type_, name) for type_ in self.types for name in names if name.endswith(f".{type_}")}
+        return [(type_, name) for type_ in self.types for name in names if name.endswith(f".{type_}")]
 
     def _enqueue_callback(
         self,
@@ -354,9 +354,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if isinstance(record, DNSPointer):
             name = record.name
             alias = record.alias
-            matches = self._names_matching_types({alias})
+            matches = self._names_matching_types((alias,))
             if name in self.types:
-                matches.add((name, alias))
+                matches.append((name, alias))
             for type_, name in matches:
                 if old_record is None:
                     self._enqueue_callback(ServiceStateChange.Added, type_, name)
@@ -378,7 +378,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 self._enqueue_callback(ServiceStateChange.Updated, type_, name)
             return
 
-        for type_, name in self._names_matching_types({record.name}):
+        for type_, name in self._names_matching_types((record.name,)):
             self._enqueue_callback(ServiceStateChange.Updated, type_, name)
 
     def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
