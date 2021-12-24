@@ -27,18 +27,18 @@ def test_service_type_name_overlong_full_name():
 
 def test_possible_types():
     """Test possible types from name."""
-    assert nameutils.possible_types('_test-srvc-type._tcp.local.') == ['_test-srvc-type._tcp.local.']
-    assert nameutils.possible_types('_any._tcp.local.') == ['_any._tcp.local.']
-    assert nameutils.possible_types('.._x._tcp.local.') == ['_x._tcp.local.']
-    assert nameutils.possible_types('x.y._http._tcp.local.') == ['_http._tcp.local.']
-    assert nameutils.possible_types('1.2.3._mqtt._tcp.local.') == ['_mqtt._tcp.local.']
-    assert nameutils.possible_types('x.sub._http._tcp.local.') == ['_http._tcp.local.']
-    assert nameutils.possible_types('6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local.') == [
+    assert nameutils.possible_types('_test-srvc-type._tcp.local.') == {'_test-srvc-type._tcp.local.'}
+    assert nameutils.possible_types('_any._tcp.local.') == {'_any._tcp.local.'}
+    assert nameutils.possible_types('.._x._tcp.local.') == {'_x._tcp.local.'}
+    assert nameutils.possible_types('x.y._http._tcp.local.') == {'_http._tcp.local.'}
+    assert nameutils.possible_types('1.2.3._mqtt._tcp.local.') == {'_mqtt._tcp.local.'}
+    assert nameutils.possible_types('x.sub._http._tcp.local.') == {'_http._tcp.local.'}
+    assert nameutils.possible_types('6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local.') == {
         '_http._tcp.local.',
         '_zget._http._tcp.local.',
-    ]
-    assert nameutils.possible_types('my._printer._sub._http._tcp.local.') == [
+    }
+    assert nameutils.possible_types('my._printer._sub._http._tcp.local.') == {
         '_http._tcp.local.',
         '_sub._http._tcp.local.',
         '_printer._sub._http._tcp.local.',
-    ]
+    }
