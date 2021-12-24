@@ -26,7 +26,7 @@ import random
 import threading
 import warnings
 from collections import OrderedDict
-from typing import Callable, Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import Callable, Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
@@ -324,9 +324,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def service_state_changed(self) -> SignalRegistrationInterface:
         return self._service_state_changed.registration_interface
 
-    def _record_matching_type(self, record: DNSRecord) -> Optional[str]:
-        """Return the type if the record matches one of the types we are browsing."""
-        return next((type_ for type_ in self.types if record.name.endswith(type_)), None)
+    def _names_matching_types(self, names: Iterable[str]) -> List[Tuple[str, str]]:
+        """Return the type and name for records matching the types we are browsing."""
+        return [(type_, name) for type_ in self.types for name in names if name.endswith(f".{type_}")]
 
     def _enqueue_callback(
         self,
@@ -352,14 +352,18 @@ class _ServiceBrowserBase(RecordUpdateListener):
     ) -> None:
         """Process a single record update from a batch of updates."""
         if isinstance(record, DNSPointer):
-            if record.name not in self.types:
-                return
-            if old_record is None:
-                self._enqueue_callback(ServiceStateChange.Added, record.name, record.alias)
-            elif record.is_expired(now):
-                self._enqueue_callback(ServiceStateChange.Removed, record.name, record.alias)
-            else:
-                self.reschedule_type(record.name, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
+            name = record.name
+            alias = record.alias
+            matches = self._names_matching_types((alias,))
+            if name in self.types:
+                matches.append((name, alias))
+            for type_, name in matches:
+                if old_record is None:
+                    self._enqueue_callback(ServiceStateChange.Added, type_, name)
+                elif record.is_expired(now):
+                    self._enqueue_callback(ServiceStateChange.Removed, type_, name)
+                else:
+                    self.reschedule_type(type_, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
             return
 
         # If its expired or already exists in the cache it cannot be updated.
@@ -368,17 +372,14 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         if isinstance(record, DNSAddress):
             # Iterate through the DNSCache and callback any services that use this address
-            for service in self.zc.cache.async_entries_with_server(record.name):
-                type_ = self._record_matching_type(service)
-                if type_:
-                    self._enqueue_callback(ServiceStateChange.Updated, type_, service.name)
-                    break
-
+            for type_, name in self._names_matching_types(
+                {service.name for service in self.zc.cache.async_entries_with_server(record.name)}
+            ):
+                self._enqueue_callback(ServiceStateChange.Updated, type_, name)
             return
 
-        type_ = self._record_matching_type(record)
-        if type_:
-            self._enqueue_callback(ServiceStateChange.Updated, type_, record.name)
+        for type_, name in self._names_matching_types((record.name,)):
+            self._enqueue_callback(ServiceStateChange.Updated, type_, name)
 
     def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Callback invoked by Zeroconf when new information arrives.

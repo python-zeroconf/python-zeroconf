@@ -1017,3 +1017,86 @@ async def test_query_scheduler():
     assert set(query_scheduler.process_ready_types(now + delay * 20)) == set()
 
     assert set(query_scheduler.process_ready_types(now + delay * 31)) == {"_http._tcp.local."}
+
+
+def test_service_browser_matching():
+    """Test that the ServiceBrowser matching does not match partial names."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    not_match_type_ = "_asustor-looksgood_http._tcp.local."
+    not_match_registration_name = "xxxyyy.%s" % not_match_type_
+    callbacks = []
+
+    class MyServiceListener(r.ServiceListener):
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+        def update_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("update", type_, name))
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    should_not_match = ServiceInfo(
+        not_match_type_, not_match_registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
+    )
+
+    def mock_incoming_msg(records) -> r.DNSIncoming:
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        for record in records:
+            generated.add_answer_at_time(record, 0)
+        return r.DNSIncoming(generated.packets()[0])
+
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
+    )
+    _inject_response(
+        zc,
+        mock_incoming_msg(
+            [
+                should_not_match.dns_pointer(),
+                should_not_match.dns_service(),
+                should_not_match.dns_text(),
+                *should_not_match.dns_addresses(),
+            ]
+        ),
+    )
+    time.sleep(0.2)
+    info.port = 400
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_service()]),
+    )
+    should_not_match.port = 400
+    _inject_response(
+        zc,
+        mock_incoming_msg([should_not_match.dns_service()]),
+    )
+    time.sleep(0.2)
+
+    assert callbacks == [
+        ('add', type_, registration_name),
+        ('update', type_, registration_name),
+    ]
+    browser.cancel()
+
+    zc.close()

@@ -38,10 +38,11 @@ def teardown_module():
 class ListenerTest(unittest.TestCase):
     def test_integration_with_listener_class(self):
 
+        sub_service_added = Event()
         service_added = Event()
         service_removed = Event()
-        service_updated = Event()
-        service_updated2 = Event()
+        sub_service_updated = Event()
+        duplicate_service_added = Event()
 
         subtype_name = "My special Subtype"
         type_ = "_http._tcp.local."
@@ -58,21 +59,32 @@ class ListenerTest(unittest.TestCase):
                 service_removed.set()
 
             def update_service(self, zeroconf, type, name):
-                service_updated2.set()
+                pass
+
+        class DuplicateListener(r.ServiceListener):
+            def add_service(self, zeroconf, type, name):
+                duplicate_service_added.set()
+
+            def remove_service(self, zeroconf, type, name):
+                pass
+
+            def update_service(self, zeroconf, type, name):
+                pass
 
         class MySubListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
+                sub_service_added.set()
                 pass
 
             def remove_service(self, zeroconf, type, name):
                 pass
 
             def update_service(self, zeroconf, type, name):
-                service_updated.set()
+                sub_service_updated.set()
 
         listener = MyListener()
         zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
-        zeroconf_browser.add_service_listener(subtype, listener)
+        zeroconf_browser.add_service_listener(type_, listener)
 
         properties = dict(
             prop_none=None,
@@ -106,6 +118,11 @@ class ListenerTest(unittest.TestCase):
 
                 # short pause to allow multicast timers to expire
                 time.sleep(3)
+
+                zeroconf_browser.add_service_listener(type_, DuplicateListener())
+                duplicate_service_added.wait(
+                    1
+                )  # Ensure a listener for the same type calls back right away from cache
 
                 # clear the answer cache to force query
                 _clear_cache(zeroconf_browser)
@@ -160,7 +177,9 @@ class ListenerTest(unittest.TestCase):
 
                 # test TXT record update
                 sublistener = MySubListener()
-                zeroconf_browser.add_service_listener(registration_name, sublistener)
+
+                zeroconf_browser.add_service_listener(subtype, sublistener)
+
                 properties['prop_blank'] = b'an updated string'
                 desc.update(properties)
                 info_service = ServiceInfo(
@@ -174,8 +193,9 @@ class ListenerTest(unittest.TestCase):
                     addresses=[socket.inet_aton("10.0.1.2")],
                 )
                 zeroconf_registrar.update_service(info_service)
-                service_updated.wait(1)
-                assert service_updated.is_set()
+
+                sub_service_added.wait(1)  # we cleared the cache above
+                assert sub_service_added.is_set()
 
                 info = zeroconf_browser.get_service_info(type_, registration_name)
                 assert info is not None
