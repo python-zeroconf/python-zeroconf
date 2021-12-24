@@ -44,7 +44,7 @@ class ListenerTest(unittest.TestCase):
         sub_service_updated = Event()
         duplicate_service_added = Event()
 
-        subtype_name = "My special Subtype"
+        subtype_name = "_printer"
         type_ = "_http._tcp.local."
         subtype = subtype_name + "._sub." + type_
         name = "UPPERxxxyyyæøå"
