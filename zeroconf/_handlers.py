@@ -515,12 +515,12 @@ class RecordManager:
         This function must be run from the event loop.
         """
         now = current_time_millis()
-        records: List[RecordUpdate] = []
-        for question in questions:
-            for record in self.cache.async_entries_with_name(question.name):
-                if not record.is_expired(now) and question.answered_by(record):
-                    records.append(RecordUpdate(record, None))
-
+        records: List[RecordUpdate] = [
+            RecordUpdate(record, None)
+            for question in questions
+            for record in self.cache.async_entries_with_name(question.name)
+            if not record.is_expired(now) and question.answered_by(record)
+        ]
         if not records:
             return
         listener.async_update_records(self.zc, now, records)
