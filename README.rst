@@ -138,6 +138,16 @@ See examples directory for more.
 Changelog
 =========
 
+0.38.3
+======
+
+Version bump only, no changes from 0.38.2
+
+0.38.2
+======
+
+* Make decode errors more helpful in finding the source of the bad data (#1052) @bdraco
+
 0.38.1
 ======
 
