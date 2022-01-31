@@ -275,7 +275,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
         self.offset = self._decode_labels_at_offset(self.offset, labels, seen_pointers)
         name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
-            raise IncomingDecodeError(f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH}")
+            raise IncomingDecodeError(
+                f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH} from {self.source}"
+            )
         return name
 
     def _decode_labels_at_offset(self, off: int, labels: List[str], seen_pointers: Set[int]) -> int:
@@ -292,16 +294,24 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 continue
 
             if length < 0xC0:
-                raise IncomingDecodeError(f"DNS compression type {length} is unknown at {off}")
+                raise IncomingDecodeError(
+                    f"DNS compression type {length} is unknown at {off} from {self.source}"
+                )
 
             # We have a DNS compression pointer
             link = (length & 0x3F) * 256 + self.data[off + 1]
             if link > self.data_len:
-                raise IncomingDecodeError(f"DNS compression pointer at {off} points to {link} beyond packet")
+                raise IncomingDecodeError(
+                    f"DNS compression pointer at {off} points to {link} beyond packet from {self.source}"
+                )
             if link == off:
-                raise IncomingDecodeError(f"DNS compression pointer at {off} points to itself")
+                raise IncomingDecodeError(
+                    f"DNS compression pointer at {off} points to itself from {self.source}"
+                )
             if link in seen_pointers:
-                raise IncomingDecodeError(f"DNS compression pointer at {off} was seen again")
+                raise IncomingDecodeError(
+                    f"DNS compression pointer at {off} was seen again from {self.source}"
+                )
             linked_labels = self.name_cache.get(link, [])
             if not linked_labels:
                 seen_pointers.add(link)
@@ -309,7 +319,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 self.name_cache[link] = linked_labels
             labels.extend(linked_labels)
             if len(labels) > MAX_DNS_LABELS:
-                raise IncomingDecodeError(f"Maximum dns labels reached while processing pointer at {off}")
+                raise IncomingDecodeError(
+                    f"Maximum dns labels reached while processing pointer at {off} from {self.source}"
+                )
             return off + DNS_COMPRESSION_POINTER_LEN
 
-        raise IncomingDecodeError("Corrupt packet received while decoding name")
+        raise IncomingDecodeError("Corrupt packet received while decoding name from {self.source}")
