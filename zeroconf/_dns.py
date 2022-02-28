@@ -401,7 +401,7 @@ class DNSService(DNSRecord):
 
     """A DNS service record"""
 
-    __slots__ = ('_hash', 'priority', 'weight', 'port', 'server')
+    __slots__ = ('_hash', 'priority', 'weight', 'port', 'server', 'server_key')
 
     def __init__(
         self,
@@ -420,6 +420,7 @@ class DNSService(DNSRecord):
         self.weight = weight
         self.port = port
         self.server = server
+        self.server_key = server.lower()
         self._hash = hash((self.key, type_, self.class_, priority, weight, port, server))
 
     def write(self, out: 'DNSOutgoing') -> None:

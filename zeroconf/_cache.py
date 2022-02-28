@@ -74,7 +74,7 @@ class DNSCache:
         # direction would return the old incorrect entry.
         self.cache.setdefault(entry.key, {})[entry] = entry
         if isinstance(entry, DNSService):
-            self.service_cache.setdefault(entry.server, {})[entry] = entry
+            self.service_cache.setdefault(entry.server_key, {})[entry] = entry
 
     def async_add_records(self, entries: Iterable[DNSRecord]) -> None:
         """Add multiple records.
@@ -90,7 +90,7 @@ class DNSCache:
         This function must be run in from event loop.
         """
         if isinstance(entry, DNSService):
-            _remove_key(self.service_cache, entry.server, entry)
+            _remove_key(self.service_cache, entry.server_key, entry)
         _remove_key(self.cache, entry.key, entry)
 
     def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:

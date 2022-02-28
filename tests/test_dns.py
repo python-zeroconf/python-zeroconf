@@ -334,6 +334,17 @@ def test_dns_service_record_hashablity():
     assert len(record_set) == 4
 
 
+def test_dns_service_server_key():
+    """Test DNSService server_key is lowercase."""
+    srv1 = r.DNSService(
+        'X._tcp._http.local.', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, 'X.local.'
+    )
+    assert srv1.name == 'X._tcp._http.local.'
+    assert srv1.key == 'x._tcp._http.local.'
+    assert srv1.server == 'X.local.'
+    assert srv1.server_key == 'x.local.'
+
+
 def test_dns_nsec_record_hashablity():
     """Test DNSNsec are hashable."""
     nsec1 = r.DNSNsec(
