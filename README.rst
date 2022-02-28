@@ -138,6 +138,15 @@ See examples directory for more.
 Changelog
 =========
 
+0.38.4
+======
+
+* Fix IP Address updates when hostname is uppercase (#1057) @bdraco
+
+  ServiceBrowsers would not callback updates when the ip address changed
+  if the hostname contained uppercase characters
+
+
 0.38.3
 ======
 
