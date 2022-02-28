@@ -1132,3 +1132,42 @@ async def test_legacy_unicast_response(run_isolated):
     assert outgoing.questions == [question]
     assert outgoing.id == query.id
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_update_with_uppercase_names(run_isolated):
+    """Test an ip update from a shelly which uses uppercase names."""
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+
+    callbacks = []
+
+    class MyServiceListener(ServiceListener):
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            callbacks.append(("remove", type_, name))
+
+        def update_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            callbacks.append(("update", type_, name))
+
+    listener = MyServiceListener()
+    browser = AsyncServiceBrowser(aiozc.zeroconf, "_http._tcp.local.", None, listener)
+    protocol = aiozc.zeroconf.engine.protocols[0]
+
+    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbc=\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'
+    protocol.datagram_received(packet, ('127.0.0.1', 6503))
+    await asyncio.sleep(0)
+    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbcA\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'
+    protocol.datagram_received(packet, ('127.0.0.1', 6503))
+
+    await aiozc.async_close()
+
+    assert callbacks == [
+        ('add', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
+        ('update', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
+    ]
