@@ -111,7 +111,7 @@ Here's an example of browsing for a service:
             print(f"Service {name} removed")
     
         def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-            info = zeroconf.get_service_info(type_, name)
+            info = zc.get_service_info(type_, name)
             print(f"Service {name} added, service info: {info}")
     
     
