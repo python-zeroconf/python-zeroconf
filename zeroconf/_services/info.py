@@ -183,7 +183,7 @@ class ServiceInfo(RecordUpdateListener):
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
                     f" got {address}. Hint: convert string addresses with socket.inet_pton"  # type: ignore
                 )
-            if addr.version == 4:
+            if isinstance(addr, ipaddress.IPv4Address):
                 self._ipv4_addresses.append(addr)
             else:
                 self._ipv6_addresses.append(addr)
@@ -333,7 +333,7 @@ class ServiceInfo(RecordUpdateListener):
             except ValueError as ex:
                 log.warning("Encountered invalid address while processing %s: %s", record, ex)
                 return
-            if ip_addr.version == 4:
+            if isinstance(ip_addr, ipaddress.IPv4Address):
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
                 return
