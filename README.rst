@@ -141,6 +141,17 @@ See examples directory for more.
 Changelog
 =========
 
+0.38.5
+======
+
+* Fix ServiceBrowsers not getting ServiceStateChange.Removed callbacks on PTR record expire (#1064) @bdraco
+
+  ServiceBrowsers were only getting a `ServiceStateChange.Removed` callback
+  when the record was sent with a TTL of 0. ServiceBrowsers now correctly
+  get a `ServiceStateChange.Removed` callback when the record expires as well.
+* Fix missing minimum version of python 3.7 (#1060) @stevencrader
+
+
 0.38.4
 ======
 
