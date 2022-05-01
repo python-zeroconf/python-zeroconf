@@ -167,7 +167,7 @@ class AsyncEngine:
         now = current_time_millis()
         self.zc.question_history.async_expire(now)
         self.zc.record_manager.async_updates(
-            now, [RecordUpdate(record, None) for record in self.zc.cache.async_expire(now)]
+            now, [RecordUpdate(record, record) for record in self.zc.cache.async_expire(now)]
         )
         self.zc.record_manager.async_updates_complete()
         assert self.loop is not None
