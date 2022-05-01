@@ -3,7 +3,6 @@
 
 """ Unit tests for zeroconf._services.browser. """
 
-import asyncio
 import logging
 import socket
 import time
@@ -17,7 +16,7 @@ import pytest
 import zeroconf as r
 from zeroconf import DNSPointer, DNSQuestion, const, current_time_millis, millis_to_seconds
 import zeroconf._services.browser as _services_browser
-from zeroconf import Zeroconf
+from zeroconf import _core, _handlers, Zeroconf
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
@@ -1096,6 +1095,76 @@ def test_service_browser_matching():
     assert callbacks == [
         ('add', type_, registration_name),
         ('update', type_, registration_name),
+    ]
+    browser.cancel()
+
+    zc.close()
+
+
+@patch.object(_handlers, '_DNS_PTR_MIN_TTL', 1)
+@patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10)
+def test_service_browser_expire_callbacks():
+    """Test that the ServiceBrowser matching does not match partial names."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+    callbacks = []
+
+    class MyServiceListener(r.ServiceListener):
+        def add_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+        def update_service(self, zc, type_, name) -> None:
+            nonlocal callbacks
+            if name == registration_name:
+                callbacks.append(("update", type_, name))
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    desc = {'path': '/~paulsm/'}
+    address_parsed = "10.0.1.2"
+    address = socket.inet_aton(address_parsed)
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", host_ttl=1, other_ttl=1, addresses=[address]
+    )
+
+    def mock_incoming_msg(records) -> r.DNSIncoming:
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        for record in records:
+            generated.add_answer_at_time(record, 0)
+        return r.DNSIncoming(generated.packets()[0])
+
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
+    )
+    time.sleep(0.2)
+    info.port = 400
+    _inject_response(
+        zc,
+        mock_incoming_msg([info.dns_service()]),
+    )
+
+    assert callbacks == [
+        ('add', type_, registration_name),
+        ('update', type_, registration_name),
+    ]
+    time.sleep(1.2)
+    assert callbacks == [
+        ('add', type_, registration_name),
+        ('update', type_, registration_name),
+        ('remove', type_, registration_name),
     ]
     browser.cancel()
 
