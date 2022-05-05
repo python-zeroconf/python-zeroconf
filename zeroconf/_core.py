@@ -169,7 +169,7 @@ class AsyncEngine:
         self.zc.record_manager.async_updates(
             now, [RecordUpdate(record, record) for record in self.zc.cache.async_expire(now)]
         )
-        self.zc.record_manager.async_updates_complete()
+        self.zc.record_manager.async_updates_complete(False)
         assert self.loop is not None
         self._cleanup_timer = self.loop.call_later(
             millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
