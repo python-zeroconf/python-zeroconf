@@ -7,8 +7,7 @@ flake8
 flake8-import-order
 ifaddr
 mypy;implementation_name=="cpython"
-# 0.11.0 breaks things https://github.com/PyCQA/pep8-naming/issues/152
-pep8-naming!=0.6.0,!=0.11.0
+pep8-naming>=0.12.0
 pylint
 pytest
 pytest-asyncio
