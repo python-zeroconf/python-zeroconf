@@ -167,7 +167,6 @@ def possible_types(name: str) -> Set[str]:
     types = {f"_{type_labels}"}
     labels = type_labels.split('.')
     for count in range(1, len(labels) - 3):
-        if not labels[count].startswith('_'):
-            break
-        types.add('.'.join(labels[count:]))
+        if labels[count].startswith('_'):
+            types.add('.'.join(labels[count:]))
     return types
