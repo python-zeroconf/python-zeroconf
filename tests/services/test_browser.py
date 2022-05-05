@@ -1108,8 +1108,8 @@ def test_service_browser_expire_callbacks():
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
     # start a browser
-    type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    type_ = "_old._tcp.local."
+    registration_name = "uniquezip323.%s" % type_
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1132,11 +1132,11 @@ def test_service_browser_expire_callbacks():
 
     browser = r.ServiceBrowser(zc, type_, None, listener)
 
-    desc = {'path': '/~paulsm/'}
-    address_parsed = "10.0.1.2"
+    desc = {'path': '/~paul2/'}
+    address_parsed = "10.0.1.3"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", host_ttl=1, other_ttl=1, addresses=[address]
+        type_, registration_name, 80, 0, 0, desc, "newname-2.local.", host_ttl=1, other_ttl=1, addresses=[address]
     )
 
     def mock_incoming_msg(records) -> r.DNSIncoming:
@@ -1149,7 +1149,7 @@ def test_service_browser_expire_callbacks():
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
     )
-    time.sleep(0.2)
+    time.sleep(0.3)
     info.port = 400
     _inject_response(
         zc,
@@ -1160,7 +1160,7 @@ def test_service_browser_expire_callbacks():
         ('add', type_, registration_name),
         ('update', type_, registration_name),
     ]
-    time.sleep(1.2)
+    time.sleep(1.1)
     assert callbacks == [
         ('add', type_, registration_name),
         ('update', type_, registration_name),
