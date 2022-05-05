@@ -161,12 +161,12 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
 
 def possible_types(name: str) -> Set[str]:
     """Build a set of all possible types from a fully qualified name."""
-    type_labels = name.partition('_')[2]
-    if "_" not in type_labels:
-        return set()
-    types = {f"_{type_labels}"}
-    labels = type_labels.split('.')
-    for count in range(1, len(labels) - 3):
-        if labels[count].startswith('_'):
-            types.add('.'.join(labels[count:]))
+    labels = name.split('.')
+    label_count = len(labels)
+    types = set()
+    for count in range(label_count):
+        parts = labels[label_count - count - 4 :]
+        if not parts[0].startswith('_'):
+            break
+        types.add('.'.join(parts))
     return types
