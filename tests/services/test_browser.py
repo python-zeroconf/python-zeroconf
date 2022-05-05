@@ -1149,7 +1149,7 @@ def test_service_browser_expire_callbacks():
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
     )
-    time.sleep(0.3)
+    time.sleep(0.6)
     info.port = 400
     _inject_response(
         zc,
@@ -1160,7 +1160,7 @@ def test_service_browser_expire_callbacks():
         ('add', type_, registration_name),
         ('update', type_, registration_name),
     ]
-    time.sleep(1.1)
+    time.sleep(0.6)
     assert callbacks == [
         ('add', type_, registration_name),
         ('update', type_, registration_name),
