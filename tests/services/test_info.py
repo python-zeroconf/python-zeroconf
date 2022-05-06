@@ -862,6 +862,6 @@ async def test_release_wait_when_new_recorded_added():
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
     aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
-    assert await asyncio.wait_for(task, timeout=0.2)
+    assert await asyncio.wait_for(task, timeout=2)
     assert info.addresses == [b'\x7f\x00\x00\x01']
     await aiozc.async_close()
