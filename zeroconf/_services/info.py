@@ -467,6 +467,8 @@ class ServiceInfo(RecordUpdateListener):
         """Returns true if the service could be discovered on the
         network, and updates this object with details discovered.
         """
+        if not zc.started:
+            await zc.async_wait_for_start()
         if self.load_from_cache(zc):
             return True
 
@@ -475,7 +477,6 @@ class ServiceInfo(RecordUpdateListener):
         delay = _LISTENER_TIME
         next_ = now
         last = now + timeout
-        await zc.async_wait_for_start()
         try:
             zc.async_add_listener(self, None)
             while not self._is_complete:
