@@ -184,7 +184,8 @@ class AsyncEngine:
 
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets."""
-        self.running_event.clear()
+        if self.running_event:
+            self.running_event.clear()
         for transport in itertools.chain(self.senders, self.readers):
             transport.close()
 
