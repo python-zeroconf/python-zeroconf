@@ -141,6 +141,13 @@ See examples directory for more.
 Changelog
 =========
 
+
+0.38.6
+======
+
+* Performance improvements for fetching ServiceInfo (#1068) @bdraco
+
+
 0.38.5
 ======
 
