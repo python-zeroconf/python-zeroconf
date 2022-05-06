@@ -169,7 +169,7 @@ class AsyncEngine:
         self.zc.record_manager.async_updates(
             now, [RecordUpdate(record, record) for record in self.zc.cache.async_expire(now)]
         )
-        self.zc.record_manager.async_updates_complete()
+        self.zc.record_manager.async_updates_complete(False)
         assert self.loop is not None
         self._cleanup_timer = self.loop.call_later(
             millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
@@ -184,6 +184,8 @@ class AsyncEngine:
 
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets."""
+        assert self.running_event is not None
+        self.running_event.clear()
         for transport in itertools.chain(self.senders, self.readers):
             transport.close()
 
@@ -465,6 +467,11 @@ class Zeroconf(QuietLogger):
         self._out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY)
 
         self.start()
+
+    @property
+    def started(self) -> bool:
+        """Check if the instance has started."""
+        return bool(self.engine.running_event and self.engine.running_event.is_set())
 
     def start(self) -> None:
         """Start Zeroconf."""

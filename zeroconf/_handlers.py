@@ -391,7 +391,7 @@ class RecordManager:
         for listener in self.listeners:
             listener.async_update_records(self.zc, now, records)
 
-    def async_updates_complete(self) -> None:
+    def async_updates_complete(self, notify: bool) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
@@ -401,7 +401,8 @@ class RecordManager:
         """
         for listener in self.listeners:
             listener.async_update_records_complete()
-        self.zc.async_notify_all()
+        if notify:
+            self.zc.async_notify_all()
 
     def async_updates_from_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
@@ -459,15 +460,16 @@ class RecordManager:
         # zc.get_service_info will see the cached value
         # but ONLY after all the record updates have been
         # processsed.
+        new = False
         if other_adds or address_adds:
-            self.cache.async_add_records(itertools.chain(address_adds, other_adds))
+            new = self.cache.async_add_records(itertools.chain(address_adds, other_adds))
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
         if removes:
             self.cache.async_remove_records(removes)
         if updates:
-            self.async_updates_complete()
+            self.async_updates_complete(new)
 
     def _async_mark_unique_cached_records_older_than_1s_to_expire(
         self, unique_types: Set[Tuple[str, int, int]], answers: Iterable[DNSRecord], now: float

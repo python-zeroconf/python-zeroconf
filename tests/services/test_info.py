@@ -3,6 +3,7 @@
 
 """ Unit tests for zeroconf._services.info. """
 
+import asyncio
 import logging
 import socket
 import threading
@@ -16,6 +17,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import DNSAddress, const
+from zeroconf._services import types
 from zeroconf._services.info import ServiceInfo
 from zeroconf.asyncio import AsyncZeroconf
 
@@ -798,3 +800,68 @@ async def test_we_try_four_times_with_random_delay():
     await aiozc.async_close()
 
     assert request_count == 4
+
+
+@pytest.mark.asyncio
+async def test_release_wait_when_new_recorded_added():
+    """Test that async_request returns as soon as new matching records are added to the cache."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiarec.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    host = "multahost.local."
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    task = asyncio.create_task(info.async_request(aiozc.zeroconf, timeout=200))
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            registration_name,
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            registration_name,
+            [const._TYPE_AAAA],
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            0,
+            0,
+            80,
+            host,
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x01',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(
+            registration_name,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+        ),
+        0,
+    )
+    await aiozc.zeroconf.async_wait_for_start()
+    await asyncio.sleep(0)
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    assert await asyncio.wait_for(task, timeout=2)
+    assert info.addresses == [b'\x7f\x00\x00\x01']
+    await aiozc.async_close()

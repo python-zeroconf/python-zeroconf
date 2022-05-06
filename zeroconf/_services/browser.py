@@ -441,7 +441,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     async def _async_start_query_sender(self) -> None:
         """Start scheduling queries."""
-        await self.zc.async_wait_for_start()
+        if not self.zc.started:
+            await self.zc.async_wait_for_start()
         self._async_send_ready_queries_schedule_next()
 
     def _cancel_send_timer(self) -> None:

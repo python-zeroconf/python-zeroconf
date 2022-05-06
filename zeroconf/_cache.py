@@ -27,6 +27,7 @@ from ._dns import (
     DNSAddress,
     DNSEntry,
     DNSHinfo,
+    DNSNsec,
     DNSPointer,
     DNSRecord,
     DNSService,
@@ -61,8 +62,10 @@ class DNSCache:
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
-    def _async_add(self, entry: DNSRecord) -> None:
+    def _async_add(self, entry: DNSRecord) -> bool:
         """Adds an entry.
+
+        Returns true if the entry was not already in the cache.
 
         This function must be run in from event loop.
         """
@@ -72,17 +75,25 @@ class DNSCache:
         # replaces any existing records that are __eq__ to each other which
         # removes the risk that accessing the cache from the wrong
         # direction would return the old incorrect entry.
-        self.cache.setdefault(entry.key, {})[entry] = entry
+        store = self.cache.setdefault(entry.key, {})
+        new = entry not in store and not isinstance(entry, DNSNsec)
+        store[entry] = entry
         if isinstance(entry, DNSService):
             self.service_cache.setdefault(entry.server_key, {})[entry] = entry
+        return new
 
-    def async_add_records(self, entries: Iterable[DNSRecord]) -> None:
+    def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
         """Add multiple records.
+
+        Returns true if any of the records were not in the cache.
 
         This function must be run in from event loop.
         """
+        new = False
         for entry in entries:
-            self._async_add(entry)
+            if self._async_add(entry):
+                new = True
+        return new
 
     def _async_remove(self, entry: DNSRecord) -> None:
         """Removes an entry.

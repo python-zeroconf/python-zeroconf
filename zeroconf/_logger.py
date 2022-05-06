@@ -1,4 +1,5 @@
 """ Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+        )
     Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
     This module provides a framework for the use of DNS Service Discovery
