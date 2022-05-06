@@ -1136,7 +1136,16 @@ def test_service_browser_expire_callbacks():
     address_parsed = "10.0.1.3"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "newname-2.local.", host_ttl=1, other_ttl=1, addresses=[address]
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "newname-2.local.",
+        host_ttl=1,
+        other_ttl=1,
+        addresses=[address],
     )
 
     def mock_incoming_msg(records) -> r.DNSIncoming:
