@@ -1,4 +1,5 @@
 """ Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+        )
     Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
     This module provides a framework for the use of DNS Service Discovery
@@ -56,9 +57,6 @@ class QuietLogger:
         log_exc_info = False
         exc_info = sys.exc_info()
         exc_str = str(exc_info[1])
-        import pprint
-
-        pprint.pprint(cls._seen_logs)
         if exc_str not in cls._seen_logs:
             # log the trace only on the first time
             cls._seen_logs[exc_str] = exc_info
