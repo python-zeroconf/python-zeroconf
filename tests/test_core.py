@@ -808,3 +808,4 @@ async def test_event_loop_blocked(mock_start):
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     with pytest.raises(NotRunningException):
         await aiozc.zeroconf.async_wait_for_start()
+    assert aiozc.zeroconf.started is False
