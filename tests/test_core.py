@@ -801,7 +801,7 @@ def test_shutdown_while_register_in_process():
 
 
 @pytest.mark.asyncio
-@unittest.skipIf(sys.version_info[:3][1] < 8, 'Requires Python 3.8 or later')
+@unittest.skipIf(sys.version_info[:3][1] < 8, 'Requires Python 3.8 or later to patch _async_setup')
 @patch("zeroconf._core._STARTUP_TIMEOUT", 0)
 @patch("zeroconf._core.AsyncEngine._async_setup")
 async def test_event_loop_blocked(mock_start):
