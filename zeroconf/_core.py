@@ -471,7 +471,7 @@ class Zeroconf(QuietLogger):
     @property
     def started(self) -> bool:
         """Check if the instance has started."""
-        return bool(self.engine.running_event and self.engine.running_event.is_set())
+        return bool(not self.done and self.engine.running_event and self.engine.running_event.is_set())
 
     def start(self) -> None:
         """Start Zeroconf."""
