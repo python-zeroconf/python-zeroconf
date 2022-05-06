@@ -801,7 +801,7 @@ def test_shutdown_while_register_in_process():
 
 
 @pytest.mark.asyncio
-@patch("zeroconf._core._STARTUP_TIMEOUT", 0.001)
+@patch("zeroconf._core._STARTUP_TIMEOUT", 0)
 @patch("zeroconf._core.AsyncEngine._async_setup")
 async def test_event_loop_blocked(mock_start):
     """Test we raise NotRunningException when waiting for startup that times out."""
