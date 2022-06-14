@@ -47,6 +47,11 @@ MAX_NAME_LENGTH = 253
 
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
+UNPACK_6H = struct.Struct(b'!6H').unpack
+UNPACK_HH = struct.Struct(b'!HH').unpack
+UNPACK_H = struct.Struct(b'!H').unpack
+UNPACK_HHiH = struct.Struct(b'!HHiH').unpack
+
 
 class DNSIncoming(DNSMessage, QuietLogger):
 
@@ -139,9 +144,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
             ]
         )
 
-    def unpack(self, format_: bytes, length: int) -> tuple:
+    def unpack(self, unpacker: Callable, length: int) -> tuple:
         self.offset += length
-        return struct.unpack(format_, self.data[self.offset - length : self.offset])
+        return unpacker(self.data[self.offset - length : self.offset])
 
     def read_header(self) -> None:
         """Reads header portion of packet"""
@@ -152,12 +157,12 @@ class DNSIncoming(DNSMessage, QuietLogger):
             self.num_answers,
             self.num_authorities,
             self.num_additionals,
-        ) = self.unpack(b'!6H', 12)
+        ) = self.unpack(UNPACK_6H, 12)
 
     def read_questions(self) -> None:
         """Reads questions section of packet"""
         self.questions = [
-            DNSQuestion(self.read_name(), *self.unpack(b'!HH', 4)) for _ in range(self.num_questions)
+            DNSQuestion(self.read_name(), *self.unpack(UNPACK_HH, 4)) for _ in range(self.num_questions)
         ]
 
     def read_character_string(self) -> bytes:
@@ -174,7 +179,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
 
     def read_unsigned_short(self) -> int:
         """Reads an unsigned short from the packet"""
-        return cast(int, self.unpack(b'!H', 2)[0])
+        return cast(int, self.unpack(UNPACK_H, 2)[0])
 
     def read_others(self) -> None:
         """Reads the answers, authorities and additionals section of the
@@ -183,7 +188,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
         n = self.num_answers + self.num_authorities + self.num_additionals
         for _ in range(n):
             domain = self.read_name()
-            type_, class_, ttl, length = self.unpack(b'!HHiH', 10)
+            type_, class_, ttl, length = self.unpack(UNPACK_HHiH, 10)
             end = self.offset + length
             rec = None
             try:
