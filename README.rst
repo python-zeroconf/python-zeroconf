@@ -142,6 +142,12 @@ Changelog
 =========
 
 
+0.38.7
+======
+
+* Performance improvements for parsing incoming packet data (#1076) @bdraco
+
+
 0.38.6
 ======
 
