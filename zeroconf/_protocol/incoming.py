@@ -144,7 +144,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
             ]
         )
 
-    def unpack(self, unpacker: Callable, length: int) -> tuple:
+    def unpack(self, unpacker: Callable[[bytes], tuple], length: int) -> tuple:
         self.offset += length
         return unpacker(self.data[self.offset - length : self.offset])
 
