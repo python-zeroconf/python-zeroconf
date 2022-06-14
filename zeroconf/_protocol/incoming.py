@@ -224,7 +224,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 type_,
                 class_,
                 ttl,
-                *self.unpack(UNPACK_3H, 6),
+                *cast(Tuple[int, int, int], self.unpack(UNPACK_3H, 6)),
                 self.read_name(),
                 self.now,
             )
