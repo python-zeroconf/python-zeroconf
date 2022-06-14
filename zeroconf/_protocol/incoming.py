@@ -50,7 +50,6 @@ DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 UNPACK_3H = struct.Struct(b'!3H').unpack
 UNPACK_6H = struct.Struct(b'!6H').unpack
 UNPACK_HH = struct.Struct(b'!HH').unpack
-UNPACK_H = struct.Struct(b'!H').unpack
 UNPACK_HHiH = struct.Struct(b'!HHiH').unpack
 
 
@@ -177,10 +176,6 @@ class DNSIncoming(DNSMessage, QuietLogger):
         info = self.data[self.offset : self.offset + length]
         self.offset += length
         return info
-
-    def read_unsigned_short(self) -> int:
-        """Reads an unsigned short from the packet"""
-        return cast(int, self.unpack(UNPACK_H, 2)[0])
 
     def read_others(self) -> None:
         """Reads the answers, authorities and additionals section of the
