@@ -47,6 +47,7 @@ MAX_NAME_LENGTH = 253
 
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
+UNPACK_3H = struct.Struct(b'!3H').unpack
 UNPACK_6H = struct.Struct(b'!6H').unpack
 UNPACK_HH = struct.Struct(b'!HH').unpack
 UNPACK_H = struct.Struct(b'!H').unpack
@@ -223,9 +224,7 @@ class DNSIncoming(DNSMessage, QuietLogger):
                 type_,
                 class_,
                 ttl,
-                self.read_unsigned_short(),
-                self.read_unsigned_short(),
-                self.read_unsigned_short(),
+                *self.unpack(UNPACK_3H, 6),
                 self.read_name(),
                 self.now,
             )
