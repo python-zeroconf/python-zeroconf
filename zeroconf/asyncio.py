@@ -146,7 +146,7 @@ class AsyncZeroconf:
         zc: Optional[Zeroconf] = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
-        multicast communications and listening.
+        multicast communications, and listening.
 
         :param interfaces: :class:`InterfaceChoice` or a list of IP addresses
             (IPv4 and IPv6) and interface indexes (IPv6 only).
