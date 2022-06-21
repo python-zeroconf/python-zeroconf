@@ -132,8 +132,9 @@ class AsyncZeroconf:
 
     Supports registration, unregistration, queries and browsing.
 
-    The async version is currently a wrapper around the sync version
-    with I/O being done in the executor for backwards compatibility.
+    The async version is currently a wrapper around Zeroconf which
+    is now also async. It is expected that an asyncio event loop
+    is already running before creating the AsyncZeroconf object.
     """
 
     def __init__(
@@ -145,7 +146,7 @@ class AsyncZeroconf:
         zc: Optional[Zeroconf] = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
-        multicast communications, listening and reaping threads.
+        multicast communications, and listening.
 
         :param interfaces: :class:`InterfaceChoice` or a list of IP addresses
             (IPv4 and IPv6) and interface indexes (IPv6 only).

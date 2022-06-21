@@ -1,4 +1,4 @@
-# version: 1.2
+# version: 1.3
 
 .PHONY: all virtualenv
 MAX_LINE_LENGTH=110
