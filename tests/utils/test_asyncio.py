@@ -114,12 +114,45 @@ def test_cumulative_timeouts_less_than_close_plus_buffer():
     ) < 1 + _CLOSE_TIMEOUT + _LOADED_SYSTEM_TIMEOUT
 
 
+@pytest.mark.asyncio
 async def test_run_coro_with_timeout() -> None:
     """Test running a coroutine with a timeout raises EventLoopBlocked."""
     loop = asyncio.get_event_loop()
+    task = None
+
+    async def _saved_sleep_task():
+        nonlocal task
+        task = asyncio.create_task(asyncio.sleep(0.2))
+        await task
 
     def _run_in_loop():
-        aioutils.run_coro_with_timeout(asyncio.sleep(0.3), loop, 0.1)
+        aioutils.run_coro_with_timeout(_saved_sleep_task(), loop, 0.1)
 
     with pytest.raises(EventLoopBlocked), patch.object(aioutils, "_LOADED_SYSTEM_TIMEOUT", 0.0):
         await loop.run_in_executor(None, _run_in_loop)
+
+    # ensure the thread is shutdown
+    task.cancel()
+    await asyncio.sleep(0)
+    await _shutdown_default_executor(loop)
+
+
+# Remove this when we drop support for older python versions
+# since we can use loop.shutdown_default_executor() in 3.9+
+async def _shutdown_default_executor(loop: asyncio.AbstractEventLoop) -> None:
+    """Backport of cpython 3.9 schedule the shutdown of the default executor."""
+    future = loop.create_future()
+
+    def _do_shutdown() -> None:
+        try:
+            loop._default_executor.shutdown(wait=True)  # type: ignore  # pylint: disable=protected-access
+            loop.call_soon_threadsafe(future.set_result, None)
+        except Exception as ex:  # pylint: disable=broad-except
+            loop.call_soon_threadsafe(future.set_exception, ex)
+
+    thread = threading.Thread(target=_do_shutdown)
+    thread.start()
+    try:
+        await future
+    finally:
+        thread.join()
