@@ -141,6 +141,16 @@ See examples directory for more.
 Changelog
 =========
 
+0.39.0
+======
+
+Technically backwards incompatible:
+
+* Switch to using async_timeout for timeouts (#1081) @bdraco
+
+  Significantly reduces the number of asyncio tasks that are created when
+  using `ServiceInfo` or `AsyncServiceInfo`
+
 
 0.38.7
 ======
