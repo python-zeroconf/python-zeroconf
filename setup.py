@@ -45,5 +45,5 @@ setup(
         'Programming Language :: Python :: Implementation :: PyPy',
     ],
     keywords=['Bonjour', 'Avahi', 'Zeroconf', 'Multicast DNS', 'Service Discovery', 'mDNS'],
-    install_requires=['ifaddr>=0.1.7'],
+    install_requires=['async_timeout>=4.0.1', 'ifaddr>=0.1.7'],
 )
