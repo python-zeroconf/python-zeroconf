@@ -460,7 +460,13 @@ def test_sending_unicast():
     assert zc.cache.get(entry) is None
 
     zc.send(generated)
-    time.sleep(0.2)
+
+    # Handle slow github CI runners on windows
+    for _ in range(10):
+        time.sleep(0.05)
+        if zc.cache.get(entry) is not None:
+            break
+
     assert zc.cache.get(entry) is not None
 
     zc.close()
