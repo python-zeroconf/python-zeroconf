@@ -1165,11 +1165,21 @@ def test_service_browser_expire_callbacks():
         mock_incoming_msg([info.dns_service()]),
     )
 
+    for _ in range(10):
+        time.sleep(0.05)
+        if len(callbacks) == 2:
+            break
+
     assert callbacks == [
         ('add', type_, registration_name),
         ('update', type_, registration_name),
     ]
-    time.sleep(1.1)
+
+    for _ in range(25):
+        time.sleep(0.05)
+        if len(callbacks) == 3:
+            break
+
     assert callbacks == [
         ('add', type_, registration_name),
         ('update', type_, registration_name),
