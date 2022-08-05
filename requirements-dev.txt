@@ -2,7 +2,6 @@ async_timeout>=4.0.1
 autopep8
 black;implementation_name=="cpython"
 bump2version
-coveralls
 coverage
 flake8
 flake8-import-order
