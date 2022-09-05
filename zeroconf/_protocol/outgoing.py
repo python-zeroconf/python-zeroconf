@@ -21,8 +21,7 @@
 """
 
 import enum
-import struct
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from . import DNSMessage
 from .incoming import DNSIncoming
@@ -180,29 +179,28 @@ class DNSOutgoing(DNSMessage):
         for cached_entry in cached_entries:
             self.add_answer_at_time(cached_entry, now)
 
-    def _pack(self, format_: Union[bytes, str], size: int, value: Any) -> None:
-        self.data.append(struct.pack(format_, value))
-        self.size += size
-
     def _write_byte(self, value: int) -> None:
         """Writes a single byte to the packet"""
-        self._pack(b'!c', 1, bytes((value,)))
+        self.data.append(value.to_bytes(1, 'big'))
+        self.size += 1
 
     def _insert_short_at_start(self, value: int) -> None:
         """Inserts an unsigned short at the start of the packet"""
-        self.data.insert(0, struct.pack(b'!H', value))
+        self.data.insert(0, value.to_bytes(2, 'big'))
 
     def _replace_short(self, index: int, value: int) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
-        self.data[index] = struct.pack(b'!H', value)
+        self.data[index] = value.to_bytes(2, 'big')
 
     def write_short(self, value: int) -> None:
         """Writes an unsigned short to the packet"""
-        self._pack(b'!H', 2, value)
+        self.data.append(value.to_bytes(2, 'big'))
+        self.size += 2
 
     def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self._pack(b'!I', 4, int(value))
+        self.data.append(int(value).to_bytes(4, 'big'))
+        self.size += 4
 
     def write_string(self, value: bytes) -> None:
         """Writes a string to the packet"""
