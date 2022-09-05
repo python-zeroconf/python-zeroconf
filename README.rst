@@ -141,6 +141,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.39.1
+======
+
+* Performance improvements for constructing outgoing packet data (#1090) @bdraco
+
+
 0.39.0
 ======
 
