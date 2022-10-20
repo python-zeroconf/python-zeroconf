@@ -271,7 +271,9 @@ class DNSIncoming(DNSMessage, QuietLogger):
         """Reads a domain name from the packet."""
         labels: List[str] = []
         seen_pointers: Set[int] = set()
-        self.offset = self._decode_labels_at_offset(self.offset, labels, seen_pointers)
+        original_offset = self.offset
+        self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers)
+        self.name_cache[original_offset] = labels
         name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
             raise IncomingDecodeError(
