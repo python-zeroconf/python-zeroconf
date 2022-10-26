@@ -141,6 +141,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.39.3
+======
+
+* Fix port changes not being seen by ServiceInfo (#1100) @bdraco
+
+
 0.39.2
 ======
 
