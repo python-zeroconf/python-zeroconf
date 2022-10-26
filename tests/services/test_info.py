@@ -942,7 +942,9 @@ async def test_port_changes_are_seen():
     )
     aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
 
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
     await info.async_request(aiozc.zeroconf, timeout=200)
     assert info.port == 81
+    assert info.priority == 10
+    assert info.weight == 10
     await aiozc.async_close()
