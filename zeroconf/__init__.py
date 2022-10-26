@@ -79,7 +79,7 @@ from ._utils.time import current_time_millis, millis_to_seconds  # noqa # import
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.39.2'
+__version__ = '0.39.3'
 __license__ = 'LGPL'
 
 
