@@ -933,8 +933,8 @@ async def test_port_changes_are_seen():
             const._TYPE_SRV,
             const._CLASS_IN | const._CLASS_UNIQUE,
             10000,
-            0,
-            0,
+            90,
+            90,
             81,
             host,
         ),
@@ -945,6 +945,6 @@ async def test_port_changes_are_seen():
     info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
     await info.async_request(aiozc.zeroconf, timeout=200)
     assert info.port == 81
-    assert info.priority == 10
-    assert info.weight == 10
+    assert info.priority == 90
+    assert info.weight == 90
     await aiozc.async_close()
