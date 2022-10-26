@@ -312,7 +312,7 @@ class ServiceInfo(RecordUpdateListener):
         for record_update in records:
             update_addresses |= self._process_record_threadsafe(record_update[0], now)
 
-        # Only update addresses if the DNSService (.server) has changed
+        # Only update addresses if the DNSService has changed
         if not update_addresses:
             return
 
@@ -354,7 +354,12 @@ class ServiceInfo(RecordUpdateListener):
             if record.key != self.key:
                 return False
             self.name = record.name
-            server_changed = record.server != self.server
+            server_changed = (
+                record.server != self.server
+                or record.port != self.port
+                or record.weight != self.weight
+                or record.priority != self.priority
+            )
             self.server = record.server
             self.server_key = record.server.lower()
             self.port = record.port
