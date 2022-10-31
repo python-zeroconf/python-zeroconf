@@ -328,9 +328,10 @@ class ServiceInfo(RecordUpdateListener):
         """Thread safe record updating."""
         seen_addresses: Set[bytes] = set()
         for record_update in records:
+            record = record_update.new
             if isinstance(record, DNSAddress):
                 seen_addresses.add(record.address)
-            self._process_record_threadsafe(record_update[0], now)
+            self._process_record_threadsafe(record, now)
         for record in self._get_address_records_from_cache(zc):
             if record.address not in seen_addresses:
                 self._process_record_threadsafe(record, now)
