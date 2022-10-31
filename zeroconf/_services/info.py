@@ -430,10 +430,13 @@ class ServiceInfo(RecordUpdateListener):
 
     def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSAddress]:
         """Get the address records from the cache."""
-        return cast("List[DNSAddress]",[
-            *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
-            *zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN),
-        ])
+        return cast(
+            "List[DNSAddress]",
+            [
+                *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
+                *zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN),
+            ],
+        )
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache.
