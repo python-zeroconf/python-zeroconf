@@ -106,7 +106,6 @@ class ServiceInfo(RecordUpdateListener):
         "key",
         "_ipv4_addresses",
         "_ipv6_addresses",
-        "addresses",
         "port",
         "weight",
         "priority",
