@@ -23,8 +23,7 @@
 import ipaddress
 import random
 import socket
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
-
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Set, Union, cast
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
 from .._logger import log
@@ -327,10 +326,14 @@ class ServiceInfo(RecordUpdateListener):
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Thread safe record updating."""
+        seen_addresses: Set[bytes] = set()
         for record_update in records:
+            if isinstance(record, DNSAddress):
+                seen_addresses.add(record.address)
             self._process_record_threadsafe(record_update[0], now)
         for record in self._get_address_records_from_cache(zc):
-            self._process_record_threadsafe(record, now)
+            if record.address not in seen_addresses:
+                self._process_record_threadsafe(record, now)
 
     def _process_record_threadsafe(self, record: DNSRecord, now: float) -> None:
         """Thread safe record updating."""
@@ -369,7 +372,6 @@ class ServiceInfo(RecordUpdateListener):
             self.port = record.port
             self.weight = record.weight
             self.priority = record.priority
-
 
     def dns_addresses(
         self,
@@ -426,7 +428,7 @@ class ServiceInfo(RecordUpdateListener):
             created,
         )
 
-    def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSRecord]:
+    def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSAddress]:
         """Get the address records from the cache."""
         return [
             *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
