@@ -99,9 +99,8 @@ class ServiceInfo(RecordUpdateListener):
       where the peer is connected to
     """
 
-    text = b''
-
     __slots__ = (
+        "text",
         "type",
         "_name",
         "key",
@@ -141,6 +140,7 @@ class ServiceInfo(RecordUpdateListener):
             raise TypeError("addresses and parsed_addresses cannot be provided together")
         if not type_.endswith(service_type_name(name, strict=False)):
             raise BadTypeInNameException
+        self.text = b''
         self.type = type_
         self._name = name
         self.key = name.lower()
