@@ -108,7 +108,6 @@ class ServiceInfo(RecordUpdateListener):
         "port",
         "weight",
         "priority",
-        "_server_is_default",
         "server",
         "server_key",
         "_properties",
@@ -151,7 +150,6 @@ class ServiceInfo(RecordUpdateListener):
         self.port = port
         self.weight = weight
         self.priority = priority
-        self._server_is_default = True
         self.server = server if server else name
         self.server_key = self.server.lower()
         self._properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
