@@ -23,7 +23,7 @@
 import ipaddress
 import random
 import socket
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
+from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Union, cast
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
@@ -99,7 +99,23 @@ class ServiceInfo(RecordUpdateListener):
       where the peer is connected to
     """
 
-    text = b''
+    __slots__ = (
+        "text",
+        "type",
+        "_name",
+        "key",
+        "_ipv4_addresses",
+        "_ipv6_addresses",
+        "port",
+        "weight",
+        "priority",
+        "server",
+        "server_key",
+        "_properties",
+        "host_ttl",
+        "other_ttl",
+        "interface_index",
+    )
 
     def __init__(
         self,
@@ -122,6 +138,7 @@ class ServiceInfo(RecordUpdateListener):
             raise TypeError("addresses and parsed_addresses cannot be provided together")
         if not type_.endswith(service_type_name(name, strict=False)):
             raise BadTypeInNameException
+        self.text = b''
         self.type = type_
         self._name = name
         self.key = name.lower()
@@ -308,66 +325,53 @@ class ServiceInfo(RecordUpdateListener):
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Thread safe record updating."""
-        update_addresses = False
+        seen_addresses: Set[bytes] = set()
         for record_update in records:
-            update_addresses |= self._process_record_threadsafe(record_update[0], now)
-
-        # Only update addresses if the DNSService has changed
-        if not update_addresses:
-            return
-
-        for record in self._get_address_records_from_cache(zc):
+            record = record_update.new
+            if isinstance(record, DNSAddress):
+                seen_addresses.add(record.address)
             self._process_record_threadsafe(record, now)
+        for record in self._get_address_records_from_cache(zc):
+            if record.address not in seen_addresses:
+                self._process_record_threadsafe(record, now)
 
-    def _process_record_threadsafe(self, record: DNSRecord, now: float) -> bool:
-        """Thread safe record updating.
-
-        Returns True if the server has changed.
-        """
+    def _process_record_threadsafe(self, record: DNSRecord, now: float) -> None:
+        """Thread safe record updating."""
         if record.is_expired(now):
-            return False
+            return
 
         if isinstance(record, DNSAddress):
             if record.key != self.server_key:
-                return False
+                return
             try:
                 ip_addr = ipaddress.ip_address(record.address)
             except ValueError as ex:
                 log.warning("Encountered invalid address while processing %s: %s", record, ex)
-                return False
+                return
             if isinstance(ip_addr, ipaddress.IPv4Address):
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
-                return False
+                return
             if ip_addr not in self._ipv6_addresses:
                 self._ipv6_addresses.insert(0, ip_addr)
                 if ip_addr.is_link_local:
                     self.interface_index = record.scope_id
-            return False
+            return
 
         if isinstance(record, DNSText):
             if record.key == self.key:
                 self._set_text(record.text)
-            return False
+            return
 
         if isinstance(record, DNSService):
             if record.key != self.key:
-                return False
+                return
             self.name = record.name
-            server_changed = (
-                record.server != self.server
-                or record.port != self.port
-                or record.weight != self.weight
-                or record.priority != self.priority
-            )
             self.server = record.server
             self.server_key = record.server.lower()
             self.port = record.port
             self.weight = record.weight
             self.priority = record.priority
-            return server_changed
-
-        return False
 
     def dns_addresses(
         self,
@@ -424,12 +428,15 @@ class ServiceInfo(RecordUpdateListener):
             created,
         )
 
-    def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSRecord]:
+    def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSAddress]:
         """Get the address records from the cache."""
-        return [
-            *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
-            *zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN),
-        ]
+        return cast(
+            "List[DNSAddress]",
+            [
+                *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
+                *zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN),
+            ],
+        )
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache.
