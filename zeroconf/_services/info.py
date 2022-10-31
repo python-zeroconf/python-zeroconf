@@ -24,6 +24,7 @@ import ipaddress
 import random
 import socket
 from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Union, cast
+
 from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
 from .._exceptions import BadTypeInNameException
 from .._logger import log
