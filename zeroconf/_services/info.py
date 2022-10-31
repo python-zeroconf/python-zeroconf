@@ -101,6 +101,25 @@ class ServiceInfo(RecordUpdateListener):
 
     text = b''
 
+    __slots__ = (
+        "type",
+        "_name",
+        "key",
+        "_ipv4_addresses",
+        "_ipv6_addresses",
+        "addresses",
+        "port",
+        "weight",
+        "priority",
+        "_server_is_default",
+        "server",
+        "server_key",
+        "_properties",
+        "host_ttl",
+        "other_ttl",
+        "interface_index",
+    )
+
     def __init__(
         self,
         type_: str,
@@ -134,6 +153,7 @@ class ServiceInfo(RecordUpdateListener):
         self.port = port
         self.weight = weight
         self.priority = priority
+        self._server_is_default = server is None
         self.server = server if server else name
         self.server_key = self.server.lower()
         self._properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
@@ -355,11 +375,13 @@ class ServiceInfo(RecordUpdateListener):
                 return False
             self.name = record.name
             server_changed = (
-                record.server != self.server
+                self._server_is_default
+                or record.server != self.server
                 or record.port != self.port
                 or record.weight != self.weight
                 or record.priority != self.priority
             )
+            self._server_is_default = False
             self.server = record.server
             self.server_key = record.server.lower()
             self.port = record.port
