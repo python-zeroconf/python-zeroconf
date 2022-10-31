@@ -333,6 +333,7 @@ class ServiceInfo(RecordUpdateListener):
 
         # Only update addresses if the DNSService has changed
         if not update_addresses:
+            log.warning("No addresses updated for %s", self)
             return
 
         for record in self._get_address_records_from_cache(zc):
