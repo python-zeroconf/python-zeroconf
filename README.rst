@@ -141,6 +141,12 @@ See examples directory for more.
 Changelog
 =========
 
+0.39.4
+======
+
+* Fix IP changes being missed by ServiceInfo (#1102) @bdraco
+
+
 0.39.3
 ======
 
