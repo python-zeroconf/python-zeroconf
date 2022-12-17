@@ -23,9 +23,9 @@ def build(setup_kwargs: Any) -> None:
             dict(
                 ext_modules=cythonize(
                     [
-                        "zeroconf/_dns.py",
-                        "zeroconf/_protocol/incoming.py",
-                        "zeroconf/_protocol/outgoing.py",
+                        "src/zeroconf/_dns.py",
+                        "src/zeroconf/_protocol/incoming.py",
+                        "src/zeroconf/_protocol/outgoing.py",
                     ],
                     compiler_directives={"language_level": "3"},  # Python 3
                 ),
