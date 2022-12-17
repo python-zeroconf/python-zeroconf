@@ -47,7 +47,7 @@ from ..const import (
     _TYPE_TXT,
     _TYPES,
 )
-from . import DNSMessage
+from .message import DNSMessage
 
 DNS_COMPRESSION_HEADER_LEN = 1
 DNS_COMPRESSION_POINTER_LEN = 2

@@ -1,7 +1,7 @@
 
 import cython
 
-from . import DNSMessage
+from .message import DNSMessage
 
 
 cdef class DNSIncoming:

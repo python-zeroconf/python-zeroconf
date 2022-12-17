@@ -19,3 +19,29 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
     USA
 """
+
+from .._logger import QuietLogger
+from ..const import _FLAGS_QR_MASK, _FLAGS_QR_QUERY, _FLAGS_QR_RESPONSE, _FLAGS_TC
+
+
+class DNSMessage(QuietLogger):
+    """A base class for DNS messages."""
+
+    __slots__ = ('flags',)
+
+    def __init__(self, flags: int) -> None:
+        """Construct a DNS message."""
+        self.flags = flags
+
+    def is_query(self) -> bool:
+        """Returns true if this is a query."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
+
+    def is_response(self) -> bool:
+        """Returns true if this is a response."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
+
+    @property
+    def truncated(self) -> bool:
+        """Returns true if this is a truncated."""
+        return (self.flags & _FLAGS_TC) == _FLAGS_TC

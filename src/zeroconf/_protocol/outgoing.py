@@ -34,8 +34,8 @@ from ..const import (
     _MAX_MSG_ABSOLUTE,
     _MAX_MSG_TYPICAL,
 )
-from . import DNSMessage
 from .incoming import DNSIncoming
+from .message import DNSMessage
 
 
 class DNSOutgoing(DNSMessage):
