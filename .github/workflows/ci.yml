@@ -57,9 +57,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
-      - name: Install libs
-        if: ${{ matrix.extension != 'skip_cython' && matrix.os == 'ubuntu-latest' }}
-        run: sudo apt-get install -y gcc
       - name: Install poetry
         run: pipx install poetry
       - name: Set up Python
