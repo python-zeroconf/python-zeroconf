@@ -105,7 +105,7 @@ def test_service_browser_started_after_zeroconf_closed():
     zc.close()
 
     with pytest.raises(RuntimeError):
-        browser = r.ServiceBrowser(zc, type_, None, listener)
+        r.ServiceBrowser(zc, type_, None, listener)
 
 
 def test_multiple_instances_running_close():

@@ -2,17 +2,18 @@
 
 import os
 from distutils.command.build_ext import build_ext
+from typing import Any
 
 
 class BuildExt(build_ext):
-    def build_extensions(self):
+    def build_extensions(self) -> None:
         try:
             super().build_extensions()
         except Exception:
             pass
 
 
-def build(setup_kwargs):
+def build(setup_kwargs: Any) -> None:
     if os.environ.get("SKIP_CYTHON", False):
         return
     try:

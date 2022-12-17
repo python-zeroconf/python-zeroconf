@@ -9,7 +9,7 @@ import os
 import socket
 import threading
 import time
-from unittest.mock import ANY, MagicMock, call, patch
+from unittest.mock import ANY, call, patch
 
 import pytest
 

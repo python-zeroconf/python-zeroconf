@@ -9,6 +9,7 @@ import socket
 import time
 import unittest
 from threading import Event
+from typing import Dict
 from unittest.mock import patch
 
 import pytest

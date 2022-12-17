@@ -6,7 +6,6 @@
 import logging
 import socket
 import time
-from threading import Event
 
 import pytest
 
