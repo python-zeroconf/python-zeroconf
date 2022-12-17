@@ -23,20 +23,23 @@
 import ipaddress
 import random
 import socket
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union, cast
 
-from .._dns import DNSAddress, DNSPointer, DNSQuestionType, DNSRecord, DNSService, DNSText
+from .._dns import (
+    DNSAddress,
+    DNSPointer,
+    DNSQuestionType,
+    DNSRecord,
+    DNSService,
+    DNSText,
+)
 from .._exceptions import BadTypeInNameException
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.asyncio import get_running_loop, run_coro_with_timeout
 from .._utils.name import service_type_name
-from .._utils.net import (
-    IPVersion,
-    _encode_address,
-    _is_v6_address,
-)
+from .._utils.net import IPVersion, _encode_address, _is_v6_address
 from .._utils.time import current_time_millis
 from ..const import (
     _CLASS_IN,
@@ -51,7 +54,6 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-
 
 # https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
 # The most common case for calling ServiceInfo is from a
@@ -542,7 +544,7 @@ class ServiceInfo(RecordUpdateListener):
         return '{}({})'.format(
             type(self).__name__,
             ', '.join(
-                '{}={!r}'.format(name, getattr(self, name))
+                f'{name}={getattr(self, name)!r}'
                 for name in (
                     'type',
                     'name',

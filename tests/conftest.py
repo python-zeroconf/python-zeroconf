@@ -4,10 +4,9 @@
 """ conftest for zeroconf tests. """
 
 import threading
+import unittest
 
 import pytest
-
-import unittest
 
 from zeroconf import _core, const
 

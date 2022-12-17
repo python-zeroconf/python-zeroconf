@@ -3,9 +3,9 @@
 
 """Unit tests for _history.py."""
 
-from zeroconf._history import QuestionHistory
 import zeroconf as r
 import zeroconf.const as const
+from zeroconf._history import QuestionHistory
 
 
 def test_question_suppression():

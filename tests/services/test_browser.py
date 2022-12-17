@@ -4,9 +4,9 @@
 """ Unit tests for zeroconf._services.browser. """
 
 import logging
+import os
 import socket
 import time
-import os
 import unittest
 from threading import Event
 from unittest.mock import patch
@@ -14,16 +14,23 @@ from unittest.mock import patch
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSPointer, DNSQuestion, const, current_time_millis, millis_to_seconds
 import zeroconf._services.browser as _services_browser
-from zeroconf import _core, _handlers, Zeroconf
+from zeroconf import (
+    DNSPointer,
+    DNSQuestion,
+    Zeroconf,
+    _core,
+    _handlers,
+    const,
+    current_time_millis,
+    millis_to_seconds,
+)
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import has_working_ipv6, _inject_response, _wait_for_start
-
+from .. import _inject_response, _wait_for_start, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET

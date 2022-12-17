@@ -10,7 +10,13 @@ import logging
 from time import sleep
 from typing import cast
 
-from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf, ZeroconfServiceTypes
+from zeroconf import (
+    IPVersion,
+    ServiceBrowser,
+    ServiceStateChange,
+    Zeroconf,
+    ZeroconfServiceTypes,
+)
 
 
 def on_service_state_change(

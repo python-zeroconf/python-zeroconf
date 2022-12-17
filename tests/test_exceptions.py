@@ -8,11 +8,7 @@ import unittest
 import unittest.mock
 
 import zeroconf as r
-from zeroconf import (
-    ServiceInfo,
-    Zeroconf,
-)
-
+from zeroconf import ServiceInfo, Zeroconf
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET

@@ -23,13 +23,20 @@
 import struct
 from typing import Callable, Dict, List, Optional, Set, Tuple, cast
 
-from . import DNSMessage
-from .._dns import DNSAddress, DNSHinfo, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSService, DNSText
+from .._dns import (
+    DNSAddress,
+    DNSHinfo,
+    DNSNsec,
+    DNSPointer,
+    DNSQuestion,
+    DNSRecord,
+    DNSService,
+    DNSText,
+)
 from .._exceptions import IncomingDecodeError
 from .._logger import QuietLogger, log
 from .._utils.time import current_time_millis
 from ..const import (
-    _TYPES,
     _TYPE_A,
     _TYPE_AAAA,
     _TYPE_CNAME,
@@ -38,7 +45,9 @@ from ..const import (
     _TYPE_PTR,
     _TYPE_SRV,
     _TYPE_TXT,
+    _TYPES,
 )
+from . import DNSMessage
 
 DNS_COMPRESSION_HEADER_LEN = 1
 DNS_COMPRESSION_POINTER_LEN = 2

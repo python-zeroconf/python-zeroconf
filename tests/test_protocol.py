@@ -13,11 +13,7 @@ import unittest.mock
 from typing import cast
 
 import zeroconf as r
-from zeroconf import DNSIncoming, const, current_time_millis
-from zeroconf import (
-    DNSHinfo,
-    DNSText,
-)
+from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
 
 from . import has_working_ipv6
 

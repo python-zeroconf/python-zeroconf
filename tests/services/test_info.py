@@ -5,13 +5,13 @@
 
 import asyncio
 import logging
+import os
 import socket
 import threading
-import os
 import unittest
-from unittest.mock import patch
 from threading import Event
 from typing import List
+from unittest.mock import patch
 
 import pytest
 
@@ -22,8 +22,7 @@ from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import has_working_ipv6, _inject_response
-
+from .. import _inject_response, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET

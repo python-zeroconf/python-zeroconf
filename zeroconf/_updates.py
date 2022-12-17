@@ -20,11 +20,9 @@
     USA
 """
 
-from typing import List, NamedTuple, Optional, TYPE_CHECKING
-
+from typing import TYPE_CHECKING, List, NamedTuple, Optional
 
 from ._dns import DNSRecord
-
 
 if TYPE_CHECKING:
     from ._core import Zeroconf

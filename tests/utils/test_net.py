@@ -2,16 +2,16 @@
 
 
 """Unit tests for zeroconf._utils.net."""
-from unittest.mock import MagicMock, Mock, patch
-
 import errno
-import ifaddr
-import pytest
 import socket
 import unittest
+from unittest.mock import MagicMock, Mock, patch
 
-from zeroconf._utils import net as netutils
+import ifaddr
+import pytest
+
 import zeroconf as r
+from zeroconf._utils import net as netutils
 
 
 def _generate_mock_adapters():
@@ -205,7 +205,7 @@ def test_bind_raises_skips_address():
 
     def _mock_socket(*args, **kwargs):
         sock = MagicMock()
-        sock.bind = MagicMock(side_effect=OSError(err, "Error: {}".format(err)))
+        sock.bind = MagicMock(side_effect=OSError(err, f"Error: {err}"))
         return sock
 
     with patch("socket.socket", _mock_socket):

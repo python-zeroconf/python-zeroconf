@@ -7,34 +7,42 @@ import asyncio
 import logging
 import os
 import socket
-import time
 import threading
-from unittest.mock import ANY, call, patch, MagicMock
-
+import time
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
-from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
+import zeroconf._services.browser as _services_browser
 from zeroconf import (
+    DNSAddress,
     DNSIncoming,
     DNSOutgoing,
-    DNSQuestion,
     DNSPointer,
+    DNSQuestion,
     DNSService,
-    DNSAddress,
     DNSText,
     NotRunningException,
     ServiceStateChange,
     Zeroconf,
     const,
 )
-from zeroconf.const import _LISTENER_TIME
 from zeroconf._core import AsyncListener
-from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
+from zeroconf._exceptions import (
+    BadTypeInNameException,
+    NonUniqueNameException,
+    ServiceNameAlreadyRegistered,
+)
 from zeroconf._services import ServiceListener
-import zeroconf._services.browser as _services_browser
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.time import current_time_millis
+from zeroconf.asyncio import (
+    AsyncServiceBrowser,
+    AsyncServiceInfo,
+    AsyncZeroconf,
+    AsyncZeroconfServiceTypes,
+)
+from zeroconf.const import _LISTENER_TIME
 
 from . import _clear_cache, has_working_ipv6
 

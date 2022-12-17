@@ -6,20 +6,22 @@
 import asyncio
 import logging
 import os
-import pytest
 import socket
 import time
 import unittest
 import unittest.mock
 from typing import List
 
+import pytest
+
 import zeroconf as r
-from zeroconf import _handlers, ServiceInfo, Zeroconf, current_time_millis
-from zeroconf import const
-from zeroconf._handlers import construct_outgoing_multicast_answers, MulticastOutgoingQueue
+from zeroconf import ServiceInfo, Zeroconf, _handlers, const, current_time_millis
+from zeroconf._handlers import (
+    MulticastOutgoingQueue,
+    construct_outgoing_multicast_answers,
+)
 from zeroconf._utils.time import millis_to_seconds
 from zeroconf.asyncio import AsyncZeroconf
-
 
 from . import _clear_cache, _inject_response, has_working_ipv6
 

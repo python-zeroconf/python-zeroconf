@@ -7,22 +7,23 @@ import asyncio
 import itertools
 import logging
 import os
-import pytest
 import socket
 import sys
-import time
 import threading
+import time
 import unittest
 import unittest.mock
 from typing import cast
 from unittest.mock import patch
 
-import zeroconf as r
-from zeroconf import _core, const, Zeroconf, current_time_millis, NotRunningException
-from zeroconf.asyncio import AsyncZeroconf
-from zeroconf._protocol import outgoing
+import pytest
 
-from . import has_working_ipv6, _clear_cache, _inject_response, _wait_for_start
+import zeroconf as r
+from zeroconf import NotRunningException, Zeroconf, _core, const, current_time_millis
+from zeroconf._protocol import outgoing
+from zeroconf.asyncio import AsyncZeroconf
+
+from . import _clear_cache, _inject_response, _wait_for_start, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -609,8 +610,7 @@ def test_tc_bit_defers_last_response_missing():
     threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     timer2 = protocol._timers[source_ip]
-    if sys.version_info >= (3, 7):
-        assert timer1.cancelled()
+    assert timer1.cancelled()
     assert timer2 != timer1
 
     # Send the same packet again to similar multi interfaces
@@ -618,8 +618,7 @@ def test_tc_bit_defers_last_response_missing():
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
     timer3 = protocol._timers[source_ip]
-    if sys.version_info >= (3, 7):
-        assert not timer3.cancelled()
+    assert not timer3.cancelled()
     assert timer3 == timer2
 
     next_packet = r.DNSIncoming(packets.pop(0))
@@ -628,8 +627,7 @@ def test_tc_bit_defers_last_response_missing():
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
     timer4 = protocol._timers[source_ip]
-    if sys.version_info >= (3, 7):
-        assert timer3.cancelled()
+    assert timer3.cancelled()
     assert timer4 != timer3
 
     for _ in range(8):

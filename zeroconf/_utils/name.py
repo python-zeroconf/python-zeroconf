@@ -24,8 +24,8 @@ from typing import Set
 
 from .._exceptions import BadTypeInNameException
 from ..const import (
-    _HAS_ASCII_CONTROL_CHARS,
     _HAS_A_TO_Z,
+    _HAS_ASCII_CONTROL_CHARS,
     _HAS_ONLY_A_TO_Z_NUM_HYPHEN,
     _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE,
     _LOCAL_TRAILER,

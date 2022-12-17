@@ -30,13 +30,8 @@ from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import ServiceInfo
 from ._services.types import ZeroconfServiceTypes
-from ._utils.net import IPVersion, InterfaceChoice, InterfacesType
-from .const import (
-    _BROWSER_TIME,
-    _MDNS_PORT,
-    _SERVICE_TYPE_ENUMERATION_NAME,
-)
-
+from ._utils.net import InterfaceChoice, InterfacesType, IPVersion
+from .const import _BROWSER_TIME, _MDNS_PORT, _SERVICE_TYPE_ENUMERATION_NAME
 
 __all__ = [
     "AsyncZeroconf",

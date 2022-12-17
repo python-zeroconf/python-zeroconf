@@ -11,7 +11,7 @@ python-zeroconf
    :target: https://codecov.io/gh/jstasiak/python-zeroconf
 
 `Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
-    
+
 This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
 originally by Paul Scott-Murphy (https://github.com/paulsm/pyzeroconf),
 modified by William McBrine (https://github.com/wmcbrine/pyzeroconf).
@@ -22,7 +22,7 @@ The original William McBrine's fork note::
     (and therefore HME/VLC), Network Remote, Remote Proxy, and pyTivo.
     Before this, I was tracking the changes for zeroconf.py in three
     separate repos. I figured I should have an authoritative source.
-    
+
     Although I make changes based on my experience with TiVos, I expect that
     they're generally applicable. This version also includes patches found
     on the now-defunct (?) Launchpad repo of pyzeroconf, and elsewhere
@@ -100,21 +100,21 @@ Here's an example of browsing for a service:
 .. code-block:: python
 
     from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
-    
-    
+
+
     class MyListener(ServiceListener):
-    
+
         def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             print(f"Service {name} updated")
-    
+
         def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             print(f"Service {name} removed")
-    
+
         def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
             info = zc.get_service_info(type_, name)
             print(f"Service {name} added, service info: {info}")
-    
-    
+
+
     zeroconf = Zeroconf()
     listener = MyListener()
     browser = ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
@@ -770,7 +770,7 @@ Backwards incompatible:
 
 * Separated cache loading from I/O in ServiceInfo and fixed cache lookup (#356),
   thanks to J. Nick Koston.
-  
+
   The ServiceInfo class gained a load_from_cache() method to only fetch information
   from Zeroconf cache (if it exists) with no IO performed. Additionally this should
   reduce IO in cases where cache lookups were previously incorrectly failing.
@@ -1205,7 +1205,7 @@ Technically backwards incompatible:
   - better TXT record parsing
   - server is now separate from name
   - can cancel a service browser
-  
+
 * modified some unit tests to accommodate these changes
 
 0.09
