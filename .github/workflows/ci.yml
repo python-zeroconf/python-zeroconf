@@ -140,7 +140,7 @@ jobs:
 
       - uses: actions/checkout@v3
         with:
-          ref: "v${{ steps.release_tag.outputs.newest_release_tag }}"
+          ref: "${{ steps.release_tag.outputs.newest_release_tag }}"
           fetch-depth: 0
 
       - name: Install cibuildwheel
