@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.40.0 (2022-12-17)
+### Feature
+* Drop async_timeout requirement for python 3.11+ ([#1107](https://github.com/python-zeroconf/python-zeroconf/issues/1107)) ([`1f4224e`](https://github.com/python-zeroconf/python-zeroconf/commit/1f4224ef122299235013cb81b501f8ff9a30dea1))
+
 # 0.39.5
 
   - This is a stub version to initialize python-semantic-release
