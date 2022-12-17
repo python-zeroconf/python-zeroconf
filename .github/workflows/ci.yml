@@ -73,7 +73,7 @@ jobs:
         if: ${{ matrix.extension != 'skip_cython' }}
         run: poetry install --only=main,dev
       - name: Test with Pytest
-        run: poetry run pytest --cov=zeroconf --cov-report=xml --timeout=60 --durations=20
+        run: poetry run pytest --durations=20 --timeout=60 -v --cov=zeroconf --cov-branch --cov-report xml --cov-report html --cov-report term-missing tests
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
