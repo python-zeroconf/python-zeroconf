@@ -35,7 +35,7 @@ class TestDNSCache(unittest.TestCase):
         cached_record = cache.get(entry)
         assert cached_record == record2
 
-    def test_adding_same_record_to_cache_different_ttls(self):
+    def test_adding_same_record_to_cache_different_ttls_with_get(self):
         """We should always get back the last entry we added if there are different TTLs.
 
         This ensures we only have one source of truth for TTLs as a record cannot
@@ -49,7 +49,7 @@ class TestDNSCache(unittest.TestCase):
         cached_record = cache.get(entry)
         assert cached_record == record2
 
-    def test_adding_same_record_to_cache_different_ttls(self):
+    def test_adding_same_record_to_cache_different_ttls_with_get_all(self):
         """Verify we only get one record back.
 
         The last record added should replace the previous since two

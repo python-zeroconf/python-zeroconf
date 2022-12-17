@@ -10,14 +10,13 @@ import socket
 import threading
 import unittest
 from threading import Event
-from typing import List
+from typing import List, Optional
 from unittest.mock import patch
 
 import pytest
 
 import zeroconf as r
 from zeroconf import DNSAddress, const
-from zeroconf._services import types
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
@@ -739,7 +738,7 @@ def test_asking_qu_questions():
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
         zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QU)
-        assert first_outgoing.questions[0].unicast == True
+        assert first_outgoing.questions[0].unicast is True
         zeroconf.close()
 
 
@@ -763,7 +762,7 @@ def test_asking_qm_questions():
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
         zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QM)
-        assert first_outgoing.questions[0].unicast == False
+        assert first_outgoing.questions[0].unicast is False
         zeroconf.close()
 
 
@@ -955,7 +954,6 @@ async def test_ip_changes_are_seen():
     """Test that ip changes are seen by async_request."""
     type_ = "_http._tcp.local."
     registration_name = "multiarec.%s" % type_
-    desc = {'path': '/~paulsm/'}
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     host = "multahost.local."
 

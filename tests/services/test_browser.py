@@ -577,8 +577,8 @@ def test_asking_default_is_asking_qm_questions_after_the_first_qu():
         browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change], delay=5)
         time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 5))
         try:
-            assert first_outgoing.questions[0].unicast == True
-            assert second_outgoing.questions[0].unicast == False
+            assert first_outgoing.questions[0].unicast is True
+            assert second_outgoing.questions[0].unicast is False
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -612,7 +612,7 @@ def test_asking_qm_questions():
         )
         time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
-            assert first_outgoing.questions[0].unicast == False
+            assert first_outgoing.questions[0].unicast is False
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -646,7 +646,7 @@ def test_asking_qu_questions():
         )
         time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
-            assert first_outgoing.questions[0].unicast == True
+            assert first_outgoing.questions[0].unicast is True
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -722,8 +722,10 @@ def test_service_browser_is_aware_of_port_changes():
     registration_name = "xxxyyy.%s" % type_
 
     callbacks = []
+
     # dummy service callback
     def on_service_state_change(zeroconf, service_type, state_change, name):
+        """Dummy callback."""
         nonlocal callbacks
         if name == registration_name:
             callbacks.append((service_type, state_change, name))
