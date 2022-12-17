@@ -58,13 +58,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
-      - name: Install Dependencies
-        run: |
-          if [ "${{ matrix.extension }}" = "skip_cython" ]; then
-            SKIP_CYTHON=1 poetry install --only=main,dev
-          else
-            poetry install --only=main,dev
-          fi
+      - name: Install Dependencies no cython
+        if: ${{ matrix.extension == "skip_cython" }}
+        env:
+          SKIP_CYTHON: 1
+        run: poetry install --only=main,dev
+      - name: Install Dependencies with cython
+        if: ${{ matrix.extension != "skip_cython" }}
+        run: poetry install --only=main,dev
       - name: Test with Pytest
         run: poetry run pytest --cov=zeroconf --cov-report=xml --timeout=60 --durations=20
       - name: Upload coverage to Codecov
