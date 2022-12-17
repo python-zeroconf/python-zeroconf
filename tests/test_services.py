@@ -4,11 +4,12 @@
 """ Unit tests for zeroconf._services. """
 
 import logging
+import os
 import socket
 import time
-import os
 import unittest
 from threading import Event
+from typing import Dict
 from unittest.mock import patch
 
 import pytest
@@ -17,8 +18,7 @@ import zeroconf as r
 from zeroconf import Zeroconf
 from zeroconf._services.info import ServiceInfo
 
-from . import has_working_ipv6, _clear_cache
-
+from . import _clear_cache, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET

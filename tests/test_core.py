@@ -7,22 +7,23 @@ import asyncio
 import itertools
 import logging
 import os
-import pytest
 import socket
 import sys
-import time
 import threading
+import time
 import unittest
 import unittest.mock
-from typing import cast
+from typing import Set, cast
 from unittest.mock import patch
 
-import zeroconf as r
-from zeroconf import _core, const, Zeroconf, current_time_millis, NotRunningException
-from zeroconf.asyncio import AsyncZeroconf
-from zeroconf._protocol import outgoing
+import pytest
 
-from . import has_working_ipv6, _clear_cache, _inject_response, _wait_for_start
+import zeroconf as r
+from zeroconf import NotRunningException, Zeroconf, _core, const, current_time_millis
+from zeroconf._protocol import outgoing
+from zeroconf.asyncio import AsyncZeroconf
+
+from . import _clear_cache, _inject_response, _wait_for_start, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -61,7 +62,7 @@ async def test_reaper():
         zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
         question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
         now = r.current_time_millis()
-        other_known_answers = {
+        other_known_answers: Set[r.DNSRecord] = {
             r.DNSPointer(
                 "_hap._tcp.local.",
                 const._TYPE_PTR,
@@ -114,7 +115,7 @@ class Framework(unittest.TestCase):
             assert rv.done is False
         assert rv.done is True
 
-        with r.Zeroconf(interfaces=r.InterfaceChoice.Default) as rv:
+        with r.Zeroconf(interfaces=r.InterfaceChoice.Default) as rv:  # type: ignore[unreachable]
             assert rv.done is False
         assert rv.done is True
 
@@ -285,6 +286,7 @@ class Framework(unittest.TestCase):
             # service removed
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
             dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
+            assert dns_text is not None
             assert dns_text.is_expired(current_time_millis() + 1000)
 
         finally:
@@ -394,7 +396,9 @@ def test_register_service_with_custom_ttl():
     )
 
     zc.register_service(info_service, ttl=3000)
-    assert zc.cache.get(info_service.dns_pointer()).ttl == 3000
+    record = zc.cache.get(info_service.dns_pointer())
+    assert record is not None
+    assert record.ttl == 3000
     zc.close()
 
 
@@ -422,7 +426,9 @@ def test_logging_packets(caplog):
     caplog.clear()
     zc.register_service(info_service, ttl=3000)
     assert "Sending to" in caplog.text
-    assert zc.cache.get(info_service.dns_pointer()).ttl == 3000
+    record = zc.cache.get(info_service.dns_pointer())
+    assert record is not None
+    assert record.ttl == 3000
     logging.getLogger('zeroconf').setLevel(logging.INFO)
     caplog.clear()
     zc.unregister_service(info_service)
@@ -609,8 +615,7 @@ def test_tc_bit_defers_last_response_missing():
     threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, None)
     assert protocol._deferred[source_ip] == expected_deferred
     timer2 = protocol._timers[source_ip]
-    if sys.version_info >= (3, 7):
-        assert timer1.cancelled()
+    assert timer1.cancelled()
     assert timer2 != timer1
 
     # Send the same packet again to similar multi interfaces
@@ -618,8 +623,7 @@ def test_tc_bit_defers_last_response_missing():
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
     timer3 = protocol._timers[source_ip]
-    if sys.version_info >= (3, 7):
-        assert not timer3.cancelled()
+    assert not timer3.cancelled()
     assert timer3 == timer2
 
     next_packet = r.DNSIncoming(packets.pop(0))
@@ -628,8 +632,7 @@ def test_tc_bit_defers_last_response_missing():
     assert protocol._deferred[source_ip] == expected_deferred
     assert source_ip in protocol._timers
     timer4 = protocol._timers[source_ip]
-    if sys.version_info >= (3, 7):
-        assert timer3.cancelled()
+    assert timer3.cancelled()
     assert timer4 != timer3
 
     for _ in range(8):
@@ -672,9 +675,10 @@ async def test_multiple_sync_instances_stared_from_async_close():
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
     zc2 = Zeroconf(interfaces=['127.0.0.1'])
+    assert zc.loop is not None
+    assert zc2.loop is not None
 
     assert zc.loop == zc2.loop
-
     zc.close()
     assert zc.loop.is_running()
     zc2.close()

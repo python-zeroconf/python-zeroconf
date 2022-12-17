@@ -5,8 +5,8 @@
 
 import pytest
 
-from zeroconf._utils import name as nameutils
 from zeroconf import BadTypeInNameException
+from zeroconf._utils import name as nameutils
 
 
 def test_service_type_name_overlong_type():

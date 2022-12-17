@@ -22,18 +22,12 @@
 
 import enum
 import socket
-from typing import Any, Dict, Iterable, List, Optional, TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
 from ._utils.time import current_time_millis, millis_to_seconds
-from .const import (
-    _CLASSES,
-    _CLASS_MASK,
-    _CLASS_UNIQUE,
-    _TYPES,
-    _TYPE_ANY,
-)
+from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
 
 _LEN_BYTE = 1
 _LEN_SHORT = 2

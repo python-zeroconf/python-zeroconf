@@ -27,9 +27,9 @@ from typing import Any, Awaitable, Coroutine, Optional, Set
 
 import async_timeout
 
-from .time import millis_to_seconds
 from .._exceptions import EventLoopBlocked
 from ..const import _LOADED_SYSTEM_TIMEOUT
+from .time import millis_to_seconds
 
 # The combined timeouts should be lower than _CLOSE_TIMEOUT + _WAIT_FOR_LOOP_TASKS_TIMEOUT
 _TASK_AWAIT_TIMEOUT = 1

@@ -6,20 +6,22 @@
 import asyncio
 import logging
 import os
-import pytest
 import socket
 import time
 import unittest
 import unittest.mock
-from typing import List
+from typing import List, cast
+
+import pytest
 
 import zeroconf as r
-from zeroconf import _handlers, ServiceInfo, Zeroconf, current_time_millis
-from zeroconf import const
-from zeroconf._handlers import construct_outgoing_multicast_answers, MulticastOutgoingQueue
+from zeroconf import ServiceInfo, Zeroconf, _handlers, const, current_time_millis
+from zeroconf._handlers import (
+    MulticastOutgoingQueue,
+    construct_outgoing_multicast_answers,
+)
 from zeroconf._utils.time import millis_to_seconds
 from zeroconf.asyncio import AsyncZeroconf
-
 
 from . import _clear_cache, _inject_response, has_working_ipv6
 
@@ -306,7 +308,7 @@ def test_any_query_for_ptr():
     question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
     mcast_answers = list(question_answers.mcast_aggregate)
     assert mcast_answers[0].name == type_
-    assert mcast_answers[0].alias == registration_name
+    assert mcast_answers[0].alias == registration_name  # type: ignore[attr-defined]
     # unregister
     zc.registry.async_remove(info)
     zc.close()
@@ -332,7 +334,7 @@ def test_aaaa_query():
     packets = generated.packets()
     question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
     mcast_answers = list(question_answers.mcast_now)
-    assert mcast_answers[0].address == ipv6_address
+    assert mcast_answers[0].address == ipv6_address  # type: ignore[attr-defined]
     # unregister
     zc.registry.async_remove(info)
     zc.close()
@@ -660,7 +662,7 @@ def test_known_answer_supression():
     packets = generated.packets()
     question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
     assert not question_answers.ucast
-    expected_nsec_record: r.DNSNsec = list(question_answers.mcast_now)[0]
+    expected_nsec_record = cast(r.DNSNsec, list(question_answers.mcast_now)[0])
     assert const._TYPE_A not in expected_nsec_record.rdtypes
     assert const._TYPE_AAAA in expected_nsec_record.rdtypes
     assert not question_answers.mcast_aggregate
@@ -1019,6 +1021,7 @@ async def test_cache_flush_bit():
     for packet in out.packets():
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
     assert zc.cache.async_get_unique(a_record) is original_a_record
+    assert original_a_record is not None
     assert original_a_record.ttl != 1
     for record in new_records:
         assert zc.cache.async_get_unique(record) is not None
@@ -1036,8 +1039,9 @@ async def test_cache_flush_bit():
         assert zc.cache.async_get_unique(record) is not None
 
     cached_records = [zc.cache.async_get_unique(record) for record in new_records]
-    for record in cached_records:
-        record.created = current_time_millis() - 1001
+    for cached_record in cached_records:
+        assert cached_record is not None
+        cached_record.created = current_time_millis() - 1001
 
     fresh_address = socket.inet_aton("4.4.4.4")
     info.addresses = [fresh_address]
@@ -1047,10 +1051,12 @@ async def test_cache_flush_bit():
         out.add_answer_at_time(answer, 0)
     for packet in out.packets():
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
-    for record in cached_records:
-        assert record.ttl == 1
+    for cached_record in cached_records:
+        assert cached_record is not None
+        assert cached_record.ttl == 1
 
     for entry in zc.cache.async_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
+        assert isinstance(entry, r.DNSAddress)
         if entry.address == fresh_address:
             assert entry.ttl > 1
         else:
@@ -1211,8 +1217,10 @@ async def test_guard_against_low_ptr_ttl():
     zc.record_manager.async_updates_from_response(incoming)
 
     incoming_answer_low = zc.cache.async_get_unique(answer_with_low_ttl)
+    assert incoming_answer_low is not None
     assert incoming_answer_low.ttl == const._DNS_PTR_MIN_TTL
     incoming_answer_normal = zc.cache.async_get_unique(answer_with_normal_ttl)
+    assert incoming_answer_normal is not None
     assert incoming_answer_normal.ttl == const._DNS_OTHER_TTL
     assert zc.cache.async_get_unique(good_bye_answer) is None
     await aiozc.async_close()
@@ -1555,7 +1563,7 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
             """Update multiple records in one shot."""
             updated.extend(records)
 
-    zc.add_listener(MyListener(), None)
+    zc.add_listener(MyListener(), None)  # type: ignore[arg-type]
     await asyncio.sleep(0)  # flush out any call soons
     assert "listeners passed to async_add_listener must inherit from RecordUpdateListener" in caplog.text
 

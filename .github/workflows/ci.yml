@@ -5,66 +5,174 @@ on:
     branches:
       - master
   pull_request:
-    branches:
-      - "**"
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+      - uses: pre-commit/action@v2.0.3
+
+  # Make sure commit messages follow the conventional commits convention:
+  # https://www.conventionalcommits.org
+  commitlint:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v4.1.11
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.7"
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "pypy-3.7"
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        extension:
+          - "skip_cython"
+          - "use_cython"
+        exclude:
+          - os: macos-latest
+            extension: use_cython
+          - os: windows-latest
+            extension: use_cython
+          - os: windows-latest
+            python-version: "pypy-3.7"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "poetry"
+      - name: Install Dependencies no cython
+        if: ${{ matrix.extension == 'skip_cython' }}
+        env:
+          SKIP_CYTHON: 1
+        run: poetry install --only=main,dev
+      - name: Install Dependencies with cython
+        if: ${{ matrix.extension != 'skip_cython' }}
+        run: poetry install --only=main,dev
+      - name: Test with Pytest
+        run: poetry run pytest --durations=20 --timeout=60 -v --cov=zeroconf --cov-branch --cov-report xml --cov-report html --cov-report term-missing tests
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    if: github.ref == 'refs/heads/master'
+    needs:
+      - test
+      - lint
+      - commitlint
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Run semantic release:
+      # - Update CHANGELOG.md
+      # - Update version in code
+      # - Create git tag
+      # - Create GitHub release
+      # - Publish to PyPI
+      - name: Python Semantic Release
+        uses: relekang/python-semantic-release@v7.32.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+  build_wheels:
+    needs: [release]
+
+    name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.7, 3.8, 3.9, "3.10", "3.11", "pypy-3.7"]
-        include:
-          - os: ubuntu-latest
-            venvcmd: . env/bin/activate
-          - os: macos-latest
-            venvcmd: . env/bin/activate
-          - os: windows-latest
-            venvcmd: env\Scripts\Activate.ps1
+        os: [ubuntu-20.04, windows-2019, macOS-11]
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: 'x64'
-      - uses: actions/cache@v2
-        id: cache
+          fetch-depth: 0
+          ref: "master"
+
+      # Used to host cibuildwheel
+      - name: Set up Python
+        uses: actions/setup-python@v4
+
+      - name: Install python-semantic-release
+        run: python -m pip install python-semantic-release
+
+      - name: Get Release Tag
+        id: release_tag
+        shell: bash
+        run: |
+          echo "::set-output name=newest_release_tag::$(semantic-release print-version --current)"
+
+      - uses: actions/checkout@v3
         with:
-          path: env
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/Makefile') }}-${{ hashFiles('**/requirements-dev.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/Makefile') }}
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          python -m venv env
-          ${{ matrix.venvcmd }}
-          pip install --upgrade -r requirements-dev.txt pytest-github-actions-annotate-failures
-      - name: Validate readme
-        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy-3.7' }}
-        run: |
-          ${{ matrix.venvcmd }}
-          python -m readme_renderer README.rst -o -
-      - name: Run flake8
-        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy-3.7' }}
-        run: |
-          ${{ matrix.venvcmd }}
-          make flake8
-      - name: Run mypy
-        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy-3.7' }}
-        run: |
-          ${{ matrix.venvcmd }}
-          make mypy
-      - name: Run black_check
-        if: ${{ runner.os == 'Linux' && matrix.python-version != 'pypy-3.7' }}
-        run: |
-          ${{ matrix.venvcmd }}
-          make black_check
-      - name: Run tests
-        run: |
-          ${{ matrix.venvcmd }}
-          make test_coverage
-      - name: Report coverage to Codecov
-        uses: codecov/codecov-action@v1
+          ref: "v${{ steps.release_tag.outputs.newest_release_tag }}"
+          fetch-depth: 0
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.11.3
+
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        # to supply options, put them in 'env', like:
+        env:
+          CIBW_SKIP: cp36-*
+          CIBW_BEFORE_ALL_LINUX: apt-get install -y gcc || yum install -y gcc || apk add gcc
+          CIBW_BUILD_VERBOSITY: 3
+          REQUIRE_CYTHON: 1
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+
+  upload_pypi:
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          # unpacks default artifact into dist/
+          # if `name: artifact` is omitted, the action will create extra parent dir
+          name: artifact
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+
+          # To test: repository_url: https://test.pypi.org/legacy/

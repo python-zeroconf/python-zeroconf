@@ -2,16 +2,16 @@
 
 
 """Unit tests for zeroconf._utils.net."""
-from unittest.mock import MagicMock, Mock, patch
-
 import errno
-import ifaddr
-import pytest
 import socket
 import unittest
+from unittest.mock import MagicMock, Mock, patch
 
-from zeroconf._utils import net as netutils
+import ifaddr
+import pytest
+
 import zeroconf as r
+from zeroconf._utils import net as netutils
 
 
 def _generate_mock_adapters():
@@ -63,9 +63,9 @@ def test_ip6_addresses_to_indexes():
     with patch("zeroconf._utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
         assert netutils.ip6_addresses_to_indexes(interfaces) == [(('2001:db8::', 1, 1), 1)]
 
-    interfaces = ['2001:db8::']
+    interfaces_2 = ['2001:db8::']
     with patch("zeroconf._utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
-        assert netutils.ip6_addresses_to_indexes(interfaces) == [(('2001:db8::', 1, 1), 1)]
+        assert netutils.ip6_addresses_to_indexes(interfaces_2) == [(('2001:db8::', 1, 1), 1)]
 
 
 def test_normalize_interface_choice_errors():
@@ -188,11 +188,11 @@ def test_add_multicast_member():
 
     # ENODEV should return False for ipv6
     with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
-        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False
+        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False  # type: ignore[arg-type]
 
     # No IPv6 support should return False for IPv6
     with patch("socket.inet_pton", side_effect=OSError()):
-        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False
+        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False  # type: ignore[arg-type]
 
     # No error should return True
     with patch("socket.socket.setsockopt"):
@@ -205,18 +205,18 @@ def test_bind_raises_skips_address():
 
     def _mock_socket(*args, **kwargs):
         sock = MagicMock()
-        sock.bind = MagicMock(side_effect=OSError(err, "Error: {}".format(err)))
+        sock.bind = MagicMock(side_effect=OSError(err, f"Error: {err}"))
         return sock
 
     with patch("socket.socket", _mock_socket):
-        assert netutils.new_socket(("0.0.0.0", 0)) is None
+        assert netutils.new_socket(("0.0.0.0", 0)) is None  # type: ignore[arg-type]
 
     err = errno.EAGAIN
     with pytest.raises(OSError), patch("socket.socket", _mock_socket):
-        netutils.new_socket(("0.0.0.0", 0))
+        netutils.new_socket(("0.0.0.0", 0))  # type: ignore[arg-type]
 
 
 def test_new_respond_socket_new_socket_returns_none():
     """Test new_respond_socket returns None if new_socket returns None."""
     with patch.object(netutils, "new_socket", return_value=None):
-        assert netutils.new_respond_socket(("0.0.0.0", 0)) is None
+        assert netutils.new_respond_socket(("0.0.0.0", 0)) is None  # type: ignore[arg-type]

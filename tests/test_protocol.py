@@ -13,11 +13,7 @@ import unittest.mock
 from typing import cast
 
 import zeroconf as r
-from zeroconf import DNSIncoming, const, current_time_millis
-from zeroconf import (
-    DNSHinfo,
-    DNSText,
-)
+from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
 
 from . import has_working_ipv6
 
@@ -258,7 +254,7 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for _ in range(30):
-            question = r.DNSQuestion(f"_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+            question = r.DNSQuestion("_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
             generated.add_question(question)
             questions.append(question)
         assert len(generated.questions) == 30
@@ -297,12 +293,11 @@ class PacketGeneration(unittest.TestCase):
         questions = []
         for _ in range(30):
             question = r.DNSQuestion(
-                f"_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN | const._CLASS_UNIQUE
+                "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN | const._CLASS_UNIQUE
             )
             generated.add_question(question)
             questions.append(question)
         assert len(generated.questions) == 30
-        now = current_time_millis()
         for _ in range(200):
             authorative_answer = r.DNSPointer(
                 "myservice{i}_tcp._tcp.local.",
@@ -753,7 +748,10 @@ def test_qm_packet_parser():
 # 389951	1450.577370	192.168.107.111	224.0.0.251	MDNS	115	Standard query 0x0000 PTR _companion-link._tcp.local, "QU" question OPT
 def test_qu_packet_parser():
     """Test we can parse a query packet with the QU bit."""
-    qu_packet = b'\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x0f_companion-link\x04_tcp\x05local\x00\x00\x0c\x80\x01\x00\x00)\x05\xa0\x00\x00\x11\x94\x00\x12\x00\x04\x00\x0e\x00dz{\x8a6\x9czF\x84,\xcaQ\xff'
+    qu_packet = (
+        b'\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x0f_companion-link\x04_tcp\x05local'
+        b'\x00\x00\x0c\x80\x01\x00\x00)\x05\xa0\x00\x00\x11\x94\x00\x12\x00\x04\x00\x0e\x00dz{\x8a6\x9czF\x84,\xcaQ\xff'
+    )
     parsed = DNSIncoming(qu_packet)
     assert parsed.questions[0].unicast is True
     assert ",QU," in str(parsed.questions[0])
@@ -769,7 +767,7 @@ def test_parse_packet_with_nsec_record():
         b"\x00\x00\x80\x00@"
     )
     parsed = DNSIncoming(nsec_packet)
-    nsec_record = parsed.answers[3]
+    nsec_record = cast(r.DNSNsec, parsed.answers[3])
     assert "nsec," in str(nsec_record)
     assert nsec_record.rdtypes == [16, 33]
     assert nsec_record.next_name == "MyHome54 (2)._meshcop._udp.local."
@@ -1015,8 +1013,9 @@ def test_txt_after_invalid_nsec_name_still_usable():
         b'ce=0'
     )
     parsed = r.DNSIncoming(packet)
+    txt_record = cast(r.DNSText, parsed.answers[4])
     # The NSEC record with the invalid name compression should be skipped
-    assert parsed.answers[4].text == (
+    assert txt_record.text == (
         b'2info=/api/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers'
         b'=1.24.1\nbootseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn'
         b'9K9DLXJe0f3LP9747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:14'

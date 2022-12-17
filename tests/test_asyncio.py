@@ -7,34 +7,41 @@ import asyncio
 import logging
 import os
 import socket
-import time
 import threading
-from unittest.mock import ANY, call, patch, MagicMock
-
+import time
+from unittest.mock import ANY, call, patch
 
 import pytest
 
-from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf, AsyncZeroconfServiceTypes
+import zeroconf._services.browser as _services_browser
 from zeroconf import (
+    DNSAddress,
     DNSIncoming,
     DNSOutgoing,
-    DNSQuestion,
     DNSPointer,
+    DNSQuestion,
     DNSService,
-    DNSAddress,
     DNSText,
     NotRunningException,
     ServiceStateChange,
     Zeroconf,
     const,
 )
-from zeroconf.const import _LISTENER_TIME
-from zeroconf._core import AsyncListener
-from zeroconf._exceptions import BadTypeInNameException, NonUniqueNameException, ServiceNameAlreadyRegistered
+from zeroconf._exceptions import (
+    BadTypeInNameException,
+    NonUniqueNameException,
+    ServiceNameAlreadyRegistered,
+)
 from zeroconf._services import ServiceListener
-import zeroconf._services.browser as _services_browser
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.time import current_time_millis
+from zeroconf.asyncio import (
+    AsyncServiceBrowser,
+    AsyncServiceInfo,
+    AsyncZeroconf,
+    AsyncZeroconfServiceTypes,
+)
+from zeroconf.const import _LISTENER_TIME
 
 from . import _clear_cache, has_working_ipv6
 
@@ -597,13 +604,13 @@ async def test_async_service_browser() -> None:
     calls = []
 
     class MyListener(ServiceListener):
-        def add_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+        def add_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
-        def remove_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+        def remove_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("remove", type, name))
 
-        def update_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+        def update_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
     listener = MyListener()
@@ -786,17 +793,17 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     callbacks = []
 
     class MyServiceListener(ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
@@ -967,8 +974,8 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
         nonlocal first_outgoing
         nonlocal second_outgoing
         if out.questions:
-            if first_outgoing is not None and second_outgoing is None:
-                second_outgoing = out
+            if first_outgoing is not None and second_outgoing is None:  # type: ignore[unreachable]
+                second_outgoing = out  # type: ignore[unreachable]
             if first_outgoing is None:
                 first_outgoing = out
         old_send(out, addr=addr, port=port)
@@ -980,8 +987,8 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
         with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
             await aiosinfo.async_request(aiozc.zeroconf, 1200)
         try:
-            assert first_outgoing.questions[0].unicast == True
-            assert second_outgoing.questions[0].unicast == False
+            assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
+            assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
         finally:
             await aiozc.async_close()
 
@@ -998,17 +1005,17 @@ async def test_service_browser_ignores_unrelated_updates():
     callbacks = []
 
     class MyServiceListener(ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
@@ -1143,15 +1150,15 @@ async def test_update_with_uppercase_names(run_isolated):
     callbacks = []
 
     class MyServiceListener(ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             callbacks.append(("update", type_, name))
 
@@ -1159,12 +1166,12 @@ async def test_update_with_uppercase_names(run_isolated):
     browser = AsyncServiceBrowser(aiozc.zeroconf, "_http._tcp.local.", None, listener)
     protocol = aiozc.zeroconf.engine.protocols[0]
 
-    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbc=\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'
+    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbc=\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'  # noqa: E501
     protocol.datagram_received(packet, ('127.0.0.1', 6503))
     await asyncio.sleep(0)
-    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbcA\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'
+    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbcA\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'  # noqa: E501
     protocol.datagram_received(packet, ('127.0.0.1', 6503))
-
+    await browser.async_cancel()
     await aiozc.async_close()
 
     assert callbacks == [

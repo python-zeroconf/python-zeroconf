@@ -5,6 +5,7 @@
 
 import logging
 from unittest.mock import call, patch
+
 from zeroconf._logger import QuietLogger, set_logger_level_if_unset
 
 

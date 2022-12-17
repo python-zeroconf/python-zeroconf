@@ -1,6 +1,58 @@
+[tool.poetry]
+name = "python-zeroconf"
+version = "0.39.4"
+description = "A pure python implementation of multicast DNS service discovery"
+authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Koston"]
+license = "LGPL"
+readme = "README.rst"
+repository = "https://github.com/python-zeroconf/python-zeroconf"
+documentation = "https://python-zeroconf.readthedocs.io"
+classifiers=[
+	'Development Status :: 5 - Production/Stable',
+	'Intended Audience :: Developers',
+	'Intended Audience :: System Administrators',
+	'License :: OSI Approved :: GNU Lesser General Public License v2 (LGPLv2)',
+	'Operating System :: POSIX',
+	'Operating System :: POSIX :: Linux',
+	'Operating System :: MacOS :: MacOS X',
+	'Topic :: Software Development :: Libraries',
+	'Programming Language :: Python :: 3.7',
+	'Programming Language :: Python :: 3.8',
+	'Programming Language :: Python :: 3.9',
+	'Programming Language :: Python :: 3.10',
+	'Programming Language :: Python :: 3.11',
+	'Programming Language :: Python :: Implementation :: CPython',
+	'Programming Language :: Python :: Implementation :: PyPy',
+]
+build = "build_ext.py"
+packages = [
+    { include = "zeroconf", from = "src" },
+]
+
+
+[tool.semantic_release]
+branch = "master"
+version_toml = "pyproject.toml:tool.poetry.version"
+version_variable = "src/zeroconf/__init__.py:__version__"
+build_command = "pip install poetry && poetry build"
+
+
+[tool.poetry.dependencies]
+python = "^3.7"
+async-timeout = ">=3.0.1"
+ifaddr = ">=0.1.7"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.0"
+pytest-cov = "^4.0.0"
+pytest-asyncio = "^0.20.3"
+cython = "^0.29.32"
+setuptools = "^65.6.3"
+pytest-timeout = "^2.1.0"
+
 [tool.black]
 line-length = 110
-target_version = ['py35', 'py36', 'py37', 'py38']
+target_version = ['py37', 'py38', 'py39', 'py310', 'py311']
 skip_string_normalization = true
 
 [tool.pylint.BASIC]
@@ -35,3 +87,61 @@ disable = [
     "too-many-instance-attributes",
     "too-many-public-methods"
 ]
+
+
+[tool.pytest.ini_options]
+addopts = "-v -Wdefault --cov=zeroconf --cov-report=term-missing:skip-covered"
+pythonpath = ["src"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "@overload",
+    "if TYPE_CHECKING",
+    "raise NotImplementedError",
+]
+
+
+[tool.isort]
+profile = "black"
+known_first_party = ["zeroconf", "tests"]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = false  # turn this on when we drop 3.7/3.8 support
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+mypy_path = "src/"
+no_implicit_optional = true
+show_error_codes = true
+warn_unreachable = true
+warn_unused_ignores = true
+exclude = [
+    'docs/*',
+    'bench/*',
+]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+allow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "docs.*"
+ignore_errors = true
+allow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "bench.*"
+ignore_errors = true
+
+[build-system]
+requires = ['setuptools>=65.4.1', 'wheel', 'Cython', "poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.codespell]
+skip = '*.po,*.ts,./tests,./bench'
+count = ''
+quiet-level = 3

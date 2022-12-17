@@ -26,7 +26,18 @@ import random
 import threading
 import warnings
 from collections import OrderedDict
-from typing import Callable, Dict, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
@@ -104,7 +115,7 @@ def _group_ptr_queries_with_known_answers(
     # goal of this algorithm is to quickly bucket the query + known answers without
     # the overhead of actually constructing the packets.
     query_by_size: Dict[DNSQuestion, int] = {
-        question: (question.max_size + sum([answer.max_size_compressed for answer in known_answers]))
+        question: (question.max_size + sum(answer.max_size_compressed for answer in known_answers))
         for question, known_answers in question_with_known_answers.items()
     }
     max_bucket_size = _MAX_MSG_TYPICAL - _DNS_PACKET_HEADER_LEN

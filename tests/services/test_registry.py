@@ -3,8 +3,8 @@
 
 """Unit tests for zeroconf._services.registry."""
 
-import unittest
 import socket
+import unittest
 
 import zeroconf as r
 from zeroconf import ServiceInfo

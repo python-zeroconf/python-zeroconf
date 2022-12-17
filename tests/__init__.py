@@ -27,7 +27,6 @@ from typing import List
 
 import ifaddr
 
-
 from zeroconf import DNSIncoming, Zeroconf
 
 

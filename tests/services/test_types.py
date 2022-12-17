@@ -5,13 +5,13 @@
 
 import logging
 import os
-import unittest
 import socket
 import sys
+import unittest
 from unittest.mock import patch
 
 import zeroconf as r
-from zeroconf import Zeroconf, ServiceInfo, ZeroconfServiceTypes
+from zeroconf import ServiceInfo, Zeroconf, ZeroconfServiceTypes
 
 from .. import _clear_cache, has_working_ipv6
 

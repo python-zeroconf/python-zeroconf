@@ -23,10 +23,21 @@
 import itertools
 import random
 from collections import deque
-from typing import Dict, Iterable, List, NamedTuple, Optional, Set, TYPE_CHECKING, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Iterable,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from ._cache import DNSCache, _UniqueRecordsType
-from ._dns import DNSAddress, DNSNsec, DNSPointer, DNSQuestion, DNSRRSet, DNSRecord
+from ._dns import DNSAddress, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
 from ._history import QuestionHistory
 from ._logger import log
 from ._protocol.incoming import DNSIncoming
@@ -495,7 +506,7 @@ class RecordManager:
         This function is not threadsafe and must be called in the eventloop.
         """
         if not isinstance(listener, RecordUpdateListener):
-            log.error(
+            log.error(  # type: ignore[unreachable]
                 "listeners passed to async_add_listener must inherit from RecordUpdateListener;"
                 " In the future this will fail"
             )

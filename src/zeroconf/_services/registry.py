@@ -22,9 +22,8 @@
 
 from typing import Dict, List, Optional, Union
 
-
-from .info import ServiceInfo
 from .._exceptions import ServiceNameAlreadyRegistered
+from .info import ServiceInfo
 
 
 class ServiceRegistry:

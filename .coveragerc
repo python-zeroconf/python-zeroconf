@@ -1,5 +1,5 @@
 [report]
-exclude_lines = 
+exclude_lines =
     pragma: no cover
     if TYPE_CHECKING:
     if sys.version_info

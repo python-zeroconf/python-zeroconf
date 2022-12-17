@@ -6,16 +6,13 @@
 import logging
 import socket
 import time
-from threading import Event
 
 import pytest
 
 import zeroconf as r
-from zeroconf import const
-from zeroconf import Zeroconf
+from zeroconf import Zeroconf, const
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
-
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET

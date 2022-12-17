@@ -58,9 +58,9 @@ from ._utils.asyncio import (
 )
 from ._utils.name import service_type_name
 from ._utils.net import (
-    IPVersion,
     InterfaceChoice,
     InterfacesType,
+    IPVersion,
     autodetect_ip_version,
     can_send_to,
     create_sockets,

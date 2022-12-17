@@ -20,12 +20,7 @@
     USA
 """
 
-from ..const import (
-    _FLAGS_QR_MASK,
-    _FLAGS_QR_QUERY,
-    _FLAGS_QR_RESPONSE,
-    _FLAGS_TC,
-)
+from ..const import _FLAGS_QR_MASK, _FLAGS_QR_QUERY, _FLAGS_QR_RESPONSE, _FLAGS_TC
 
 
 class DNSMessage:

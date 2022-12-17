@@ -1,11 +1,12 @@
 """Benchmark for DNSIncoming."""
 import socket
 import timeit
+from typing import List
 
 from zeroconf import DNSAddress, DNSIncoming, DNSOutgoing, DNSService, DNSText, const
 
 
-def generate_packets():
+def generate_packets() -> List[bytes]:
     out = DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
     address = socket.inet_pton(socket.AF_INET, "192.168.208.5")
 
@@ -156,7 +157,7 @@ def generate_packets():
 packets = generate_packets()
 
 
-def parse_incoming_message():
+def parse_incoming_message() -> None:
     for packet in packets:
         DNSIncoming(packet).answers
         break

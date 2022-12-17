@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # This file is execfile()d with the current directory set to its containing dir.
 #
@@ -7,6 +6,8 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
+
+from typing import Any, Dict
 
 import zeroconf
 
@@ -172,14 +173,7 @@ htmlhelp_basename = 'zeroconfdoc'
 
 # -- Options for LaTeX output --------------------------------------------------
 
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #'papersize': 'letterpaper',
-    # The font size ('10pt', '11pt' or '12pt').
-    #'pointsize': '10pt',
-    # Additional stuff for the LaTeX preamble.
-    #'preamble': '',
-}
+latex_elements: Dict[str, Any] = {}
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
@@ -240,11 +234,11 @@ latex_elements = {
 intersphinx_mapping = {'http://docs.python.org/': None}
 
 
-def setup(app):
+def setup(app):  # type: ignore[no-untyped-def]
     app.connect('autodoc-skip-member', skip_member)
 
 
-def skip_member(app, what, name, obj, skip, options):
+def skip_member(app, what, name, obj, skip, options):  # type: ignore[no-untyped-def]
     return (
         skip
         or getattr(obj, '__doc__', None) is None

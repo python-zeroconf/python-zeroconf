@@ -21,8 +21,7 @@
 """
 
 import enum
-from typing import Any, Callable, List, TYPE_CHECKING
-
+from typing import TYPE_CHECKING, Any, Callable, List
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
