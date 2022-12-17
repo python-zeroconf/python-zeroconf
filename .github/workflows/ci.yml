@@ -60,12 +60,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
       - name: Install Dependencies no cython
-        if: ${{ matrix.extension == "skip_cython" }}
+        if: ${{ matrix.extension }} == skip_cython
         env:
           SKIP_CYTHON: 1
         run: poetry install --only=master,dev
       - name: Install Dependencies with cython
-        if: ${{ matrix.extension != "skip_cython" }}
+        if: ${{ matrix.extension }} != skip_cython
         run: poetry install --only=master,dev
       - name: Test with Pytest
         run: poetry run pytest --cov=zeroconf --cov-report=xml --timeout=60 --durations=20
