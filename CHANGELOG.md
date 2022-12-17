@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+# 0.39.5
+
+  - This is a stub version to initialize python-semantic-release
+
+    This version will not be published
+
 # 0.39.4
 
   - Fix IP changes being missed by ServiceInfo (\#1102) @bdraco
