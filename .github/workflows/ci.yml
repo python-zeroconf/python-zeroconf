@@ -130,7 +130,7 @@ jobs:
         uses: actions/setup-python@v4
 
       - name: Install python-semantic-release
-        run: python -m pip install python-semantic-release
+        run: pipx install python-semantic-release
 
       - name: Get Release Tag
         id: release_tag
@@ -143,11 +143,8 @@ jobs:
           ref: "${{ steps.release_tag.outputs.newest_release_tag }}"
           fetch-depth: 0
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.11.3
-
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        uses: pypa/cibuildwheel@v2.11.3
         # to supply options, put them in 'env', like:
         env:
           CIBW_SKIP: cp36-*
