@@ -66,7 +66,7 @@ jobs:
             poetry install --only=main,dev
           fi
       - name: Test with Pytest
-        run: poetry run pytest --cov-report=xml --timeout=10
+        run: poetry run pytest --cov=zeroconf --cov-report=xml --timeout=60 --durations=20
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
