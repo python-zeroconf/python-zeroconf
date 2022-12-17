@@ -20,10 +20,11 @@
     USA
 """
 
+from .._logger import QuietLogger
 from ..const import _FLAGS_QR_MASK, _FLAGS_QR_QUERY, _FLAGS_QR_RESPONSE, _FLAGS_TC
 
 
-class DNSMessage:
+class DNSMessage(QuietLogger):
     """A base class for DNS messages."""
 
     __slots__ = ('flags',)

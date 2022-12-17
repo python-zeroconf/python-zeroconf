@@ -34,7 +34,7 @@ from .._dns import (
     DNSText,
 )
 from .._exceptions import IncomingDecodeError
-from .._logger import QuietLogger, log
+from .._logger import log
 from .._utils.time import current_time_millis
 from ..const import (
     _TYPE_A,
@@ -62,7 +62,7 @@ UNPACK_HH = struct.Struct(b'!HH').unpack
 UNPACK_HHiH = struct.Struct(b'!HHiH').unpack
 
 
-class DNSIncoming(DNSMessage, QuietLogger):
+class DNSIncoming(DNSMessage):
 
     """Object representation of an incoming DNS packet"""
 
