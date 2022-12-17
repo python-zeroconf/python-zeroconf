@@ -107,7 +107,7 @@ exclude_lines = [
 
 [tool.isort]
 profile = "black"
-known_first_party = ["dbus_fast", "tests"]
+known_first_party = ["zeroconf", "tests"]
 
 [tool.mypy]
 check_untyped_defs = true
