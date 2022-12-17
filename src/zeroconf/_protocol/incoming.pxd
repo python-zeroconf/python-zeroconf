@@ -4,6 +4,7 @@ import cython
 
 cdef class DNSIncoming:
 
+    cdef object _read_others
     cdef public object flags
     cdef public object offset
     cdef public object data
