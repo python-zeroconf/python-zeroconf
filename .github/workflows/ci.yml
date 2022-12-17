@@ -54,6 +54,8 @@ jobs:
             extension: use_cython
           - os: windows-latest
             extension: use_cython
+          - os: windows-latest
+            python-version: "pypy-3.7"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
