@@ -1,14 +1,14 @@
 python-zeroconf
 ===============
 
-.. image:: https://github.com/jstasiak/python-zeroconf/workflows/CI/badge.svg
-   :target: https://github.com/jstasiak/python-zeroconf?query=workflow%3ACI+branch%3Amaster
+.. image:: https://github.com/python-zeroconf/python-zeroconf/workflows/CI/badge.svg
+   :target: https://github.com/python-zeroconf/python-zeroconf?query=workflow%3ACI+branch%3Amaster
 
 .. image:: https://img.shields.io/pypi/v/zeroconf.svg
     :target: https://pypi.python.org/pypi/zeroconf
 
-.. image:: https://codecov.io/gh/jstasiak/python-zeroconf/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/jstasiak/python-zeroconf
+.. image:: https://codecov.io/gh/python-zeroconf/python-zeroconf/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/python-zeroconf/python-zeroconf
 
 `Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
 
@@ -40,6 +40,7 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 * doesn't force you to use particular event loop or Twisted (asyncio is used under the hood but not required)
 * is pip-installable
 * has PyPI distribution
+* has an optional cython extension for performance (pure python is supported as well)
 
 Python compatibility
 --------------------
@@ -50,11 +51,7 @@ Python compatibility
 Versioning
 ----------
 
-This project's versions follow the following pattern: MAJOR.MINOR.PATCH.
-
-* MAJOR version has been 0 so far
-* MINOR version is incremented on backward incompatible changes
-* PATCH version is incremented on backward compatible changes
+This project uses semantic versioning.
 
 Status
 ------
@@ -83,8 +80,8 @@ IPv6 support is relatively new and currently limited, specifically:
 How to get python-zeroconf?
 ===========================
 
-* PyPI page https://pypi.python.org/pypi/zeroconf
-* GitHub project https://github.com/jstasiak/python-zeroconf
+* PyPI page https://pypi.org/project/zeroconf/
+* GitHub project https://github.com/python-zeroconf/python-zeroconf
 
 The easiest way to install python-zeroconf is using pip::
 
