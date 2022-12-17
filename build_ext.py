@@ -24,8 +24,6 @@ def build(setup_kwargs: Any) -> None:
                 ext_modules=cythonize(
                     [
                         "src/zeroconf/_dns.py",
-                        "src/zeroconf/_logger.py",
-                        "src/zeroconf/_protocol/__init__.py",
                         "src/zeroconf/_protocol/incoming.py",
                         "src/zeroconf/_protocol/outgoing.py",
                     ],

@@ -65,10 +65,10 @@ UNPACK_6H = struct.Struct(b'!6H').unpack
 UNPACK_HH = struct.Struct(b'!HH').unpack
 UNPACK_HHiH = struct.Struct(b'!HHiH').unpack
 
+_seen_logs: Dict[str, Union[int, tuple]] = {}
+
 
 class DNSIncoming:
-    _seen_logs: Dict[str, Union[int, tuple]] = {}
-
     """Object representation of an incoming DNS packet"""
 
     __slots__ = (
@@ -156,9 +156,9 @@ class DNSIncoming:
         log_exc_info = False
         exc_info = sys.exc_info()
         exc_str = str(exc_info[1])
-        if exc_str not in cls._seen_logs:
+        if exc_str not in _seen_logs:
             # log the trace only on the first time
-            cls._seen_logs[exc_str] = exc_info
+            _seen_logs[exc_str] = exc_info
             log_exc_info = True
         log.debug(*(logger_data or ['Exception occurred']), exc_info=log_exc_info)
 
