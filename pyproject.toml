@@ -35,7 +35,7 @@ branch = "master"
 version_toml = "pyproject.toml:tool.poetry.version"
 version_variable = "src/zeroconf/__init__.py:__version__"
 build_command = "pip install poetry && poetry build"
-
+tag_format = "{version}"
 
 [tool.poetry.dependencies]
 python = "^3.7"
