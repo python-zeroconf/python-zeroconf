@@ -3,6 +3,7 @@
 
 """ Unit tests for zeroconf._cache. """
 
+
 import logging
 import unittest
 import unittest.mock
@@ -45,7 +46,7 @@ class TestDNSCache(unittest.TestCase):
         record2 = r.DNSAddress('a', const._TYPE_A, const._CLASS_IN, 10, b'a')
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        entry = r.DNSEntry(record2)
+        entry = r.DNSEntry(record2.name, const._TYPE_A, const._CLASS_IN)
         cached_record = cache.get(entry)
         assert cached_record == record2
 

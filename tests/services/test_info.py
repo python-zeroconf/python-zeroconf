@@ -10,7 +10,7 @@ import socket
 import threading
 import unittest
 from threading import Event
-from typing import List, Optional
+from typing import Iterable, List, Optional
 from unittest.mock import patch
 
 import pytest
@@ -222,7 +222,7 @@ class TestServiceInfo(unittest.TestCase):
         # patch the zeroconf send
         with patch.object(zc, "async_send", send):
 
-            def mock_incoming_msg(records) -> r.DNSIncoming:
+            def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
 
                 generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
@@ -273,7 +273,7 @@ class TestServiceInfo(unittest.TestCase):
                 )
                 send_event.wait(wait_time)
                 assert last_sent is not None
-                assert len(last_sent.questions) == 3
+                assert len(last_sent.questions) == 3  # type: ignore[unreachable]
                 assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
                 assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
@@ -367,7 +367,7 @@ class TestServiceInfo(unittest.TestCase):
         # patch the zeroconf send
         with patch.object(zc, "async_send", send):
 
-            def mock_incoming_msg(records) -> r.DNSIncoming:
+            def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
 
                 generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
@@ -612,7 +612,7 @@ def test_filter_address_by_type_from_service_info():
     ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6])
 
-    def dns_addresses_to_addresses(dns_address: List[DNSAddress]):
+    def dns_addresses_to_addresses(dns_address: List[DNSAddress]) -> List[bytes]:
         return [address.address for address in dns_address]
 
     assert dns_addresses_to_addresses(info.dns_addresses()) == [ipv4, ipv6]
@@ -738,7 +738,7 @@ def test_asking_qu_questions():
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
         zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QU)
-        assert first_outgoing.questions[0].unicast is True
+        assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         zeroconf.close()
 
 
@@ -762,7 +762,7 @@ def test_asking_qm_questions():
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
         zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QM)
-        assert first_outgoing.questions[0].unicast is False
+        assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         zeroconf.close()
 
 

@@ -120,8 +120,8 @@ show_error_codes = true
 warn_unreachable = true
 warn_unused_ignores = true
 exclude = [
-    './docs/*',
-    './bench/*',
+    'docs/*',
+    'bench/*',
 ]
 
 [[tool.mypy.overrides]]
@@ -130,6 +130,11 @@ allow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = "docs.*"
+ignore_errors = true
+allow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "bench.*"
 ignore_errors = true
 
 [build-system]

@@ -9,6 +9,7 @@ import socket
 import time
 import unittest
 from threading import Event
+from typing import Iterable
 from unittest.mock import patch
 
 import pytest
@@ -152,17 +153,17 @@ class TestServiceBrowser(unittest.TestCase):
         service_updated_event = Event()
 
         class MyServiceListener(r.ServiceListener):
-            def add_service(self, zc, type_, name) -> None:
+            def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
                 nonlocal service_added_count
                 service_added_count += 1
                 service_add_event.set()
 
-            def remove_service(self, zc, type_, name) -> None:
+            def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
                 nonlocal service_removed_count
                 service_removed_count += 1
                 service_removed_event.set()
 
-            def update_service(self, zc, type_, name) -> None:
+            def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
                 nonlocal service_updated_count
                 service_updated_count += 1
                 service_info = zc.get_service_info(type_, name)
@@ -340,13 +341,13 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
         service_removed_event = Event()
 
         class MyServiceListener(r.ServiceListener):
-            def add_service(self, zc, type_, name) -> None:
+            def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
                 nonlocal service_added_count
                 service_added_count += 1
                 if service_added_count == 3:
                     service_add_event.set()
 
-            def remove_service(self, zc, type_, name) -> None:
+            def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
                 nonlocal service_removed_count
                 service_removed_count += 1
                 if service_removed_count == 3:
@@ -501,6 +502,7 @@ def test_backoff():
                 else:
                     assert not got_query.is_set()
                 time_offset += initial_query_interval
+                assert zeroconf_browser.loop is not None
                 zeroconf_browser.loop.call_soon_threadsafe(browser._async_send_ready_queries_schedule_next)
 
         finally:
@@ -562,8 +564,8 @@ def test_asking_default_is_asking_qm_questions_after_the_first_qu():
         """Sends an outgoing packet."""
         nonlocal first_outgoing
         nonlocal second_outgoing
-        if first_outgoing is not None and second_outgoing is None:
-            second_outgoing = out
+        if first_outgoing is not None and second_outgoing is None:  # type: ignore[unreachable]
+            second_outgoing = out  # type: ignore[unreachable]
         if first_outgoing is None:
             first_outgoing = out
         old_send(out, addr=addr, port=port)
@@ -577,8 +579,8 @@ def test_asking_default_is_asking_qm_questions_after_the_first_qu():
         browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change], delay=5)
         time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 5))
         try:
-            assert first_outgoing.questions[0].unicast is True
-            assert second_outgoing.questions[0].unicast is False
+            assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
+            assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -612,7 +614,7 @@ def test_asking_qm_questions():
         )
         time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
-            assert first_outgoing.questions[0].unicast is False
+            assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -646,7 +648,7 @@ def test_asking_qu_questions():
         )
         time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
-            assert first_outgoing.questions[0].unicast is True
+            assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         finally:
             browser.cancel()
             zeroconf_browser.close()
@@ -737,7 +739,7 @@ def test_service_browser_is_aware_of_port_changes():
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
-    def mock_incoming_msg(records) -> r.DNSIncoming:
+    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         for record in records:
             generated.add_answer_at_time(record, 0)

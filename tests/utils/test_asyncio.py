@@ -8,6 +8,7 @@ import concurrent.futures
 import contextlib
 import threading
 import time
+from typing import Optional
 from unittest.mock import patch
 
 import pytest
@@ -25,11 +26,13 @@ async def test_async_get_all_tasks() -> None:
     We make sure we handle RuntimeError here as
     this is not thread safe under PyPy
     """
-    await aioutils._async_get_all_tasks(aioutils.get_running_loop())
+    loop = aioutils.get_running_loop()
+    assert loop is not None
+    await aioutils._async_get_all_tasks(loop)
     if not hasattr(asyncio, 'all_tasks'):
         return
     with patch("zeroconf._utils.asyncio.asyncio.all_tasks", side_effect=RuntimeError):
-        await aioutils._async_get_all_tasks(aioutils.get_running_loop())
+        await aioutils._async_get_all_tasks(loop)
 
 
 @pytest.mark.asyncio
@@ -85,6 +88,7 @@ def test_shutdown_loop() -> None:
 
     def _run_coro() -> None:
         runcoro_thread_ready.set()
+        assert loop is not None
         with contextlib.suppress(concurrent.futures.TimeoutError):
             asyncio.run_coroutine_threadsafe(_still_running(), loop).result(1)
 
@@ -93,6 +97,7 @@ def test_shutdown_loop() -> None:
     runcoro_thread_ready.wait()
 
     time.sleep(0.1)
+    assert loop is not None
     aioutils.shutdown_loop(loop)
     for _ in range(5):
         if not loop.is_running():
@@ -118,11 +123,12 @@ def test_cumulative_timeouts_less_than_close_plus_buffer():
 async def test_run_coro_with_timeout() -> None:
     """Test running a coroutine with a timeout raises EventLoopBlocked."""
     loop = asyncio.get_event_loop()
-    task = None
+    task: Optional[asyncio.Task] = None
 
     async def _saved_sleep_task():
         nonlocal task
         task = asyncio.create_task(asyncio.sleep(0.2))
+        assert task is not None
         await task
 
     def _run_in_loop():
@@ -131,6 +137,7 @@ async def test_run_coro_with_timeout() -> None:
     with pytest.raises(EventLoopBlocked), patch.object(aioutils, "_LOADED_SYSTEM_TIMEOUT", 0.0):
         await loop.run_in_executor(None, _run_in_loop)
 
+    assert task is not None
     # ensure the thread is shutdown
     task.cancel()
     await asyncio.sleep(0)

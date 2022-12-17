@@ -26,7 +26,7 @@ import ipaddress
 import socket
 import struct
 import sys
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import Any, List, Optional, Sequence, Tuple, Union, cast
 
 import ifaddr
 
@@ -40,7 +40,7 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
-InterfacesType = Union[List[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
+InterfacesType = Union[Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
 
 
 @enum.unique
@@ -107,7 +107,7 @@ def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str
 
 
 def ip6_addresses_to_indexes(
-    interfaces: List[Union[str, int, Tuple[Tuple[str, int, int], int]]]
+    interfaces: Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]]
 ) -> List[Tuple[Tuple[str, int, int], int]]:
     """Convert IPv6 interface addresses to interface indexes.
 
