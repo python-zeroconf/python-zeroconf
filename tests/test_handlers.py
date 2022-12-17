@@ -1556,14 +1556,14 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
     zc: Zeroconf = aiozc.zeroconf
     updated = []
 
-    class MyListener(r.RecordUpdateListener):
+    class MyListener:
         """A RecordUpdateListener that does not implement update_records."""
 
         def async_update_records(self, zc: 'Zeroconf', now: float, records: List[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
-    zc.add_listener(MyListener(), None)
+    zc.add_listener(MyListener(), None)  # type: ignore[arg-type]
     await asyncio.sleep(0)  # flush out any call soons
     assert "listeners passed to async_add_listener must inherit from RecordUpdateListener" in caplog.text
 
