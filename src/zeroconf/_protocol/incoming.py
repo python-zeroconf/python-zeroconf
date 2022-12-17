@@ -73,7 +73,6 @@ class DNSIncoming:
 
     __slots__ = (
         "_read_others",
-        "_seen_logs",
         'flags',
         'offset',
         'data',
