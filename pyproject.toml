@@ -6,7 +6,7 @@ authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Kos
 license = "LGPL"
 readme = "README.rst"
 repository = "https://github.com/python-zeroconf/python-zeroconf"
-documentation = "https://dbus-fast.readthedocs.io"
+documentation = "https://python-zeroconf.readthedocs.io"
 classifiers=[
 	'Development Status :: 5 - Production/Stable',
 	'Intended Audience :: Developers',
@@ -90,7 +90,7 @@ disable = [
 
 
 [tool.pytest.ini_options]
-addopts = "-v -Wdefault --cov=dbus_fast --cov-report=term-missing:skip-covered"
+addopts = "-v -Wdefault --cov=zeroconf --cov-report=term-missing:skip-covered"
 pythonpath = ["src"]
 
 [tool.coverage.run]
