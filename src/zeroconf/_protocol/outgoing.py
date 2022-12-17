@@ -30,19 +30,22 @@ from .._logger import log
 from ..const import (
     _CLASS_UNIQUE,
     _DNS_PACKET_HEADER_LEN,
+    _FLAGS_QR_MASK,
+    _FLAGS_QR_QUERY,
+    _FLAGS_QR_RESPONSE,
     _FLAGS_TC,
     _MAX_MSG_ABSOLUTE,
     _MAX_MSG_TYPICAL,
 )
 from .incoming import DNSIncoming
-from .message import DNSMessage
 
 
-class DNSOutgoing(DNSMessage):
+class DNSOutgoing:
 
     """Object representation of an outgoing packet"""
 
     __slots__ = (
+        'flags',
         'finished',
         'id',
         'multicast',
@@ -59,7 +62,7 @@ class DNSOutgoing(DNSMessage):
     )
 
     def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:
-        super().__init__(flags)
+        self.flags = flags
         self.finished = False
         self.id = id_
         self.multicast = multicast
@@ -77,6 +80,14 @@ class DNSOutgoing(DNSMessage):
         self.answers: List[Tuple[DNSRecord, float]] = []
         self.authorities: List[DNSPointer] = []
         self.additionals: List[DNSRecord] = []
+
+    def is_query(self) -> bool:
+        """Returns true if this is a query."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
+
+    def is_response(self) -> bool:
+        """Returns true if this is a response."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
     def _reset_for_next_packet(self) -> None:
         self.names = {}

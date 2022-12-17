@@ -21,7 +21,8 @@
 """
 
 import struct
-from typing import Callable, Dict, List, Optional, Set, Tuple, cast
+import sys
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
 from .._dns import (
     DNSAddress,
@@ -37,6 +38,10 @@ from .._exceptions import IncomingDecodeError
 from .._logger import log
 from .._utils.time import current_time_millis
 from ..const import (
+    _FLAGS_QR_MASK,
+    _FLAGS_QR_QUERY,
+    _FLAGS_QR_RESPONSE,
+    _FLAGS_TC,
     _TYPE_A,
     _TYPE_AAAA,
     _TYPE_CNAME,
@@ -47,7 +52,6 @@ from ..const import (
     _TYPE_TXT,
     _TYPES,
 )
-from .message import DNSMessage
 
 DNS_COMPRESSION_HEADER_LEN = 1
 DNS_COMPRESSION_POINTER_LEN = 2
@@ -62,11 +66,15 @@ UNPACK_HH = struct.Struct(b'!HH').unpack
 UNPACK_HHiH = struct.Struct(b'!HHiH').unpack
 
 
-class DNSIncoming(DNSMessage):
+class DNSIncoming:
+    _seen_logs: Dict[str, Union[int, tuple]] = {}
 
     """Object representation of an incoming DNS packet"""
 
     __slots__ = (
+        "_read_others",
+        "_seen_logs",
+        'flags',
         'offset',
         'data',
         'data_len',
@@ -92,7 +100,7 @@ class DNSIncoming(DNSMessage):
         now: Optional[float] = None,
     ) -> None:
         """Constructor from string holding bytes of packet"""
-        super().__init__(0)
+        self.flags = 0
         self.offset = 0
         self.data = data
         self.data_len = len(data)
@@ -110,6 +118,19 @@ class DNSIncoming(DNSMessage):
         self.source = source
         self.scope_id = scope_id
         self._parse_data(self._initial_parse)
+
+    def is_query(self) -> bool:
+        """Returns true if this is a query."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
+
+    def is_response(self) -> bool:
+        """Returns true if this is a response."""
+        return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
+
+    @property
+    def truncated(self) -> bool:
+        """Returns true if this is a truncated."""
+        return (self.flags & _FLAGS_TC) == _FLAGS_TC
 
     def _initial_parse(self) -> None:
         """Parse the data needed to initalize the packet object."""
@@ -130,6 +151,17 @@ class DNSIncoming(DNSMessage):
                 self.offset,
                 self.data,
             )
+
+    @classmethod
+    def log_exception_debug(cls, *logger_data: Any) -> None:
+        log_exc_info = False
+        exc_info = sys.exc_info()
+        exc_str = str(exc_info[1])
+        if exc_str not in cls._seen_logs:
+            # log the trace only on the first time
+            cls._seen_logs[exc_str] = exc_info
+            log_exc_info = True
+        log.debug(*(logger_data or ['Exception occurred']), exc_info=log_exc_info)
 
     @property
     def answers(self) -> List[DNSRecord]:
