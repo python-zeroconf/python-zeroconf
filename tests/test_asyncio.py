@@ -604,13 +604,13 @@ async def test_async_service_browser() -> None:
     calls = []
 
     class MyListener(ServiceListener):
-        def add_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+        def add_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
-        def remove_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+        def remove_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("remove", type, name))
 
-        def update_service(self, aiozc: AsyncZeroconf, type: str, name: str) -> None:
+        def update_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
     listener = MyListener()
@@ -793,17 +793,17 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     callbacks = []
 
     class MyServiceListener(ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
@@ -974,8 +974,8 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
         nonlocal first_outgoing
         nonlocal second_outgoing
         if out.questions:
-            if first_outgoing is not None and second_outgoing is None:
-                second_outgoing = out
+            if first_outgoing is not None and second_outgoing is None:  # type: ignore[unreachable]
+                second_outgoing = out  # type: ignore[unreachable]
             if first_outgoing is None:
                 first_outgoing = out
         old_send(out, addr=addr, port=port)
@@ -987,8 +987,8 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
         with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
             await aiosinfo.async_request(aiozc.zeroconf, 1200)
         try:
-            assert first_outgoing.questions[0].unicast is True
-            assert second_outgoing.questions[0].unicast is False
+            assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
+            assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
         finally:
             await aiozc.async_close()
 
@@ -1005,17 +1005,17 @@ async def test_service_browser_ignores_unrelated_updates():
     callbacks = []
 
     class MyServiceListener(ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
@@ -1150,15 +1150,15 @@ async def test_update_with_uppercase_names(run_isolated):
     callbacks = []
 
     class MyServiceListener(ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             callbacks.append(("update", type_, name))
 

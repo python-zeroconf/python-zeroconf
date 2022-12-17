@@ -9,7 +9,7 @@ import socket
 import time
 import unittest
 from threading import Event
-from typing import Iterable
+from typing import Iterable, Set
 from unittest.mock import patch
 
 import pytest
@@ -752,7 +752,9 @@ def test_service_browser_is_aware_of_port_changes():
     time.sleep(0.1)
 
     assert callbacks == [('_hap._tcp.local.', ServiceStateChange.Added, 'xxxyyy._hap._tcp.local.')]
-    assert zc.get_service_info(type_, registration_name).port == 80
+    service_info = zc.get_service_info(type_, registration_name)
+    assert service_info is not None
+    assert service_info.port == 80
 
     info.port = 400
     _inject_response(
@@ -765,7 +767,9 @@ def test_service_browser_is_aware_of_port_changes():
         ('_hap._tcp.local.', ServiceStateChange.Added, 'xxxyyy._hap._tcp.local.'),
         ('_hap._tcp.local.', ServiceStateChange.Updated, 'xxxyyy._hap._tcp.local.'),
     ]
-    assert zc.get_service_info(type_, registration_name).port == 400
+    service_info = zc.get_service_info(type_, registration_name)
+    assert service_info is not None
+    assert service_info == 400
     browser.cancel()
 
     zc.close()
@@ -782,17 +786,17 @@ def test_service_browser_listeners_update_service():
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
@@ -806,7 +810,7 @@ def test_service_browser_listeners_update_service():
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
-    def mock_incoming_msg(records) -> r.DNSIncoming:
+    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         for record in records:
             generated.add_answer_at_time(record, 0)
@@ -843,13 +847,13 @@ def test_service_browser_listeners_no_update_service():
     registration_name = "xxxyyy.%s" % type_
     callbacks = []
 
-    class MyServiceListener:
-        def add_service(self, zc, type_, name) -> None:
+    class MyServiceListener(r.ServiceListener):
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
@@ -863,7 +867,7 @@ def test_service_browser_listeners_no_update_service():
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
-    def mock_incoming_msg(records) -> r.DNSIncoming:
+    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         for record in records:
             generated.add_answer_at_time(record, 0)
@@ -946,7 +950,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
         10000,
         f'known-to-other.{name}',
     )
-    other_known_answers = {answer}
+    other_known_answers: Set[r.DNSRecord] = {answer}
     zc.question_history.add_question_at_time(question, now, other_known_answers)
     assert zc.question_history.suppresses(question, now, other_known_answers)
 
@@ -1042,17 +1046,17 @@ def test_service_browser_matching():
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
@@ -1069,7 +1073,7 @@ def test_service_browser_matching():
         not_match_type_, not_match_registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
     )
 
-    def mock_incoming_msg(records) -> r.DNSIncoming:
+    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         for record in records:
             generated.add_answer_at_time(record, 0)
@@ -1124,17 +1128,17 @@ def test_service_browser_expire_callbacks():
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
-        def add_service(self, zc, type_, name) -> None:
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
-        def remove_service(self, zc, type_, name) -> None:
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
-        def update_service(self, zc, type_, name) -> None:
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
@@ -1159,7 +1163,7 @@ def test_service_browser_expire_callbacks():
         addresses=[address],
     )
 
-    def mock_incoming_msg(records) -> r.DNSIncoming:
+    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         for record in records:
             generated.add_answer_at_time(record, 0)

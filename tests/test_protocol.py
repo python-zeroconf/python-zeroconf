@@ -767,7 +767,7 @@ def test_parse_packet_with_nsec_record():
         b"\x00\x00\x80\x00@"
     )
     parsed = DNSIncoming(nsec_packet)
-    nsec_record = parsed.answers[3]
+    nsec_record = cast(r.DNSNsec, parsed.answers[3])
     assert "nsec," in str(nsec_record)
     assert nsec_record.rdtypes == [16, 33]
     assert nsec_record.next_name == "MyHome54 (2)._meshcop._udp.local."
@@ -1013,8 +1013,9 @@ def test_txt_after_invalid_nsec_name_still_usable():
         b'ce=0'
     )
     parsed = r.DNSIncoming(packet)
+    txt_record = cast(r.DNSText, parsed.answers[4])
     # The NSEC record with the invalid name compression should be skipped
-    assert parsed.answers[4].text == (
+    assert txt_record.text == (
         b'2info=/api/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers'
         b'=1.24.1\nbootseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn'
         b'9K9DLXJe0f3LP9747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:14'
