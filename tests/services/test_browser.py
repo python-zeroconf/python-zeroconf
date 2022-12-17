@@ -769,7 +769,7 @@ def test_service_browser_is_aware_of_port_changes():
     ]
     service_info = zc.get_service_info(type_, registration_name)
     assert service_info is not None
-    assert service_info == 400
+    assert service_info.port == 400
     browser.cancel()
 
     zc.close()
