@@ -22,7 +22,8 @@ cdef class DNSEntry:
     cdef public unique
 
 cdef class DNSQuestion(DNSEntry):
-    """Empty"""
+
+    cdef public _hash
 
 cdef class DNSRecord(DNSEntry):
 
