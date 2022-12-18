@@ -29,6 +29,9 @@ packages = [
     { include = "zeroconf", from = "src" },
 ]
 
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/python-zeroconf/python-zeroconf/issues"
+"Changelog" = "https://github.com/python-zeroconf/python-zeroconf/blob/master/CHANGELOG.md"
 
 [tool.semantic_release]
 branch = "master"
