@@ -8,19 +8,19 @@ cdef cython.uint DNS_COMPRESSION_POINTER_LEN
 cdef cython.uint MAX_NAME_LENGTH
 
 
-cdef object _TYPE_A
-cdef object _TYPE_CNAME
-cdef object _TYPE_PTR
-cdef object _TYPE_TXT
-cdef object _TYPE_SRV
-cdef object _TYPE_HINFO
-cdef object _TYPE_AAAA
-cdef object _TYPE_NSEC
-cdef object _FLAGS_QR_MASK
-cdef object _FLAGS_QR_MASK
-cdef object _FLAGS_TC
-cdef object _FLAGS_QR_QUERY
-cdef object _FLAGS_QR_RESPONSE
+cdef cython.uint _TYPE_A
+cdef cython.uint _TYPE_CNAME
+cdef cython.uint _TYPE_PTR
+cdef cython.uint _TYPE_TXT
+cdef cython.uint _TYPE_SRV
+cdef cython.uint _TYPE_HINFO
+cdef cython.uint _TYPE_AAAA
+cdef cython.uint _TYPE_NSEC
+cdef cython.uint _FLAGS_QR_MASK
+cdef cython.uint _FLAGS_QR_MASK
+cdef cython.uint _FLAGS_TC
+cdef cython.uint _FLAGS_QR_QUERY
+cdef cython.uint _FLAGS_QR_RESPONSE
 
 cdef object UNPACK_3H
 cdef object UNPACK_6H
@@ -34,7 +34,7 @@ cdef object IncomingDecodeError
 cdef class DNSIncoming:
 
     cdef bint _did_read_others
-    cdef public object flags
+    cdef public unsigned int flags
     cdef unsigned int offset
     cdef public bytes data
     cdef unsigned int _data_len
