@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.41.0 (2022-12-18)
+### Feature
+* Optimize incoming parser by adding pxd files ([#1111](https://github.com/python-zeroconf/python-zeroconf/issues/1111)) ([`26efeb0`](https://github.com/python-zeroconf/python-zeroconf/commit/26efeb09783050266242542228f34eb4dd83e30c))
+
 ## v0.40.1 (2022-12-18)
 ### Fix
 * Fix project name in pyproject.toml ([#1112](https://github.com/python-zeroconf/python-zeroconf/issues/1112)) ([`a330f62`](https://github.com/python-zeroconf/python-zeroconf/commit/a330f62040475257c4a983044e1675aeb95e030a))
