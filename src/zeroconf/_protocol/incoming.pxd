@@ -8,14 +8,14 @@ cdef cython.uint DNS_COMPRESSION_POINTER_LEN
 cdef cython.uint MAX_NAME_LENGTH
 
 
-cdef cython.uint _TYPE_A
-cdef cython.uint _TYPE_CNAME
-cdef cython.uint _TYPE_PTR
-cdef cython.uint _TYPE_TXT
-cdef cython.uint _TYPE_SRV
-cdef cython.uint _TYPE_HINFO
-cdef cython.uint _TYPE_AAAA
-cdef cython.uint _TYPE_NSEC
+cdef object _TYPE_A
+cdef object _TYPE_CNAME
+cdef object _TYPE_PTR
+cdef object _TYPE_TXT
+cdef object _TYPE_SRV
+cdef object _TYPE_HINFO
+cdef object _TYPE_AAAA
+cdef object _TYPE_NSEC
 cdef object _FLAGS_QR_MASK
 cdef object _FLAGS_QR_MASK
 cdef object _FLAGS_TC
