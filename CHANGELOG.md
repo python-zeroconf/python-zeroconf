@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.40.1 (2022-12-18)
+### Fix
+* Fix project name in pyproject.toml ([#1112](https://github.com/python-zeroconf/python-zeroconf/issues/1112)) ([`a330f62`](https://github.com/python-zeroconf/python-zeroconf/commit/a330f62040475257c4a983044e1675aeb95e030a))
+
 ## v0.40.0 (2022-12-17)
 ### Feature
 * Drop async_timeout requirement for python 3.11+ ([#1107](https://github.com/python-zeroconf/python-zeroconf/issues/1107)) ([`1f4224e`](https://github.com/python-zeroconf/python-zeroconf/commit/1f4224ef122299235013cb81b501f8ff9a30dea1))
