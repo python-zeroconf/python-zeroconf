@@ -42,10 +42,10 @@ cdef class DNSIncoming:
     cdef public object questions
     cdef object _answers
     cdef public object id
-    cdef public object num_questions
-    cdef public object num_answers
-    cdef public object num_authorities
-    cdef public object num_additionals
+    cdef public cython.uint num_questions
+    cdef public cython.uint num_answers
+    cdef public cython.uint num_authorities
+    cdef public cython.uint num_additionals
     cdef public object valid
     cdef public object now
     cdef public object scope_id
@@ -61,6 +61,14 @@ cdef class DNSIncoming:
 
     cdef _read_header(self)
 
+    cdef _initial_parse(self)
+
+    @cython.locals(
+        end=cython.uint,
+        length=cython.uint
+    )
+    cdef _read_others(self)
+
     cdef _read_questions(self)
 
     @cython.locals(
@@ -73,7 +81,7 @@ cdef class DNSIncoming:
     @cython.locals(
         name_start=cython.uint
     )
-    cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, object length)
+    cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, unsigned int length)
 
     cdef _read_bitmap(self, unsigned int end)
 
