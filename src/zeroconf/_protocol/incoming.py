@@ -60,10 +60,10 @@ MAX_NAME_LENGTH = 253
 
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
-UNPACK_3H = struct.Struct(b'!3H').unpack
-UNPACK_6H = struct.Struct(b'!6H').unpack
-UNPACK_HH = struct.Struct(b'!HH').unpack
-UNPACK_HHiH = struct.Struct(b'!HHiH').unpack
+UNPACK_3H = struct.Struct(b'!3H').unpack_from
+UNPACK_6H = struct.Struct(b'!6H').unpack_from
+UNPACK_HH = struct.Struct(b'!HH').unpack_from
+UNPACK_HHiH = struct.Struct(b'!HHiH').unpack_from
 
 _seen_logs: Dict[str, Union[int, tuple]] = {}
 
@@ -188,9 +188,9 @@ class DNSIncoming:
             ]
         )
 
-    def _unpack(self, unpacker: Callable[[bytes], tuple], length: int) -> tuple:
+    def _unpack(self, unpacker: Callable[[bytes, int], tuple], length: int) -> tuple:
         self.offset += length
-        return unpacker(self.data[self.offset - length : self.offset])
+        return unpacker(self.data, self.offset - length)
 
     def _read_header(self) -> None:
         """Reads header portion of packet"""
@@ -228,7 +228,8 @@ class DNSIncoming:
         n = self.num_answers + self.num_authorities + self.num_additionals
         for _ in range(n):
             domain = self._read_name()
-            type_, class_, ttl, length = self._unpack(UNPACK_HHiH, 10)
+            type_, class_, ttl, length = UNPACK_HHiH(self.data, self.offset)
+            self.offset += 10
             end = self.offset + length
             rec = None
             try:
