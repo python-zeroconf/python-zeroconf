@@ -63,8 +63,6 @@ cdef class DNSIncoming:
 
     cdef _read_questions(self)
 
-    cdef _read_others(self)
-
     cdef _read_character_string(self)
 
     cdef _read_string(self, unsigned int length)
