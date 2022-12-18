@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.42.0 (2022-12-18)
+### Feature
+* Optimize incoming parser by using unpack_from ([#1115](https://github.com/python-zeroconf/python-zeroconf/issues/1115)) ([`a7d50ba`](https://github.com/python-zeroconf/python-zeroconf/commit/a7d50baab362eadd2d292df08a39de6836b41ea7))
+
 ## v0.41.0 (2022-12-18)
 ### Feature
 * Optimize incoming parser by adding pxd files ([#1111](https://github.com/python-zeroconf/python-zeroconf/issues/1111)) ([`26efeb0`](https://github.com/python-zeroconf/python-zeroconf/commit/26efeb09783050266242542228f34eb4dd83e30c))
