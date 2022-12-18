@@ -69,8 +69,6 @@ cdef class DNSIncoming:
 
     cdef _read_string(self, unsigned int length)
 
-    cdef _parse_data(self, object parser_call)
-
     cdef _read_record(self, object domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
 
     cdef _read_bitmap(self, unsigned int end)
