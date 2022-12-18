@@ -8,14 +8,14 @@ cdef cython.uint DNS_COMPRESSION_POINTER_LEN
 cdef cython.uint MAX_NAME_LENGTH
 
 
-cdef object _TYPE_A
-cdef object _TYPE_CNAME
-cdef object _TYPE_PTR
-cdef object _TYPE_TXT
-cdef object _TYPE_SRV
-cdef object _TYPE_HINFO
-cdef object _TYPE_AAAA
-cdef object _TYPE_NSEC
+cdef cython.uint _TYPE_A
+cdef cython.uint _TYPE_CNAME
+cdef cython.uint _TYPE_PTR
+cdef cython.uint _TYPE_TXT
+cdef cython.uint _TYPE_SRV
+cdef cython.uint _TYPE_HINFO
+cdef cython.uint _TYPE_AAAA
+cdef cython.uint _TYPE_NSEC
 cdef object _FLAGS_QR_MASK
 cdef object _FLAGS_QR_MASK
 cdef object _FLAGS_TC
@@ -33,9 +33,9 @@ cdef object IncomingDecodeError
 
 cdef class DNSIncoming:
 
-    cdef object _read_others
+    cdef bint _did_read_others
     cdef public object flags
-    cdef object offset
+    cdef unsigned int offset
     cdef public bytes data
     cdef unsigned int _data_len
     cdef public object name_cache
@@ -58,3 +58,21 @@ cdef class DNSIncoming:
         link=cython.uint
     )
     cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, object seen_pointers)
+
+    cdef _read_header(self)
+
+    cdef _read_questions(self)
+
+    cdef _read_others(self)
+
+    cdef _read_character_string(self)
+
+    cdef _read_string(self, unsigned int length)
+
+    cdef _parse_data(self, object parser_call)
+
+    cdef _read_record(self, object domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
+
+    cdef _read_bitmap(self, unsigned int end)
+
+    cdef _read_name(self)
