@@ -427,6 +427,9 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             service_removed_event.wait(wait_time)
             assert service_added_count == 3
             assert service_removed_count == 3
+        except TypeError:
+            # Cannot be patched with cython as get_expiration_time is immutable
+            pass
 
         finally:
             assert len(zeroconf.listeners) == 1
