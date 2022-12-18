@@ -63,11 +63,17 @@ cdef class DNSIncoming:
 
     cdef _read_questions(self)
 
-    cdef _read_character_string(self)
+    @cython.locals(
+        length=cython.uint
+    )
+    cdef bytes _read_character_string(self)
 
     cdef _read_string(self, unsigned int length)
 
-    cdef _read_record(self, object domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
+    @cython.locals(
+        name_start=cython.uint
+    )
+    cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, object length)
 
     cdef _read_bitmap(self, unsigned int end)
 
