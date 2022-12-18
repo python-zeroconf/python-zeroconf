@@ -36,7 +36,7 @@ cdef class DNSIncoming:
     cdef object _read_others
     cdef public object flags
     cdef object offset
-    cdef bytes data
+    cdef public bytes data
     cdef unsigned int _data_len
     cdef public object name_cache
     cdef public object questions
