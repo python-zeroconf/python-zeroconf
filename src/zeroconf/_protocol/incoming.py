@@ -116,7 +116,15 @@ class DNSIncoming:
         self.now = now or current_time_millis()
         self.source = source
         self.scope_id = scope_id
-        self._parse_data(self._initial_parse)
+        try:
+            self._initial_parse()
+        except DECODE_EXCEPTIONS:
+            self._log_exception_debug(
+                'Received invalid packet from %s at offset %d while unpacking %r',
+                self.source,
+                self.offset,
+                self.data,
+            )
 
     def is_query(self) -> bool:
         """Returns true if this is a query."""
@@ -139,18 +147,6 @@ class DNSIncoming:
             self._read_others()
         self.valid = True
 
-    def _parse_data(self, parser_call: Callable) -> None:
-        """Parse part of the packet and catch exceptions."""
-        try:
-            parser_call()
-        except DECODE_EXCEPTIONS:
-            self._log_exception_debug(
-                'Received invalid packet from %s at offset %d while unpacking %r',
-                self.source,
-                self.offset,
-                self.data,
-            )
-
     @classmethod
     def _log_exception_debug(cls, *logger_data: Any) -> None:
         log_exc_info = False
@@ -166,7 +162,15 @@ class DNSIncoming:
     def answers(self) -> List[DNSRecord]:
         """Answers in the packet."""
         if not self._did_read_others:
-            self._parse_data(self._read_others)
+            try:
+                self._read_others()
+            except DECODE_EXCEPTIONS:
+                self._log_exception_debug(
+                    'Received invalid packet from %s at offset %d while unpacking %r',
+                    self.source,
+                    self.offset,
+                    self.data,
+                )
         return self._answers
 
     def __repr__(self) -> str:
