@@ -76,7 +76,7 @@ class DNSIncoming:
         'flags',
         'offset',
         'data',
-        'data_len',
+        '_data_len',
         'name_cache',
         'questions',
         '_answers',
@@ -102,7 +102,7 @@ class DNSIncoming:
         self.flags = 0
         self.offset = 0
         self.data = data
-        self.data_len = len(data)
+        self._data_len = len(data)
         self.name_cache: Dict[int, List[str]] = {}
         self.questions: List[DNSQuestion] = []
         self._answers: List[DNSRecord] = []
@@ -323,7 +323,7 @@ class DNSIncoming:
 
     def _decode_labels_at_offset(self, off: int, labels: List[str], seen_pointers: Set[int]) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
-        while off < self.data_len:
+        while off < self._data_len:
             length = self.data[off]
             if length == 0:
                 return off + DNS_COMPRESSION_HEADER_LEN
@@ -341,7 +341,7 @@ class DNSIncoming:
 
             # We have a DNS compression pointer
             link = (length & 0x3F) * 256 + self.data[off + 1]
-            if link > self.data_len:
+            if link > self._data_len:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} points to {link} beyond packet from {self.source}"
                 )
