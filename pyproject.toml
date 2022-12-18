@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zeroconf"
-version = "0.39.5"
+version = "0.40.0"
 description = "A pure python implementation of multicast DNS service discovery"
 authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Koston"]
 license = "LGPL"
@@ -39,7 +39,7 @@ tag_format = "{version}"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-async-timeout = ">=3.0.1"
+async-timeout = {version = ">=3.0.0", python = "<3.11"}
 ifaddr = ">=0.1.7"
 
 [tool.poetry.group.dev.dependencies]
