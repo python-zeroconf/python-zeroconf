@@ -31,31 +31,31 @@ cdef class DNSRecord(DNSEntry):
 
 cdef class DNSAddress(DNSRecord):
 
-    cdef _hash
+    cdef public _hash
     cdef public address
     cdef public scope_id
 
 
 cdef class DNSHinfo(DNSRecord):
 
-    cdef _hash
+    cdef public _hash
     cdef public cpu
     cdef public os
 
 
 cdef class DNSPointer(DNSRecord):
 
-    cdef _hash
+    cdef public _hash
     cdef public alias
 
 cdef class DNSText(DNSRecord):
 
-    cdef _hash
+    cdef public _hash
     cdef public text
 
 cdef class DNSService(DNSRecord):
 
-    cdef _hash
+    cdef public _hash
     cdef public priority
     cdef public weight
     cdef public port
@@ -64,9 +64,9 @@ cdef class DNSService(DNSRecord):
 
 cdef class DNSNsec(DNSRecord):
 
-    cdef _hash
+    cdef public _hash
     cdef public next_name
-    cdef public rftypes
+    cdef public rdtypes
 
 
 cdef class DNSRRSet:
