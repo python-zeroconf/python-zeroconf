@@ -714,12 +714,17 @@ def test_guard_against_oversized_packets():
             0,
         )
 
-    # We are patching to generate an oversized packet
-    with patch.object(outgoing, "_MAX_MSG_ABSOLUTE", 100000), patch.object(
-        outgoing, "_MAX_MSG_TYPICAL", 100000
-    ):
-        over_sized_packet = generated.packets()[0]
-        assert len(over_sized_packet) > const._MAX_MSG_ABSOLUTE
+    try:
+        # We are patching to generate an oversized packet
+        with patch.object(outgoing, "_MAX_MSG_ABSOLUTE", 100000), patch.object(
+            outgoing, "_MAX_MSG_TYPICAL", 100000
+        ):
+            over_sized_packet = generated.packets()[0]
+            assert len(over_sized_packet) > const._MAX_MSG_ABSOLUTE
+    except AttributeError:
+        # cannot patch with cython
+        zc.close()
+        return
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     okpacket_record = r.DNSText(

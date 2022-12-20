@@ -21,6 +21,7 @@
 """
 
 import enum
+import logging
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from .._cache import DNSCache
@@ -38,6 +39,11 @@ from ..const import (
     _MAX_MSG_TYPICAL,
 )
 from .incoming import DNSIncoming
+
+
+class State(enum.Enum):
+    init = 0
+    finished = 1
 
 
 class DNSOutgoing:
@@ -74,7 +80,7 @@ class DNSOutgoing:
         self.size: int = _DNS_PACKET_HEADER_LEN
         self.allow_long: bool = True
 
-        self.state = self.State.init
+        self.state = State.init
 
         self.questions: List[DNSQuestion] = []
         self.answers: List[Tuple[DNSRecord, float]] = []
@@ -106,10 +112,6 @@ class DNSOutgoing:
                 'additionals=%s' % self.additionals,
             ]
         )
-
-    class State(enum.Enum):
-        init = 0
-        finished = 1
 
     def add_question(self, record: DNSQuestion) -> None:
         """Adds a question"""
@@ -373,8 +375,10 @@ class DNSOutgoing:
         will be written out to a single oversized packet no more than
         _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
         fragmentation potentially)."""
+        return self._packets()
 
-        if self.state == self.State.finished:
+    def _packets(self) -> List[bytes]:
+        if self.state == State.finished:
             return self.packets_data
 
         questions_offset = 0
@@ -383,25 +387,27 @@ class DNSOutgoing:
         additional_offset = 0
         # we have to at least write out the question
         first_time = True
+        debug_enable = log.isEnabledFor(logging.DEBUG)
 
         while first_time or self._has_more_to_add(
             questions_offset, answer_offset, authority_offset, additional_offset
         ):
             first_time = False
-            log.debug(
-                "offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
-                questions_offset,
-                answer_offset,
-                authority_offset,
-                additional_offset,
-            )
-            log.debug(
-                "lengths = questions=%d, answers=%d, authorities=%d, additionals=%d",
-                len(self.questions),
-                len(self.answers),
-                len(self.authorities),
-                len(self.additionals),
-            )
+            if debug_enable:
+                log.debug(
+                    "offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
+                    questions_offset,
+                    answer_offset,
+                    authority_offset,
+                    additional_offset,
+                )
+                log.debug(
+                    "lengths = questions=%d, answers=%d, authorities=%d, additionals=%d",
+                    len(self.questions),
+                    len(self.answers),
+                    len(self.authorities),
+                    len(self.additionals),
+                )
 
             questions_written = self._write_questions_from_offset(questions_offset)
             answers_written = self._write_answers_from_offset(answer_offset)
@@ -417,13 +423,14 @@ class DNSOutgoing:
             answer_offset += answers_written
             authority_offset += authorities_written
             additional_offset += additionals_written
-            log.debug(
-                "now offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
-                questions_offset,
-                answer_offset,
-                authority_offset,
-                additional_offset,
-            )
+            if debug_enable:
+                log.debug(
+                    "now offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
+                    questions_offset,
+                    answer_offset,
+                    authority_offset,
+                    additional_offset,
+                )
 
             if self.is_query() and self._has_more_to_add(
                 questions_offset, answer_offset, authority_offset, additional_offset
@@ -447,5 +454,5 @@ class DNSOutgoing:
             ) > 0:
                 log.warning("packets() made no progress adding records; returning")
                 break
-        self.state = self.State.finished
+        self.state = State.finished
         return self.packets_data
