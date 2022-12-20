@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.44.0 (2022-12-18)
+### Feature
+* Optimize dns objects by adding pxd files ([#1113](https://github.com/python-zeroconf/python-zeroconf/issues/1113)) ([`919d4d8`](https://github.com/python-zeroconf/python-zeroconf/commit/919d4d875747b4fa68e25bccd5aae7f304d8a36d))
+
+## v0.43.0 (2022-12-18)
+### Feature
+* Optimize incoming parser by reducing call stack ([#1116](https://github.com/python-zeroconf/python-zeroconf/issues/1116)) ([`11f3f0e`](https://github.com/python-zeroconf/python-zeroconf/commit/11f3f0e699e00c1ee3d6d8ab5e30f62525510589))
+
 ## v0.42.0 (2022-12-18)
 ### Feature
 * Optimize incoming parser by using unpack_from ([#1115](https://github.com/python-zeroconf/python-zeroconf/issues/1115)) ([`a7d50ba`](https://github.com/python-zeroconf/python-zeroconf/commit/a7d50baab362eadd2d292df08a39de6836b41ea7))
