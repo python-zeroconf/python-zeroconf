@@ -1,4 +1,4 @@
-
+import cython
 from ._dns cimport (
     DNSAddress,
     DNSEntry,
