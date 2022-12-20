@@ -529,5 +529,5 @@ _DNSEntry = DNSEntry
 _str = str
 
 
-def _dns_entry_matches(record: _DNSEntry, key: _str, type_: int, class_: int) -> bool:
-    return key == record.key and type_ == record.type and class_ == record.class_
+def _dns_entry_matches(entry: _DNSEntry, key: _str, type_: int, class_: int) -> bool:
+    return key == entry.key and type_ == entry.type and class_ == entry.class_
