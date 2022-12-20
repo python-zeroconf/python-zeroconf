@@ -14,8 +14,8 @@ cdef object _TYPE_PTR
 
 cdef class DNSCache:
 
-    cdef public object cache
-    cdef public object service_cache
+    cdef public cython.dict cache
+    cdef public cython.dict service_cache
 
 
 cdef _dns_entry_matches(DNSEntry entry, object key, object type_, object class_)
