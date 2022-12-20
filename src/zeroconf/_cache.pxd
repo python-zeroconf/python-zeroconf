@@ -14,7 +14,7 @@ cdef object _TYPE_PTR
 
 cdef class DNSCache:
 
-    cdef public object _cache
+    cdef public object cache
     cdef public object service_cache
 
 
