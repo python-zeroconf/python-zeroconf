@@ -32,7 +32,6 @@ from ._dns import (
     DNSRecord,
     DNSService,
     DNSText,
-    dns_entry_matches,
 )
 from ._utils.time import current_time_millis
 from .const import _TYPE_PTR
@@ -138,7 +137,7 @@ class DNSCache:
         """
         key = name.lower()
         for entry in self.cache.get(key, []):
-            if dns_entry_matches(entry, key, type_, class_):
+            if _dns_entry_matches(entry, key, type_, class_):
                 yield entry
 
     def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
@@ -185,7 +184,7 @@ class DNSCache:
         """
         key = name.lower()
         for cached_entry in reversed(list(self.cache.get(key, []))):
-            if dns_entry_matches(cached_entry, key, type_, class_):
+            if _dns_entry_matches(cached_entry, key, type_, class_):
                 return cached_entry
         return None
 
@@ -193,7 +192,7 @@ class DNSCache:
         """Gets all matching entries by details."""
         key = name.lower()
         return [
-            entry for entry in list(self.cache.get(key, [])) if dns_entry_matches(entry, key, type_, class_)
+            entry for entry in list(self.cache.get(key, [])) if _dns_entry_matches(entry, key, type_, class_)
         ]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
@@ -218,3 +217,7 @@ class DNSCache:
     def names(self) -> List[str]:
         """Return a copy of the list of current cache names."""
         return list(self.cache)
+
+
+def _dns_entry_matches(record, key, type_: int, class_: int) -> bool:  # type: ignore[no-untyped-def]
+    return key == record.key and type_ == record.type and class_ == record.class_
