@@ -10,7 +10,6 @@ cdef cython.uint _FLAGS_QR_MASK
 cdef cython.uint _FLAGS_QR_QUERY
 cdef cython.uint _FLAGS_QR_RESPONSE
 cdef cython.uint _FLAGS_TC
-cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _MAX_MSG_TYPICAL
 
 
