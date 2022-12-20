@@ -15,57 +15,57 @@ cdef object _RECENT_TIME_MS
 
 cdef class DNSEntry:
 
-    cdef public str key
-    cdef public str name
-    cdef public unsigned int type
-    cdef public unsigned int class_
-    cdef public unsigned int unique
+    cdef public key
+    cdef public name
+    cdef public type
+    cdef public class_
+    cdef public unique
 
 cdef class DNSQuestion(DNSEntry):
 
-    cdef public unsigned int _hash
+    cdef public _hash
 
 cdef class DNSRecord(DNSEntry):
 
-    cdef public unsigned int ttl
+    cdef public ttl
     cdef public created
 
 cdef class DNSAddress(DNSRecord):
 
-    cdef public unsigned int _hash
+    cdef public _hash
     cdef public address
     cdef public scope_id
 
 
 cdef class DNSHinfo(DNSRecord):
 
-    cdef public unsigned int _hash
+    cdef public _hash
     cdef public cpu
     cdef public os
 
 
 cdef class DNSPointer(DNSRecord):
 
-    cdef public unsigned int _hash
+    cdef public _hash
     cdef public alias
 
 cdef class DNSText(DNSRecord):
 
-    cdef public unsigned int _hash
+    cdef public _hash
     cdef public text
 
 cdef class DNSService(DNSRecord):
 
-    cdef public unsigned int _hash
-    cdef public unsigned int priority
-    cdef public unsigned int weight
-    cdef public unsigned int port
+    cdef public _hash
+    cdef public priority
+    cdef public weight
+    cdef public port
     cdef public server
     cdef public server_key
 
 cdef class DNSNsec(DNSRecord):
 
-    cdef public unsigned int _hash
+    cdef public _hash
     cdef public next_name
     cdef public rdtypes
 
@@ -75,4 +75,4 @@ cdef class DNSRRSet:
     cdef _records
     cdef _lookup
 
-cdef _dns_entry_matches(DNSEntry entry, str key, unsigned int type_, unsigned int class_)
+cdef _dns_entry_matches(DNSEntry entry, object key, object type_, object class_)

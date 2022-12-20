@@ -18,4 +18,4 @@ cdef class DNSCache:
     cdef public object service_cache
 
 
-cdef _dns_entry_matches(DNSEntry entry, str key, unsigned int type_, unsigned int class_)
+cdef _dns_entry_matches(DNSEntry entry, object key, object type_, object class_)
