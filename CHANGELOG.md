@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.45.0 (2022-12-20)
+### Feature
+* Optimize construction of outgoing packets ([#1118](https://github.com/python-zeroconf/python-zeroconf/issues/1118)) ([`81e186d`](https://github.com/python-zeroconf/python-zeroconf/commit/81e186d365c018381f9b486a4dbe4e2e4b8bacbf))
+
 ## v0.44.0 (2022-12-18)
 ### Feature
 * Optimize dns objects by adding pxd files ([#1113](https://github.com/python-zeroconf/python-zeroconf/issues/1113)) ([`919d4d8`](https://github.com/python-zeroconf/python-zeroconf/commit/919d4d875747b4fa68e25bccd5aae7f304d8a36d))
