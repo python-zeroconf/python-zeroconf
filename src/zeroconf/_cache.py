@@ -63,7 +63,7 @@ class DNSCache:
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
-    def _async_add(self, entry: _DNSRecord) -> bool:
+    def _async_add(self, record: _DNSRecord) -> bool:
         """Adds an entry.
 
         Returns true if the entry was not already in the cache.
@@ -76,11 +76,11 @@ class DNSCache:
         # replaces any existing records that are __eq__ to each other which
         # removes the risk that accessing the cache from the wrong
         # direction would return the old incorrect entry.
-        store = self.cache.setdefault(entry.key, {})
-        new = entry not in store and not isinstance(entry, DNSNsec)
-        store[entry] = entry
-        if isinstance(entry, DNSService):
-            self.service_cache.setdefault(entry.server_key, {})[entry] = entry
+        store = self.cache.setdefault(record.key, {})
+        new = record not in store and not isinstance(record, DNSNsec)
+        store[record] = record
+        if isinstance(record, DNSService):
+            self.service_cache.setdefault(record.server_key, {})[record] = record
         return new
 
     def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
