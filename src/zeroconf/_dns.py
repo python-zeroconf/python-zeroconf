@@ -525,7 +525,9 @@ class DNSRRSet:
         return record in self.lookup
 
 
-# This is duplicated in _cache.py since it cannot be cimported
-# there with cython 2.x
-def _dns_entry_matches(record, key, type_: int, class_: int) -> bool:  # type: ignore[no-untyped-def]
+_DNSEntry = DNSEntry
+_str = str
+
+
+def _dns_entry_matches(record: _DNSEntry, key: _str, type_: int, class_: int) -> bool:
     return key == record.key and type_ == record.type and class_ == record.class_

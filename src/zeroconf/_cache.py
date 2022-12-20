@@ -39,14 +39,16 @@ from .const import _TYPE_PTR
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
 _DNSRecordCacheType = Dict[str, Dict[DNSRecord, DNSRecord]]
+_DNSRecord = DNSRecord
+_str = str
 
 
-def _remove_key(cache: _DNSRecordCacheType, key: str, entry: DNSRecord) -> None:
+def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> None:
     """Remove a key from a DNSRecord cache
 
     This function must be run in from event loop.
     """
-    del cache[key][entry]
+    del cache[key][record]
     if not cache[key]:
         del cache[key]
 
@@ -61,7 +63,7 @@ class DNSCache:
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
-    def _async_add(self, entry: DNSRecord) -> bool:
+    def _async_add(self, entry: _DNSRecord) -> bool:
         """Adds an entry.
 
         Returns true if the entry was not already in the cache.
@@ -94,14 +96,14 @@ class DNSCache:
                 new = True
         return new
 
-    def _async_remove(self, entry: DNSRecord) -> None:
+    def _async_remove(self, record: _DNSRecord) -> None:
         """Removes an entry.
 
         This function must be run in from event loop.
         """
-        if isinstance(entry, DNSService):
-            _remove_key(self.service_cache, entry.server_key, entry)
-        _remove_key(self.cache, entry.key, entry)
+        if isinstance(record, DNSService):
+            _remove_key(self.service_cache, record.server_key, record)
+        _remove_key(self.cache, record.key, record)
 
     def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
         """Remove multiple records.
@@ -127,7 +129,10 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self.cache.get(entry.key, {}).get(entry)
+        store = self.cache.get(entry.key)
+        if store is None:
+            return None
+        return store.get(entry)
 
     def async_all_by_details(self, name: str, type_: int, class_: int) -> Iterator[DNSRecord]:
         """Gets all matching entries by details.
@@ -137,7 +142,7 @@ class DNSCache:
         """
         key = name.lower()
         for entry in self.cache.get(key, []):
-            if _dns_entry_matches(entry, key, type_, class_):
+            if _dns_record_matches(entry, key, type_, class_):
                 yield entry
 
     def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
@@ -184,7 +189,7 @@ class DNSCache:
         """
         key = name.lower()
         for cached_entry in reversed(list(self.cache.get(key, []))):
-            if _dns_entry_matches(cached_entry, key, type_, class_):
+            if _dns_record_matches(cached_entry, key, type_, class_):
                 return cached_entry
         return None
 
@@ -192,7 +197,7 @@ class DNSCache:
         """Gets all matching entries by details."""
         key = name.lower()
         return [
-            entry for entry in list(self.cache.get(key, [])) if _dns_entry_matches(entry, key, type_, class_)
+            entry for entry in list(self.cache.get(key, [])) if _dns_record_matches(entry, key, type_, class_)
         ]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
@@ -219,7 +224,5 @@ class DNSCache:
         return list(self.cache)
 
 
-# This is duplicated in _dns.py since it cannot be cimported
-# into this file with cython 2.x
-def _dns_entry_matches(record, key, type_: int, class_: int) -> bool:  # type: ignore[no-untyped-def]
+def _dns_record_matches(record: _DNSRecord, key: _str, type_: int, class_: int) -> bool:
     return key == record.key and type_ == record.type and class_ == record.class_

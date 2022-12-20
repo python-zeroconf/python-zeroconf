@@ -66,6 +66,7 @@ UNPACK_HH = struct.Struct(b'!HH').unpack_from
 UNPACK_HHiH = struct.Struct(b'!HHiH').unpack_from
 
 _seen_logs: Dict[str, Union[int, tuple]] = {}
+_str = str
 
 
 class DNSIncoming:
@@ -250,7 +251,9 @@ class DNSIncoming:
             if rec is not None:
                 self._answers.append(rec)
 
-    def _read_record(self, domain, type_: int, class_: int, ttl: int, length: int) -> Optional[DNSRecord]:  # type: ignore[no-untyped-def]
+    def _read_record(
+        self, domain: _str, type_: int, class_: int, ttl: int, length: int
+    ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
             return DNSAddress(domain, type_, class_, ttl, self._read_string(4), created=self.now)
