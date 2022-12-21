@@ -1,4 +1,5 @@
 
+import cython
 
 
 cdef object _LEN_BYTE
@@ -12,67 +13,91 @@ cdef object _EXPIRE_FULL_TIME_MS
 cdef object _EXPIRE_STALE_TIME_MS
 cdef object _RECENT_TIME_MS
 
+cdef object _CLASS_UNIQUE
+cdef object _CLASS_MASK
 
 cdef class DNSEntry:
 
-    cdef public key
-    cdef public name
-    cdef public type
-    cdef public class_
-    cdef public unique
+    cdef public object key
+    cdef public object name
+    cdef public object type
+    cdef public object class_
+    cdef public object unique
 
 cdef class DNSQuestion(DNSEntry):
 
-    cdef public _hash
+    cdef public cython.int _hash
 
 cdef class DNSRecord(DNSEntry):
 
-    cdef public ttl
-    cdef public created
+    cdef public object ttl
+    cdef public object created
+
+    cdef _suppressed_by_answer(self, DNSRecord answer)
+
 
 cdef class DNSAddress(DNSRecord):
 
-    cdef public _hash
-    cdef public address
-    cdef public scope_id
+    cdef public cython.int _hash
+    cdef public object address
+    cdef public object scope_id
+
+    cdef _eq(self, DNSAddress other)
 
 
 cdef class DNSHinfo(DNSRecord):
 
-    cdef public _hash
-    cdef public cpu
-    cdef public os
+    cdef public cython.int _hash
+    cdef public object cpu
+    cdef public object os
+
+    cdef _eq(self, DNSHinfo other)
 
 
 cdef class DNSPointer(DNSRecord):
 
-    cdef public _hash
-    cdef public alias
+    cdef public cython.int _hash
+    cdef public object alias
+
+    cdef _eq(self, DNSPointer other)
+
 
 cdef class DNSText(DNSRecord):
 
-    cdef public _hash
-    cdef public text
+    cdef public cython.int _hash
+    cdef public object text
+
+    cdef _eq(self, DNSText other)
+
 
 cdef class DNSService(DNSRecord):
 
-    cdef public _hash
-    cdef public priority
-    cdef public weight
-    cdef public port
-    cdef public server
-    cdef public server_key
+    cdef public cython.int _hash
+    cdef public object priority
+    cdef public object weight
+    cdef public object port
+    cdef public object server
+    cdef public object server_key
+
+    cdef _eq(self, DNSService other)
+
 
 cdef class DNSNsec(DNSRecord):
 
-    cdef public _hash
-    cdef public next_name
-    cdef public rdtypes
+    cdef public cython.int _hash
+    cdef public object next_name
+    cdef public cython.list rdtypes
+
+    cdef _eq(self, DNSNsec other)
 
 
 cdef class DNSRRSet:
 
     cdef _records
-    cdef _lookup
+    cdef cython.dict _lookup
 
-cdef _dns_entry_matches(DNSEntry entry, object key, object type_, object class_)
+    @cython.locals(other=DNSRecord)
+    cpdef suppresses(self, DNSRecord record)
+
+
+cdef _dns_entry_matches(DNSEntry entry, str key, cython.int type_, cython.int class_)
