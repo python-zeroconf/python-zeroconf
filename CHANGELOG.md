@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.0 (2022-12-21)
+### Feature
+* Optimize the dns cache ([#1119](https://github.com/python-zeroconf/python-zeroconf/issues/1119)) ([`e80fcef`](https://github.com/python-zeroconf/python-zeroconf/commit/e80fcef967024f8e846e44b464a82a25f5550edf))
+
 ## v0.45.0 (2022-12-20)
 ### Feature
 * Optimize construction of outgoing packets ([#1118](https://github.com/python-zeroconf/python-zeroconf/issues/1118)) ([`81e186d`](https://github.com/python-zeroconf/python-zeroconf/commit/81e186d365c018381f9b486a4dbe4e2e4b8bacbf))
