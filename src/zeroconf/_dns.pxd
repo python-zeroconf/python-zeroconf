@@ -74,3 +74,5 @@ cdef class DNSRRSet:
 
     cdef _records
     cdef _lookup
+
+cdef _dns_entry_matches(DNSEntry entry, object key, object type_, object class_)
