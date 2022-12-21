@@ -416,7 +416,7 @@ class DNSService(DNSRecord):
         self.port = port
         self.server = server
         self.server_key = server.lower()
-        self._hash = hash((self.key, type_, self.class_, priority, weight, port, self.server_key))
+        self._hash = hash((self.key, type_, self.class_, priority, weight, port, server))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -435,7 +435,7 @@ class DNSService(DNSRecord):
             self.priority == other.priority
             and self.weight == other.weight
             and self.port == other.port
-            and self.server_key == other.server_key
+            and self.server == other.server
             and _dns_entry_matches(other, self.key, self.type, self.class_)
         )
 
