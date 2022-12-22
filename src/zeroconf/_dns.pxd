@@ -24,6 +24,8 @@ cdef class DNSEntry:
     cdef public object class_
     cdef public object unique
 
+    cdef _dns_entry_matches(self, DNSEntry other)
+
 cdef class DNSQuestion(DNSEntry):
 
     cdef public cython.int _hash
@@ -98,6 +100,3 @@ cdef class DNSRRSet:
 
     @cython.locals(other=DNSRecord)
     cpdef suppresses(self, DNSRecord record)
-
-
-cdef _dns_entry_matches(DNSEntry entry, object key, object type_, object class_)
