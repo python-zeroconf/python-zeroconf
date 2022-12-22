@@ -100,4 +100,4 @@ cdef class DNSRRSet:
     cpdef suppresses(self, DNSRecord record)
 
 
-cdef _dns_entry_matches(DNSEntry entry, str key, cython.int type_, cython.int class_)
+cdef _dns_entry_matches(DNSEntry entry, object key, object type_, object class_)
