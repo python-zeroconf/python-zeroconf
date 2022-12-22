@@ -72,9 +72,12 @@ class DNSEntry:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
+    def _dns_entry_matches(self, other) -> bool:  # type: ignore[no-untyped-def]
+        return self.key == other.key and self.type == other.type and self.class_ == other.class_
+
     def __eq__(self, other: Any) -> bool:
         """Equality test on key (lowercase name), type, and class"""
-        return _dns_entry_matches(other, self.key, self.type, self.class_) and isinstance(other, DNSEntry)
+        return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
     @staticmethod
     def get_class_(class_: int) -> str:
@@ -117,7 +120,7 @@ class DNSQuestion(DNSEntry):
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on dns question."""
-        return isinstance(other, DNSQuestion) and _dns_entry_matches(other, self.key, self.type, self.class_)
+        return isinstance(other, DNSQuestion) and self._dns_entry_matches(other)
 
     @property
     def max_size(self) -> int:
@@ -169,9 +172,9 @@ class DNSRecord(DNSEntry):
     def suppressed_by(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
-        return any(self.suppressed_by_answer(record) for record in msg.answers)
+        return any(self._suppressed_by_answer(record) for record in msg.answers)
 
-    def suppressed_by_answer(self, other: 'DNSRecord') -> bool:
+    def _suppressed_by_answer(self, other) -> bool:  # type: ignore[no-untyped-def]
         """Returns true if another record has same name, type and class,
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
@@ -246,11 +249,13 @@ class DNSAddress(DNSRecord):
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on address"""
+        return isinstance(other, DNSAddress) and self._eq(other)
+
+    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
         return (
-            isinstance(other, DNSAddress)
-            and self.address == other.address
+            self.address == other.address
             and self.scope_id == other.scope_id
-            and _dns_entry_matches(other, self.key, self.type, self.class_)
+            and self._dns_entry_matches(other)
         )
 
     def __hash__(self) -> int:
@@ -289,13 +294,12 @@ class DNSHinfo(DNSRecord):
         out.write_character_string(self.os.encode('utf-8'))
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on cpu and os"""
-        return (
-            isinstance(other, DNSHinfo)
-            and self.cpu == other.cpu
-            and self.os == other.os
-            and _dns_entry_matches(other, self.key, self.type, self.class_)
-        )
+        """Tests equality on cpu and os."""
+        return isinstance(other, DNSHinfo) and self._eq(other)
+
+    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+        """Tests equality on cpu and os."""
+        return self.cpu == other.cpu and self.os == other.os and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
         """Hash to compare like DNSHinfo."""
@@ -334,12 +338,12 @@ class DNSPointer(DNSRecord):
         out.write_name(self.alias)
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on alias"""
-        return (
-            isinstance(other, DNSPointer)
-            and self.alias == other.alias
-            and _dns_entry_matches(other, self.key, self.type, self.class_)
-        )
+        """Tests equality on alias."""
+        return isinstance(other, DNSPointer) and self._eq(other)
+
+    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+        """Tests equality on alias."""
+        return self.alias == other.alias and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
         """Hash to compare like DNSPointer."""
@@ -373,12 +377,12 @@ class DNSText(DNSRecord):
         return self._hash
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on text"""
-        return (
-            isinstance(other, DNSText)
-            and self.text == other.text
-            and _dns_entry_matches(other, self.key, self.type, self.class_)
-        )
+        """Tests equality on text."""
+        return isinstance(other, DNSText) and self._eq(other)
+
+    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+        """Tests equality on text."""
+        return self.text == other.text and self._dns_entry_matches(other)
 
     def __repr__(self) -> str:
         """String representation"""
@@ -422,13 +426,16 @@ class DNSService(DNSRecord):
 
     def __eq__(self, other: Any) -> bool:
         """Tests equality on priority, weight, port and server"""
+        return isinstance(other, DNSService) and self._eq(other)
+
+    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+        """Tests equality on priority, weight, port and server."""
         return (
-            isinstance(other, DNSService)
-            and self.priority == other.priority
+            self.priority == other.priority
             and self.weight == other.weight
             and self.port == other.port
             and self.server == other.server
-            and _dns_entry_matches(other, self.key, self.type, self.class_)
+            and self._dns_entry_matches(other)
         )
 
     def __hash__(self) -> int:
@@ -478,12 +485,15 @@ class DNSNsec(DNSRecord):
         out.write_string(out_bytes)
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on cpu and os"""
+        """Tests equality on next_name and rdtypes."""
+        return isinstance(other, DNSNsec) and self._eq(other)
+
+    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+        """Tests equality on next_name and rdtypes."""
         return (
-            isinstance(other, DNSNsec)
-            and self.next_name == other.next_name
+            self.next_name == other.next_name
             and self.rdtypes == other.rdtypes
-            and _dns_entry_matches(other, self.key, self.type, self.class_)
+            and self._dns_entry_matches(other)
         )
 
     def __hash__(self) -> int:
@@ -495,6 +505,9 @@ class DNSNsec(DNSRecord):
         return self.to_string(
             self.next_name + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes])
         )
+
+
+_DNSRecord = DNSRecord
 
 
 class DNSRRSet:
@@ -514,20 +527,15 @@ class DNSRRSet:
             self._lookup = {record: record for record in self._records}
         return self._lookup
 
-    def suppresses(self, record: DNSRecord) -> bool:
+    def suppresses(self, record: _DNSRecord) -> bool:
         """Returns true if any answer in the rrset can suffice for the
         information held in this record."""
-        other = self.lookup.get(record)
+        if self._lookup is None:
+            other = self.lookup.get(record)
+        else:
+            other = self._lookup.get(record)
         return bool(other and other.ttl > (record.ttl / 2))
 
     def __contains__(self, record: DNSRecord) -> bool:
         """Returns true if the rrset contains the record."""
         return record in self.lookup
-
-
-_DNSEntry = DNSEntry
-_str = str
-
-
-def _dns_entry_matches(entry: _DNSEntry, key: _str, type_: int, class_: int) -> bool:
-    return key == entry.key and type_ == entry.type and class_ == entry.class_
