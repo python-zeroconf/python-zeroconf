@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.47.0 (2022-12-22)
+### Feature
+* Optimize equality checks for DNS records ([#1120](https://github.com/python-zeroconf/python-zeroconf/issues/1120)) ([`3a25ff7`](https://github.com/python-zeroconf/python-zeroconf/commit/3a25ff74bea83cd7d50888ce1ebfd7650d704bfa))
+
 ## v0.46.0 (2022-12-21)
 ### Feature
 * Optimize the dns cache ([#1119](https://github.com/python-zeroconf/python-zeroconf/issues/1119)) ([`e80fcef`](https://github.com/python-zeroconf/python-zeroconf/commit/e80fcef967024f8e846e44b464a82a25f5550edf))
