@@ -283,6 +283,14 @@ def test_dns_pointer_record_hashablity():
     assert len(record_set) == 2
 
 
+def test_dns_pointer_comparison_is_case_insensitive():
+    """Test DNSPointer comparison is case insensitive."""
+    ptr1 = r.DNSPointer('irrelevant', const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, '123')
+    ptr2 = r.DNSPointer('irrelevant'.upper(), const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, '123')
+
+    assert ptr1 == ptr2
+
+
 def test_dns_text_record_hashablity():
     """Test DNSText are hashable."""
     text1 = r.DNSText('irrelevant', 0, 0, const._DNS_OTHER_TTL, b'12345678901')
@@ -338,6 +346,17 @@ def test_dns_service_server_key():
     assert srv1.key == 'x._tcp._http.local.'
     assert srv1.server == 'X.local.'
     assert srv1.server_key == 'x.local.'
+
+
+def test_dns_service_server_comparison_is_case_insensitive():
+    """Test DNSService server comparison is case insensitive."""
+    srv1 = r.DNSService(
+        'X._tcp._http.local.', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, 'X.local.'
+    )
+    srv2 = r.DNSService(
+        'X._tcp._http.local.', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, 'x.local.'
+    )
+    assert srv1 == srv2
 
 
 def test_dns_nsec_record_hashablity():

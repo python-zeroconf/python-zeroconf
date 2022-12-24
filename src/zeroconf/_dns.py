@@ -314,14 +314,15 @@ class DNSPointer(DNSRecord):
 
     """A DNS pointer record"""
 
-    __slots__ = ('_hash', 'alias')
+    __slots__ = ('_hash', 'alias', 'alias_key')
 
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, alias: str, created: Optional[float] = None
     ) -> None:
         super().__init__(name, type_, class_, ttl, created)
         self.alias = alias
-        self._hash = hash((self.key, type_, self.class_, alias))
+        self.alias_key = self.alias.lower()
+        self._hash = hash((self.key, type_, self.class_, self.alias_key))
 
     @property
     def max_size_compressed(self) -> int:
@@ -343,7 +344,7 @@ class DNSPointer(DNSRecord):
 
     def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
         """Tests equality on alias."""
-        return self.alias == other.alias and self._dns_entry_matches(other)
+        return self.alias_key == other.alias_key and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
         """Hash to compare like DNSPointer."""
@@ -415,7 +416,7 @@ class DNSService(DNSRecord):
         self.port = port
         self.server = server
         self.server_key = server.lower()
-        self._hash = hash((self.key, type_, self.class_, priority, weight, port, server))
+        self._hash = hash((self.key, type_, self.class_, priority, weight, port, self.server_key))
 
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet"""
@@ -434,7 +435,7 @@ class DNSService(DNSRecord):
             self.priority == other.priority
             and self.weight == other.weight
             and self.port == other.port
-            and self.server == other.server
+            and self.server_key == other.server_key
             and self._dns_entry_matches(other)
         )
 
