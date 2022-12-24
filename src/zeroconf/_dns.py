@@ -435,7 +435,7 @@ class DNSService(DNSRecord):
             self.priority == other.priority
             and self.weight == other.weight
             and self.port == other.port
-            and self.server == other.server
+            and self.server_key == other.server_key
             and self._dns_entry_matches(other)
         )
 
