@@ -60,6 +60,7 @@ cdef class DNSPointer(DNSRecord):
 
     cdef public cython.int _hash
     cdef public object alias
+    cdef public object alias_key
 
     cdef _eq(self, DNSPointer other)
 
