@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.47.1 (2022-12-24)
+### Fix
+* The equality checks for DNSPointer and DNSService should be case insensitive ([#1122](https://github.com/python-zeroconf/python-zeroconf/issues/1122)) ([`48ae77f`](https://github.com/python-zeroconf/python-zeroconf/commit/48ae77f026a96e2ca475b0ff80cb6d22207ce52f))
+
 ## v0.47.0 (2022-12-22)
 ### Feature
 * Optimize equality checks for DNS records ([#1120](https://github.com/python-zeroconf/python-zeroconf/issues/1120)) ([`3a25ff7`](https://github.com/python-zeroconf/python-zeroconf/commit/3a25ff74bea83cd7d50888ce1ebfd7650d704bfa))
