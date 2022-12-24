@@ -176,7 +176,7 @@ class TestServiceBrowser(unittest.TestCase):
                         socket.AF_INET6, service_v6_second_address
                     ) in service_info.addresses_by_version(r.IPVersion.V6Only)
                 assert service_info.text == service_text
-                assert service_info.server == service_server
+                assert service_info.server.lower() == service_server.lower()
                 service_updated_event.set()
 
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
