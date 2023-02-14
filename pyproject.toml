@@ -24,7 +24,6 @@ classifiers=[
 	'Programming Language :: Python :: Implementation :: CPython',
 	'Programming Language :: Python :: Implementation :: PyPy',
 ]
-build = "build_ext.py"
 packages = [
     { include = "zeroconf", from = "src" },
 ]
@@ -32,6 +31,10 @@ packages = [
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/python-zeroconf/python-zeroconf/issues"
 "Changelog" = "https://github.com/python-zeroconf/python-zeroconf/blob/master/CHANGELOG.md"
+
+[tool.poetry.build]
+generate-setup-file = true
+script = "build_ext.py"
 
 [tool.semantic_release]
 branch = "master"
