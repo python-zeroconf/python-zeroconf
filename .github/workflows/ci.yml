@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v4.1.11
+      - uses: wagoid/commitlint-github-action@v5
 
   test:
     strategy:
@@ -102,7 +102,7 @@ jobs:
       # - Create GitHub release
       # - Publish to PyPI
       - name: Python Semantic Release
-        uses: relekang/python-semantic-release@v7.32.2
+        uses: relekang/python-semantic-release@v7.33.1
         #        env:
         #          REPOSITORY_URL: https://test.pypi.org/legacy/
         #          TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
