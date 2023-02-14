@@ -307,6 +307,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.done = False
         self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
+        self._query_sender_task: Optional[asyncio.Task] = None
 
         if hasattr(handlers, 'add_service'):
             listener = cast('ServiceListener', handlers)
@@ -436,6 +437,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.done = True
         self._cancel_send_timer()
         self.zc.async_remove_listener(self)
+        assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
         self._query_sender_task.cancel()
 
     def _generate_ready_queries(self, first_request: bool, now: float) -> List[DNSOutgoing]:
