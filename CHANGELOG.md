@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.47.3 (2023-02-14)
+### Fix
+* Hold a strong reference to the query sender start task ([#1128](https://github.com/python-zeroconf/python-zeroconf/issues/1128)) ([`808c3b2`](https://github.com/python-zeroconf/python-zeroconf/commit/808c3b2194a7f499a469a9893102d328ccee83db))
+
 ## v0.47.2 (2023-02-14)
 ### Fix
 * Missing c extensions with newer poetry ([#1129](https://github.com/python-zeroconf/python-zeroconf/issues/1129)) ([`44d7fc6`](https://github.com/python-zeroconf/python-zeroconf/commit/44d7fc6483485102f60c91d591d0d697872f8865))
