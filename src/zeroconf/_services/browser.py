@@ -307,6 +307,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.done = False
         self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
+        self._query_sender_task: Optional[asyncio.Task] = None
 
         if hasattr(handlers, 'add_service'):
             listener = cast('ServiceListener', handlers)
@@ -329,7 +330,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.query_scheduler.start(current_time_millis())
         self.zc.async_add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
         # Only start queries after the listener is installed
-        asyncio.ensure_future(self._async_start_query_sender())
+        self._query_sender_task = asyncio.ensure_future(self._async_start_query_sender())
 
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
@@ -436,6 +437,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.done = True
         self._cancel_send_timer()
         self.zc.async_remove_listener(self)
+        assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
+        self._query_sender_task.cancel()
 
     def _generate_ready_queries(self, first_request: bool, now: float) -> List[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
