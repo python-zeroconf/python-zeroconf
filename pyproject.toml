@@ -144,7 +144,8 @@ module = "bench.*"
 ignore_errors = true
 
 [build-system]
-requires = ['setuptools>=65.4.1', 'wheel', 'Cython', "poetry-core>=1.0.0"]
+# 1.5.2 required for https://github.com/python-poetry/poetry/issues/7505
+requires = ['setuptools>=65.4.1', 'wheel', 'Cython', "poetry-core>=1.5.2"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.codespell]
