@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.47.4 (2023-03-20)
+### Fix
+* Correct duplicate record entries in windows wheels by updating poetry-core ([#1134](https://github.com/python-zeroconf/python-zeroconf/issues/1134)) ([`a43055d`](https://github.com/python-zeroconf/python-zeroconf/commit/a43055d3fa258cd762c3e9394b01f8bdcb24f97e))
+
 ## v0.47.3 (2023-02-14)
 ### Fix
 * Hold a strong reference to the query sender start task ([#1128](https://github.com/python-zeroconf/python-zeroconf/issues/1128)) ([`808c3b2`](https://github.com/python-zeroconf/python-zeroconf/commit/808c3b2194a7f499a469a9893102d328ccee83db))
