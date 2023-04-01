@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.51.0 (2023-04-01)
+### Feature
+* Improve performance of constructing ServiceInfo ([#1141](https://github.com/python-zeroconf/python-zeroconf/issues/1141)) ([`36d5b45`](https://github.com/python-zeroconf/python-zeroconf/commit/36d5b45a4ece1dca902e9c3c79b5a63b8d9ae41f))
+
 ## v0.50.0 (2023-04-01)
 ### Feature
 * Small speed up to handler dispatch ([#1140](https://github.com/python-zeroconf/python-zeroconf/issues/1140)) ([`5bd1b6e`](https://github.com/python-zeroconf/python-zeroconf/commit/5bd1b6e7b4dd796069461c737ded956305096307))
