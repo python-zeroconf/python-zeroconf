@@ -50,7 +50,7 @@ class Signal:
         self._handlers: List[Callable[..., None]] = []
 
     def fire(self, **kwargs: Any) -> None:
-        for h in list(self._handlers):
+        for h in self._handlers[:]:
             h(**kwargs)
 
     @property
