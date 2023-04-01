@@ -124,7 +124,10 @@ class _WrappedTransport:
         fileno: int,
         sock_name: Any,
     ) -> None:
-        """Initialize the wrapped transport."""
+        """Initialize the wrapped transport.
+
+        These attributes are used when sending packets.
+        """
         self.transport = transport
         self.is_ipv6 = is_ipv6
         self.sock = sock
