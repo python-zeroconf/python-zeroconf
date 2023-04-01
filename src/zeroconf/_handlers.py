@@ -489,7 +489,7 @@ class RecordManager:
         # Since unique is set, all old records with that name, rrtype,
         # and rrclass that were received more than one second ago are declared
         # invalid, and marked to expire from the cache in one second.
-        answers_rrset = DNSRRSet(answers)
+        answers_rrset = set(answers)
         for name, type_, class_ in unique_types:
             for entry in self.cache.async_all_by_details(name, type_, class_):
                 if (now - entry.created > _ONE_SECOND) and entry not in answers_rrset:
