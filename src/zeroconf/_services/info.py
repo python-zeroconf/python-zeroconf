@@ -23,6 +23,7 @@
 import ipaddress
 import random
 import socket
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union, cast
 
 from .._dns import (
@@ -77,6 +78,9 @@ def instance_name_from_service_info(info: "ServiceInfo") -> str:
     if not info.type.endswith(service_name):
         raise BadTypeInNameException
     return info.name[: -len(service_name) - 1]
+
+
+_cached_ip_addresses = lru_cache(maxsize=256)(ipaddress.ip_address)
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -196,7 +200,7 @@ class ServiceInfo(RecordUpdateListener):
 
         for address in value:
             try:
-                addr = ipaddress.ip_address(address)
+                addr = _cached_ip_addresses(address)
             except ValueError:
                 raise TypeError(
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
@@ -245,7 +249,7 @@ class ServiceInfo(RecordUpdateListener):
             return self.parsed_addresses(version)
 
         def is_link_local(addr_str: str) -> Any:
-            addr = ipaddress.ip_address(addr_str)
+            addr = _cached_ip_addresses(addr_str)
             return addr.version == 6 and addr.is_link_local
 
         ll_addrs = list(filter(is_link_local, self.parsed_addresses(version)))
@@ -346,7 +350,7 @@ class ServiceInfo(RecordUpdateListener):
             if record.key != self.server_key:
                 return
             try:
-                ip_addr = ipaddress.ip_address(record.address)
+                ip_addr = _cached_ip_addresses(record.address)
             except ValueError as ex:
                 log.warning("Encountered invalid address while processing %s: %s", record, ex)
                 return
