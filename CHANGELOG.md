@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.49.0 (2023-04-01)
+### Feature
+* Speed up processing incoming records ([#1139](https://github.com/python-zeroconf/python-zeroconf/issues/1139)) ([`7246a34`](https://github.com/python-zeroconf/python-zeroconf/commit/7246a344b6c0543871b40715c95c9435db4c7f81))
+
 ## v0.48.0 (2023-04-01)
 ### Feature
 * Reduce overhead to send responses ([#1135](https://github.com/python-zeroconf/python-zeroconf/issues/1135)) ([`c4077dd`](https://github.com/python-zeroconf/python-zeroconf/commit/c4077dde6dfde9e2598eb63daa03c36063a3e7b0))
