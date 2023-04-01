@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.48.0 (2023-04-01)
+### Feature
+* Reduce overhead to send responses ([#1135](https://github.com/python-zeroconf/python-zeroconf/issues/1135)) ([`c4077dd`](https://github.com/python-zeroconf/python-zeroconf/commit/c4077dde6dfde9e2598eb63daa03c36063a3e7b0))
+
 ## v0.47.4 (2023-03-20)
 ### Fix
 * Correct duplicate record entries in windows wheels by updating poetry-core ([#1134](https://github.com/python-zeroconf/python-zeroconf/issues/1134)) ([`a43055d`](https://github.com/python-zeroconf/python-zeroconf/commit/a43055d3fa258cd762c3e9394b01f8bdcb24f97e))
