@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.50.0 (2023-04-01)
+### Feature
+* Small speed up to handler dispatch ([#1140](https://github.com/python-zeroconf/python-zeroconf/issues/1140)) ([`5bd1b6e`](https://github.com/python-zeroconf/python-zeroconf/commit/5bd1b6e7b4dd796069461c737ded956305096307))
+
 ## v0.49.0 (2023-04-01)
 ### Feature
 * Speed up processing incoming records ([#1139](https://github.com/python-zeroconf/python-zeroconf/issues/1139)) ([`7246a34`](https://github.com/python-zeroconf/python-zeroconf/commit/7246a344b6c0543871b40715c95c9435db4c7f81))
