@@ -27,7 +27,6 @@ import random
 import socket
 import sys
 import threading
-from dataclasses import dataclass
 from types import TracebackType  # noqa # used in type hints
 from typing import Any, Awaitable, Dict, List, Optional, Tuple, Type, Union, cast
 
@@ -106,15 +105,31 @@ _CLOSE_TIMEOUT = 3000  # ms
 _REGISTER_BROADCASTS = 3
 
 
-@dataclass
 class _WrappedTransport:
     """A wrapper for transports."""
 
-    transport: asyncio.DatagramTransport
-    is_ipv6: bool
-    socket: socket.socket
-    fileno: int
-    sock_name: Any
+    __slots__ = (
+        'transport',
+        'is_ipv6',
+        'sock',
+        'fileno',
+        'sock_name',
+    )
+
+    def __init__(
+        self,
+        transport: asyncio.DatagramTransport,
+        is_ipv6: bool,
+        sock: socket.socket,
+        fileno: int,
+        sock_name: Any,
+    ) -> None:
+        """Initialize the wrapped transport."""
+        self.transport = transport
+        self.is_ipv6 = is_ipv6
+        self.sock = sock
+        self.fileno = fileno
+        self.sock_name = sock_name
 
 
 def _make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTransport:
@@ -123,7 +138,7 @@ def _make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTra
     return _WrappedTransport(
         transport=transport,
         is_ipv6=sock.family == socket.AF_INET6,
-        socket=sock,
+        sock=sock,
         fileno=sock.fileno(),
         sock_name=sock.getsockname(),
     )
