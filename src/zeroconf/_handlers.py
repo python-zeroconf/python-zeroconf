@@ -23,12 +23,12 @@
 import itertools
 import random
 from collections import deque
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Dict,
     Iterable,
     List,
-    NamedTuple,
     Optional,
     Set,
     Tuple,
@@ -75,14 +75,16 @@ _ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
 
-class QuestionAnswers(NamedTuple):
+@dataclass
+class QuestionAnswers:
     ucast: _AnswerWithAdditionalsType
     mcast_now: _AnswerWithAdditionalsType
     mcast_aggregate: _AnswerWithAdditionalsType
     mcast_aggregate_last_second: _AnswerWithAdditionalsType
 
 
-class AnswerGroup(NamedTuple):
+@dataclass
+class AnswerGroup:
     """A group of answers scheduled to be sent at the same time."""
 
     send_after: float  # Must be sent after this time
