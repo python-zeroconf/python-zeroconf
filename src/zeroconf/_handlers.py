@@ -23,7 +23,6 @@
 import itertools
 import random
 from collections import deque
-from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Dict,
@@ -75,21 +74,35 @@ _ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
 
-@dataclass
 class QuestionAnswers:
-    ucast: _AnswerWithAdditionalsType
-    mcast_now: _AnswerWithAdditionalsType
-    mcast_aggregate: _AnswerWithAdditionalsType
-    mcast_aggregate_last_second: _AnswerWithAdditionalsType
+    """A group of answers for a question."""
+
+    __slots__ = ("ucast", "mcast_now", "mcast_aggregate", "mcast_aggregate_last_second")
+
+    def __init__(
+        self,
+        ucast: _AnswerWithAdditionalsType,
+        mcast_now: _AnswerWithAdditionalsType,
+        mcast_aggregate: _AnswerWithAdditionalsType,
+        mcast_aggregate_last_second: _AnswerWithAdditionalsType,
+    ) -> None:
+        """Initialize the question answers."""
+        self.ucast = ucast
+        self.mcast_now = mcast_now
+        self.mcast_aggregate = mcast_aggregate
+        self.mcast_aggregate_last_second = mcast_aggregate_last_second
 
 
-@dataclass
 class AnswerGroup:
     """A group of answers scheduled to be sent at the same time."""
 
-    send_after: float  # Must be sent after this time
-    send_before: float  # Must be sent before this time
-    answers: _AnswerWithAdditionalsType
+    __slots__ = ("send_after", "send_before", "answers")
+
+    def __init__(self, send_after: float, send_before: float, answers: _AnswerWithAdditionalsType) -> None:
+        """Initialize the answer group."""
+        self.send_after = send_after  # Must be sent after this time
+        self.send_before = send_before  # Must be sent before this time
+        self.answers = answers
 
 
 def _message_is_probe(msg: DNSIncoming) -> bool:
