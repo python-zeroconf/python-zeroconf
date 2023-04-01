@@ -8,7 +8,6 @@ from ._protocol.outgoing cimport DNSOutgoing
 
 
 cdef object RecordUpdate
-cdef object _DNS_PTR_MIN_TTL
 
 cdef class QueryHandler:
 
