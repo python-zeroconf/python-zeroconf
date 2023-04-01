@@ -80,7 +80,7 @@ def instance_name_from_service_info(info: "ServiceInfo") -> str:
     return info.name[: -len(service_name) - 1]
 
 
-_cached_ip_addresses = lru_cache(maxsize=1024)(ipaddress.ip_address)
+_cached_ip_addresses = lru_cache(maxsize=256)(ipaddress.ip_address)
 
 
 class ServiceInfo(RecordUpdateListener):
