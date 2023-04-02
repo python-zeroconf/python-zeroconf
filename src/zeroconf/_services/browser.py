@@ -53,6 +53,7 @@ from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.name import cached_possible_types, service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
+    _ADDRESS_RECORD_TYPES,
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
     _CLASS_IN,
@@ -63,8 +64,6 @@ from ..const import (
     _MDNS_ADDR,
     _MDNS_ADDR6,
     _MDNS_PORT,
-    _TYPE_A,
-    _TYPE_AAAA,
     _TYPE_PTR,
 )
 
@@ -385,7 +384,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if old_record or record.is_expired(now):
             return
 
-        if record_type in (_TYPE_A, _TYPE_AAAA):
+        if record_type in _ADDRESS_RECORD_TYPES:
             # Iterate through the DNSCache and callback any services that use this address
             for type_, name in self._names_matching_types(
                 {service.name for service in self.zc.cache.async_entries_with_server(record.name)}
