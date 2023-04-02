@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.53.0 (2023-04-02)
+### Feature
+* Improve ServiceBrowser performance by removing OrderedDict ([#1148](https://github.com/python-zeroconf/python-zeroconf/issues/1148)) ([`9a16be5`](https://github.com/python-zeroconf/python-zeroconf/commit/9a16be56a9f69a5d0f7cde13dc1337b6d93c1433))
+
+### Fix
+* Make parsed_scoped_addresses return addresses in the same order as all other methods ([#1150](https://github.com/python-zeroconf/python-zeroconf/issues/1150)) ([`9b6adcf`](https://github.com/python-zeroconf/python-zeroconf/commit/9b6adcf5c04a469632ee866c32f5898c5cbf810a))
+
 ## v0.52.0 (2023-04-02)
 ### Feature
 * Small cleanups to cache cleanup interval ([#1146](https://github.com/python-zeroconf/python-zeroconf/issues/1146)) ([`b434b60`](https://github.com/python-zeroconf/python-zeroconf/commit/b434b60f14ebe8f114b7b19bb4f54081c8ae0173))
