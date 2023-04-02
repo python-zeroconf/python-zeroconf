@@ -233,6 +233,16 @@ class ServiceInfo(RecordUpdateListener):
             *(addr.packed for addr in self._ipv6_addresses),
         ]
 
+    def ip_addresses_by_version(
+        self, version: IPVersion
+    ) -> Union[List[ipaddress.IPv4Address], List[ipaddress.IPv6Address], List[ipaddress._BaseAddress]]:
+        """List ip_address objects matching IP version."""
+        if version == IPVersion.V4Only:
+            return self._ipv4_addresses
+        if version == IPVersion.V6Only:
+            return self._ipv6_addresses
+        return [*self._ipv4_addresses, *self._ipv6_addresses]
+
     def parsed_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
         """List addresses in their parsed string form."""
         result = self.addresses_by_version(version)
