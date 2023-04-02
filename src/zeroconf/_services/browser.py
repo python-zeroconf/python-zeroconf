@@ -306,7 +306,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
         self._service_state_changed = Signal()
         self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
-        self.queue: Optional[queue.SimpleQueue] = None
         self.done = False
         self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
@@ -522,7 +521,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         # Add the queue before the listener is installed in _setup
         # to ensure that events run in the dedicated thread and do
         # not block the event loop
-        self.queue = queue.SimpleQueue()
+        self.queue: queue.SimpleQueue = queue.SimpleQueue()
         self.daemon = True
         self.start()
         zc.loop.call_soon_threadsafe(self._async_start)
@@ -534,14 +533,12 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     def cancel(self) -> None:
         """Cancel the browser."""
         assert self.zc.loop is not None
-        assert self.queue is not None
         self.queue.put(None)
         self.zc.loop.call_soon_threadsafe(self._async_cancel)
         self.join()
 
     def run(self) -> None:
         """Run the browser thread."""
-        assert self.queue is not None
         while True:
             event = self.queue.get()
             if event is None:
@@ -555,6 +552,5 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
 
         This method will be run in the event loop.
         """
-        assert self.queue is not None
         while self._pending_handlers:
             self.queue.put(self._pending_handlers.popitem(False))
