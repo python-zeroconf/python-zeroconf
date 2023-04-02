@@ -47,6 +47,7 @@ from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.time import current_time_millis, millis_to_seconds
 from .const import (
+    _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
     _CLASS_UNIQUE,
     _DNS_OTHER_TTL,
@@ -71,7 +72,6 @@ if TYPE_CHECKING:
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 
 _MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
-_ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
 
