@@ -175,9 +175,7 @@ class AsyncEngine:
     async def _async_setup(self, loop_thread_ready: Optional[threading.Event]) -> None:
         """Set up the instance."""
         assert self.loop is not None
-        self._cleanup_timer = self.loop.call_later(
-            millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
-        )
+        self._cleanup_timer = self.loop.call_later(_CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
         await self._async_create_endpoints()
         assert self.running_event is not None
         self.running_event.set()
@@ -213,9 +211,7 @@ class AsyncEngine:
         )
         self.zc.record_manager.async_updates_complete(False)
         assert self.loop is not None
-        self._cleanup_timer = self.loop.call_later(
-            millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
-        )
+        self._cleanup_timer = self.loop.call_later(_CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
 
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""

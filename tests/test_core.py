@@ -51,8 +51,7 @@ def threadsafe_query(zc, protocol, *args):
 # which is not threadsafe
 @pytest.mark.asyncio
 async def test_reaper():
-    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10):
-        assert _core._CACHE_CLEANUP_INTERVAL == 10
+    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 0.01):
         aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
         zeroconf = aiozc.zeroconf
         cache = zeroconf.cache
@@ -88,8 +87,7 @@ async def test_reaper():
 @pytest.mark.asyncio
 async def test_reaper_aborts_when_done():
     """Ensure cache cleanup stops when zeroconf is done."""
-    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 10):
-        assert _core._CACHE_CLEANUP_INTERVAL == 10
+    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 0.01):
         aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
         zeroconf = aiozc.zeroconf
         record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
