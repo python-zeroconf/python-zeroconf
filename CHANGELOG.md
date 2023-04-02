@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.52.0 (2023-04-02)
+### Feature
+* Small cleanups to cache cleanup interval ([#1146](https://github.com/python-zeroconf/python-zeroconf/issues/1146)) ([`b434b60`](https://github.com/python-zeroconf/python-zeroconf/commit/b434b60f14ebe8f114b7b19bb4f54081c8ae0173))
+* Add ip_addresses_by_version to ServiceInfo ([#1145](https://github.com/python-zeroconf/python-zeroconf/issues/1145)) ([`524494e`](https://github.com/python-zeroconf/python-zeroconf/commit/524494edd49bd049726b19ae8ac8f6eea69a3943))
+* Speed up processing records in the ServiceBrowser ([#1143](https://github.com/python-zeroconf/python-zeroconf/issues/1143)) ([`6a327d0`](https://github.com/python-zeroconf/python-zeroconf/commit/6a327d00ffb81de55b7c5b599893c789996680c1))
+* Speed up matching types in the ServiceBrowser ([#1144](https://github.com/python-zeroconf/python-zeroconf/issues/1144)) ([`68871c3`](https://github.com/python-zeroconf/python-zeroconf/commit/68871c3b5569e41740a66b7d3d7fa5cc41514ea5))
+* Include tests and docs in sdist archives ([#1142](https://github.com/python-zeroconf/python-zeroconf/issues/1142)) ([`da10a3b`](https://github.com/python-zeroconf/python-zeroconf/commit/da10a3b2827cee0719d3bb9152ae897f061c6e2e))
+
 ## v0.51.0 (2023-04-01)
 ### Feature
 * Improve performance of constructing ServiceInfo ([#1141](https://github.com/python-zeroconf/python-zeroconf/issues/1141)) ([`36d5b45`](https://github.com/python-zeroconf/python-zeroconf/commit/36d5b45a4ece1dca902e9c3c79b5a63b8d9ae41f))
