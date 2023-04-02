@@ -275,7 +275,12 @@ class QueryHandler:
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
-        self, name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
+        self,
+        name: str,
+        answer_set: _AnswerWithAdditionalsType,
+        known_answers: DNSRRSet,
+        now: float,
+        add_additionals: bool,
     ) -> None:
         """Answer PTR/ANY question."""
         for service in self.registry.async_get_infos_type(name):
@@ -284,8 +289,10 @@ class QueryHandler:
             dns_pointer = service.dns_pointer(created=now)
             if known_answers.suppresses(dns_pointer):
                 continue
-            additionals: Set[DNSRecord] = {service.dns_service(created=now), service.dns_text(created=now)}
-            additionals |= _get_address_and_nsec_records(service, now)
+            additionals: Set[DNSRecord] = set()
+            if add_additionals:
+                additionals |= {service.dns_service(created=now), service.dns_text(created=now)}
+                additionals |= _get_address_and_nsec_records(service, now)
             answer_set[dns_pointer] = additionals
 
     def _add_address_answers(
@@ -331,7 +338,7 @@ class QueryHandler:
         type_ = question.type
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
-            self._add_pointer_answers(question.name, answer_set, known_answers, now)
+            self._add_pointer_answers(question.name, answer_set, known_answers, now, type_ != _TYPE_ANY)
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
             self._add_address_answers(question.name, answer_set, known_answers, now, type_)
