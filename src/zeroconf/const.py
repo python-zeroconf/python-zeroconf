@@ -139,6 +139,8 @@ _TYPES = {
     _TYPE_NSEC: "nsec",
 }
 
+_ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
+
 _HAS_A_TO_Z = re.compile(r'[A-Za-z]')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN = re.compile(r'^[A-Za-z0-9\-]+$')
 _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE = re.compile(r'^[A-Za-z0-9\-\_]+$')
