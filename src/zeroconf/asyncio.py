@@ -89,8 +89,9 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
 
         This method will be run in the event loop.
         """
-        while self._pending_handlers:
-            self._fire_service_state_changed_event(self._pending_handlers.popitem(False))
+        for pending in self._pending_handlers.items():
+            self._fire_service_state_changed_event(pending)
+        self._pending_handlers.clear()
 
 
 class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):

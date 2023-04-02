@@ -26,7 +26,6 @@ import random
 import threading
 import warnings
 from abc import abstractmethod
-from collections import OrderedDict
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -303,7 +302,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
         self.question_type = question_type
-        self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
+        self._pending_handlers: Dict[Tuple[str, str], ServiceStateChange] = {}
         self._service_state_changed = Signal()
         self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
         self.queue: Optional[queue.SimpleQueue] = None
@@ -556,5 +555,6 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         This method will be run in the event loop.
         """
         assert self.queue is not None
-        while self._pending_handlers:
-            self.queue.put(self._pending_handlers.popitem(False))
+        for pending in self._pending_handlers.items():
+            self.queue.put(pending)
+        self._pending_handlers.clear()
