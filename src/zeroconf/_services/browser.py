@@ -25,6 +25,7 @@ import queue
 import random
 import threading
 import warnings
+from abc import abstractmethod
 from collections import OrderedDict
 from typing import (
     TYPE_CHECKING,
@@ -408,6 +409,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for record in records:
             self._async_process_record_update(now, record[0], record[1])
 
+    @abstractmethod
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
 
@@ -415,14 +417,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        while self._pending_handlers:
-            event = self._pending_handlers.popitem(False)
-            # If there is a queue running (ServiceBrowser)
-            # get fired in dedicated thread
-            if self.queue:
-                self.queue.put(event)
-            else:
-                self._fire_service_state_changed_event(event)
 
     def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
         """Fire a service state changed event.
@@ -553,3 +547,14 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             if event is None:
                 return
             self._fire_service_state_changed_event(event)
+
+    def async_update_records_complete(self) -> None:
+        """Called when a record update has completed for all handlers.
+
+        At this point the cache will have the new records.
+
+        This method will be run in the event loop.
+        """
+        assert self.queue is not None
+        while self._pending_handlers:
+            self.queue.put(self._pending_handlers.popitem(False))
