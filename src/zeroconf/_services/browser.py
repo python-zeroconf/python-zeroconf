@@ -39,7 +39,7 @@ from typing import (
     cast,
 )
 
-from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
+from .._dns import DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._services import (
@@ -49,7 +49,7 @@ from .._services import (
     SignalRegistrationInterface,
 )
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.name import possible_types, service_type_name
+from .._utils.name import cached_possible_types, service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _BROWSER_BACKOFF_LIMIT,
@@ -62,6 +62,8 @@ from ..const import (
     _MDNS_ADDR,
     _MDNS_ADDR6,
     _MDNS_PORT,
+    _TYPE_A,
+    _TYPE_AAAA,
     _TYPE_PTR,
 )
 
@@ -338,7 +340,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     def _names_matching_types(self, names: Iterable[str]) -> List[Tuple[str, str]]:
         """Return the type and name for records matching the types we are browsing."""
-        return [(type_, name) for name in names for type_ in self.types.intersection(possible_types(name))]
+        return [
+            (type_, name) for name in names for type_ in self.types.intersection(cached_possible_types(name))
+        ]
 
     def _enqueue_callback(
         self,
@@ -363,8 +367,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self, now: float, record: DNSRecord, old_record: Optional[DNSRecord]
     ) -> None:
         """Process a single record update from a batch of updates."""
-        if isinstance(record, DNSPointer):
-            for type_ in self.types.intersection(possible_types(record.name)):
+        record_type = record.type
+
+        if record_type is _TYPE_PTR:
+            if TYPE_CHECKING:
+                record = cast(DNSPointer, record)
+            for type_ in self.types.intersection(cached_possible_types(record.name)):
                 if old_record is None:
                     self._enqueue_callback(ServiceStateChange.Added, type_, record.alias)
                 elif record.is_expired(now):
@@ -377,7 +385,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if old_record or record.is_expired(now):
             return
 
-        if isinstance(record, DNSAddress):
+        if record_type in (_TYPE_A, _TYPE_AAAA):
             # Iterate through the DNSCache and callback any services that use this address
             for type_, name in self._names_matching_types(
                 {service.name for service in self.zc.cache.async_entries_with_server(record.name)}

@@ -20,6 +20,7 @@
     USA
 """
 
+from functools import lru_cache
 from typing import Set
 
 from .._exceptions import BadTypeInNameException
@@ -170,3 +171,6 @@ def possible_types(name: str) -> Set[str]:
             break
         types.add('.'.join(parts))
     return types
+
+
+cached_possible_types = lru_cache(maxsize=256)(possible_types)
