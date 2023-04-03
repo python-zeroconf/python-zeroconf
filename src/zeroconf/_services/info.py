@@ -417,11 +417,11 @@ class ServiceInfo(RecordUpdateListener):
         if record.key != self.key:
             return False
 
-        if isinstance(record, DNSText):
+        if record.type == _TYPE_TXT and isinstance(record, DNSText):
             self._set_text(record.text)
             return True
 
-        if isinstance(record, DNSService):
+        if record.type == _TYPE_SRV and isinstance(record, DNSService):
             self.name = record.name
             self.server = record.server
             self.server_key = record.server.lower()
