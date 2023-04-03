@@ -211,7 +211,7 @@ class ServiceInfo(RecordUpdateListener):
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
                     f" got {address!r}. Hint: convert string addresses with socket.inet_pton"
                 )
-            if isinstance(addr, ipaddress.IPv4Address):
+            if addr.version == 4:
                 self._ipv4_addresses.append(addr)
             else:
                 self._ipv6_addresses.append(addr)
