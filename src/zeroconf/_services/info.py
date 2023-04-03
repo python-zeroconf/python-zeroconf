@@ -515,6 +515,9 @@ class ServiceInfo(RecordUpdateListener):
             # be called and we do not want to do it twice
             record_updates.append(RecordUpdate(cached_srv_record, None))
         else:
+            # Records are in the cache in insertion order, so we
+            # replay them in the same order to ensure that the
+            # we order the addresses LIFO
             for record in self._get_address_records_from_cache(zc):
                 record_updates.append(RecordUpdate(record, None))
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
