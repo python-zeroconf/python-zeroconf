@@ -429,6 +429,7 @@ class ServiceInfo(RecordUpdateListener):
             if ip_addr.version == 4:
                 if not self._ipv4_addresses:
                     self._set_ipv4_addresses_from_cache(zc)
+
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
                     return True
@@ -440,6 +441,7 @@ class ServiceInfo(RecordUpdateListener):
 
             if not self._ipv6_addresses:
                 self._set_ipv6_addresses_from_cache(zc)
+
             if ip_addr not in self._ipv6_addresses:
                 self._ipv6_addresses.insert(0, ip_addr)
                 return True
