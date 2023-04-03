@@ -161,8 +161,8 @@ class ServiceInfo(RecordUpdateListener):
         self.port = port
         self.weight = weight
         self.priority = priority
-        self.server = server if server else name
-        self.server_key = self.server.lower()
+        self.server = server if server else None
+        self.server_key = server.lower() if server else None
         self._properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
         if isinstance(properties, bytes):
             self._set_text(properties)
@@ -481,7 +481,7 @@ class ServiceInfo(RecordUpdateListener):
         """Return matching DNSAddress from ServiceInfo."""
         return [
             DNSAddress(
-                self.server,
+                self.server or self.name,
                 _TYPE_AAAA if address.version == 6 else _TYPE_A,
                 _CLASS_IN | _CLASS_UNIQUE,
                 override_ttl if override_ttl is not None else self.host_ttl,
@@ -512,7 +512,7 @@ class ServiceInfo(RecordUpdateListener):
             self.priority,
             self.weight,
             cast(int, self.port),
-            self.server,
+            self.server or self.name,
             created,
         )
 
@@ -529,7 +529,18 @@ class ServiceInfo(RecordUpdateListener):
 
     def _get_address_records_from_cache_by_type(self, zc: 'Zeroconf', _type: int) -> List[DNSAddress]:
         """Get the addresses from the cache."""
+        if self.server_key is None:
+            return []
         return cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
+
+    def set_server_if_missing(self) -> None:
+        """Set the server if it is missing.
+
+        This function is for backwards compatibility.
+        """
+        if self.server is None:
+            self.server = self.name
+            self.server_key = self.server.lower()
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache.
@@ -622,8 +633,8 @@ class ServiceInfo(RecordUpdateListener):
         out = DNSOutgoing(_FLAGS_QR_QUERY)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_SRV, _CLASS_IN)
         out.add_question_or_one_cache(zc.cache, now, self.name, _TYPE_TXT, _CLASS_IN)
-        out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_A, _CLASS_IN)
-        out.add_question_or_all_cache(zc.cache, now, self.server, _TYPE_AAAA, _CLASS_IN)
+        out.add_question_or_all_cache(zc.cache, now, self.server or self.name, _TYPE_A, _CLASS_IN)
+        out.add_question_or_all_cache(zc.cache, now, self.server or self.name, _TYPE_AAAA, _CLASS_IN)
         if question_type == DNSQuestionType.QU:
             for question in out.questions:
                 question.unicast = True
