@@ -527,13 +527,6 @@ class ServiceInfo(RecordUpdateListener):
             created,
         )
 
-    def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSAddress]:
-        """Get the address records from the cache."""
-        return [
-            *self._get_address_records_from_cache_by_type(zc, _TYPE_A),
-            *self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA),
-        ]
-
     def _get_address_records_from_cache_by_type(self, zc: 'Zeroconf', _type: int) -> List[DNSAddress]:
         """Get the addresses from the cache."""
         return cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
@@ -555,7 +548,10 @@ class ServiceInfo(RecordUpdateListener):
             # If there is a srv which changes the server_key,
             # A and AAAA will already be loaded from the cache
             # and we do not want to do it twice
-            for record in self._get_address_records_from_cache(zc):
+            for record in [
+                *self._get_address_records_from_cache_by_type(zc, _TYPE_A),
+                *self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA),
+            ]:
                 self._process_record_threadsafe(zc, record, now)
         return self._is_complete
 
