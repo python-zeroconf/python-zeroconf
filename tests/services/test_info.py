@@ -1184,3 +1184,167 @@ async def test_bad_ip_addresses_ignored_in_cache():
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x01']
+
+
+@pytest.mark.asyncio
+async def test_service_name_change_as_seen_has_ip_in_cache():
+    """Test that service name changes are seen by async_request when the ip is in the cache."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiarec.%s" % type_
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    host = "multahost.local."
+
+    # New kwarg way
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            registration_name,
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            registration_name,
+            [const._TYPE_AAAA],
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            registration_name,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x01',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x02',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(
+            registration_name,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+        ),
+        0,
+    )
+    await aiozc.zeroconf.async_wait_for_start()
+    await asyncio.sleep(0)
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+
+    info = ServiceInfo(type_, registration_name)
+    await info.async_request(aiozc.zeroconf, timeout=200)
+    assert info.addresses_by_version(IPVersion.V4Only) == []
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            0,
+            0,
+            80,
+            host,
+        ),
+        0,
+    )
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+
+    info = ServiceInfo(type_, registration_name)
+    await info.async_request(aiozc.zeroconf, timeout=200)
+    assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x02']
+
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_service_name_change_as_seen_ip_not_in_cache():
+    """Test that service name changes are seen by async_request when the ip is not in the cache."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiarec.%s" % type_
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    host = "multahost.local."
+
+    # New kwarg way
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            registration_name,
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            registration_name,
+            [const._TYPE_AAAA],
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            registration_name,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x01',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(
+            registration_name,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+        ),
+        0,
+    )
+    await aiozc.zeroconf.async_wait_for_start()
+    await asyncio.sleep(0)
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+
+    info = ServiceInfo(type_, registration_name)
+    await info.async_request(aiozc.zeroconf, timeout=200)
+    assert info.addresses_by_version(IPVersion.V4Only) == []
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            0,
+            0,
+            80,
+            host,
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x02',
+        ),
+        0,
+    )
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+
+    info = ServiceInfo(type_, registration_name)
+    await info.async_request(aiozc.zeroconf, timeout=200)
+    assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x02']
+
+    await aiozc.async_close()
