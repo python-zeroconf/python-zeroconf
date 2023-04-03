@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.54.0 (2023-04-03)
+### Feature
+* Avoid waking async_request when record updates are not relevant ([#1153](https://github.com/python-zeroconf/python-zeroconf/issues/1153)) ([`a3f970c`](https://github.com/python-zeroconf/python-zeroconf/commit/a3f970c7f66067cf2c302c49ed6ad8286f19b679))
+
 ## v0.53.1 (2023-04-03)
 ### Fix
 * Addresses incorrect after server name change ([#1154](https://github.com/python-zeroconf/python-zeroconf/issues/1154)) ([`41ea06a`](https://github.com/python-zeroconf/python-zeroconf/commit/41ea06a0192c0d186e678009285759eb37d880d5))
