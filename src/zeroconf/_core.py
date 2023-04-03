@@ -495,6 +495,7 @@ class Zeroconf(QuietLogger):
         self.query_handler = QueryHandler(self.registry, self.cache, self.question_history)
         self.record_manager = RecordManager(self)
 
+        self.notify_event: Optional[asyncio.Event] = None
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
 
@@ -512,6 +513,7 @@ class Zeroconf(QuietLogger):
         """Start Zeroconf."""
         self.loop = get_running_loop()
         if self.loop:
+            self.notify_event = asyncio.Event()
             self.engine.setup(self.loop, None)
             return
         self._start_thread()
@@ -523,6 +525,7 @@ class Zeroconf(QuietLogger):
         def _run_loop() -> None:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
+            self.notify_event = asyncio.Event()
             self.engine.setup(self.loop, loop_thread_ready)
             self.loop.run_forever()
 
@@ -546,6 +549,22 @@ class Zeroconf(QuietLogger):
     @property
     def listeners(self) -> List[RecordUpdateListener]:
         return self.record_manager.listeners
+
+    async def async_wait(self, timeout: float) -> None:
+        """Calling task waits for a given number of milliseconds or until notified."""
+        assert self.notify_event is not None
+        await wait_event_or_timeout(self.notify_event, timeout=millis_to_seconds(timeout))
+
+    def notify_all(self) -> None:
+        """Notifies all waiting threads and notify listeners."""
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.async_notify_all)
+
+    def async_notify_all(self) -> None:
+        """Schedule an async_notify_all."""
+        assert self.notify_event is not None
+        self.notify_event.set()
+        self.notify_event.clear()
 
     def get_service_info(
         self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
@@ -928,6 +947,7 @@ class Zeroconf(QuietLogger):
 
     def _shutdown_threads(self) -> None:
         """Shutdown any threads."""
+        self.notify_all()
         if not self._loop_thread:
             return
         assert self.loop is not None

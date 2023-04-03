@@ -557,14 +557,14 @@ def test_multiple_addresses():
             assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_addresses(r.IPVersion.V6Only) == [address_v6_parsed, address_v6_ll_parsed]
             assert info.parsed_scoped_addresses() == [
-                address_v6_ll_scoped_parsed,
                 address_parsed,
                 address_v6_parsed,
+                address_v6_ll_scoped_parsed,
             ]
             assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [
-                address_v6_ll_scoped_parsed,
                 address_v6_parsed,
+                address_v6_ll_scoped_parsed,
             ]
 
 
