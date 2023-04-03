@@ -378,10 +378,24 @@ class ServiceInfo(RecordUpdateListener):
         """
         updated: bool = False
         for record_update in records:
-            updated |= self._process_record_threadsafe(record_update.new, now)
+            updated |= self._process_record_threadsafe(zc, record_update.new, now)
         return updated
 
-    def _process_record_threadsafe(self, record: DNSRecord, now: float) -> bool:
+    def _load_ipv4_addresses_from_cache(self, zc: 'Zeroconf') -> None:
+        """Load IPv4 addresses from the cache."""
+        self._ipv4_addresses = [
+            _cached_ip_addresses(record.address)
+            for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A)
+        ]
+
+    def _load_ipv6_addresses_from_cache(self, zc: 'Zeroconf') -> None:
+        """Load IPv6 addresses from the cache."""
+        self._ipv6_addresses = [
+            _cached_ip_addresses(record.address)
+            for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA)
+        ]
+
+    def _process_record_threadsafe(self, zc: 'Zeroconf', record: DNSRecord, now: float) -> bool:
         """Thread safe record updating.
 
         Returns True if a new record was added.
@@ -396,12 +410,17 @@ class ServiceInfo(RecordUpdateListener):
                 log.warning("Encountered invalid address while processing %s: %s", record, ex)
                 return False
 
-            target_list: Union[List[ipaddress.IPv4Address], List[ipaddress.IPv6Address]] = (
-                self._ipv4_addresses if ip_addr.version == 4 else self._ipv6_addresses
-            )
-            if ip_addr not in target_list:
-                # Add the address to the front of the list
-                target_list.insert(0, ip_addr)
+            if ip_addr.version == 4:
+                if not self._ipv4_addresses:
+                    self._load_ipv4_addresses_from_cache(zc)
+                if ip_addr not in self._ipv4_addresses:
+                    self._ipv4_addresses.insert(0, ip_addr)
+                    return True
+
+            if not self._ipv6_addresses:
+                self._load_ipv6_addresses_from_cache(zc)
+            if ip_addr not in self._ipv6_addresses:
+                self._ipv6_addresses.insert(0, ip_addr)
                 return True
 
             return False
@@ -414,12 +433,16 @@ class ServiceInfo(RecordUpdateListener):
             return True
 
         if record.type == _TYPE_SRV and isinstance(record, DNSService):
+            old_server_key = self.server_key
             self.name = record.name
             self.server = record.server
             self.server_key = record.server.lower()
             self.port = record.port
             self.weight = record.weight
             self.priority = record.priority
+            if old_server_key != self.server_key:
+                self._load_ipv4_addresses_from_cache(zc)
+                self._load_ipv6_addresses_from_cache(zc)
             return True
 
         return False
@@ -481,13 +504,14 @@ class ServiceInfo(RecordUpdateListener):
 
     def _get_address_records_from_cache(self, zc: 'Zeroconf') -> List[DNSAddress]:
         """Get the address records from the cache."""
-        return cast(
-            "List[DNSAddress]",
-            [
-                *zc.cache.get_all_by_details(self.server, _TYPE_A, _CLASS_IN),
-                *zc.cache.get_all_by_details(self.server, _TYPE_AAAA, _CLASS_IN),
-            ],
-        )
+        return [
+            *self._get_address_records_from_cache_by_type(zc, _TYPE_A),
+            *self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA),
+        ]
+
+    def _get_address_records_from_cache_by_type(self, zc: 'Zeroconf', _type: int) -> List[DNSAddress]:
+        """Get the addresses from the cache."""
+        return cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
 
     def load_from_cache(self, zc: 'Zeroconf') -> bool:
         """Populate the service info from the cache.
@@ -501,18 +525,12 @@ class ServiceInfo(RecordUpdateListener):
             # If there is a srv record, A and AAAA will already
             # be called and we do not want to do it twice
             record_updates.append(RecordUpdate(cached_srv_record, None))
-        else:
-            # Records are in the cache in insertion order, so we
-            # replay them in the same order to ensure that the
-            # we order the addresses LIFO
-            for record in self._get_address_records_from_cache(zc):
-                record_updates.append(RecordUpdate(record, None))
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
             record_updates.append(RecordUpdate(cached_txt_record, None))
         # Process the records so that _get_address_records_from_cache
         # will be able to find the records otherwise self.server might
-        # not be set
+        # not be set to the correct value
         self._process_records_threadsafe(zc, now, record_updates)
         address_record_updates = [
             RecordUpdate(record, None) for record in self._get_address_records_from_cache(zc)
