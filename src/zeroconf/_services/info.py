@@ -406,16 +406,10 @@ class ServiceInfo(RecordUpdateListener):
             target_list: Union[List[ipaddress.IPv4Address], List[ipaddress.IPv6Address]] = (
                 self._ipv4_addresses if ip_addr.version == 4 else self._ipv6_addresses
             )
-            ip_in_list = ip_addr in target_list
-
-            if not ip_in_list:
+            if ip_addr not in target_list:
                 # Add the address to the front of the list
                 target_list.insert(0, ip_addr)
                 return True
-            elif ip_in_list and target_list and target_list[0] != ip_addr:
-                # Move the address to the front of the list
-                target_list.pop(target_list.index(ip_addr))
-                target_list.insert(0, ip_addr)
 
             return False
 
