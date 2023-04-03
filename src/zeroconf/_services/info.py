@@ -410,15 +410,14 @@ class ServiceInfo(RecordUpdateListener):
                 return True
             return False
 
-        if isinstance(record, DNSText):
-            if record.key == self.key:
-                self._set_text(record.text)
-                return True
+        if record.key != self.key:
             return False
 
+        if isinstance(record, DNSText):
+            self._set_text(record.text)
+            return True
+
         if isinstance(record, DNSService):
-            if record.key != self.key:
-                return False
             self.name = record.name
             self.server = record.server
             self.server_key = record.server.lower()
