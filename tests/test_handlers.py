@@ -103,7 +103,7 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.server or info.name, const._TYPE_A, const._CLASS_IN))
         question_answers = zc.query_handler.async_response(
             [r.DNSIncoming(packet) for packet in query.packets()], False
         )
@@ -141,7 +141,7 @@ class TestRegistrar(unittest.TestCase):
         query.add_question(r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_SRV, const._CLASS_IN))
         query.add_question(r.DNSQuestion(info.name, const._TYPE_TXT, const._CLASS_IN))
-        query.add_question(r.DNSQuestion(info.server, const._TYPE_A, const._CLASS_IN))
+        query.add_question(r.DNSQuestion(info.server or info.name, const._TYPE_A, const._CLASS_IN))
         question_answers = zc.query_handler.async_response(
             [r.DNSIncoming(packet) for packet in query.packets()], False
         )

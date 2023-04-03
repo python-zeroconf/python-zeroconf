@@ -247,7 +247,7 @@ def _get_address_and_nsec_records(service: ServiceInfo, now: float) -> Set[DNSRe
         records.add(dns_address)
     missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
     if missing_types:
-        records.add(construct_nsec_record(service.server, list(missing_types), now))
+        records.add(construct_nsec_record(service.server or service.name, list(missing_types), now))
     return records
 
 
@@ -310,11 +310,15 @@ class QueryHandler:
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
             if answers:
                 if missing_types:
-                    additionals.add(construct_nsec_record(service.server, list(missing_types), now))
+                    additionals.add(
+                        construct_nsec_record(service.server or service.name, list(missing_types), now)
+                    )
                 for answer in answers:
                     answer_set[answer] = additionals
             elif type_ in missing_types:
-                answer_set[construct_nsec_record(service.server, list(missing_types), now)] = set()
+                answer_set[
+                    construct_nsec_record(service.server or service.name, list(missing_types), now)
+                ] = set()
 
     def _answer_question(
         self,
