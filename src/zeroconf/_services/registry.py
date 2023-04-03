@@ -80,6 +80,7 @@ class ServiceRegistry:
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
+        assert info.server_key is not None, "ServiceInfo must have a server"
         if info.key in self._services:
             raise ServiceNameAlreadyRegistered
 
@@ -93,6 +94,7 @@ class ServiceRegistry:
             if info.key not in self._services:
                 continue
             old_service_info = self._services[info.key]
+            assert old_service_info.server_key is not None
             self.types[old_service_info.type.lower()].remove(info.key)
             self.servers[old_service_info.server_key].remove(info.key)
             del self._services[info.key]
