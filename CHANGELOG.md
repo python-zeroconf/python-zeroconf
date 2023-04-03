@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.53.1 (2023-04-03)
+### Fix
+* Addresses incorrect after server name change ([#1154](https://github.com/python-zeroconf/python-zeroconf/issues/1154)) ([`41ea06a`](https://github.com/python-zeroconf/python-zeroconf/commit/41ea06a0192c0d186e678009285759eb37d880d5))
+
 ## v0.53.0 (2023-04-02)
 ### Feature
 * Improve ServiceBrowser performance by removing OrderedDict ([#1148](https://github.com/python-zeroconf/python-zeroconf/issues/1148)) ([`9a16be5`](https://github.com/python-zeroconf/python-zeroconf/commit/9a16be56a9f69a5d0f7cde13dc1337b6d93c1433))
