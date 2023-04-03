@@ -337,57 +337,64 @@ class ServiceInfo(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        self._process_records_threadsafe(zc, now, records)
+        if self._process_records_threadsafe(zc, now, records):
+            return True
 
-    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
+    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
         """Thread safe record updating."""
         seen_addresses: Set[bytes] = set()
+        updated: bool = False
         for record_update in records:
             record = record_update.new
             if isinstance(record, DNSAddress):
                 seen_addresses.add(record.address)
-            self._process_record_threadsafe(record, now)
+            updated |= self._process_record_threadsafe(record, now)
         for record in self._get_address_records_from_cache(zc):
             if record.address not in seen_addresses:
-                self._process_record_threadsafe(record, now)
+                updated |= self._process_record_threadsafe(record, now)
+        return updated
 
-    def _process_record_threadsafe(self, record: DNSRecord, now: float) -> None:
+    def _process_record_threadsafe(self, record: DNSRecord, now: float) -> bool:
         """Thread safe record updating."""
         if record.is_expired(now):
             return
 
         if isinstance(record, DNSAddress):
             if record.key != self.server_key:
-                return
+                return False
             try:
                 ip_addr = _cached_ip_addresses(record.address)
             except ValueError as ex:
                 log.warning("Encountered invalid address while processing %s: %s", record, ex)
-                return
+                return False
             if isinstance(ip_addr, ipaddress.IPv4Address):
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
-                return
+                    return True
+                return False
             if ip_addr not in self._ipv6_addresses:
                 self._ipv6_addresses.insert(0, ip_addr)
                 if ip_addr.is_link_local:
                     self.interface_index = record.scope_id
-            return
+                return True
+            return False
 
         if isinstance(record, DNSText):
             if record.key == self.key:
                 self._set_text(record.text)
-            return
+                return True
+            return False
 
         if isinstance(record, DNSService):
             if record.key != self.key:
-                return
+                return False
             self.name = record.name
             self.server = record.server
             self.server_key = record.server.lower()
             self.port = record.port
             self.weight = record.weight
             self.priority = record.priority
+            return True
 
     def dns_addresses(
         self,
