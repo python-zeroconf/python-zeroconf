@@ -351,36 +351,6 @@ class ServiceInfo(RecordUpdateListener):
         """Name accessor"""
         return self.name[: len(self.name) - len(self.type) - 1]
 
-    def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
-        """Updates service information from a DNS record.
-
-        This method is deprecated and will be removed in a future version.
-        update_records should be implemented instead.
-
-        This method will be run in the event loop.
-        """
-        if record is not None:
-            self._process_record_threadsafe(zc, record, now)
-
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
-        """Updates service information from a DNS record.
-
-        This method will be run in the event loop.
-        """
-        if self._process_records_threadsafe(zc, now, records) and self._notify_event:
-            self._notify_event.set()
-            self._notify_event.clear()
-
-    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
-        """Thread safe record updating.
-
-        Returns True if new records were added.
-        """
-        updated: bool = False
-        for record_update in records:
-            updated |= self._process_record_threadsafe(zc, record_update.new, now)
-        return updated
-
     def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf') -> None:
         """Set IPv6 addresses from the cache."""
         address_list: List[ipaddress.IPv6Address] = []
@@ -410,6 +380,36 @@ class ServiceInfo(RecordUpdateListener):
                 address_list.append(ip_address)
         address_list.reverse()  # Reverse to get LIFO order
         self._ipv4_addresses = address_list
+
+    def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
+        """Updates service information from a DNS record.
+
+        This method is deprecated and will be removed in a future version.
+        update_records should be implemented instead.
+
+        This method will be run in the event loop.
+        """
+        if record is not None:
+            self._process_record_threadsafe(zc, record, now)
+
+    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
+        """Updates service information from a DNS record.
+
+        This method will be run in the event loop.
+        """
+        if self._process_records_threadsafe(zc, now, records) and self._notify_event:
+            self._notify_event.set()
+            self._notify_event.clear()
+
+    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
+        """Thread safe record updating.
+
+        Returns True if new records were added.
+        """
+        updated: bool = False
+        for record_update in records:
+            updated |= self._process_record_threadsafe(zc, record_update.new, now)
+        return updated
 
     def _process_record_threadsafe(self, zc: 'Zeroconf', record: DNSRecord, now: float) -> bool:
         """Thread safe record updating.
