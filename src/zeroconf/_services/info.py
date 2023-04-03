@@ -24,7 +24,7 @@ import asyncio
 import ipaddress
 import random
 from functools import lru_cache
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, cast
 
 from .._dns import (
     DNSAddress,
@@ -47,7 +47,6 @@ from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
-    _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
     _CLASS_UNIQUE,
     _DNS_HOST_TTL,
@@ -377,16 +376,9 @@ class ServiceInfo(RecordUpdateListener):
 
         Returns True if new records were added.
         """
-        seen_addresses: Set[bytes] = set()
         updated: bool = False
         for record_update in records:
-            record = record_update.new
-            if record.type in _ADDRESS_RECORD_TYPES and isinstance(record, DNSAddress):
-                seen_addresses.add(record.address)
-            updated |= self._process_record_threadsafe(record, now)
-        for record in self._get_address_records_from_cache(zc):
-            if record.address not in seen_addresses:
-                updated |= self._process_record_threadsafe(record, now)
+            updated |= self._process_record_threadsafe(record_update.new, now)
         return updated
 
     def _process_record_threadsafe(self, record: DNSRecord, now: float) -> bool:
@@ -519,6 +511,9 @@ class ServiceInfo(RecordUpdateListener):
         if cached_txt_record:
             record_updates.append(RecordUpdate(cached_txt_record, None))
         self._process_records_threadsafe(zc, now, record_updates)
+        self._process_records_threadsafe(
+            zc, now, [RecordUpdate(record, None) for record in self._get_address_records_from_cache(zc)]
+        )
         return self._is_complete
 
     @property
