@@ -351,10 +351,12 @@ class ServiceInfo(RecordUpdateListener):
         """Name accessor"""
         return self.name[: len(self.name) - len(self.type) - 1]
 
-    def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf') -> None:
+    def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Set IPv6 addresses from the cache."""
         address_list: List[ipaddress.IPv6Address] = []
         for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA):
+            if record.is_expired(now):
+                continue
             try:
                 ip_address = _cached_ip_addresses(record.address)
             except ValueError:
@@ -366,10 +368,12 @@ class ServiceInfo(RecordUpdateListener):
         address_list.reverse()  # Reverse to get LIFO order
         self._ipv6_addresses = address_list
 
-    def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf') -> None:
+    def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Set IPv4 addresses from the cache."""
         address_list: List[ipaddress.IPv4Address] = []
         for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A):
+            if record.is_expired(now):
+                continue
             try:
                 ip_address = _cached_ip_addresses(record.address)
             except ValueError:
@@ -428,7 +432,7 @@ class ServiceInfo(RecordUpdateListener):
 
             if ip_addr.version == 4:
                 if not self._ipv4_addresses:
-                    self._set_ipv4_addresses_from_cache(zc)
+                    self._set_ipv4_addresses_from_cache(zc, now)
 
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
@@ -440,7 +444,7 @@ class ServiceInfo(RecordUpdateListener):
                 return False
 
             if not self._ipv6_addresses:
-                self._set_ipv6_addresses_from_cache(zc)
+                self._set_ipv6_addresses_from_cache(zc, now)
 
             if ip_addr not in self._ipv6_addresses:
                 self._ipv6_addresses.insert(0, ip_addr)
@@ -467,8 +471,8 @@ class ServiceInfo(RecordUpdateListener):
             self.weight = record.weight
             self.priority = record.priority
             if old_server_key != self.server_key:
-                self._set_ipv4_addresses_from_cache(zc)
-                self._set_ipv6_addresses_from_cache(zc)
+                self._set_ipv4_addresses_from_cache(zc, now)
+                self._set_ipv6_addresses_from_cache(zc, now)
             return True
 
         return False
