@@ -374,7 +374,7 @@ class ServiceInfo(RecordUpdateListener):
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
         """Thread safe record updating.
 
-        Returns True if the service info was updated.
+        Returns True if new records were added.
         """
         seen_addresses: Set[bytes] = set()
         updated: bool = False
@@ -389,7 +389,10 @@ class ServiceInfo(RecordUpdateListener):
         return updated
 
     def _process_record_threadsafe(self, record: DNSRecord, now: float) -> bool:
-        """Thread safe record updating."""
+        """Thread safe record updating.
+
+        Returns True if a new record was added.
+        """
         if record.is_expired(now):
             return False
 
@@ -399,16 +402,21 @@ class ServiceInfo(RecordUpdateListener):
             except ValueError as ex:
                 log.warning("Encountered invalid address while processing %s: %s", record, ex)
                 return False
-            if ip_addr.version == 4:
-                if ip_addr not in self._ipv4_addresses:
-                    self._ipv4_addresses.insert(0, ip_addr)
-                    return True
-                return False
-            if ip_addr not in self._ipv6_addresses:
-                self._ipv6_addresses.insert(0, ip_addr)
-                if ip_addr.is_link_local:
-                    self.interface_index = record.scope_id
+
+            target_list: Union[List[ipaddress.IPv4Address], List[ipaddress.IPv6Address]] = (
+                self._ipv4_addresses if ip_addr.version == 4 else self._ipv6_addresses
+            )
+            ip_in_list = ip_addr in target_list
+
+            if not ip_in_list:
+                # Add the address to the front of the list
+                target_list.insert(0, ip_addr)
                 return True
+            elif ip_in_list and target_list and target_list[0] != ip_addr:
+                # Move the address to the front of the list
+                target_list.pop(target_list.index(ip_addr))
+                target_list.insert(0, ip_addr)
+
             return False
 
         if record.key != self.key:
