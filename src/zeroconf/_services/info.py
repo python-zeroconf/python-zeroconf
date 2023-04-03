@@ -47,6 +47,7 @@ from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
+    _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
     _CLASS_UNIQUE,
     _DNS_HOST_TTL,
@@ -380,7 +381,7 @@ class ServiceInfo(RecordUpdateListener):
         updated: bool = False
         for record_update in records:
             record = record_update.new
-            if isinstance(record, DNSAddress):
+            if record.type in _ADDRESS_RECORD_TYPES and isinstance(record, DNSAddress):
                 seen_addresses.add(record.address)
             updated |= self._process_record_threadsafe(record, now)
         for record in self._get_address_records_from_cache(zc):
