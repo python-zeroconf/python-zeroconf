@@ -20,6 +20,7 @@
     USA
 """
 
+import asyncio
 import ipaddress
 import random
 import socket
@@ -38,10 +39,14 @@ from .._exceptions import BadTypeInNameException
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.asyncio import get_running_loop, run_coro_with_timeout
+from .._utils.asyncio import (
+    get_running_loop,
+    run_coro_with_timeout,
+    wait_event_or_timeout,
+)
 from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address, _is_v6_address
-from .._utils.time import current_time_millis
+from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _CLASS_IN,
     _CLASS_UNIQUE,
@@ -167,6 +172,7 @@ class ServiceInfo(RecordUpdateListener):
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self.interface_index = interface_index
+        self._notify_event: Optional[asyncio.Event] = None
 
     @property
     def name(self) -> str:
@@ -221,6 +227,12 @@ class ServiceInfo(RecordUpdateListener):
         was none. No further decoding is attempted. The type returned is `Dict[bytes, Optional[bytes]]`.
         """
         return self._properties
+
+    async def async_wait(self, timeout: float) -> None:
+        """Calling task waits for a given number of milliseconds or until notified."""
+        if self._notify_event is None:
+            self._notify_event = asyncio.Event()
+        await wait_event_or_timeout(self._notify_event, timeout=millis_to_seconds(timeout))
 
     def addresses_by_version(self, version: IPVersion) -> List[bytes]:
         """List addresses matching IP version."""
@@ -337,8 +349,9 @@ class ServiceInfo(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        if self._process_records_threadsafe(zc, now, records):
-            return True
+        if self._process_records_threadsafe(zc, now, records) and self._notify_event:
+            self._notify_event.set()
+            self._notify_event.clear()
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
         """Thread safe record updating."""
@@ -357,7 +370,7 @@ class ServiceInfo(RecordUpdateListener):
     def _process_record_threadsafe(self, record: DNSRecord, now: float) -> bool:
         """Thread safe record updating."""
         if record.is_expired(now):
-            return
+            return False
 
         if isinstance(record, DNSAddress):
             if record.key != self.server_key:
@@ -535,7 +548,7 @@ class ServiceInfo(RecordUpdateListener):
                     delay *= 2
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
 
-                await zc.async_wait(min(next_, last) - now)
+                await self.async_wait(min(next_, last) - now)
                 now = current_time_millis()
         finally:
             zc.async_remove_listener(self)
