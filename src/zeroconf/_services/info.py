@@ -432,12 +432,18 @@ class ServiceInfo(RecordUpdateListener):
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
                     return True
+                else:
+                    self._ipv4_addresses.remove(ip_addr)
+                    self._ipv4_addresses.insert(0, ip_addr)
 
             if not self._ipv6_addresses:
                 self._set_ipv6_addresses_from_cache(zc)
             if ip_addr not in self._ipv6_addresses:
                 self._ipv6_addresses.insert(0, ip_addr)
                 return True
+            else:
+                self._ipv6_addresses.remove(ip_addr)
+                self._ipv6_addresses.insert(0, ip_addr)
 
             return False
 
