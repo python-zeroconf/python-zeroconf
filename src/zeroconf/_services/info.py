@@ -351,10 +351,12 @@ class ServiceInfo(RecordUpdateListener):
         """Name accessor"""
         return self.name[: len(self.name) - len(self.type) - 1]
 
-    def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
+    def _get_ip_addresses_from_cache_lifo(
+        self, zc: 'Zeroconf', now: float, type: int
+    ) -> List[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]]:
         """Set IPv6 addresses from the cache."""
-        address_list: List[ipaddress.IPv6Address] = []
-        for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA):
+        address_list: List[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]] = []
+        for record in self._get_address_records_from_cache_by_type(zc, type):
             if record.is_expired(now):
                 continue
             try:
@@ -362,28 +364,21 @@ class ServiceInfo(RecordUpdateListener):
             except ValueError:
                 continue
             else:
-                if TYPE_CHECKING:
-                    ip_address = cast(ipaddress.IPv6Address, ip_address)
                 address_list.append(ip_address)
         address_list.reverse()  # Reverse to get LIFO order
-        self._ipv6_addresses = address_list
+        return address_list
+
+    def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
+        """Set IPv6 addresses from the cache."""
+        self._ipv6_addresses = cast(
+            "List[ipaddress.IPv6Address]", self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA)
+        )
 
     def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Set IPv4 addresses from the cache."""
-        address_list: List[ipaddress.IPv4Address] = []
-        for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A):
-            if record.is_expired(now):
-                continue
-            try:
-                ip_address = _cached_ip_addresses(record.address)
-            except ValueError:
-                continue
-            else:
-                if TYPE_CHECKING:
-                    ip_address = cast(ipaddress.IPv4Address, ip_address)
-                address_list.append(ip_address)
-        address_list.reverse()  # Reverse to get LIFO order
-        self._ipv4_addresses = address_list
+        self._ipv4_addresses = cast(
+            "List[ipaddress.IPv4Address]", self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
+        )
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
         """Updates service information from a DNS record.
