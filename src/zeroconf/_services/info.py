@@ -372,7 +372,10 @@ class ServiceInfo(RecordUpdateListener):
             self._notify_event.clear()
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
-        """Thread safe record updating."""
+        """Thread safe record updating.
+
+        Returns True if the service info was updated.
+        """
         seen_addresses: Set[bytes] = set()
         updated: bool = False
         for record_update in records:
@@ -390,15 +393,13 @@ class ServiceInfo(RecordUpdateListener):
         if record.is_expired(now):
             return False
 
-        if isinstance(record, DNSAddress):
-            if record.key != self.server_key:
-                return False
+        if record.key == self.server_key and isinstance(record, DNSAddress):
             try:
                 ip_addr = _cached_ip_addresses(record.address)
             except ValueError as ex:
                 log.warning("Encountered invalid address while processing %s: %s", record, ex)
                 return False
-            if isinstance(ip_addr, ipaddress.IPv4Address):
+            if ip_addr.version == 4:
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
                     return True
