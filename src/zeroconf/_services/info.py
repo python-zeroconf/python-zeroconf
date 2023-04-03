@@ -381,8 +381,8 @@ class ServiceInfo(RecordUpdateListener):
             updated |= self._process_record_threadsafe(zc, record_update.new, now)
         return updated
 
-    def _get_ipv6_addresses_from_cache(self, zc: 'Zeroconf') -> List[ipaddress.IPv6Address]:
-        """Get IP addresses from the cache."""
+    def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf') -> None:
+        """Set IPv6 addresses from the cache."""
         address_list: List[ipaddress.IPv6Address] = []
         for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA):
             try:
@@ -393,10 +393,11 @@ class ServiceInfo(RecordUpdateListener):
                 continue
             else:
                 address_list.append(ip_address)
-        return address_list
+        address_list.reverse()  # Reverse to get LIFO order
+        self._ipv6_addresses = address_list
 
-    def _get_ipv4_addresses_from_cache(self, zc: 'Zeroconf') -> List[ipaddress.IPv4Address]:
-        """Get IP addresses from the cache."""
+    def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf') -> None:
+        """Set IPv4 addresses from the cache."""
         address_list: List[ipaddress.IPv4Address] = []
         for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A):
             try:
@@ -407,7 +408,8 @@ class ServiceInfo(RecordUpdateListener):
                 continue
             else:
                 address_list.append(ip_address)
-        return address_list
+        address_list.reverse()  # Reverse to get LIFO order
+        self._ipv4_addresses = address_list
 
     def _process_record_threadsafe(self, zc: 'Zeroconf', record: DNSRecord, now: float) -> bool:
         """Thread safe record updating.
@@ -426,13 +428,13 @@ class ServiceInfo(RecordUpdateListener):
 
             if ip_addr.version == 4:
                 if not self._ipv4_addresses:
-                    self._ipv4_addresses = self._get_ipv4_addresses_from_cache(zc)
+                    self._set_ipv4_addresses_from_cache(zc)
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
                     return True
 
             if not self._ipv6_addresses:
-                self._ipv6_addresses = self._get_ipv6_addresses_from_cache(zc)
+                self._set_ipv6_addresses_from_cache(zc)
             if ip_addr not in self._ipv6_addresses:
                 self._ipv6_addresses.insert(0, ip_addr)
                 return True
@@ -455,8 +457,8 @@ class ServiceInfo(RecordUpdateListener):
             self.weight = record.weight
             self.priority = record.priority
             if old_server_key != self.server_key:
-                self._ipv4_addresses = self._get_ipv4_addresses_from_cache(zc)
-                self._ipv6_addresses = self._get_ipv6_addresses_from_cache(zc)
+                self._set_ipv4_addresses_from_cache(zc)
+                self._set_ipv6_addresses_from_cache(zc)
             return True
 
         return False
@@ -534,6 +536,7 @@ class ServiceInfo(RecordUpdateListener):
         """
         now = current_time_millis()
         record_updates: List[RecordUpdate] = []
+        original_server_key = self.server_key
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
             # If there is a srv record, A and AAAA will already
@@ -542,15 +545,14 @@ class ServiceInfo(RecordUpdateListener):
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
             record_updates.append(RecordUpdate(cached_txt_record, None))
-        # Process the records so that _get_address_records_from_cache
-        # will be able to find the records otherwise self.server might
-        # not be set to the correct value
-        self._process_records_threadsafe(zc, now, record_updates)
-        address_record_updates = [
-            RecordUpdate(record, None) for record in self._get_address_records_from_cache(zc)
-        ]
-        if address_record_updates:
-            self._process_records_threadsafe(zc, now, address_record_updates)
+        if original_server_key == self.server_key:
+            # If the server key changed we already have the addresses
+            self._process_records_threadsafe(zc, now, record_updates)
+            address_record_updates = [
+                RecordUpdate(record, None) for record in self._get_address_records_from_cache(zc)
+            ]
+            if address_record_updates:
+                self._process_records_threadsafe(zc, now, address_record_updates)
         return self._is_complete
 
     @property
