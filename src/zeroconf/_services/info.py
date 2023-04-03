@@ -381,19 +381,33 @@ class ServiceInfo(RecordUpdateListener):
             updated |= self._process_record_threadsafe(zc, record_update.new, now)
         return updated
 
-    def _load_ipv4_addresses_from_cache(self, zc: 'Zeroconf') -> None:
-        """Load IPv4 addresses from the cache."""
-        self._ipv4_addresses = [
-            _cached_ip_addresses(record.address)
-            for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A)
-        ]
+    def _get_ipv6_addresses_from_cache(self, zc: 'Zeroconf') -> List[ipaddress.IPv6Address]:
+        """Get IP addresses from the cache."""
+        address_list: List[ipaddress.IPv6Address] = []
+        for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA):
+            try:
+                ip_address = _cached_ip_addresses(record.address)
+                if TYPE_CHECKING:
+                    ip_address = cast(ipaddress.IPv6Address, ip_address)
+            except ValueError:
+                continue
+            else:
+                address_list.append(ip_address)
+        return address_list
 
-    def _load_ipv6_addresses_from_cache(self, zc: 'Zeroconf') -> None:
-        """Load IPv6 addresses from the cache."""
-        self._ipv6_addresses = [
-            _cached_ip_addresses(record.address)
-            for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA)
-        ]
+    def _get_ipv4_addresses_from_cache(self, zc: 'Zeroconf') -> List[ipaddress.IPv4Address]:
+        """Get IP addresses from the cache."""
+        address_list: List[ipaddress.IPv4Address] = []
+        for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A):
+            try:
+                ip_address = _cached_ip_addresses(record.address)
+                if TYPE_CHECKING:
+                    ip_address = cast(ipaddress.IPv4Address, ip_address)
+            except ValueError:
+                continue
+            else:
+                address_list.append(ip_address)
+        return address_list
 
     def _process_record_threadsafe(self, zc: 'Zeroconf', record: DNSRecord, now: float) -> bool:
         """Thread safe record updating.
@@ -412,13 +426,13 @@ class ServiceInfo(RecordUpdateListener):
 
             if ip_addr.version == 4:
                 if not self._ipv4_addresses:
-                    self._load_ipv4_addresses_from_cache(zc)
+                    self._ipv4_addresses = self._get_ipv4_addresses_from_cache(zc)
                 if ip_addr not in self._ipv4_addresses:
                     self._ipv4_addresses.insert(0, ip_addr)
                     return True
 
             if not self._ipv6_addresses:
-                self._load_ipv6_addresses_from_cache(zc)
+                self._ipv6_addresses = self._get_ipv6_addresses_from_cache(zc)
             if ip_addr not in self._ipv6_addresses:
                 self._ipv6_addresses.insert(0, ip_addr)
                 return True
@@ -441,8 +455,8 @@ class ServiceInfo(RecordUpdateListener):
             self.weight = record.weight
             self.priority = record.priority
             if old_server_key != self.server_key:
-                self._load_ipv4_addresses_from_cache(zc)
-                self._load_ipv6_addresses_from_cache(zc)
+                self._ipv4_addresses = self._get_ipv4_addresses_from_cache(zc)
+                self._ipv6_addresses = self._get_ipv6_addresses_from_cache(zc)
             return True
 
         return False
