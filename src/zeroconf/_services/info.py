@@ -387,11 +387,11 @@ class ServiceInfo(RecordUpdateListener):
         for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA):
             try:
                 ip_address = _cached_ip_addresses(record.address)
-                if TYPE_CHECKING:
-                    ip_address = cast(ipaddress.IPv6Address, ip_address)
             except ValueError:
                 continue
             else:
+                if TYPE_CHECKING:
+                    ip_address = cast(ipaddress.IPv6Address, ip_address)
                 address_list.append(ip_address)
         address_list.reverse()  # Reverse to get LIFO order
         self._ipv6_addresses = address_list
@@ -402,11 +402,11 @@ class ServiceInfo(RecordUpdateListener):
         for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A):
             try:
                 ip_address = _cached_ip_addresses(record.address)
-                if TYPE_CHECKING:
-                    ip_address = cast(ipaddress.IPv4Address, ip_address)
             except ValueError:
                 continue
             else:
+                if TYPE_CHECKING:
+                    ip_address = cast(ipaddress.IPv4Address, ip_address)
                 address_list.append(ip_address)
         address_list.reverse()  # Reverse to get LIFO order
         self._ipv4_addresses = address_list
