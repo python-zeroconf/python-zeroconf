@@ -510,10 +510,15 @@ class ServiceInfo(RecordUpdateListener):
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
             record_updates.append(RecordUpdate(cached_txt_record, None))
+        # Process the records so that _get_address_records_from_cache
+        # will be able to find the records otherwise self.server might
+        # not be set
         self._process_records_threadsafe(zc, now, record_updates)
-        self._process_records_threadsafe(
-            zc, now, [RecordUpdate(record, None) for record in self._get_address_records_from_cache(zc)]
-        )
+        address_record_updates = [
+            RecordUpdate(record, None) for record in self._get_address_records_from_cache(zc)
+        ]
+        if address_record_updates:
+            self._process_records_threadsafe(zc, now, address_record_updates)
         return self._is_complete
 
     @property
