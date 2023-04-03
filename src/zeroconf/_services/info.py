@@ -545,25 +545,19 @@ class ServiceInfo(RecordUpdateListener):
         This method is designed to be threadsafe.
         """
         now = current_time_millis()
-        record_updates: List[RecordUpdate] = []
+        original_server_key = self.server_key
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
-            record_updates.append(RecordUpdate(cached_srv_record, None))
+            self._process_record_threadsafe(zc, cached_srv_record, now)
         cached_txt_record = zc.cache.get_by_details(self.name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
-            record_updates.append(RecordUpdate(cached_txt_record, None))
-        if record_updates:
-            original_server_key = self.server_key
-            self._process_records_threadsafe(zc, now, record_updates)
-            if original_server_key == self.server_key:
-                # If there is a srv which changes the server_key,
-                # A and AAAA will already be loaded from the cache
-                # and we do not want to do it twice
-                address_record_updates = [
-                    RecordUpdate(record, None) for record in self._get_address_records_from_cache(zc)
-                ]
-                if address_record_updates:
-                    self._process_records_threadsafe(zc, now, address_record_updates)
+            self._process_record_threadsafe(zc, cached_txt_record, now)
+        if original_server_key == self.server_key:
+            # If there is a srv which changes the server_key,
+            # A and AAAA will already be loaded from the cache
+            # and we do not want to do it twice
+            for record in self._get_address_records_from_cache(zc):
+                self._process_record_threadsafe(zc, record, now)
         return self._is_complete
 
     @property
