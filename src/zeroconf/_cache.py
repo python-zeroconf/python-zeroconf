@@ -134,32 +134,34 @@ class DNSCache:
             return None
         return store.get(entry)
 
-    def async_all_by_details(self, name: str, type_: int, class_: int) -> Iterator[DNSRecord]:
+    def async_all_by_details(self, name: _str, type_: int, class_: int) -> Iterator[DNSRecord]:
         """Gets all matching entries by details.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
         key = name.lower()
-        for entry in self.cache.get(key, []):
+        for entry in self.cache.get(key) or []:
             if _dns_record_matches(entry, key, type_, class_):
                 yield entry
 
-    def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
+    def async_entries_with_name(self, name: _str) -> Dict[DNSRecord, DNSRecord]:
         """Returns a dict of entries whose key matches the name.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self.cache.get(name.lower(), {})
+        key = name.lower()
+        return self.cache.get(key) or {}
 
-    def async_entries_with_server(self, name: str) -> Dict[DNSRecord, DNSRecord]:
+    def async_entries_with_server(self, name: _str) -> Dict[DNSRecord, DNSRecord]:
         """Returns a dict of entries whose key matches the server.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self.service_cache.get(name.lower(), {})
+        key = name.lower()
+        return self.service_cache.get(key) or {}
 
     # The below functions are threadsafe and do not need to be run in the
     # event loop, however they all make copies so they significantly
@@ -175,7 +177,7 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
+    def get_by_details(self, name: _str, type_: int, class_: int) -> Optional[DNSRecord]:
         """Gets the first matching entry by details. Returns None if no entries match.
 
         Calling this function is not recommended as it will only
@@ -193,7 +195,7 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
+    def get_all_by_details(self, name: _str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
         key = name.lower()
         return [
