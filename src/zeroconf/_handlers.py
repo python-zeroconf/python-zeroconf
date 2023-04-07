@@ -90,10 +90,6 @@ class AnswerGroup(NamedTuple):
     answers: _AnswerWithAdditionalsType
 
 
-def _message_is_probe(msg: DNSIncoming) -> bool:
-    return msg.num_authorities > 0
-
-
 def construct_nsec_record(name: str, types: List[int], now: float) -> DNSNsec:
     """Construct an NSEC record for name and a list of dns types.
 
@@ -159,7 +155,7 @@ class _QueryResponse:
 
     def __init__(self, cache: DNSCache, msgs: List[DNSIncoming]) -> None:
         """Build a query response."""
-        self._is_probe = any(_message_is_probe(msg) for msg in msgs)
+        self._is_probe = any(msg.is_probe for msg in msgs)
         self._msg = msgs[0]
         self._now = self._msg.now
         self._cache = cache
@@ -363,9 +359,7 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        known_answers = DNSRRSet(
-            itertools.chain.from_iterable(msg.answers for msg in msgs if not _message_is_probe(msg))
-        )
+        known_answers = DNSRRSet(msg.answers for msg in msgs if not msg.is_probe)
         query_res = _QueryResponse(self.cache, msgs)
 
         for msg in msgs:

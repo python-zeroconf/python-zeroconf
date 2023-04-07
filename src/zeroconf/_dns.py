@@ -514,18 +514,18 @@ _DNSRecord = DNSRecord
 class DNSRRSet:
     """A set of dns records independent of the ttl."""
 
-    __slots__ = ('_records', '_lookup')
+    __slots__ = ('_record_sets', '_lookup')
 
-    def __init__(self, records: Iterable[DNSRecord]) -> None:
-        """Create an RRset from records."""
-        self._records = records
+    def __init__(self, record_sets: Iterable[List[DNSRecord]]) -> None:
+        """Create an RRset from records sets."""
+        self._record_sets = record_sets
         self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
 
     @property
     def lookup(self) -> Dict[DNSRecord, DNSRecord]:
         if self._lookup is None:
             # Build the hash table so we can lookup the record independent of the ttl
-            self._lookup = {record: record for record in self._records}
+            self._lookup = {record: record for record_sets in self._record_sets for record in record_sets}
         return self._lookup
 
     def suppresses(self, record: _DNSRecord) -> bool:
