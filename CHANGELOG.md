@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.55.0 (2023-04-07)
+### Feature
+* Improve performance of processing incoming records ([#1155](https://github.com/python-zeroconf/python-zeroconf/issues/1155)) ([`b65e279`](https://github.com/python-zeroconf/python-zeroconf/commit/b65e2792751c44e0fafe9ad3a55dadc5d8ee9d46))
+
 ## v0.54.0 (2023-04-03)
 ### Feature
 * Avoid waking async_request when record updates are not relevant ([#1153](https://github.com/python-zeroconf/python-zeroconf/issues/1153)) ([`a3f970c`](https://github.com/python-zeroconf/python-zeroconf/commit/a3f970c7f66067cf2c302c49ed6ad8286f19b679))
