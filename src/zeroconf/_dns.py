@@ -523,6 +523,11 @@ class DNSRRSet:
 
     @property
     def lookup(self) -> Dict[DNSRecord, DNSRecord]:
+        """Return the lookup table."""
+        return self._get_lookup()
+
+    def _get_lookup(self) -> Dict[DNSRecord, DNSRecord]:
+        """Return the lookup table, building it if needed."""
         if self._lookup is None:
             # Build the hash table so we can lookup the record independent of the ttl
             self._lookup = {record: record for record_sets in self._record_sets for record in record_sets}
@@ -531,12 +536,5 @@ class DNSRRSet:
     def suppresses(self, record: _DNSRecord) -> bool:
         """Returns true if any answer in the rrset can suffice for the
         information held in this record."""
-        if self._lookup is None:
-            other = self.lookup.get(record)
-        else:
-            other = self._lookup.get(record)
+        other = self._get_lookup().get(record)
         return bool(other and other.ttl > (record.ttl / 2))
-
-    def __contains__(self, record: DNSRecord) -> bool:
-        """Returns true if the rrset contains the record."""
-        return record in self.lookup

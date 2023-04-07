@@ -101,3 +101,5 @@ cdef class DNSRRSet:
 
     @cython.locals(other=DNSRecord)
     cpdef suppresses(self, DNSRecord record)
+
+    cdef _get_lookup(self)
