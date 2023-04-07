@@ -416,7 +416,7 @@ class RecordManager:
             # ServiceBrowsers generating excessive queries refresh queries.
             # Apple uses a 15s minimum TTL, however we do not have the same
             # level of rate limit and safe guards so we use 1/4 of the recommended value.
-            if record.type == _TYPE_PTR and record.ttl and record.ttl < _DNS_PTR_MIN_TTL:
+            if record.ttl and record.type == _TYPE_PTR and record.ttl < _DNS_PTR_MIN_TTL:
                 log.debug(
                     "Increasing effective ttl of %s to minimum of %s to protect against excessive refreshes.",
                     record,
