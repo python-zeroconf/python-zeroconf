@@ -536,5 +536,6 @@ class DNSRRSet:
     def suppresses(self, record: _DNSRecord) -> bool:
         """Returns true if any answer in the rrset can suffice for the
         information held in this record."""
-        other = self._get_lookup().get(record)
+        lookup = self._get_lookup()
+        other = lookup.get(record)
         return bool(other and other.ttl > (record.ttl / 2))

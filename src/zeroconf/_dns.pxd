@@ -16,6 +16,8 @@ cdef object _RECENT_TIME_MS
 cdef object _CLASS_UNIQUE
 cdef object _CLASS_MASK
 
+cdef object current_time_millis
+
 cdef class DNSEntry:
 
     cdef public object key
@@ -102,4 +104,5 @@ cdef class DNSRRSet:
     @cython.locals(other=DNSRecord)
     cpdef suppresses(self, DNSRecord record)
 
+    @cython.locals(lookup=cython.dict)
     cdef _get_lookup(self)
