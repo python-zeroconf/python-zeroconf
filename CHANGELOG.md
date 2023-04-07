@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.56.0 (2023-04-07)
+### Feature
+* Reduce denial of service protection overhead ([#1157](https://github.com/python-zeroconf/python-zeroconf/issues/1157)) ([`2c2f26a`](https://github.com/python-zeroconf/python-zeroconf/commit/2c2f26a87d0aac81a77205b06bc9ba499caa2321))
+
 ## v0.55.0 (2023-04-07)
 ### Feature
 * Improve performance of processing incoming records ([#1155](https://github.com/python-zeroconf/python-zeroconf/issues/1155)) ([`b65e279`](https://github.com/python-zeroconf/python-zeroconf/commit/b65e2792751c44e0fafe9ad3a55dadc5d8ee9d46))
