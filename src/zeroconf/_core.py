@@ -175,9 +175,7 @@ class AsyncEngine:
     async def _async_setup(self, loop_thread_ready: Optional[threading.Event]) -> None:
         """Set up the instance."""
         assert self.loop is not None
-        self._cleanup_timer = self.loop.call_later(
-            millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
-        )
+        self._cleanup_timer = self.loop.call_later(_CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
         await self._async_create_endpoints()
         assert self.running_event is not None
         self.running_event.set()
@@ -213,9 +211,7 @@ class AsyncEngine:
         )
         self.zc.record_manager.async_updates_complete(False)
         assert self.loop is not None
-        self._cleanup_timer = self.loop.call_later(
-            millis_to_seconds(_CACHE_CLEANUP_INTERVAL), self._async_cache_cleanup
-        )
+        self._cleanup_timer = self.loop.call_later(_CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
 
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
@@ -645,6 +641,7 @@ class Zeroconf(QuietLogger):
             info.host_ttl = ttl
             info.other_ttl = ttl
 
+        info.set_server_if_missing()
         await self.async_wait_for_start()
         await self.async_check_service(info, allow_name_change, cooperating_responders)
         self.registry.async_add(info)
@@ -742,10 +739,12 @@ class Zeroconf(QuietLogger):
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
         """Unregister a service."""
+        info.set_server_if_missing()
         self.registry.async_remove(info)
         # If another server uses the same addresses, we do not want to send
         # goodbye packets for the address records
 
+        assert info.server is not None
         entries = self.registry.async_get_infos_server(info.server)
         broadcast_addresses = not bool(entries)
         return asyncio.ensure_future(

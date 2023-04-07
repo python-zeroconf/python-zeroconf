@@ -174,6 +174,11 @@ class DNSIncoming:
                 )
         return self._answers
 
+    @property
+    def is_probe(self) -> bool:
+        """Returns true if this is a probe."""
+        return self.num_authorities > 0
+
     def __repr__(self) -> str:
         return '<DNSIncoming:{%s}>' % ', '.join(
             [

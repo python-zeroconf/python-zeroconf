@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zeroconf"
-version = "0.50.0"
+version = "0.55.0"
 description = "A pure python implementation of multicast DNS service discovery"
 authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Koston"]
 license = "LGPL"
@@ -26,6 +26,12 @@ classifiers=[
 ]
 packages = [
     { include = "zeroconf", from = "src" },
+]
+include = [
+    { path = "CHANGELOG.md", format = "sdist" },
+    { path = "COPYING", format = "sdist" },
+    { path = "docs", format = "sdist" },
+    { path = "tests", format = "sdist" },
 ]
 
 [tool.poetry.urls]
