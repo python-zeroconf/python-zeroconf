@@ -538,4 +538,6 @@ class DNSRRSet:
         information held in this record."""
         lookup = self._get_lookup()
         other_ttl = lookup.get(record)
-        return bool(other_ttl and other_ttl > (record.ttl / 2))
+        if other_ttl is None:
+            return False
+        return other_ttl > (record.ttl / 2)
