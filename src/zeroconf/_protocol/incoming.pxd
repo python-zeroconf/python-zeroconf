@@ -31,6 +31,18 @@ cdef object DECODE_EXCEPTIONS
 
 cdef object IncomingDecodeError
 
+from .._dns cimport (
+    DNSAddress,
+    DNSEntry,
+    DNSHinfo,
+    DNSNsec,
+    DNSPointer,
+    DNSRecord,
+    DNSService,
+    DNSText,
+)
+
+
 cdef class DNSIncoming:
 
     cdef bint _did_read_others
