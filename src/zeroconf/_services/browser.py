@@ -25,7 +25,7 @@ import queue
 import random
 import threading
 import warnings
-from collections import OrderedDict
+from abc import abstractmethod
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -39,7 +39,7 @@ from typing import (
     cast,
 )
 
-from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
+from .._dns import DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._services import (
@@ -49,9 +49,10 @@ from .._services import (
     SignalRegistrationInterface,
 )
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.name import possible_types, service_type_name
+from .._utils.name import cached_possible_types, service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
+    _ADDRESS_RECORD_TYPES,
     _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
     _CLASS_IN,
@@ -300,10 +301,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
         self.question_type = question_type
-        self._pending_handlers: OrderedDict[Tuple[str, str], ServiceStateChange] = OrderedDict()
+        self._pending_handlers: Dict[Tuple[str, str], ServiceStateChange] = {}
         self._service_state_changed = Signal()
         self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
-        self.queue: Optional[queue.SimpleQueue] = None
         self.done = False
         self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
@@ -338,7 +338,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
     def _names_matching_types(self, names: Iterable[str]) -> List[Tuple[str, str]]:
         """Return the type and name for records matching the types we are browsing."""
-        return [(type_, name) for name in names for type_ in self.types.intersection(possible_types(name))]
+        return [
+            (type_, name) for name in names for type_ in self.types.intersection(cached_possible_types(name))
+        ]
 
     def _enqueue_callback(
         self,
@@ -363,8 +365,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self, now: float, record: DNSRecord, old_record: Optional[DNSRecord]
     ) -> None:
         """Process a single record update from a batch of updates."""
-        if isinstance(record, DNSPointer):
-            for type_ in self.types.intersection(possible_types(record.name)):
+        record_type = record.type
+
+        if record_type is _TYPE_PTR:
+            if TYPE_CHECKING:
+                record = cast(DNSPointer, record)
+            for type_ in self.types.intersection(cached_possible_types(record.name)):
                 if old_record is None:
                     self._enqueue_callback(ServiceStateChange.Added, type_, record.alias)
                 elif record.is_expired(now):
@@ -377,7 +383,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if old_record or record.is_expired(now):
             return
 
-        if isinstance(record, DNSAddress):
+        if record_type in _ADDRESS_RECORD_TYPES:
             # Iterate through the DNSCache and callback any services that use this address
             for type_, name in self._names_matching_types(
                 {service.name for service in self.zc.cache.async_entries_with_server(record.name)}
@@ -400,6 +406,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for record in records:
             self._async_process_record_update(now, record[0], record[1])
 
+    @abstractmethod
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
 
@@ -407,14 +414,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        while self._pending_handlers:
-            event = self._pending_handlers.popitem(False)
-            # If there is a queue running (ServiceBrowser)
-            # get fired in dedicated thread
-            if self.queue:
-                self.queue.put(event)
-            else:
-                self._fire_service_state_changed_event(event)
 
     def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
         """Fire a service state changed event.
@@ -520,7 +519,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         # Add the queue before the listener is installed in _setup
         # to ensure that events run in the dedicated thread and do
         # not block the event loop
-        self.queue = queue.SimpleQueue()
+        self.queue: queue.SimpleQueue = queue.SimpleQueue()
         self.daemon = True
         self.start()
         zc.loop.call_soon_threadsafe(self._async_start)
@@ -532,16 +531,25 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
     def cancel(self) -> None:
         """Cancel the browser."""
         assert self.zc.loop is not None
-        assert self.queue is not None
         self.queue.put(None)
         self.zc.loop.call_soon_threadsafe(self._async_cancel)
         self.join()
 
     def run(self) -> None:
         """Run the browser thread."""
-        assert self.queue is not None
         while True:
             event = self.queue.get()
             if event is None:
                 return
             self._fire_service_state_changed_event(event)
+
+    def async_update_records_complete(self) -> None:
+        """Called when a record update has completed for all handlers.
+
+        At this point the cache will have the new records.
+
+        This method will be run in the event loop.
+        """
+        for pending in self._pending_handlers.items():
+            self.queue.put(pending)
+        self._pending_handlers.clear()

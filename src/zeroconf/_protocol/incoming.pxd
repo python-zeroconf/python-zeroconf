@@ -47,10 +47,10 @@ cdef class DNSIncoming:
 
     cdef bint _did_read_others
     cdef public unsigned int flags
-    cdef unsigned int offset
+    cdef object offset
     cdef public bytes data
     cdef unsigned int _data_len
-    cdef public object name_cache
+    cdef public cython.dict name_cache
     cdef public object questions
     cdef object _answers
     cdef public object id
@@ -67,9 +67,10 @@ cdef class DNSIncoming:
         off=cython.uint,
         label_idx=cython.uint,
         length=cython.uint,
-        link=cython.uint
+        link=cython.uint,
+        link_data=cython.uint
     )
-    cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, object seen_pointers)
+    cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
     cdef _read_header(self)
 

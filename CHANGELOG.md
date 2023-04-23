@@ -2,6 +2,60 @@
 
 <!--next-version-placeholder-->
 
+## v0.57.0 (2023-04-23)
+### Feature
+* Speed up incoming data parser ([#1161](https://github.com/python-zeroconf/python-zeroconf/issues/1161)) ([`cb4c3b2`](https://github.com/python-zeroconf/python-zeroconf/commit/cb4c3b2b80ca3b88b8de6e87062a45e03e8805a6))
+
+## v0.56.0 (2023-04-07)
+### Feature
+* Reduce denial of service protection overhead ([#1157](https://github.com/python-zeroconf/python-zeroconf/issues/1157)) ([`2c2f26a`](https://github.com/python-zeroconf/python-zeroconf/commit/2c2f26a87d0aac81a77205b06bc9ba499caa2321))
+
+## v0.55.0 (2023-04-07)
+### Feature
+* Improve performance of processing incoming records ([#1155](https://github.com/python-zeroconf/python-zeroconf/issues/1155)) ([`b65e279`](https://github.com/python-zeroconf/python-zeroconf/commit/b65e2792751c44e0fafe9ad3a55dadc5d8ee9d46))
+
+## v0.54.0 (2023-04-03)
+### Feature
+* Avoid waking async_request when record updates are not relevant ([#1153](https://github.com/python-zeroconf/python-zeroconf/issues/1153)) ([`a3f970c`](https://github.com/python-zeroconf/python-zeroconf/commit/a3f970c7f66067cf2c302c49ed6ad8286f19b679))
+
+## v0.53.1 (2023-04-03)
+### Fix
+* Addresses incorrect after server name change ([#1154](https://github.com/python-zeroconf/python-zeroconf/issues/1154)) ([`41ea06a`](https://github.com/python-zeroconf/python-zeroconf/commit/41ea06a0192c0d186e678009285759eb37d880d5))
+
+## v0.53.0 (2023-04-02)
+### Feature
+* Improve ServiceBrowser performance by removing OrderedDict ([#1148](https://github.com/python-zeroconf/python-zeroconf/issues/1148)) ([`9a16be5`](https://github.com/python-zeroconf/python-zeroconf/commit/9a16be56a9f69a5d0f7cde13dc1337b6d93c1433))
+
+### Fix
+* Make parsed_scoped_addresses return addresses in the same order as all other methods ([#1150](https://github.com/python-zeroconf/python-zeroconf/issues/1150)) ([`9b6adcf`](https://github.com/python-zeroconf/python-zeroconf/commit/9b6adcf5c04a469632ee866c32f5898c5cbf810a))
+
+### Technically breaking change
+* IP Addresses returned from `ServiceInfo.parsed_addresses` are now stringified using the python `ipaddress` library which may format them differently than `socket.inet_ntop` depending on the operating system. It is recommended to use `ServiceInfo.ip_addresses_by_version` instead going forward as it offers a stronger guarantee since it returns `ipaddress` objects.
+
+## v0.52.0 (2023-04-02)
+### Feature
+* Small cleanups to cache cleanup interval ([#1146](https://github.com/python-zeroconf/python-zeroconf/issues/1146)) ([`b434b60`](https://github.com/python-zeroconf/python-zeroconf/commit/b434b60f14ebe8f114b7b19bb4f54081c8ae0173))
+* Add ip_addresses_by_version to ServiceInfo ([#1145](https://github.com/python-zeroconf/python-zeroconf/issues/1145)) ([`524494e`](https://github.com/python-zeroconf/python-zeroconf/commit/524494edd49bd049726b19ae8ac8f6eea69a3943))
+* Speed up processing records in the ServiceBrowser ([#1143](https://github.com/python-zeroconf/python-zeroconf/issues/1143)) ([`6a327d0`](https://github.com/python-zeroconf/python-zeroconf/commit/6a327d00ffb81de55b7c5b599893c789996680c1))
+* Speed up matching types in the ServiceBrowser ([#1144](https://github.com/python-zeroconf/python-zeroconf/issues/1144)) ([`68871c3`](https://github.com/python-zeroconf/python-zeroconf/commit/68871c3b5569e41740a66b7d3d7fa5cc41514ea5))
+* Include tests and docs in sdist archives ([#1142](https://github.com/python-zeroconf/python-zeroconf/issues/1142)) ([`da10a3b`](https://github.com/python-zeroconf/python-zeroconf/commit/da10a3b2827cee0719d3bb9152ae897f061c6e2e))
+
+## v0.51.0 (2023-04-01)
+### Feature
+* Improve performance of constructing ServiceInfo ([#1141](https://github.com/python-zeroconf/python-zeroconf/issues/1141)) ([`36d5b45`](https://github.com/python-zeroconf/python-zeroconf/commit/36d5b45a4ece1dca902e9c3c79b5a63b8d9ae41f))
+
+## v0.50.0 (2023-04-01)
+### Feature
+* Small speed up to handler dispatch ([#1140](https://github.com/python-zeroconf/python-zeroconf/issues/1140)) ([`5bd1b6e`](https://github.com/python-zeroconf/python-zeroconf/commit/5bd1b6e7b4dd796069461c737ded956305096307))
+
+## v0.49.0 (2023-04-01)
+### Feature
+* Speed up processing incoming records ([#1139](https://github.com/python-zeroconf/python-zeroconf/issues/1139)) ([`7246a34`](https://github.com/python-zeroconf/python-zeroconf/commit/7246a344b6c0543871b40715c95c9435db4c7f81))
+
+## v0.48.0 (2023-04-01)
+### Feature
+* Reduce overhead to send responses ([#1135](https://github.com/python-zeroconf/python-zeroconf/issues/1135)) ([`c4077dd`](https://github.com/python-zeroconf/python-zeroconf/commit/c4077dde6dfde9e2598eb63daa03c36063a3e7b0))
+
 ## v0.47.4 (2023-03-20)
 ### Fix
 * Correct duplicate record entries in windows wheels by updating poetry-core ([#1134](https://github.com/python-zeroconf/python-zeroconf/issues/1134)) ([`a43055d`](https://github.com/python-zeroconf/python-zeroconf/commit/a43055d3fa258cd762c3e9394b01f8bdcb24f97e))

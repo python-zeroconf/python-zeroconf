@@ -47,6 +47,7 @@ from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.time import current_time_millis, millis_to_seconds
 from .const import (
+    _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
     _CLASS_UNIQUE,
     _DNS_OTHER_TTL,
@@ -71,7 +72,6 @@ if TYPE_CHECKING:
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 
 _MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
-_ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
 
@@ -88,10 +88,6 @@ class AnswerGroup(NamedTuple):
     send_after: float  # Must be sent after this time
     send_before: float  # Must be sent before this time
     answers: _AnswerWithAdditionalsType
-
-
-def _message_is_probe(msg: DNSIncoming) -> bool:
-    return msg.num_authorities > 0
 
 
 def construct_nsec_record(name: str, types: List[int], now: float) -> DNSNsec:
@@ -137,29 +133,12 @@ def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsTy
                 sending.add(additional)
 
 
-def sanitize_incoming_record(record: DNSRecord) -> None:
-    """Protect zeroconf from records that can cause denial of service.
-
-    We enforce a minimum TTL for PTR records to avoid
-    ServiceBrowsers generating excessive queries refresh queries.
-    Apple uses a 15s minimum TTL, however we do not have the same
-    level of rate limit and safe guards so we use 1/4 of the recommended value.
-    """
-    if record.ttl and record.ttl < _DNS_PTR_MIN_TTL and isinstance(record, DNSPointer):
-        log.debug(
-            "Increasing effective ttl of %s to minimum of %s to protect against excessive refreshes.",
-            record,
-            _DNS_PTR_MIN_TTL,
-        )
-        record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
-
-
 class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
 
     def __init__(self, cache: DNSCache, msgs: List[DNSIncoming]) -> None:
         """Build a query response."""
-        self._is_probe = any(_message_is_probe(msg) for msg in msgs)
+        self._is_probe = any(msg.is_probe for msg in msgs)
         self._msg = msgs[0]
         self._now = self._msg.now
         self._cache = cache
@@ -247,6 +226,7 @@ def _get_address_and_nsec_records(service: ServiceInfo, now: float) -> Set[DNSRe
         records.add(dns_address)
     missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
     if missing_types:
+        assert service.server is not None, "Service server must be set for NSEC record."
         records.add(construct_nsec_record(service.server, list(missing_types), now))
     return records
 
@@ -310,10 +290,12 @@ class QueryHandler:
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
             if answers:
                 if missing_types:
+                    assert service.server is not None, "Service server must be set for NSEC record."
                     additionals.add(construct_nsec_record(service.server, list(missing_types), now))
                 for answer in answers:
                     answer_set[answer] = additionals
             elif type_ in missing_types:
+                assert service.server is not None, "Service server must be set for NSEC record."
                 answer_set[construct_nsec_record(service.server, list(missing_types), now)] = set()
 
     def _answer_question(
@@ -360,9 +342,7 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        known_answers = DNSRRSet(
-            itertools.chain.from_iterable(msg.answers for msg in msgs if not _message_is_probe(msg))
-        )
+        known_answers = DNSRRSet(msg.answers for msg in msgs if not msg.is_probe)
         query_res = _QueryResponse(self.cache, msgs)
 
         for msg in msgs:
@@ -423,14 +403,26 @@ class RecordManager:
         threadsafe.
         """
         updates: List[RecordUpdate] = []
-        address_adds: List[DNSAddress] = []
+        address_adds: List[DNSRecord] = []
         other_adds: List[DNSRecord] = []
         removes: Set[DNSRecord] = set()
         now = msg.now
         unique_types: Set[Tuple[str, int, int]] = set()
 
         for record in msg.answers:
-            sanitize_incoming_record(record)
+            # Protect zeroconf from records that can cause denial of service.
+            #
+            # We enforce a minimum TTL for PTR records to avoid
+            # ServiceBrowsers generating excessive queries refresh queries.
+            # Apple uses a 15s minimum TTL, however we do not have the same
+            # level of rate limit and safe guards so we use 1/4 of the recommended value.
+            if record.ttl and record.type == _TYPE_PTR and record.ttl < _DNS_PTR_MIN_TTL:
+                log.debug(
+                    "Increasing effective ttl of %s to minimum of %s to protect against excessive refreshes.",
+                    record,
+                    _DNS_PTR_MIN_TTL,
+                )
+                record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
 
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record.type, record.class_))
@@ -440,7 +432,7 @@ class RecordManager:
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
-                    if isinstance(record, DNSAddress):
+                    if record.type in _ADDRESS_RECORD_TYPES:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
@@ -489,7 +481,7 @@ class RecordManager:
         # Since unique is set, all old records with that name, rrtype,
         # and rrclass that were received more than one second ago are declared
         # invalid, and marked to expire from the cache in one second.
-        answers_rrset = DNSRRSet(answers)
+        answers_rrset = set(answers)
         for name, type_, class_ in unique_types:
             for entry in self.cache.async_all_by_details(name, type_, class_):
                 if (now - entry.created > _ONE_SECOND) and entry not in answers_rrset:
