@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.58.2 (2023-04-26)
+### Fix
+* Re-release to rebuild failed wheels ([#1165](https://github.com/python-zeroconf/python-zeroconf/issues/1165)) ([`4986271`](https://github.com/python-zeroconf/python-zeroconf/commit/498627166a4976f1d9d8cd1f3654b0d50272d266))
+
 ## v0.58.1 (2023-04-26)
 ### Fix
 * Reduce cast calls in service browser ([#1164](https://github.com/python-zeroconf/python-zeroconf/issues/1164)) ([`c0d65ae`](https://github.com/python-zeroconf/python-zeroconf/commit/c0d65aeae7037a18ed1149336f5e7bdb8b2dd8cf))
