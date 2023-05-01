@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.59.0 (2023-05-01)
+### Feature
+* Speed up decoding dns questions when processing incoming data ([#1168](https://github.com/python-zeroconf/python-zeroconf/issues/1168)) ([`f927190`](https://github.com/python-zeroconf/python-zeroconf/commit/f927190cb24f70fd7c825c6e12151fcc0daf3973))
+
 ## v0.58.2 (2023-04-26)
 ### Fix
 * Re-release to rebuild failed wheels ([#1165](https://github.com/python-zeroconf/python-zeroconf/issues/1165)) ([`4986271`](https://github.com/python-zeroconf/python-zeroconf/commit/498627166a4976f1d9d8cd1f3654b0d50272d266))
