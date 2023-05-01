@@ -209,9 +209,10 @@ class DNSIncoming:
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
         for _ in range(self.num_questions):
+            name = self._read_name()
             type_, class_ = UNPACK_HH(self.data, self.offset)
-            question = DNSQuestion(self._read_name(), type_, class_)
             self.offset += 4
+            question = DNSQuestion(name, type_, class_)
             self.questions.append(question)
 
     def _read_character_string(self) -> bytes:
@@ -391,4 +392,4 @@ class DNSIncoming:
                 )
             return off + DNS_COMPRESSION_POINTER_LEN
 
-        raise IncomingDecodeError("Corrupt packet received while decoding name from {self.source}")
+        raise IncomingDecodeError(f"Corrupt packet received while decoding name from {self.source}")
