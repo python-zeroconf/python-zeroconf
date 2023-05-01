@@ -22,7 +22,7 @@
 
 import struct
 import sys
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from .._dns import (
     DNSAddress,
@@ -194,10 +194,6 @@ class DNSIncoming:
             ]
         )
 
-    def _unpack(self, unpacker: Callable[[bytes, int], tuple], length: int) -> tuple:
-        self.offset += length
-        return unpacker(self.data, self.offset - length)
-
     def _read_header(self) -> None:
         """Reads header portion of packet"""
         (
@@ -207,13 +203,16 @@ class DNSIncoming:
             self.num_answers,
             self.num_authorities,
             self.num_additionals,
-        ) = self._unpack(UNPACK_6H, 12)
+        ) = UNPACK_6H(self.data)
+        self.offset += 12
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
-        self.questions = [
-            DNSQuestion(self._read_name(), *self._unpack(UNPACK_HH, 4)) for _ in range(self.num_questions)
-        ]
+        for _ in range(self.num_questions):
+            type_, class_ = UNPACK_HH(self.data, self.offset)
+            question = DNSQuestion(self._read_name(), type_, class_)
+            self.offset += 4
+            self.questions.append(question)
 
     def _read_character_string(self) -> bytes:
         """Reads a character string from the packet"""
@@ -261,18 +260,24 @@ class DNSIncoming:
     ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
-            return DNSAddress(domain, type_, class_, ttl, self._read_string(4), created=self.now)
+            dns_address = DNSAddress(domain, type_, class_, ttl, self._read_string(4))
+            dns_address.created = self.now
+            return dns_address
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
             return DNSPointer(domain, type_, class_, ttl, self._read_name(), self.now)
         if type_ == _TYPE_TXT:
             return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
         if type_ == _TYPE_SRV:
+            priority, weight, port = UNPACK_3H(self.data, self.offset)
+            self.offset += 6
             return DNSService(
                 domain,
                 type_,
                 class_,
                 ttl,
-                *cast(Tuple[int, int, int], self._unpack(UNPACK_3H, 6)),
+                priority,
+                weight,
+                port,
                 self._read_name(),
                 self.now,
             )
@@ -282,14 +287,15 @@ class DNSIncoming:
                 type_,
                 class_,
                 ttl,
-                self._read_character_string().decode('utf-8'),
-                self._read_character_string().decode('utf-8'),
+                self._read_character_string().decode('utf-8', 'replace'),
+                self._read_character_string().decode('utf-8', 'replace'),
                 self.now,
             )
         if type_ == _TYPE_AAAA:
-            return DNSAddress(
-                domain, type_, class_, ttl, self._read_string(16), created=self.now, scope_id=self.scope_id
-            )
+            dns_address = DNSAddress(domain, type_, class_, ttl, self._read_string(16))
+            dns_address.created = self.now
+            dns_address.scope_id = self.scope_id
+            return dns_address
         if type_ == _TYPE_NSEC:
             name_start = self.offset
             return DNSNsec(
@@ -311,9 +317,13 @@ class DNSIncoming:
         """Reads an NSEC bitmap from the packet."""
         rdtypes = []
         while self.offset < end:
-            window = self.data[self.offset]
-            bitmap_length = self.data[self.offset + 1]
-            for i, byte in enumerate(self.data[self.offset + 2 : self.offset + 2 + bitmap_length]):
+            offset = self.offset
+            offset_plus_one = offset + 1
+            offset_plus_two = offset + 2
+            window = self.data[offset]
+            bitmap_length = self.data[offset_plus_one]
+            bitmap_end = offset_plus_two + bitmap_length
+            for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
                 for bit in range(0, 8):
                     if byte & (0x80 >> bit):
                         rdtypes.append(bit + window * 256 + i * 8)

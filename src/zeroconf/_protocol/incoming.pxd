@@ -38,6 +38,7 @@ from .._dns cimport (
     DNSHinfo,
     DNSNsec,
     DNSPointer,
+    DNSQuestion,
     DNSRecord,
     DNSService,
     DNSText,
@@ -48,12 +49,12 @@ cdef class DNSIncoming:
 
     cdef bint _did_read_others
     cdef public unsigned int flags
-    cdef object offset
-    cdef public bytes data
+    cdef unsigned int offset
+    cdef public cython.bytes data
     cdef unsigned int _data_len
     cdef public cython.dict name_cache
-    cdef public object questions
-    cdef object _answers
+    cdef public cython.list questions
+    cdef cython.list _answers
     cdef public object id
     cdef public cython.uint num_questions
     cdef public cython.uint num_answers
@@ -71,13 +72,11 @@ cdef class DNSIncoming:
         link=cython.uint,
         link_data=cython.uint
     )
-    cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
+    cdef cython.uint _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
     cdef _read_header(self)
 
     cdef _initial_parse(self)
-
-    cdef _unpack(self, object unpacker, object length)
 
     @cython.locals(
         end=cython.uint,
@@ -87,18 +86,25 @@ cdef class DNSIncoming:
 
     cdef _read_questions(self)
 
-    @cython.locals(
-        length=cython.uint
-    )
     cdef bytes _read_character_string(self)
 
-    cdef _read_string(self, unsigned int length)
+    cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(
         name_start=cython.uint
     )
     cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, unsigned int length)
 
+    @cython.locals(
+        offset=cython.uint,
+        offset_plus_one=cython.uint,
+        offset_plus_two=cython.uint,
+        window=cython.uint,
+        bit=cython.uint,
+        byte=cython.uint,
+        i=cython.uint,
+        bitmap_length=cython.uint,
+    )
     cdef _read_bitmap(self, unsigned int end)
 
     cdef _read_name(self)
