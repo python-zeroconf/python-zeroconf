@@ -211,9 +211,12 @@ class DNSIncoming:
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
-        self.questions = [
-            DNSQuestion(self._read_name(), *self._unpack(UNPACK_HH, 4)) for _ in range(self.num_questions)
-        ]
+        for _ in range(self.num_questions):
+            name = self._read_name()
+            type_, class_ = UNPACK_HH(self.data, self.offset)
+            self.offset += 4
+            question = DNSQuestion(name, type_, class_)
+            self.questions.append(question)
 
     def _read_character_string(self) -> bytes:
         """Reads a character string from the packet"""

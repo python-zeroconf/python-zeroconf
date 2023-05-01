@@ -38,6 +38,7 @@ from .._dns cimport (
     DNSHinfo,
     DNSNsec,
     DNSPointer,
+    DNSQuestion,
     DNSRecord,
     DNSService,
     DNSText,
@@ -52,7 +53,7 @@ cdef class DNSIncoming:
     cdef public bytes data
     cdef unsigned int _data_len
     cdef public cython.dict name_cache
-    cdef public object questions
+    cdef public cython.list questions
     cdef object _answers
     cdef public object id
     cdef public cython.uint num_questions
