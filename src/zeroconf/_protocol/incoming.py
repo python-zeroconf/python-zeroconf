@@ -318,13 +318,9 @@ class DNSIncoming:
         """Reads an NSEC bitmap from the packet."""
         rdtypes = []
         while self.offset < end:
-            offset = self.offset
-            offset_plus_one = offset + 1
-            offset_plus_two = offset + 2
-            window = self.data[offset]
-            bitmap_length = self.data[offset_plus_one]
-            bitmap_end = offset_plus_two + bitmap_length
-            for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
+            window = self.data[self.offset]
+            bitmap_length = self.data[self.offset + 1]
+            for i, byte in enumerate(self.data[self.offset + 2 : self.offset + 2 + bitmap_length]):
                 for bit in range(0, 8):
                     if byte & (0x80 >> bit):
                         rdtypes.append(bit + window * 256 + i * 8)

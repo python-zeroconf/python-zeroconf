@@ -49,8 +49,8 @@ cdef class DNSIncoming:
 
     cdef bint _did_read_others
     cdef public unsigned int flags
-    cdef unsigned int offset
-    cdef public cython.bytes data
+    cdef object offset
+    cdef public bytes data
     cdef unsigned int _data_len
     cdef public cython.dict name_cache
     cdef public cython.list questions
@@ -88,23 +88,13 @@ cdef class DNSIncoming:
 
     cdef bytes _read_character_string(self)
 
-    cdef bytes _read_string(self, unsigned int length)
+    cdef _read_string(self, unsigned int length)
 
     @cython.locals(
         name_start=cython.uint
     )
     cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, unsigned int length)
 
-    @cython.locals(
-        offset=cython.uint,
-        offset_plus_one=cython.uint,
-        offset_plus_two=cython.uint,
-        window=cython.uint,
-        bit=cython.uint,
-        byte=cython.uint,
-        i=cython.uint,
-        bitmap_length=cython.uint,
-    )
     cdef _read_bitmap(self, unsigned int end)
 
     cdef _read_name(self)
