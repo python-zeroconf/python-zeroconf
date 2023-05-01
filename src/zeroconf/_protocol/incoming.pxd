@@ -54,7 +54,7 @@ cdef class DNSIncoming:
     cdef unsigned int _data_len
     cdef public cython.dict name_cache
     cdef public cython.list questions
-    cdef object _answers
+    cdef cython.list _answers
     cdef public object id
     cdef public cython.uint num_questions
     cdef public cython.uint num_answers
@@ -78,8 +78,6 @@ cdef class DNSIncoming:
 
     cdef _initial_parse(self)
 
-    cdef _unpack(self, object unpacker, object length)
-
     @cython.locals(
         end=cython.uint,
         length=cython.uint
@@ -88,9 +86,6 @@ cdef class DNSIncoming:
 
     cdef _read_questions(self)
 
-    @cython.locals(
-        length=cython.uint
-    )
     cdef bytes _read_character_string(self)
 
     cdef _read_string(self, unsigned int length)
