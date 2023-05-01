@@ -49,7 +49,7 @@ cdef class DNSIncoming:
 
     cdef bint _did_read_others
     cdef public unsigned int flags
-    cdef object offset
+    cdef cython.uint offset
     cdef public bytes data
     cdef unsigned int _data_len
     cdef public cython.dict name_cache
