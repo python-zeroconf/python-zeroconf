@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.60.0 (2023-05-01)
+### Feature
+* Speed up processing incoming data ([#1167](https://github.com/python-zeroconf/python-zeroconf/issues/1167)) ([`fbaaf7b`](https://github.com/python-zeroconf/python-zeroconf/commit/fbaaf7bb6ff985bdabb85feb6cba144f12d4f1d6))
+
 ## v0.59.0 (2023-05-01)
 ### Feature
 * Speed up decoding dns questions when processing incoming data ([#1168](https://github.com/python-zeroconf/python-zeroconf/issues/1168)) ([`f927190`](https://github.com/python-zeroconf/python-zeroconf/commit/f927190cb24f70fd7c825c6e12151fcc0daf3973))
