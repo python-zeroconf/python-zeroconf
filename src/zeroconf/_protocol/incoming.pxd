@@ -95,6 +95,16 @@ cdef class DNSIncoming:
     )
     cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, unsigned int length)
 
+    @cython.locals(
+        offset=cython.uint,
+        offset_plus_one=cython.uint,
+        offset_plus_two=cython.uint,
+        window=cython.uint,
+        bit=cython.uint,
+        byte=cython.uint,
+        i=cython.uint,
+        bitmap_length=cython.uint,
+    )
     cdef _read_bitmap(self, unsigned int end)
 
     cdef _read_name(self)
