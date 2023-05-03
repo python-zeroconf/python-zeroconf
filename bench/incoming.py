@@ -3,7 +3,15 @@ import socket
 import timeit
 from typing import List
 
-from zeroconf import DNSAddress, DNSIncoming, DNSOutgoing, DNSService, DNSText, const
+from zeroconf import (
+    DNSAddress,
+    DNSIncoming,
+    DNSNsec,
+    DNSOutgoing,
+    DNSService,
+    DNSText,
+    const,
+)
 
 
 def generate_packets() -> List[bytes]:
@@ -148,6 +156,16 @@ def generate_packets() -> List[bytes]:
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_HOST_TTL,
                 record["address"],  # type: ignore
+            )
+        )
+        out.add_additional_answer(
+            DNSNsec(
+                record["name"],  # type: ignore
+                const._TYPE_NSEC,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                const._DNS_OTHER_TTL,
+                record["name"],  # type: ignore
+                [const._TYPE_TXT, const._TYPE_SRV],
             )
         )
 
