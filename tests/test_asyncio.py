@@ -1247,3 +1247,109 @@ async def test_update_with_uppercase_names(run_isolated):
         ('add', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
         ('update', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
     ]
+
+
+@pytest.mark.asyncio
+async def test_service_browser_does_not_try_to_send_if_not_ready():
+    """Test that the service browser does not try to send if not ready when rescheduling a type."""
+    service_added = asyncio.Event()
+    service_removed = asyncio.Event()
+    unexpected_ttl = asyncio.Event()
+    got_query = asyncio.Event()
+
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+            elif state_change is ServiceStateChange.Removed:
+                service_removed.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    await zeroconf_browser.async_wait_for_start()
+
+    # we are going to patch the zeroconf send to check packet sizes
+    old_send = zeroconf_browser.async_send
+
+    time_offset = 0.0
+
+    def _new_current_time_millis():
+        """Current system time in milliseconds"""
+        return (time.monotonic() * 1000) + (time_offset * 1000)
+
+    expected_ttl = const._DNS_HOST_TTL
+    nbr_answers = 0
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = DNSIncoming(out.packets()[0])
+        nonlocal nbr_answers
+        for answer in pout.answers:
+            nbr_answers += 1
+            if not answer.ttl > expected_ttl / 2:
+                unexpected_ttl.set()
+
+        got_query.set()
+
+        old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
+
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    # patch the zeroconf send
+    # patch the zeroconf current_time_millis
+    # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
+    # Disable duplicate question suppression and duplicate packet suppression for this test as it works
+    # by asking the same question over and over
+    with patch.object(
+        zeroconf_registrar.engine.protocols[0], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
+        zeroconf_registrar.engine.protocols[1], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
+        zeroconf_browser.engine.protocols[0], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
+        zeroconf_browser.engine.protocols[1], "suppress_duplicate_packet", return_value=False
+    ), patch.object(
+        zeroconf_browser.question_history, "suppresses", return_value=False
+    ), patch.object(
+        zeroconf_browser, "async_send", send
+    ), patch(
+        "zeroconf._services.browser.current_time_millis", _new_current_time_millis
+    ), patch.object(
+        _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
+    ):
+        service_added = asyncio.Event()
+        service_removed = asyncio.Event()
+
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+            now = _new_current_time_millis()
+            # Force the next query to be sent since we are testing
+            # to see if the query contains answers and not the scheduler
+            browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
+            with patch.object(browser, "_async_send_ready_queries") as _async_send_ready_queries:
+                browser.reschedule_type(type_, now, now + 1)
+            assert not _async_send_ready_queries.called
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await asyncio.wait_for(service_removed.wait(), 1)
+            assert service_removed.is_set()
+            await browser.async_cancel()
+            await aiozc.async_close()
