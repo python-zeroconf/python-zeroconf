@@ -996,6 +996,9 @@ async def test_integration():
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
                 now = _new_current_time_millis()
+                # Force the next query to be sent since we are testing
+                # to see if the query contains answers and not the scheduler
+                browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
                 browser.reschedule_type(type_, now, now)
                 sleep_count += 1
                 await asyncio.wait_for(got_query.wait(), 1)
