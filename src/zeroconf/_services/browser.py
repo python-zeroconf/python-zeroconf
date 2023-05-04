@@ -258,7 +258,7 @@ class QueryScheduler:
             # we scheduled the query, we can reschedule the query to happen later.
             next_refresh_time_by_record = [
                 record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
-                for record in self._cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+                for record in self._cache.async_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             ]
             if next_refresh_time_by_record:
                 recalculated_next_time = min(next_refresh_time_by_record)
