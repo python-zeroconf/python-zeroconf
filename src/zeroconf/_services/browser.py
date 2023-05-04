@@ -70,6 +70,8 @@ from ..const import (
 # https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
 _FIRST_QUERY_DELAY_RANDOM_INTERVAL = (20, 120)  # ms
 
+_BROWSER_BACKOFF_LIMIT_MS = _BROWSER_BACKOFF_LIMIT * 1000
+
 _ON_CHANGE_DISPATCH = {
     ServiceStateChange.Added: "add_service",
     ServiceStateChange.Removed: "remove_service",
@@ -254,21 +256,23 @@ class QueryScheduler:
             if due > now:
                 continue
 
-            # If there are no stale PTR records because the record came in after
-            # we scheduled the query, we can reschedule the query to happen later.
-            next_refresh_time_by_record = [
-                record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
-                for record in self._cache.async_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
-            ]
-            if next_refresh_time_by_record:
-                recalculated_next_time = min(next_refresh_time_by_record)
-                if recalculated_next_time > now:
-                    self._next_time[type_] = recalculated_next_time
-                    continue
+            if self._delay[type_] == _BROWSER_BACKOFF_LIMIT_MS:
+                # Once we reach the backoff limit, we have a primed cache. If there are
+                # no stale PTR records because the record came in after we scheduled the
+                # query, we can reschedule the query to happen later.
+                next_refresh_time_by_record = [
+                    record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+                    for record in self._cache.async_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+                ]
+                if next_refresh_time_by_record:
+                    recalculated_next_time = min(next_refresh_time_by_record)
+                    if recalculated_next_time > now:
+                        self._next_time[type_] = recalculated_next_time
+                        continue
 
             ready_types.append(type_)
             self._next_time[type_] = now + self._delay[type_]
-            self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
+            self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT_MS, self._delay[type_] * 2)
 
         return ready_types
 
