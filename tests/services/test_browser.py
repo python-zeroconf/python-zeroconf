@@ -26,6 +26,7 @@ from zeroconf import (
     current_time_millis,
     millis_to_seconds,
 )
+from zeroconf._cache import DNSCache
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
@@ -993,7 +994,8 @@ async def test_generate_service_query_suppress_duplicate_questions():
 async def test_query_scheduler():
     delay = const._BROWSER_TIME
     types_ = {"_hap._tcp.local.", "_http._tcp.local."}
-    query_scheduler = _services_browser.QueryScheduler(types_, delay, (0, 0))
+    cache = DNSCache()
+    query_scheduler = _services_browser.QueryScheduler(cache, types_, delay, (0, 0))
 
     now = current_time_millis()
     query_scheduler.start(now)

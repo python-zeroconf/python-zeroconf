@@ -39,6 +39,7 @@ from typing import (
     cast,
 )
 
+from .._cache import DNSCache
 from .._dns import DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
@@ -198,6 +199,7 @@ class QueryScheduler:
 
     def __init__(
         self,
+        cache: DNSCache,
         types: Set[str],
         delay: int,
         first_random_delay_interval: Tuple[int, int],
@@ -207,6 +209,7 @@ class QueryScheduler:
         self._next_time: Dict[str, float] = {}
         self._first_random_delay_interval = first_random_delay_interval
         self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self._types}
+        self._cache = cache
 
     def start(self, now: float) -> None:
         """Start the scheduler."""
@@ -250,6 +253,18 @@ class QueryScheduler:
         for type_, due in self._next_time.items():
             if due > now:
                 continue
+
+            # If there are no stale PTR records because the record came in after
+            # we scheduled the query, we can reschedule the query to happen later.
+            next_refresh_time_by_record = [
+                record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+                for record in self._cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+            ]
+            if next_refresh_time_by_record:
+                recalculated_next_time = min(next_refresh_time_by_record)
+                if recalculated_next_time > now:
+                    self._next_time[type_] = recalculated_next_time
+                    continue
 
             ready_types.append(type_)
             self._next_time[type_] = now + self._delay[type_]
@@ -301,7 +316,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.question_type = question_type
         self._pending_handlers: Dict[Tuple[str, str], ServiceStateChange] = {}
         self._service_state_changed = Signal()
-        self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
+        self.query_scheduler = QueryScheduler(zc.cache, self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
         self.done = False
         self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
