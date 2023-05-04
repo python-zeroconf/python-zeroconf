@@ -460,13 +460,18 @@ class _ServiceBrowserBase(RecordUpdateListener):
         """Cancel the next send."""
         if self._next_send_timer:
             self._next_send_timer.cancel()
+            self._next_send_timer = None
 
     def reschedule_type(self, type_: str, now: float, next_time: float) -> None:
         """Reschedule a type to be refreshed in the future."""
         if self.query_scheduler.reschedule_type(type_, next_time):
+            # We need to send the queries before rescheduling the next one
+            # otherwise we may be scheduling a query to go out in the next
+            # iteration of the event loop which should be sent now.
+            if now >= next_time:
+                self._async_send_ready_queries(now)
             self._cancel_send_timer()
             self._async_schedule_next(now)
-        self._async_send_ready_queries(now)
 
     def _async_send_ready_queries(self, now: float) -> None:
         """Send any ready queries."""

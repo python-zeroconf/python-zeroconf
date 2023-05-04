@@ -996,6 +996,9 @@ async def test_integration():
                 # Increase simulated time shift by 1/4 of the TTL in seconds
                 time_offset += expected_ttl / 4
                 now = _new_current_time_millis()
+                # Force the next query to be sent since we are testing
+                # to see if the query contains answers and not the scheduler
+                browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
                 browser.reschedule_type(type_, now, now)
                 sleep_count += 1
                 await asyncio.wait_for(got_query.wait(), 1)
@@ -1244,3 +1247,67 @@ async def test_update_with_uppercase_names(run_isolated):
         ('add', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
         ('update', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
     ]
+
+
+@pytest.mark.asyncio
+async def test_service_browser_does_not_try_to_send_if_not_ready():
+    """Test that the service browser does not try to send if not ready when rescheduling a type."""
+    service_added = asyncio.Event()
+    type_ = "_http._tcp.local."
+    registration_name = "nosend.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    await zeroconf_browser.async_wait_for_start()
+
+    expected_ttl = const._DNS_HOST_TTL
+    time_offset = 0.0
+
+    def _new_current_time_millis():
+        """Current system time in milliseconds"""
+        return (time.monotonic() * 1000) + (time_offset * 1000)
+
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    with patch("zeroconf._services.browser.current_time_millis", _new_current_time_millis):
+        service_added = asyncio.Event()
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        desc = {'path': '/~paulsm/'}
+        info = ServiceInfo(
+            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            time_offset = 1000 * expected_ttl  # set the time to the end of the ttl
+            now = _new_current_time_millis()
+            browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
+            # Make sure the query schedule is to a time in the future
+            # so we will reschedule
+            with patch.object(
+                browser, "_async_send_ready_queries"
+            ) as _async_send_ready_queries, patch.object(
+                browser, "_async_send_ready_queries_schedule_next"
+            ) as _async_send_ready_queries_schedule_next:
+                # Reschedule the type to be sent in 1ms in the future
+                # to make sure the query is not sent
+                browser.reschedule_type(type_, now, now + 1)
+                assert not _async_send_ready_queries.called
+                await asyncio.sleep(0.01)
+                # Make sure it does happen after the sleep
+                assert _async_send_ready_queries_schedule_next.called
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await browser.async_cancel()
+            await aiozc.async_close()
