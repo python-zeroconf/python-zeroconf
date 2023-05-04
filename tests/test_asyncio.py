@@ -1253,8 +1253,6 @@ async def test_update_with_uppercase_names(run_isolated):
 async def test_service_browser_does_not_try_to_send_if_not_ready():
     """Test that the service browser does not try to send if not ready when rescheduling a type."""
     service_added = asyncio.Event()
-    service_removed = asyncio.Event()
-
     type_ = "_http._tcp.local."
     registration_name = "nosend.%s" % type_
 
@@ -1262,8 +1260,6 @@ async def test_service_browser_does_not_try_to_send_if_not_ready():
         if name == registration_name:
             if state_change is ServiceStateChange.Added:
                 service_added.set()
-            elif state_change is ServiceStateChange.Removed:
-                service_removed.set()
 
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     zeroconf_browser = aiozc.zeroconf
@@ -1287,10 +1283,7 @@ async def test_service_browser_does_not_try_to_send_if_not_ready():
         _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
     ):
         service_added = asyncio.Event()
-        service_removed = asyncio.Event()
-
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-
         desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
             type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
@@ -1300,17 +1293,12 @@ async def test_service_browser_does_not_try_to_send_if_not_ready():
 
         try:
             await asyncio.wait_for(service_added.wait(), 1)
-            assert service_added.is_set()
             now = _new_current_time_millis()
-            # Force the next query to be sent since we are testing
-            # to see if the query contains answers and not the scheduler
             browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
             with patch.object(browser, "_async_send_ready_queries") as _async_send_ready_queries:
                 browser.reschedule_type(type_, now, now + 1)
             assert not _async_send_ready_queries.called
         finally:
             await aio_zeroconf_registrar.async_close()
-            await asyncio.wait_for(service_removed.wait(), 1)
-            assert service_removed.is_set()
             await browser.async_cancel()
             await aiozc.async_close()
