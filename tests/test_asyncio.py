@@ -1265,13 +1265,12 @@ async def test_service_browser_does_not_try_to_send_if_not_ready():
     zeroconf_browser = aiozc.zeroconf
     await zeroconf_browser.async_wait_for_start()
 
+    expected_ttl = const._DNS_HOST_TTL
     time_offset = 0.0
 
     def _new_current_time_millis():
         """Current system time in milliseconds"""
         return (time.monotonic() * 1000) + (time_offset * 1000)
-
-    expected_ttl = const._DNS_HOST_TTL
 
     assert len(zeroconf_browser.engine.protocols) == 2
 
@@ -1279,9 +1278,7 @@ async def test_service_browser_does_not_try_to_send_if_not_ready():
     zeroconf_registrar = aio_zeroconf_registrar.zeroconf
     await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
     assert len(zeroconf_registrar.engine.protocols) == 2
-    with patch("zeroconf._services.browser.current_time_millis", _new_current_time_millis), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
-    ):
+    with patch("zeroconf._services.browser.current_time_millis", _new_current_time_millis):
         service_added = asyncio.Event()
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
         desc = {'path': '/~paulsm/'}
@@ -1293,11 +1290,23 @@ async def test_service_browser_does_not_try_to_send_if_not_ready():
 
         try:
             await asyncio.wait_for(service_added.wait(), 1)
+            time_offset = 1000 * expected_ttl  # set the time to the end of the ttl
             now = _new_current_time_millis()
             browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
-            with patch.object(browser, "_async_send_ready_queries") as _async_send_ready_queries:
+            # Make sure the query schedule is to a time in the future
+            # so we will reschedule
+            with patch.object(
+                browser, "_async_send_ready_queries"
+            ) as _async_send_ready_queries, patch.object(
+                browser, "_async_send_ready_queries_schedule_next"
+            ) as _async_send_ready_queries_schedule_next:
+                # Reschedule the type to be sent in 1ms in the future
+                # to make sure the query is not sent
                 browser.reschedule_type(type_, now, now + 1)
-            assert not _async_send_ready_queries.called
+                assert not _async_send_ready_queries.called
+                await asyncio.sleep(0.01)
+                # Make sure it does happen after the sleep
+                assert _async_send_ready_queries_schedule_next.called
         finally:
             await aio_zeroconf_registrar.async_close()
             await browser.async_cancel()
