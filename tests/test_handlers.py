@@ -910,6 +910,45 @@ def test_known_answer_supression_service_type_enumeration_query():
     zc.close()
 
 
+def test_upper_case_enumeration_query():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_otherknown._tcp.local."
+    name = "knownname"
+    registration_name = f"{name}.{type_}"
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.async_add(info)
+
+    type_2 = "_otherknown2._tcp.local."
+    name = "knownname"
+    registration_name2 = f"{name}.{type_2}"
+    desc = {'path': '/~paulsm/'}
+    server_name2 = "ash-3.local."
+    info2 = ServiceInfo(
+        type_2, registration_name2, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.async_add(info2)
+    _clear_cache(zc)
+
+    # Test PTR supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME.upper(), const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    # unregister
+    zc.registry.async_remove(info)
+    zc.registry.async_remove(info2)
+    zc.close()
+
+
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
 @pytest.mark.asyncio
