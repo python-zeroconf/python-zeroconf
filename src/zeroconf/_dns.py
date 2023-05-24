@@ -151,6 +151,9 @@ class DNSQuestion(DNSEntry):
         )
 
 
+_int = int
+
+
 class DNSRecord(DNSEntry):
 
     """A DNS record - like a DNS entry, but has a TTL"""
@@ -179,7 +182,7 @@ class DNSRecord(DNSEntry):
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
 
-    def get_expiration_time(self, percent: int) -> float:
+    def get_expiration_time(self, percent: _int) -> float:
         """Returns the time at which this record will have expired
         by a certain percentage."""
         return self.created + (percent * self.ttl * 10)
@@ -187,7 +190,10 @@ class DNSRecord(DNSEntry):
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: float) -> Union[int, float]:
         """Returns the remaining TTL in seconds."""
-        return max(0, millis_to_seconds((self.created + (_EXPIRE_FULL_TIME_MS * self.ttl)) - now))
+        remaining_millis = (self.created + (_EXPIRE_FULL_TIME_MS * self.ttl)) - now
+        if remaining_millis < 0:
+            return 0
+        return millis_to_seconds(remaining_millis)
 
     def is_expired(self, now: float) -> bool:
         """Returns true if this record has expired."""
