@@ -255,10 +255,10 @@ class QueryHandler:
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
-        self, name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
+        self, lower_name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
     ) -> None:
         """Answer PTR/ANY question."""
-        for service in self.registry.async_get_infos_type(name):
+        for service in self.registry.async_get_infos_type(lower_name):
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
             dns_pointer = service.dns_pointer(created=now)
@@ -270,14 +270,14 @@ class QueryHandler:
 
     def _add_address_answers(
         self,
-        name: str,
+        lower_name: str,
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
         now: float,
         type_: int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
-        for service in self.registry.async_get_infos_server(name):
+        for service in self.registry.async_get_infos_server(lower_name):
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             seen_types: Set[int] = set()
@@ -305,21 +305,22 @@ class QueryHandler:
         now: float,
     ) -> _AnswerWithAdditionalsType:
         answer_set: _AnswerWithAdditionalsType = {}
+        question_lower_name = question.name.lower()
 
-        if question.type == _TYPE_PTR and question.name.lower() == _SERVICE_TYPE_ENUMERATION_NAME:
+        if question.type == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
             self._add_service_type_enumeration_query_answers(answer_set, known_answers, now)
             return answer_set
 
         type_ = question.type
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
-            self._add_pointer_answers(question.name, answer_set, known_answers, now)
+            self._add_pointer_answers(question_lower_name, answer_set, known_answers, now)
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
-            self._add_address_answers(question.name, answer_set, known_answers, now, type_)
+            self._add_address_answers(question_lower_name, answer_set, known_answers, now, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
-            service = self.registry.async_get_info_name(question.name)
+            service = self.registry.async_get_info_name(question_lower_name)
             if service is not None:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     # Add recommended additional answers according to

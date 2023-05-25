@@ -110,22 +110,3 @@ class TestServiceRegistry(unittest.TestCase):
         assert registry.async_get_infos_type(type_.lower()) == [info]
         assert registry.async_get_infos_server("ash-2.local.") == [info]
         assert registry.async_get_types() == [type_.lower()]
-
-    def test_lookups_lower_case_by_upper_case(self):
-        type_ = "_test-srvc-type._tcp.local."
-        name = "xxxyyy"
-        registration_name = f"{name}.{type_}"
-
-        desc = {'path': '/~paulsm/'}
-        info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
-        )
-
-        registry = r.ServiceRegistry()
-        registry.async_add(info)
-
-        assert registry.async_get_service_infos() == [info]
-        assert registry.async_get_info_name(registration_name.upper()) == info
-        assert registry.async_get_infos_type(type_.upper()) == [info]
-        assert registry.async_get_infos_server("ASH-2.local.") == [info]
-        assert registry.async_get_types() == [type_]

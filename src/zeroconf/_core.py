@@ -745,7 +745,7 @@ class Zeroconf(QuietLogger):
         # goodbye packets for the address records
 
         assert info.server is not None
-        entries = self.registry.async_get_infos_server(info.server)
+        entries = self.registry.async_get_infos_server(info.server.lower())
         broadcast_addresses = not bool(entries)
         return asyncio.ensure_future(
             self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
