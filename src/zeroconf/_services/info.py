@@ -479,12 +479,15 @@ class ServiceInfo(RecordUpdateListener):
         created: Optional[float] = None,
     ) -> List[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
+        name = self.server or self.name
+        ttl = override_ttl if override_ttl is not None else self.host_ttl
+        class_ = _CLASS_IN | _CLASS_UNIQUE
         return [
             DNSAddress(
-                self.server or self.name,
+                name,
                 _TYPE_AAAA if address.version == 6 else _TYPE_A,
-                _CLASS_IN | _CLASS_UNIQUE,
-                override_ttl if override_ttl is not None else self.host_ttl,
+                class_,
+                ttl,
                 address.packed,
                 created=created,
             )
