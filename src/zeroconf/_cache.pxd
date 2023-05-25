@@ -1,4 +1,5 @@
 import cython
+
 from ._dns cimport (
     DNSAddress,
     DNSEntry,
@@ -10,6 +11,7 @@ from ._dns cimport (
 )
 
 
+cdef object _UNIQUE_RECORD_TYPES
 cdef object _TYPE_PTR
 
 cdef _remove_key(cython.dict cache, object key, DNSRecord record)

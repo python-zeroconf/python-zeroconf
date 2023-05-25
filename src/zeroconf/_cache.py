@@ -134,14 +134,17 @@ class DNSCache:
             return None
         return store.get(entry)
 
-    def async_all_by_details(self, name: str, type_: int, class_: int) -> Iterator[DNSRecord]:
+    def async_all_by_details(self, name: _str, type_: int, class_: int) -> Iterator[DNSRecord]:
         """Gets all matching entries by details.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
         key = name.lower()
-        for entry in self.cache.get(key, []):
+        records = self.cache.get(key)
+        if records is None:
+            return
+        for entry in records:
             if _dns_record_matches(entry, key, type_, class_):
                 yield entry
 
@@ -151,7 +154,7 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self.cache.get(name.lower(), {})
+        return self.cache.get(name.lower()) or {}
 
     def async_entries_with_server(self, name: str) -> Dict[DNSRecord, DNSRecord]:
         """Returns a dict of entries whose key matches the server.
@@ -159,7 +162,7 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self.service_cache.get(name.lower(), {})
+        return self.service_cache.get(name.lower()) or {}
 
     # The below functions are threadsafe and do not need to be run in the
     # event loop, however they all make copies so they significantly
