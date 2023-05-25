@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.63.0 (2023-05-25)
+### Feature
+* Small speed up to fetch dns addresses from ServiceInfo ([#1176](https://github.com/python-zeroconf/python-zeroconf/issues/1176)) ([`4deaa6e`](https://github.com/python-zeroconf/python-zeroconf/commit/4deaa6ed7c9161db55bf16ec068ab7260bbd4976))
+* Speed up the service registry ([#1174](https://github.com/python-zeroconf/python-zeroconf/issues/1174)) ([`360ceb2`](https://github.com/python-zeroconf/python-zeroconf/commit/360ceb2548c4c4974ff798aac43a6fff9803ea0e))
+* Improve dns cache performance ([#1172](https://github.com/python-zeroconf/python-zeroconf/issues/1172)) ([`bb496a1`](https://github.com/python-zeroconf/python-zeroconf/commit/bb496a1dd5fa3562c0412cb064d14639a542592e))
+
 ## v0.62.0 (2023-05-04)
 ### Feature
 * Improve performance of ServiceBrowser outgoing query scheduler ([#1170](https://github.com/python-zeroconf/python-zeroconf/issues/1170)) ([`963d022`](https://github.com/python-zeroconf/python-zeroconf/commit/963d022ef82b615540fa7521d164a98a6c6f5209))
