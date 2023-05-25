@@ -87,6 +87,11 @@ def instance_name_from_service_info(info: "ServiceInfo") -> str:
 _cached_ip_addresses = lru_cache(maxsize=256)(ipaddress.ip_address)
 
 
+@lru_cache(maxsize=256)
+def _packed_address(address: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]) -> bytes:
+    return address.packed
+
+
 class ServiceInfo(RecordUpdateListener):
     """Service information.
 
@@ -243,12 +248,12 @@ class ServiceInfo(RecordUpdateListener):
         address of the given IP version.
         """
         if version == IPVersion.V4Only:
-            return [addr.packed for addr in self._ipv4_addresses]
+            return [_packed_address(addr) for addr in self._ipv4_addresses]
         if version == IPVersion.V6Only:
-            return [addr.packed for addr in self._ipv6_addresses]
+            return [_packed_address(addr) for addr in self._ipv6_addresses]
         return [
-            *(addr.packed for addr in self._ipv4_addresses),
-            *(addr.packed for addr in self._ipv6_addresses),
+            *(_packed_address(addr) for addr in self._ipv4_addresses),
+            *(_packed_address(addr) for addr in self._ipv6_addresses),
         ]
 
     def ip_addresses_by_version(
@@ -485,7 +490,7 @@ class ServiceInfo(RecordUpdateListener):
                 _TYPE_AAAA if address.version == 6 else _TYPE_A,
                 _CLASS_IN | _CLASS_UNIQUE,
                 override_ttl if override_ttl is not None else self.host_ttl,
-                address.packed,
+                _packed_address(address),
                 created=created,
             )
             for address in self.ip_addresses_by_version(version)
