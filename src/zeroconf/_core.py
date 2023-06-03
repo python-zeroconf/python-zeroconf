@@ -71,6 +71,7 @@ from .const import (
     _CHECK_TIME,
     _CLASS_IN,
     _CLASS_UNIQUE,
+    _DUPLICATE_QUESTION_INTERVAL,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -311,22 +312,26 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
 
         last_incoming_message = self.last_incoming_message
         if (
-            last_incoming_message
-            and self.data == data
-            and (now - 999) < self.last_time
-            and last_incoming_message.scope_id == scope
+            data == self.data
+            and last_incoming_message is not None
+            and self.last_time > now - _DUPLICATE_QUESTION_INTERVAL
+            and not any(question.unicast for question in last_incoming_message.questions)
         ):
-            # We already processed this packet with 0.999s so we can reuse the parse
+            # We got the same packet and there are no QU questions in the packet
             if debug:
                 log.debug(
-                    "Reusing last parsed packet from %r:%r [socket %s]", addr, port, self.sock_description
+                    'Ignoring message from %r:%r [socket %s] (%d bytes) as a duplicate',
+                    addr,
+                    port,
+                    self.sock_description,
+                    data_len,
                 )
-            msg = last_incoming_message
-        else:
-            msg = DNSIncoming(data, (addr, port), scope, now)
-            self.last_incoming_message = msg
-            self.data = data
-            self.last_time = now
+            return
+
+        msg = DNSIncoming(data, (addr, port), scope, now)
+        self.last_incoming_message = msg
+        self.data = data
+        self.last_time = now
 
         if msg.valid:
             if debug:
