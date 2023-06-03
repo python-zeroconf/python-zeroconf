@@ -263,15 +263,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.sock_description: Optional[str] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
+        self.last_incoming_message: Optional[DNSIncoming] = None
         super().__init__()
-
-    def suppress_duplicate_packet(self, data: bytes, now: float) -> bool:
-        """Suppress duplicate packet if the last one was the same in the last second."""
-        if self.data == data and (now - 1000) < self.last_time:
-            return True
-        self.data = data
-        self.last_time = now
-        return False
 
     def datagram_received(
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
@@ -301,20 +294,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             )
             return
 
-        type_ = _FLAGS_QR_RESPONSE if data[2] & _FLAGS_QR_RESPONSE else _FLAGS_QR_QUERY
-        if self.suppress_duplicate_packet(data, now):
-            # Guard against duplicate packets
-            log.debug(
-                'Ignoring duplicate message with type %s received from %r:%r [socket %s] (%d bytes) as [%r]',
-                "response" if type_ == _FLAGS_QR_RESPONSE else "query",
-                addr,
-                port,
-                self.sock_description,
-                data_len,
-                data,
-            )
-            return
-
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
             # the system.
@@ -326,7 +305,21 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             )
             return
 
-        msg = DNSIncoming(data, (addr, port), scope, now)
+        last_incoming_message = self.last_incoming_message
+        if (
+            last_incoming_message
+            and self.data == data
+            and (now - 999) < self.last_time
+            and last_incoming_message.scope_id == scope
+        ):
+            # We already processed this packet with 0.999s so we can reuse the parse
+            msg = last_incoming_message
+        else:
+            msg = DNSIncoming(data, (addr, port), scope, now)
+            self.last_incoming_message = msg
+            self.data = data
+            self.last_time = now
+
         if msg.valid:
             log.debug(
                 'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
