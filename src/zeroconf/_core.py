@@ -272,6 +272,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         assert self.transport is not None
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         data_len = len(data)
+        debug = log.isEnabledFor(logging.DEBUG)
 
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
@@ -280,29 +281,32 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         else:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs  # type: ignore
-            log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
+            if debug:
+                log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
 
         now = current_time_millis()
         if data_len < 12:
-            log.debug(
-                'Ignoring message from %r:%r [socket %s] (%d bytes) as too short',
-                addr,
-                port,
-                self.sock_description,
-                data_len,
-            )
+            if debug:
+                log.debug(
+                    'Ignoring message from %r:%r [socket %s] (%d bytes) as too short',
+                    addr,
+                    port,
+                    self.sock_description,
+                    data_len,
+                )
             return
 
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
             # the system.
-            log.debug(
-                "Discarding incoming packet with length %s, which is larger "
-                "than the absolute maximum size of %s",
-                data_len,
-                _MAX_MSG_ABSOLUTE,
-            )
+            if debug:
+                log.debug(
+                    "Discarding incoming packet with length %s, which is larger "
+                    "than the absolute maximum size of %s",
+                    data_len,
+                    _MAX_MSG_ABSOLUTE,
+                )
             return
 
         last_incoming_message = self.last_incoming_message
@@ -313,7 +317,10 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             and last_incoming_message.scope_id == scope
         ):
             # We already processed this packet with 0.999s so we can reuse the parse
-            log.debug("Reusing last parsed packet from %r:%r [socket %s]", addr, port, self.sock_description)
+            if debug:
+                log.debug(
+                    "Reusing last parsed packet from %r:%r [socket %s]", addr, port, self.sock_description
+                )
             msg = last_incoming_message
         else:
             msg = DNSIncoming(data, (addr, port), scope, now)
@@ -322,24 +329,26 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.last_time = now
 
         if msg.valid:
-            log.debug(
-                'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
-                addr,
-                port,
-                self.sock_description,
-                msg,
-                data_len,
-                data,
-            )
+            if debug:
+                log.debug(
+                    'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
+                    addr,
+                    port,
+                    self.sock_description,
+                    msg,
+                    data_len,
+                    data,
+                )
         else:
-            log.debug(
-                'Received from %r:%r [socket %s]: (%d bytes) [%r]',
-                addr,
-                port,
-                self.sock_description,
-                data_len,
-                data,
-            )
+            if debug:
+                log.debug(
+                    'Received from %r:%r [socket %s]: (%d bytes) [%r]',
+                    addr,
+                    port,
+                    self.sock_description,
+                    data_len,
+                    data,
+                )
             return
 
         if not msg.is_query():
