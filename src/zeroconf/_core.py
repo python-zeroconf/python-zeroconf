@@ -313,6 +313,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             and last_incoming_message.scope_id == scope
         ):
             # We already processed this packet with 0.999s so we can reuse the parse
+            log.debug("Reusing last parsed packet from %r:%r [socket %s]", addr, port, self.sock_description)
             msg = last_incoming_message
         else:
             msg = DNSIncoming(data, (addr, port), scope, now)
