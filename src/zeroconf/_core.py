@@ -272,7 +272,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.data == data
             and (now - 1000) < self.last_time
             and self.last_message is not None
-            and not any(question.unicast for question in self.last_message.questions)
+            and not self.last_message.has_qu_question
         ):
             return True
         self.data = data

@@ -136,6 +136,11 @@ class DNSIncoming:
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
     @property
+    def has_qu_question(self) -> bool:
+        """Returns true if this is a query."""
+        return self.num_questions > 0 and any(question.unicast for question in self.questions)
+
+    @property
     def truncated(self) -> bool:
         """Returns true if this is a truncated."""
         return (self.flags & _FLAGS_TC) == _FLAGS_TC
