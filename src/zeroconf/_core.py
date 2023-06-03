@@ -291,10 +291,22 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             v6_flow_scope = (flow, scope)
 
         now = current_time_millis()
+        if data_len < 12:
+            log.debug(
+                'Ignoring message from %r:%r [socket %s] (%d bytes) as too short',
+                addr,
+                port,
+                self.sock_description,
+                data_len,
+            )
+            return
+
+        type_ = _FLAGS_QR_RESPONSE if data[2] & _FLAGS_QR_RESPONSE else _FLAGS_QR_QUERY
         if self.suppress_duplicate_packet(data, now):
             # Guard against duplicate packets
             log.debug(
-                'Ignoring duplicate message received from %r:%r [socket %s] (%d bytes) as [%r]',
+                'Ignoring duplicate message with type %s received from %r:%r [socket %s] (%d bytes) as [%r]',
+                "response" if type_ == _FLAGS_QR_RESPONSE else "query",
                 addr,
                 port,
                 self.sock_description,
