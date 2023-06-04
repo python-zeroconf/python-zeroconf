@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import Dict, Iterable, Iterator, List, Optional, Union, cast
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 
 from ._dns import (
     DNSAddress,
@@ -34,7 +34,7 @@ from ._dns import (
     DNSText,
 )
 from ._utils.time import current_time_millis
-from .const import _TYPE_PTR
+from .const import _ONE_SECOND, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
@@ -225,6 +225,20 @@ class DNSCache:
     def names(self) -> List[str]:
         """Return a copy of the list of current cache names."""
         return list(self.cache)
+
+    def async_mark_unique_cached_records_older_than_1s_to_expire(
+        self, unique_types: Set[Tuple[str, int, int]], answers: Iterable[DNSRecord], now: float
+    ) -> None:
+        # rfc6762#section-10.2 para 2
+        # Since unique is set, all old records with that name, rrtype,
+        # and rrclass that were received more than one second ago are declared
+        # invalid, and marked to expire from the cache in one second.
+        answers_rrset = set(answers)
+        for name, type_, class_ in unique_types:
+            for entry in self.async_all_by_details(name, type_, class_):
+                if (now - entry.created > _ONE_SECOND) and entry not in answers_rrset:
+                    # Expire in 1s
+                    entry.set_created_ttl(now, 1)
 
 
 def _dns_record_matches(record: _DNSRecord, key: _str, type_: int, class_: int) -> bool:

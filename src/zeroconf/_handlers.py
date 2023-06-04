@@ -26,7 +26,6 @@ from collections import deque
 from typing import (
     TYPE_CHECKING,
     Dict,
-    Iterable,
     List,
     NamedTuple,
     Optional,
@@ -421,7 +420,9 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            self._async_mark_unique_cached_records_older_than_1s_to_expire(unique_types, msg.answers, now)
+            self.cache.async_mark_unique_cached_records_older_than_1s_to_expire(
+                unique_types, msg.answers, now
+            )
 
         if updates:
             self.async_updates(now, updates)
@@ -450,20 +451,6 @@ class RecordManager:
             self.cache.async_remove_records(removes)
         if updates:
             self.async_updates_complete(new)
-
-    def _async_mark_unique_cached_records_older_than_1s_to_expire(
-        self, unique_types: Set[Tuple[str, int, int]], answers: Iterable[DNSRecord], now: float
-    ) -> None:
-        # rfc6762#section-10.2 para 2
-        # Since unique is set, all old records with that name, rrtype,
-        # and rrclass that were received more than one second ago are declared
-        # invalid, and marked to expire from the cache in one second.
-        answers_rrset = set(answers)
-        for name, type_, class_ in unique_types:
-            for entry in self.cache.async_all_by_details(name, type_, class_):
-                if (now - entry.created > _ONE_SECOND) and entry not in answers_rrset:
-                    # Expire in 1s
-                    entry.set_created_ttl(now, 1)
 
     def async_add_listener(
         self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
