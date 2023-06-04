@@ -420,9 +420,7 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            self.cache.async_mark_unique_cached_records_older_than_1s_to_expire(
-                unique_types, msg.answers, now
-            )
+            self.cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, msg.answers, now)
 
         if updates:
             self.async_updates(now, updates)

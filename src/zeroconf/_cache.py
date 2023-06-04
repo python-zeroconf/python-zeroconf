@@ -226,7 +226,7 @@ class DNSCache:
         """Return a copy of the list of current cache names."""
         return list(self.cache)
 
-    def async_mark_unique_cached_records_older_than_1s_to_expire(
+    def async_mark_unique_records_older_than_1s_to_expire(
         self, unique_types: Set[Tuple[str, int, int]], answers: Iterable[DNSRecord], now: float
     ) -> None:
         # rfc6762#section-10.2 para 2
