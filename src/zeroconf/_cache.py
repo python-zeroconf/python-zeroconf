@@ -144,7 +144,7 @@ class DNSCache:
         """
         return self._async_all_by_details(name, type_, class_)
 
-    def _async_all_by_details(self, name: _str, type_: int, class_: int) -> list[DNSRecord]:
+    def _async_all_by_details(self, name: _str, type_: int, class_: int) -> List[DNSRecord]:
         """Gets all matching entries by details.
 
         This function is not thread-safe and must be called from
