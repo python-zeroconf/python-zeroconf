@@ -71,6 +71,7 @@ from .const import (
     _CHECK_TIME,
     _CLASS_IN,
     _CLASS_UNIQUE,
+    _DUPLICATE_PACKET_SUPPRESSION_INTERVAL,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -298,7 +299,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         now = current_time_millis()
         if (
             self.data == data
-            and (now - 1000) < self.last_time
+            and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
             and self.last_message is not None
             and not self.last_message.has_qu_question
         ):

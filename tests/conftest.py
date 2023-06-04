@@ -27,3 +27,16 @@ def run_isolated():
         const, "_MDNS_PORT", 5454
     ):
         yield
+
+
+@pytest.fixture
+def disable_duplicate_packet_suppression():
+    """Disable duplicate packet suppress.
+
+    Some tests run too slowly because of the duplicate
+    packet suppression.
+    """
+    with unittest.mock.patch.object(
+        _core, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0
+    ), unittest.mock.patch.object(const, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0):
+        yield
