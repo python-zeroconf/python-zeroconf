@@ -405,7 +405,6 @@ class RecordManager:
                 unique_types.add((record.name, record.type, record.class_))
 
             maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
-            log.error("async_get_unique: record=%s, maybe_entry=%s", record, maybe_entry)
             if not record.is_expired(now):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
