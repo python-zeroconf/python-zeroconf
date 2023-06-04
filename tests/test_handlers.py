@@ -1465,7 +1465,7 @@ async def test_response_aggregation_timings(run_isolated):
 
 
 @pytest.mark.asyncio
-async def test_response_aggregation_timings_multiple(run_isolated):
+async def test_response_aggregation_timings_multiple(run_isolated, disable_duplicate_packet_suppression):
     """Verify multicast responses that are aggregated do not take longer than 620ms to send.
 
     620ms is the maximum random delay of 120ms and 500ms additional for aggregation."""
@@ -1490,9 +1490,7 @@ async def test_response_aggregation_timings_multiple(run_isolated):
     zc = aiozc.zeroconf
     protocol = zc.engine.protocols[0]
 
-    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock, unittest.mock.patch.object(
-        protocol, "suppress_duplicate_packet", return_value=False
-    ):
+    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock:
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         await asyncio.sleep(0.2)
