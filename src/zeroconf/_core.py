@@ -266,19 +266,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self._timers: Dict[str, asyncio.TimerHandle] = {}
         super().__init__()
 
-    def suppress_duplicate_packet(self, data: bytes, now: float) -> bool:
-        """Suppress duplicate packet if the last one was the same in the last second."""
-        if (
-            self.data == data
-            and (now - 1000) < self.last_time
-            and self.last_message is not None
-            and not self.last_message.has_qu_question
-        ):
-            return True
-        self.data = data
-        self.last_time = now
-        return False
-
     def datagram_received(
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
@@ -309,7 +296,12 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             return
 
         now = current_time_millis()
-        if self.suppress_duplicate_packet(data, now):
+        if (
+            self.data == data
+            and (now - 1000) < self.last_time
+            and self.last_message is not None
+            and not self.last_message.has_qu_question
+        ):
             # Guard against duplicate packets
             if debug:
                 log.debug(
@@ -323,6 +315,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             return
 
         msg = DNSIncoming(data, (addr, port), scope, now)
+        self.data = data
+        self.last_time = now
         self.last_message = msg
         if msg.valid:
             if debug:
