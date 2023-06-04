@@ -32,7 +32,6 @@ def teardown_module():
 
 class ServiceTypesQuery(unittest.TestCase):
     def test_integration_with_listener(self):
-
         type_ = "_test-listen-type._tcp.local."
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
@@ -68,7 +67,6 @@ class ServiceTypesQuery(unittest.TestCase):
     @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_v6_records(self):
-
         type_ = "_test-listenv6rec-type._tcp.local."
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
@@ -105,7 +103,6 @@ class ServiceTypesQuery(unittest.TestCase):
     @unittest.skipIf(not has_working_ipv6() or sys.platform == 'win32', 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_integration_with_listener_ipv6(self):
-
         type_ = "_test-listenv6ip-type._tcp.local."
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"

@@ -42,7 +42,6 @@ def teardown_module():
 
 class TestRegistrar(unittest.TestCase):
     def test_ttl(self):
-
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=['127.0.0.1'])
 
@@ -222,7 +221,6 @@ class TestRegistrar(unittest.TestCase):
 
 
 def test_ptr_optimization():
-
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
 

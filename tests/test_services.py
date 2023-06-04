@@ -36,7 +36,6 @@ def teardown_module():
 
 class ListenerTest(unittest.TestCase):
     def test_integration_with_listener_class(self):
-
         sub_service_added = Event()
         service_added = Event()
         service_removed = Event()
