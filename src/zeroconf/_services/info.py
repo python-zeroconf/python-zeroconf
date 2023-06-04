@@ -24,10 +24,11 @@ import asyncio
 import ipaddress
 import random
 from functools import lru_cache
-from typing import TYPE_CHECKING, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
 from .._dns import (
     DNSAddress,
+    DNSNsec,
     DNSPointer,
     DNSQuestionType,
     DNSRecord,
@@ -47,6 +48,7 @@ from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
+    _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
     _CLASS_UNIQUE,
     _DNS_HOST_TTL,
@@ -55,6 +57,7 @@ from ..const import (
     _LISTENER_TIME,
     _TYPE_A,
     _TYPE_AAAA,
+    _TYPE_NSEC,
     _TYPE_PTR,
     _TYPE_SRV,
     _TYPE_TXT,
@@ -529,6 +532,35 @@ class ServiceInfo(RecordUpdateListener):
             self.text,
             created,
         )
+
+    def dns_nsec(
+        self, missing_types: List[int], override_ttl: Optional[int] = None, created: Optional[float] = None
+    ) -> DNSNsec:
+        """Return DNSNsec from ServiceInfo."""
+        return DNSNsec(
+            self.name,
+            _TYPE_NSEC,
+            _CLASS_IN | _CLASS_UNIQUE,
+            override_ttl if override_ttl is not None else self.host_ttl,
+            self.name,
+            missing_types,
+            created,
+        )
+
+    def get_address_and_nsec_records(
+        self, override_ttl: Optional[int] = None, created: Optional[float] = None
+    ) -> Set[DNSRecord]:
+        """Build a set of address records and NSEC records for non-present record types."""
+        seen_types: Set[int] = set()
+        records: Set[DNSRecord] = set()
+        for dns_address in self.dns_addresses(override_ttl, IPVersion.All, created):
+            seen_types.add(dns_address.type)
+            records.add(dns_address)
+        missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
+        if missing_types:
+            assert self.server is not None, "Service server must be set for NSEC record."
+            records.add(self.dns_nsec(list(missing_types), override_ttl, created))
+        return records
 
     def _get_address_records_from_cache_by_type(self, zc: 'Zeroconf', _type: int) -> List[DNSAddress]:
         """Get the addresses from the cache."""

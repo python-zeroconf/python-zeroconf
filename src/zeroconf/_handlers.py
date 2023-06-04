@@ -37,19 +37,17 @@ from typing import (
 )
 
 from ._cache import DNSCache, _UniqueRecordsType
-from ._dns import DNSAddress, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
+from ._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
 from ._history import QuestionHistory
 from ._logger import log
 from ._protocol.incoming import DNSIncoming
 from ._protocol.outgoing import DNSOutgoing
-from ._services.info import ServiceInfo
 from ._services.registry import ServiceRegistry
 from ._updates import RecordUpdate, RecordUpdateListener
 from ._utils.time import current_time_millis, millis_to_seconds
 from .const import (
     _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
-    _CLASS_UNIQUE,
     _DNS_OTHER_TTL,
     _DNS_PTR_MIN_TTL,
     _FLAGS_AA,
@@ -88,15 +86,6 @@ class AnswerGroup(NamedTuple):
     send_after: float  # Must be sent after this time
     send_before: float  # Must be sent before this time
     answers: _AnswerWithAdditionalsType
-
-
-def construct_nsec_record(name: str, types: List[int], now: float) -> DNSNsec:
-    """Construct an NSEC record for name and a list of dns types.
-
-    This function should only be used for SRV/A/AAAA records
-    which have a TTL of _DNS_OTHER_TTL
-    """
-    return DNSNsec(name, _TYPE_NSEC, _CLASS_IN | _CLASS_UNIQUE, _DNS_OTHER_TTL, name, types, created=now)
 
 
 def construct_outgoing_multicast_answers(answers: _AnswerWithAdditionalsType) -> DNSOutgoing:
@@ -217,20 +206,6 @@ class _QueryResponse:
         return bool(maybe_entry and self._now - maybe_entry.created < _ONE_SECOND)
 
 
-def _get_address_and_nsec_records(service: ServiceInfo, now: float) -> Set[DNSRecord]:
-    """Build a set of address records and NSEC records for non-present record types."""
-    seen_types: Set[int] = set()
-    records: Set[DNSRecord] = set()
-    for dns_address in service.dns_addresses(created=now):
-        seen_types.add(dns_address.type)
-        records.add(dns_address)
-    missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
-    if missing_types:
-        assert service.server is not None, "Service server must be set for NSEC record."
-        records.add(construct_nsec_record(service.server, list(missing_types), now))
-    return records
-
-
 class QueryHandler:
     """Query the ServiceRegistry."""
 
@@ -264,9 +239,10 @@ class QueryHandler:
             dns_pointer = service.dns_pointer(created=now)
             if known_answers.suppresses(dns_pointer):
                 continue
-            additionals: Set[DNSRecord] = {service.dns_service(created=now), service.dns_text(created=now)}
-            additionals |= _get_address_and_nsec_records(service, now)
-            answer_set[dns_pointer] = additionals
+            answer_set[dns_pointer] = {
+                service.dns_service(created=now),
+                service.dns_text(created=now),
+            } | service.get_address_and_nsec_records(created=now)
 
     def _add_address_answers(
         self,
@@ -291,12 +267,12 @@ class QueryHandler:
             if answers:
                 if missing_types:
                     assert service.server is not None, "Service server must be set for NSEC record."
-                    additionals.add(construct_nsec_record(service.server, list(missing_types), now))
+                    additionals.add(service.dns_nsec(list(missing_types), created=now))
                 for answer in answers:
                     answer_set[answer] = additionals
             elif type_ in missing_types:
                 assert service.server is not None, "Service server must be set for NSEC record."
-                answer_set[construct_nsec_record(service.server, list(missing_types), now)] = set()
+                answer_set[service.dns_nsec(list(missing_types), created=now)] = set()
 
     def _answer_question(
         self,
@@ -327,7 +303,7 @@ class QueryHandler:
                     # https://tools.ietf.org/html/rfc6763#section-12.2.
                     dns_service = service.dns_service(created=now)
                     if not known_answers.suppresses(dns_service):
-                        answer_set[dns_service] = _get_address_and_nsec_records(service, now)
+                        answer_set[dns_service] = service.get_address_and_nsec_records(created=now)
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
                     dns_text = service.dns_text(created=now)
                     if not known_answers.suppresses(dns_text):
@@ -496,7 +472,7 @@ class RecordManager:
         its update_record method called when information is available to
         answer the question(s).
 
-        This function is not threadsafe and must be called in the eventloop.
+        This function is not thread-safe and must be called in the eventloop.
         """
         if not isinstance(listener, RecordUpdateListener):
             log.error(  # type: ignore[unreachable]

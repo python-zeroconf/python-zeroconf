@@ -42,7 +42,6 @@ def teardown_module():
 
 class TestRegistrar(unittest.TestCase):
     def test_ttl(self):
-
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=['127.0.0.1'])
 
@@ -68,7 +67,7 @@ class TestRegistrar(unittest.TestCase):
         def get_ttl(record_type):
             if expected_ttl is not None:
                 return expected_ttl
-            elif record_type in [const._TYPE_A, const._TYPE_SRV]:
+            elif record_type in [const._TYPE_A, const._TYPE_SRV, const._TYPE_NSEC]:
                 return const._DNS_HOST_TTL
             else:
                 return const._DNS_OTHER_TTL
@@ -94,7 +93,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_add(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, None))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
@@ -120,7 +119,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         expected_ttl = None
@@ -132,7 +131,7 @@ class TestRegistrar(unittest.TestCase):
         assert expected_ttl != const._DNS_HOST_TTL
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, expected_ttl))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
@@ -156,7 +155,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
         zc.close()
 
@@ -222,7 +221,6 @@ class TestRegistrar(unittest.TestCase):
 
 
 def test_ptr_optimization():
-
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
 
@@ -1467,7 +1465,7 @@ async def test_response_aggregation_timings(run_isolated):
 
 
 @pytest.mark.asyncio
-async def test_response_aggregation_timings_multiple(run_isolated):
+async def test_response_aggregation_timings_multiple(run_isolated, disable_duplicate_packet_suppression):
     """Verify multicast responses that are aggregated do not take longer than 620ms to send.
 
     620ms is the maximum random delay of 120ms and 500ms additional for aggregation."""
@@ -1492,9 +1490,7 @@ async def test_response_aggregation_timings_multiple(run_isolated):
     zc = aiozc.zeroconf
     protocol = zc.engine.protocols[0]
 
-    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock, unittest.mock.patch.object(
-        protocol, "suppress_duplicate_packet", return_value=False
-    ):
+    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock:
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         await asyncio.sleep(0.2)

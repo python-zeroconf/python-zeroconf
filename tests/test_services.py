@@ -10,7 +10,6 @@ import time
 import unittest
 from threading import Event
 from typing import Dict
-from unittest.mock import patch
 
 import pytest
 
@@ -37,7 +36,6 @@ def teardown_module():
 
 class ListenerTest(unittest.TestCase):
     def test_integration_with_listener_class(self):
-
         sub_service_added = Event()
         service_added = Event()
         service_removed = Event()
@@ -107,113 +105,108 @@ class ListenerTest(unittest.TestCase):
         )
         zeroconf_registrar.register_service(info_service)
 
-        with patch.object(
-            zeroconf_registrar.engine.protocols[0], "suppress_duplicate_packet", return_value=False
-        ), patch.object(
-            zeroconf_registrar.engine.protocols[1], "suppress_duplicate_packet", return_value=False
-        ):
-            try:
-                service_added.wait(1)
-                assert service_added.is_set()
+        try:
+            service_added.wait(1)
+            assert service_added.is_set()
 
-                # short pause to allow multicast timers to expire
-                time.sleep(3)
+            # short pause to allow multicast timers to expire
+            time.sleep(3)
 
-                zeroconf_browser.add_service_listener(type_, DuplicateListener())
-                duplicate_service_added.wait(
-                    1
-                )  # Ensure a listener for the same type calls back right away from cache
+            zeroconf_browser.add_service_listener(type_, DuplicateListener())
+            duplicate_service_added.wait(
+                1
+            )  # Ensure a listener for the same type calls back right away from cache
 
-                # clear the answer cache to force query
-                _clear_cache(zeroconf_browser)
+            # clear the answer cache to force query
+            _clear_cache(zeroconf_browser)
 
-                cached_info = ServiceInfo(type_, registration_name)
-                cached_info.load_from_cache(zeroconf_browser)
-                assert cached_info.properties == {}
+            cached_info = ServiceInfo(type_, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties == {}
 
-                # get service info without answer cache
-                info = zeroconf_browser.get_service_info(type_, registration_name)
-                assert info is not None
-                assert info.properties[b'prop_none'] is None
-                assert info.properties[b'prop_string'] == properties['prop_string']
-                assert info.properties[b'prop_float'] == b'1.0'
-                assert info.properties[b'prop_blank'] == properties['prop_blank']
-                assert info.properties[b'prop_true'] == b'1'
-                assert info.properties[b'prop_false'] == b'0'
-                assert info.addresses == addresses[:1]  # no V6 by default
-                assert set(info.addresses_by_version(r.IPVersion.All)) == set(addresses)
+            # get service info without answer cache
+            info = zeroconf_browser.get_service_info(type_, registration_name)
+            assert info is not None
+            assert info.properties[b'prop_none'] is None
+            assert info.properties[b'prop_string'] == properties['prop_string']
+            assert info.properties[b'prop_float'] == b'1.0'
+            assert info.properties[b'prop_blank'] == properties['prop_blank']
+            assert info.properties[b'prop_true'] == b'1'
+            assert info.properties[b'prop_false'] == b'0'
+            assert info.addresses == addresses[:1]  # no V6 by default
+            assert set(info.addresses_by_version(r.IPVersion.All)) == set(addresses)
 
-                cached_info = ServiceInfo(type_, registration_name)
-                cached_info.load_from_cache(zeroconf_browser)
-                assert cached_info.properties is not None
+            cached_info = ServiceInfo(type_, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
 
-                # Populate the cache
-                zeroconf_browser.get_service_info(subtype, registration_name)
+            # Populate the cache
+            zeroconf_browser.get_service_info(subtype, registration_name)
 
-                # get service info with only the cache
-                cached_info = ServiceInfo(subtype, registration_name)
-                cached_info.load_from_cache(zeroconf_browser)
-                assert cached_info.properties is not None
-                assert cached_info.properties[b'prop_float'] == b'1.0'
+            # get service info with only the cache
+            cached_info = ServiceInfo(subtype, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_float'] == b'1.0'
 
-                # get service info with only the cache with the lowercase name
-                cached_info = ServiceInfo(subtype, registration_name.lower())
-                cached_info.load_from_cache(zeroconf_browser)
-                # Ensure uppercase output is preserved
-                assert cached_info.name == registration_name
-                assert cached_info.key == registration_name.lower()
-                assert cached_info.properties is not None
-                assert cached_info.properties[b'prop_float'] == b'1.0'
+            # get service info with only the cache with the lowercase name
+            cached_info = ServiceInfo(subtype, registration_name.lower())
+            cached_info.load_from_cache(zeroconf_browser)
+            # Ensure uppercase output is preserved
+            assert cached_info.name == registration_name
+            assert cached_info.key == registration_name.lower()
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_float'] == b'1.0'
 
-                info = zeroconf_browser.get_service_info(subtype, registration_name)
-                assert info is not None
-                assert info.properties is not None
-                assert info.properties[b'prop_none'] is None
+            info = zeroconf_browser.get_service_info(subtype, registration_name)
+            assert info is not None
+            assert info.properties is not None
+            assert info.properties[b'prop_none'] is None
 
-                cached_info = ServiceInfo(subtype, registration_name.lower())
-                cached_info.load_from_cache(zeroconf_browser)
-                assert cached_info.properties is not None
-                assert cached_info.properties[b'prop_none'] is None
+            cached_info = ServiceInfo(subtype, registration_name.lower())
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_none'] is None
 
-                # test TXT record update
-                sublistener = MySubListener()
+            # test TXT record update
+            sublistener = MySubListener()
 
-                zeroconf_browser.add_service_listener(subtype, sublistener)
+            zeroconf_browser.add_service_listener(subtype, sublistener)
 
-                properties['prop_blank'] = b'an updated string'
-                desc.update(properties)
-                info_service = ServiceInfo(
-                    subtype,
-                    registration_name,
-                    80,
-                    0,
-                    0,
-                    desc,
-                    "ash-2.local.",
-                    addresses=[socket.inet_aton("10.0.1.2")],
-                )
-                zeroconf_registrar.update_service(info_service)
+            properties['prop_blank'] = b'an updated string'
+            desc.update(properties)
+            info_service = ServiceInfo(
+                subtype,
+                registration_name,
+                80,
+                0,
+                0,
+                desc,
+                "ash-2.local.",
+                addresses=[socket.inet_aton("10.0.1.2")],
+            )
+            zeroconf_registrar.update_service(info_service)
 
-                sub_service_added.wait(1)  # we cleared the cache above
-                assert sub_service_added.is_set()
+            sub_service_added.wait(1)  # we cleared the cache above
+            assert sub_service_added.is_set()
 
-                info = zeroconf_browser.get_service_info(type_, registration_name)
-                assert info is not None
-                assert info.properties[b'prop_blank'] == properties['prop_blank']
+            info = zeroconf_browser.get_service_info(type_, registration_name)
+            assert info is not None
+            assert info.properties[b'prop_blank'] == properties['prop_blank']
 
-                cached_info = ServiceInfo(subtype, registration_name)
-                cached_info.load_from_cache(zeroconf_browser)
-                assert cached_info.properties is not None
-                assert cached_info.properties[b'prop_blank'] == properties['prop_blank']
+            cached_info = ServiceInfo(subtype, registration_name)
+            cached_info.load_from_cache(zeroconf_browser)
+            assert cached_info.properties is not None
+            assert cached_info.properties[b'prop_blank'] == properties['prop_blank']
 
-                zeroconf_registrar.unregister_service(info_service)
-                service_removed.wait(1)
-                assert service_removed.is_set()
+            zeroconf_registrar.unregister_service(info_service)
+            service_removed.wait(1)
+            assert service_removed.is_set()
 
-            finally:
-                zeroconf_registrar.close()
-                zeroconf_browser.remove_service_listener(listener)
-                zeroconf_browser.close()
+        finally:
+            zeroconf_registrar.close()
+            zeroconf_browser.remove_service_listener(listener)
+            zeroconf_browser.close()
 
 
 def test_servicelisteners_raise_not_implemented():

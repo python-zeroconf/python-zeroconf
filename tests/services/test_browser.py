@@ -180,7 +180,6 @@ class TestServiceBrowser(unittest.TestCase):
                 service_updated_event.set()
 
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
-
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             assert generated.is_response() is True
 
@@ -331,7 +330,6 @@ class TestServiceBrowser(unittest.TestCase):
 
 class TestServiceBrowserMultipleTypes(unittest.TestCase):
     def test_update_record(self):
-
         service_names = ['name2._type2._tcp.local.', 'name._type._tcp.local.', 'name._type._udp.local']
         service_types = ['_type2._tcp.local.', '_type._tcp.local.', '_type._udp.local.']
 
@@ -580,7 +578,7 @@ def test_asking_default_is_asking_qm_questions_after_the_first_qu():
             pass
 
         browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change], delay=5)
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 5))
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 50))
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
             assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]

@@ -71,6 +71,7 @@ from .const import (
     _CHECK_TIME,
     _CLASS_IN,
     _CLASS_UNIQUE,
+    _DUPLICATE_PACKET_SUPPRESSION_INTERVAL,
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
@@ -259,19 +260,12 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self.zc = zc
         self.data: Optional[bytes] = None
         self.last_time: float = 0
+        self.last_message: Optional[DNSIncoming] = None
         self.transport: Optional[_WrappedTransport] = None
         self.sock_description: Optional[str] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
         super().__init__()
-
-    def suppress_duplicate_packet(self, data: bytes, now: float) -> bool:
-        """Suppress duplicate packet if the last one was the same in the last second."""
-        if self.data == data and (now - 1000) < self.last_time:
-            return True
-        self.data = data
-        self.last_time = now
-        return False
 
     def datagram_received(
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
@@ -279,6 +273,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         assert self.transport is not None
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         data_len = len(data)
+        debug = log.isEnabledFor(logging.DEBUG)
 
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
@@ -289,19 +284,6 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             addr, port, flow, scope = addrs  # type: ignore
             log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
-
-        now = current_time_millis()
-        if self.suppress_duplicate_packet(data, now):
-            # Guard against duplicate packets
-            log.debug(
-                'Ignoring duplicate message received from %r:%r [socket %s] (%d bytes) as [%r]',
-                addr,
-                port,
-                self.sock_description,
-                data_len,
-                data,
-            )
-            return
 
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
@@ -314,26 +296,50 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             )
             return
 
+        now = current_time_millis()
+        if (
+            self.data == data
+            and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
+            and self.last_message is not None
+            and not self.last_message.has_qu_question()
+        ):
+            # Guard against duplicate packets
+            if debug:
+                log.debug(
+                    'Ignoring duplicate message with no unicast questions received from %r:%r [socket %s] (%d bytes) as [%r]',
+                    addr,
+                    port,
+                    self.sock_description,
+                    data_len,
+                    data,
+                )
+            return
+
         msg = DNSIncoming(data, (addr, port), scope, now)
+        self.data = data
+        self.last_time = now
+        self.last_message = msg
         if msg.valid:
-            log.debug(
-                'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
-                addr,
-                port,
-                self.sock_description,
-                msg,
-                data_len,
-                data,
-            )
+            if debug:
+                log.debug(
+                    'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
+                    addr,
+                    port,
+                    self.sock_description,
+                    msg,
+                    data_len,
+                    data,
+                )
         else:
-            log.debug(
-                'Received from %r:%r [socket %s]: (%d bytes) [%r]',
-                addr,
-                port,
-                self.sock_description,
-                data_len,
-                data,
-            )
+            if debug:
+                log.debug(
+                    'Received from %r:%r [socket %s]: (%d bytes) [%r]',
+                    addr,
+                    port,
+                    self.sock_description,
+                    data_len,
+                    data,
+                )
             return
 
         if not msg.is_query():
@@ -722,8 +728,8 @@ class Zeroconf(QuietLogger):
         out.add_answer_at_time(info.dns_service(override_ttl=host_ttl, created=now), 0)
         out.add_answer_at_time(info.dns_text(override_ttl=other_ttl, created=now), 0)
         if broadcast_addresses:
-            for dns_address in info.dns_addresses(override_ttl=host_ttl, created=now):
-                out.add_answer_at_time(dns_address, 0)
+            for record in info.get_address_and_nsec_records(override_ttl=host_ttl, created=now):
+                out.add_answer_at_time(record, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service.
