@@ -348,8 +348,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
     ) -> None:
         # Code to ensure we only do a single update message
         # Precedence is; Added, Remove, Update
-        log.warning("ServiceBrowser %s _enqueue_callback %s %s %s", self, state_change, type_, name)
-
         key = (name, type_)
         if (
             state_change is ServiceStateChange.Added
@@ -365,7 +363,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self, now: float, record: DNSRecord, old_record: Optional[DNSRecord]
     ) -> None:
         """Process a single record update from a batch of updates."""
-        log.warning("ServiceBrowser _async_process_record_update new=%s old=%s", record, old_record)
         record_type = record.type
 
         if record_type is _TYPE_PTR:
@@ -389,12 +386,10 @@ class _ServiceBrowserBase(RecordUpdateListener):
             for type_, name in self._names_matching_types(
                 {service.name for service in self.zc.cache.async_entries_with_server(record.name)}
             ):
-                log.error("enqueue callback because of record %s", record)
                 self._enqueue_callback(ServiceStateChange.Updated, type_, name)
             return
 
         for type_, name in self._names_matching_types((record.name,)):
-            log.error("enqueue callback because of record %s", record)
             self._enqueue_callback(ServiceStateChange.Updated, type_, name)
 
     def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
@@ -402,7 +397,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         Updates information required by browser in the Zeroconf cache.
 
-        Ensures that there is are no unnecessary duplicates in the list.
+        Ensures that there is are no unecessary duplicates in the list.
 
         This method will be run in the event loop.
         """
@@ -558,7 +553,6 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
 
         This method will be run in the event loop.
         """
-        log.warning("ServiceBrowser pending_handlers=%s", self._pending_handlers)
         for pending in self._pending_handlers.items():
             self.queue.put(pending)
         self._pending_handlers.clear()
