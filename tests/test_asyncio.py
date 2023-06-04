@@ -236,6 +236,7 @@ async def test_async_service_registration_with_server_missing() -> None:
     )
     task = await aiozc.async_update_service(new_info)
     await task
+
     task = await aiozc.async_unregister_service(new_info)
     await task
     await aiozc.async_close()

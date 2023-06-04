@@ -727,8 +727,8 @@ class Zeroconf(QuietLogger):
         out.add_answer_at_time(info.dns_service(override_ttl=host_ttl, created=now), 0)
         out.add_answer_at_time(info.dns_text(override_ttl=other_ttl, created=now), 0)
         if broadcast_addresses:
-            for dns_address in info.dns_addresses(override_ttl=host_ttl, created=now):
-                out.add_answer_at_time(dns_address, 0)
+            for record in info.get_address_and_nsec_records(override_ttl=host_ttl, created=now):
+                out.add_answer_at_time(record, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
         """Unregister a service.
