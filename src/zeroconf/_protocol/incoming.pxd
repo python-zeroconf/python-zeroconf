@@ -66,6 +66,11 @@ cdef class DNSIncoming:
     cdef public object source
 
     @cython.locals(
+        question=DNSQuestion
+    )
+    cpdef has_qu_question(self)
+
+    @cython.locals(
         off=cython.uint,
         label_idx=cython.uint,
         length=cython.uint,
