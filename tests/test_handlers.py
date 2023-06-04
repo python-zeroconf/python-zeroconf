@@ -68,7 +68,7 @@ class TestRegistrar(unittest.TestCase):
         def get_ttl(record_type):
             if expected_ttl is not None:
                 return expected_ttl
-            elif record_type in [const._TYPE_A, const._TYPE_SRV]:
+            elif record_type in [const._TYPE_A, const._TYPE_SRV, const._TYPE_NSEC]:
                 return const._DNS_HOST_TTL
             else:
                 return const._DNS_OTHER_TTL
@@ -94,7 +94,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_add(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, None))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
@@ -120,7 +120,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         expected_ttl = None
@@ -132,7 +132,7 @@ class TestRegistrar(unittest.TestCase):
         assert expected_ttl != const._DNS_HOST_TTL
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, expected_ttl))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
@@ -156,7 +156,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
         zc.close()
 

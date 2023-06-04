@@ -541,7 +541,7 @@ class ServiceInfo(RecordUpdateListener):
             self.name,
             _TYPE_NSEC,
             _CLASS_IN | _CLASS_UNIQUE,
-            override_ttl if override_ttl is not None else self.other_ttl,
+            override_ttl if override_ttl is not None else self.host_ttl,
             self.name,
             missing_types,
             created,
