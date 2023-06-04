@@ -832,6 +832,23 @@ def test_guard_against_duplicate_packets():
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
+        log.setLevel(logging.WARNING)
+
+        # Call with the QM packet again
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with the same packet again and handle_query_or_defer should not fire
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_not_called()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with garbage
+        listener.datagram_received(b'garbage', addrs)
+        _handle_query_or_defer.assert_not_called()
+        _handle_query_or_defer.reset_mock()
+
     zc.close()
 
 
