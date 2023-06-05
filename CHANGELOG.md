@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.64.0 (2023-06-05)
+### Feature
+* Speed up processing incoming records ([#1179](https://github.com/python-zeroconf/python-zeroconf/issues/1179)) ([`d919316`](https://github.com/python-zeroconf/python-zeroconf/commit/d9193160b05beeca3755e19fd377ba13fe37b071))
+
+### Fix
+* Always answer QU questions when the exact same packet is received from different sources in sequence ([#1178](https://github.com/python-zeroconf/python-zeroconf/issues/1178)) ([`74d7ba1`](https://github.com/python-zeroconf/python-zeroconf/commit/74d7ba1aeeae56be087ee8142ee6ca1219744baa))
+
 ## v0.63.0 (2023-05-25)
 ### Feature
 * Small speed up to fetch dns addresses from ServiceInfo ([#1176](https://github.com/python-zeroconf/python-zeroconf/issues/1176)) ([`4deaa6e`](https://github.com/python-zeroconf/python-zeroconf/commit/4deaa6ed7c9161db55bf16ec068ab7260bbd4976))
