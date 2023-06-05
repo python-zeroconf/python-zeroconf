@@ -21,7 +21,7 @@
 """
 
 import itertools
-from typing import Dict, Iterable, Iterator, List, Optional, Union, cast
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from ._dns import (
     DNSAddress,
@@ -34,13 +34,15 @@ from ._dns import (
     DNSText,
 )
 from ._utils.time import current_time_millis
-from .const import _TYPE_PTR
+from .const import _ONE_SECOND, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
 _DNSRecordCacheType = Dict[str, Dict[DNSRecord, DNSRecord]]
 _DNSRecord = DNSRecord
 _str = str
+_float = float
+_int = int
 
 
 def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> None:
@@ -134,19 +136,29 @@ class DNSCache:
             return None
         return store.get(entry)
 
-    def async_all_by_details(self, name: _str, type_: int, class_: int) -> Iterator[DNSRecord]:
+    def async_all_by_details(self, name: _str, type_: int, class_: int) -> Iterable[DNSRecord]:
         """Gets all matching entries by details.
 
-        This function is not threadsafe and must be called from
+        This function is not thread-safe and must be called from
+        the event loop.
+        """
+        return self._async_all_by_details(name, type_, class_)
+
+    def _async_all_by_details(self, name: _str, type_: int, class_: int) -> List[DNSRecord]:
+        """Gets all matching entries by details.
+
+        This function is not thread-safe and must be called from
         the event loop.
         """
         key = name.lower()
         records = self.cache.get(key)
+        matches: List[DNSRecord] = []
         if records is None:
-            return
-        for entry in records:
-            if _dns_record_matches(entry, key, type_, class_):
-                yield entry
+            return matches
+        for record in records:
+            if _dns_record_matches(record, key, type_, class_):
+                matches.append(record)
+        return matches
 
     def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
         """Returns a dict of entries whose key matches the name.
@@ -225,6 +237,25 @@ class DNSCache:
     def names(self) -> List[str]:
         """Return a copy of the list of current cache names."""
         return list(self.cache)
+
+    def async_mark_unique_records_older_than_1s_to_expire(
+        self, unique_types: Set[Tuple[_str, _int, _int]], answers: Iterable[DNSRecord], now: _float
+    ) -> None:
+        self._async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now)
+
+    def _async_mark_unique_records_older_than_1s_to_expire(
+        self, unique_types: Set[Tuple[_str, _int, _int]], answers: Iterable[DNSRecord], now: _float
+    ) -> None:
+        # rfc6762#section-10.2 para 2
+        # Since unique is set, all old records with that name, rrtype,
+        # and rrclass that were received more than one second ago are declared
+        # invalid, and marked to expire from the cache in one second.
+        answers_rrset = set(answers)
+        for name, type_, class_ in unique_types:
+            for record in self._async_all_by_details(name, type_, class_):
+                if (now - record.created > _ONE_SECOND) and record not in answers_rrset:
+                    # Expire in 1s
+                    record.set_created_ttl(now, 1)
 
 
 def _dns_record_matches(record: _DNSRecord, key: _str, type_: int, class_: int) -> bool:
