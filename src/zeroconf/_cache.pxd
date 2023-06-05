@@ -24,7 +24,7 @@ cdef class DNSCache:
     cdef public cython.dict service_cache
 
     @cython.locals(
-        records=cython.list,
+        records=cython.dict,
         record=DNSRecord,
     )
     cdef _async_all_by_details(self, object name, object type_, object class_)
