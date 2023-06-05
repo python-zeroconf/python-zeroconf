@@ -14,7 +14,7 @@ import time
 import unittest
 import unittest.mock
 from typing import Set, cast
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -770,15 +770,85 @@ def test_guard_against_duplicate_packets():
     """
     zc = Zeroconf(interfaces=['127.0.0.1'])
     listener = _core.AsyncListener(zc)
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is False
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis() + 1000) is False
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis()) is False
-    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis() + 1000) is False
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is False
+    listener.transport = MagicMock()
+
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    question = r.DNSQuestion("x._http._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+    query.add_question(question)
+    packet_with_qm_question = query.packets()[0]
+
+    query3 = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    question3 = r.DNSQuestion("x._ay._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+    query3.add_question(question3)
+    packet_with_qm_question2 = query3.packets()[0]
+
+    query2 = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    question2 = r.DNSQuestion("x._http._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+    question2.unicast = True
+    query2.add_question(question2)
+    packet_with_qu_question = query2.packets()[0]
+
+    addrs = ("1.2.3.4", 43)
+
+    with patch.object(_core, "current_time_millis") as _current_time_millis, patch.object(
+        listener, "handle_query_or_defer"
+    ) as _handle_query_or_defer:
+        start_time = current_time_millis()
+
+        _current_time_millis.return_value = start_time
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with the same packet again and handle_query_or_defer should not fire
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_not_called()
+        _handle_query_or_defer.reset_mock()
+
+        # Now walk time forward 1000 seconds
+        _current_time_millis.return_value = start_time + 1000
+        # Now call with the same packet again and handle_query_or_defer should fire
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with the different packet and handle_query_or_defer should fire
+        listener.datagram_received(packet_with_qm_question2, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with the different packet and handle_query_or_defer should fire
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with the different packet with qu question and handle_query_or_defer should fire
+        listener.datagram_received(packet_with_qu_question, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call again with the same packet that has a qu question and handle_query_or_defer should fire
+        listener.datagram_received(packet_with_qu_question, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        log.setLevel(logging.WARNING)
+
+        # Call with the QM packet again
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with the same packet again and handle_query_or_defer should not fire
+        listener.datagram_received(packet_with_qm_question, addrs)
+        _handle_query_or_defer.assert_not_called()
+        _handle_query_or_defer.reset_mock()
+
+        # Now call with garbage
+        listener.datagram_received(b'garbage', addrs)
+        _handle_query_or_defer.assert_not_called()
+        _handle_query_or_defer.reset_mock()
+
     zc.close()
 
 

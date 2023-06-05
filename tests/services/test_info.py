@@ -196,7 +196,6 @@ class TestServiceInfo(unittest.TestCase):
     @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_get_info_partial(self):
-
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
 
         service_name = 'name._type._tcp.local.'
@@ -224,7 +223,6 @@ class TestServiceInfo(unittest.TestCase):
         with patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-
                 generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
                 for record in records:
@@ -343,7 +341,6 @@ class TestServiceInfo(unittest.TestCase):
                 zc.close()
 
     def test_get_info_single(self):
-
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
 
         service_name = 'name._type._tcp.local.'
@@ -369,7 +366,6 @@ class TestServiceInfo(unittest.TestCase):
         with patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-
                 generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
                 for record in records:
