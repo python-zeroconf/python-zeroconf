@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.64.1 (2023-06-05)
+### Fix
+* Small internal typing cleanups ([#1180](https://github.com/python-zeroconf/python-zeroconf/issues/1180)) ([`f03e511`](https://github.com/python-zeroconf/python-zeroconf/commit/f03e511f7aae72c5ccd4f7514d89e168847bd7a2))
+
 ## v0.64.0 (2023-06-05)
 ### Feature
 * Speed up processing incoming records ([#1179](https://github.com/python-zeroconf/python-zeroconf/issues/1179)) ([`d919316`](https://github.com/python-zeroconf/python-zeroconf/commit/d9193160b05beeca3755e19fd377ba13fe37b071))
