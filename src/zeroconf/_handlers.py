@@ -193,7 +193,9 @@ class _QueryResponse:
         SHOULD instead multicast the response so as to keep all the peer
         caches up to date
         """
-        maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
+        if TYPE_CHECKING:
+            record = cast(_UniqueRecordsType, record)
+        maybe_entry = self._cache.async_get_unique(record)
         return bool(maybe_entry and maybe_entry.is_recent(self._now))
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
@@ -201,7 +203,9 @@ class _QueryResponse:
         Protect the network against excessive packet flooding
         https://datatracker.ietf.org/doc/html/rfc6762#section-14
         """
-        maybe_entry = self._cache.async_get_unique(cast(_UniqueRecordsType, record))
+        if TYPE_CHECKING:
+            record = cast(_UniqueRecordsType, record)
+        maybe_entry = self._cache.async_get_unique(record)
         return bool(maybe_entry and self._now - maybe_entry.created < _ONE_SECOND)
 
 
@@ -403,7 +407,10 @@ class RecordManager:
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record.type, record.class_))
 
-            maybe_entry = self.cache.async_get_unique(cast(_UniqueRecordsType, record))
+            if TYPE_CHECKING:
+                record = cast(_UniqueRecordsType, record)
+
+            maybe_entry = self.cache.async_get_unique(record)
             if not record.is_expired(now):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
