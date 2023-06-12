@@ -1,7 +1,7 @@
 
 import cython
 
-from ..dns cimport DNSQuestion, DNSRecord
+from .._dns cimport DNSEntry, DNSQuestion, DNSRecord
 from .incoming cimport DNSIncoming
 
 
@@ -42,7 +42,7 @@ cdef class DNSOutgoing:
 
     cdef _write_int(self, object value)
 
-    cdef _write_question(self, object question)
+    cdef _write_question(self, DNSQuestion question)
 
     @cython.locals(
         d=cython.data

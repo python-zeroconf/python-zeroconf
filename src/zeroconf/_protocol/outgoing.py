@@ -41,6 +41,7 @@ from ..const import (
 from .incoming import DNSIncoming
 
 str_ = str
+float_ = float
 
 
 class State(enum.Enum):
@@ -293,11 +294,11 @@ class DNSOutgoing:
         else:
             self.write_short(record.class_)
 
-    def _write_ttl(self, record: DNSRecord, now: float) -> None:
+    def _write_ttl(self, record: DNSRecord, now: float_) -> None:
         """Write out the record ttl."""
         self._write_int(record.ttl if now == 0 else record.get_remaining_ttl(now))
 
-    def _write_record(self, record: DNSRecord, now: float) -> bool:
+    def _write_record(self, record: DNSRecord, now: float_) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
         the packet.  Returns True on success, or False if we did not
         because the packet because the record does not fit."""
