@@ -1,6 +1,7 @@
 
 import cython
 
+from ..dns cimport DNSQuestion, DNSRecord
 from .incoming cimport DNSIncoming
 
 
@@ -43,6 +44,11 @@ cdef class DNSOutgoing:
 
     cdef _write_question(self, object question)
 
+    @cython.locals(
+        d=cython.data
+    )
+    cdef _write_record(self, DNSRecord record, object now)
+
     cdef _write_record_class(self, object record)
 
     cdef _check_data_limit_or_rollback(self, object start_data_length, object start_size)
@@ -54,6 +60,12 @@ cdef class DNSOutgoing:
     cdef _write_records_from_offset(self, object records, object offset)
 
     cdef _has_more_to_add(self, object questions_offset, object answer_offset, object authority_offset, object additional_offset)
+
+    cdef _write_ttl(self, DNSRecord record, object now)
+
+    cpdef write_name(self, object name)
+
+    cpdef write_short(self, object value)
 
     @cython.locals(
         questions_offset=cython.uint,

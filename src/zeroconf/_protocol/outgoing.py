@@ -40,6 +40,8 @@ from ..const import (
 )
 from .incoming import DNSIncoming
 
+str_ = str
+
 
 class State(enum.Enum):
     init = 0
@@ -238,7 +240,7 @@ class DNSOutgoing:
         self._write_byte(length)
         self.write_string(value)
 
-    def write_name(self, name: str) -> None:
+    def write_name(self, name: str_) -> None:
         """
         Write names to packet
 
