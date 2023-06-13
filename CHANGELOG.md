@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.65.0 (2023-06-13)
+### Feature
+* Reduce overhead to enumerate ip addresses in ServiceInfo ([#1181](https://github.com/python-zeroconf/python-zeroconf/issues/1181)) ([`6a85cbf`](https://github.com/python-zeroconf/python-zeroconf/commit/6a85cbf2b872cb0abd184c2dd728d9ae3eb8115c))
+
 ## v0.64.1 (2023-06-05)
 ### Fix
 * Small internal typing cleanups ([#1180](https://github.com/python-zeroconf/python-zeroconf/issues/1180)) ([`f03e511`](https://github.com/python-zeroconf/python-zeroconf/commit/f03e511f7aae72c5ccd4f7514d89e168847bd7a2))
