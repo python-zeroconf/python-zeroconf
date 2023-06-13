@@ -63,6 +63,8 @@ from ..const import (
     _TYPE_TXT,
 )
 
+_IPVersion_All_value = IPVersion.All.value
+_IPVersion_V4Only_value = IPVersion.V4Only.value
 # https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
 # The most common case for calling ServiceInfo is from a
 # ServiceBrowser. After the first request we add a few random
@@ -245,14 +247,15 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        if version == IPVersion.V4Only:
+        version_value = version.value
+        if version_value == _IPVersion_All_value:
+            return [
+                *(addr.packed for addr in self._ipv4_addresses),
+                *(addr.packed for addr in self._ipv6_addresses),
+            ]
+        if version_value == _IPVersion_V4Only_value:
             return [addr.packed for addr in self._ipv4_addresses]
-        if version == IPVersion.V6Only:
-            return [addr.packed for addr in self._ipv6_addresses]
-        return [
-            *(addr.packed for addr in self._ipv4_addresses),
-            *(addr.packed for addr in self._ipv6_addresses),
-        ]
+        return [addr.packed for addr in self._ipv6_addresses]
 
     def ip_addresses_by_version(
         self, version: IPVersion
@@ -265,11 +268,17 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        if version == IPVersion.V4Only:
+        return self._ip_addresses_by_version_value(version.value)
+
+    def _ip_addresses_by_version_value(
+        self, version_value: int
+    ) -> Union[List[ipaddress.IPv4Address], List[ipaddress.IPv6Address], List[ipaddress._BaseAddress]]:
+        """Backend for addresses_by_version that uses the raw value."""
+        if version_value == _IPVersion_All_value:
+            return [*self._ipv4_addresses, *self._ipv6_addresses]
+        if version_value == _IPVersion_V4Only_value:
             return self._ipv4_addresses
-        if version == IPVersion.V6Only:
-            return self._ipv6_addresses
-        return [*self._ipv4_addresses, *self._ipv6_addresses]
+        return self._ipv6_addresses
 
     def parsed_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
         """List addresses in their parsed string form.
@@ -280,7 +289,7 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        return [str(addr) for addr in self.ip_addresses_by_version(version)]
+        return [str(addr) for addr in self._ip_addresses_by_version_value(version.value)]
 
     def parsed_scoped_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
         """Equivalent to parsed_addresses, with the exception that IPv6 Link-Local
@@ -296,7 +305,7 @@ class ServiceInfo(RecordUpdateListener):
             return self.parsed_addresses(version)
         return [
             f"{addr}%{self.interface_index}" if addr.version == 6 and addr.is_link_local else str(addr)
-            for addr in self.ip_addresses_by_version(version)
+            for addr in self._ip_addresses_by_version_value(version.value)
         ]
 
     def _set_properties(self, properties: Dict) -> None:
@@ -494,7 +503,7 @@ class ServiceInfo(RecordUpdateListener):
                 address.packed,
                 created=created,
             )
-            for address in self.ip_addresses_by_version(version)
+            for address in self._ip_addresses_by_version_value(version.value)
         ]
 
     def dns_pointer(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSPointer:
