@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.66.0 (2023-06-13)
+### Feature
+* Optimize construction of outgoing dns records ([#1182](https://github.com/python-zeroconf/python-zeroconf/issues/1182)) ([`fc0341f`](https://github.com/python-zeroconf/python-zeroconf/commit/fc0341f281cdb71428c0f1cf90c12d34cbb4acae))
+
 ## v0.65.0 (2023-06-13)
 ### Feature
 * Reduce overhead to enumerate ip addresses in ServiceInfo ([#1181](https://github.com/python-zeroconf/python-zeroconf/issues/1181)) ([`6a85cbf`](https://github.com/python-zeroconf/python-zeroconf/commit/6a85cbf2b872cb0abd184c2dd728d9ae3eb8115c))
