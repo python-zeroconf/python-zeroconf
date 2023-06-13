@@ -40,6 +40,11 @@ from ..const import (
 )
 from .incoming import DNSIncoming
 
+str_ = str
+float_ = float
+DNSQuestion_ = DNSQuestion
+DNSRecord_ = DNSRecord
+
 
 class State(enum.Enum):
     init = 0
@@ -238,7 +243,7 @@ class DNSOutgoing:
         self._write_byte(length)
         self.write_string(value)
 
-    def write_name(self, name: str) -> None:
+    def write_name(self, name: str_) -> None:
         """
         Write names to packet
 
@@ -276,7 +281,7 @@ class DNSOutgoing:
         # this is the end of a name
         self._write_byte(0)
 
-    def _write_question(self, question: DNSQuestion) -> bool:
+    def _write_question(self, question: DNSQuestion_) -> bool:
         """Writes a question to the packet"""
         start_data_length, start_size = len(self.data), self.size
         self.write_name(question.name)
@@ -284,18 +289,18 @@ class DNSOutgoing:
         self._write_record_class(question)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-    def _write_record_class(self, record: Union[DNSQuestion, DNSRecord]) -> None:
+    def _write_record_class(self, record: Union[DNSQuestion_, DNSRecord_]) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
         if record.unique and self.multicast:
             self.write_short(record.class_ | _CLASS_UNIQUE)
         else:
             self.write_short(record.class_)
 
-    def _write_ttl(self, record: DNSRecord, now: float) -> None:
+    def _write_ttl(self, record: DNSRecord_, now: float_) -> None:
         """Write out the record ttl."""
         self._write_int(record.ttl if now == 0 else record.get_remaining_ttl(now))
 
-    def _write_record(self, record: DNSRecord, now: float) -> bool:
+    def _write_record(self, record: DNSRecord_, now: float_) -> bool:
         """Writes a record (answer, authoritative answer, additional) to
         the packet.  Returns True on success, or False if we did not
         because the packet because the record does not fit."""
@@ -308,7 +313,9 @@ class DNSOutgoing:
         self.write_short(0)  # Will get replaced with the actual size
         record.write(self)
         # Adjust size for the short we will write before this record
-        length = sum(len(d) for d in self.data[index + 1 :])
+        length = 0
+        for d in self.data[index + 1 :]:
+            length += len(d)
         # Here we replace the 0 length short we wrote
         # before with the actual length
         self._replace_short(index, length)

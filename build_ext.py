@@ -23,8 +23,8 @@ def build(setup_kwargs: Any) -> None:
             dict(
                 ext_modules=cythonize(
                     [
-                        "src/zeroconf/_cache.py",
                         "src/zeroconf/_dns.py",
+                        "src/zeroconf/_cache.py",
                         "src/zeroconf/_protocol/incoming.py",
                         "src/zeroconf/_protocol/outgoing.py",
                     ],
