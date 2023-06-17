@@ -322,7 +322,7 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        known_answers = DNSRRSet(msg.answers for msg in msgs if not msg.is_probe)
+        known_answers = DNSRRSet([msg.answers for msg in msgs if not msg.is_probe])
         query_res = _QueryResponse(self.cache, msgs)
 
         for msg in msgs:
