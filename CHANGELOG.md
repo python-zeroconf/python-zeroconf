@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.68.0 (2023-06-17)
+
+### Feature
+
+* Reduce overhead to handle queries and responses ([#1184](https://github.com/python-zeroconf/python-zeroconf/issues/1184)) ([`81126b7`](https://github.com/python-zeroconf/python-zeroconf/commit/81126b7600f94848ef8c58b70bac0c6ab993c6ae))
+
 ## v0.67.0 (2023-06-17)
 
 ### Feature
