@@ -60,7 +60,7 @@ cdef class DNSIncoming:
     cdef public cython.uint num_answers
     cdef public cython.uint num_authorities
     cdef public cython.uint num_additionals
-    cdef public object valid
+    cdef public cython.bint valid
     cdef public object now
     cdef public object scope_id
     cdef public object source
@@ -77,9 +77,9 @@ cdef class DNSIncoming:
         link=cython.uint,
         link_data=cython.uint
     )
-    cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
+    cdef cython.int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
-    cdef _read_header(self)
+    cdef void _read_header(self)
 
     cdef _initial_parse(self)
 
