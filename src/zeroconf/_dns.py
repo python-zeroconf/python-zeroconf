@@ -530,7 +530,10 @@ class DNSRRSet:
         """Return the lookup table, building it if needed."""
         if self._lookup is None:
             # Build the hash table so we can lookup the record ttl
-            self._lookup = {record: record.ttl for record_sets in self._record_sets for record in record_sets}
+            self._lookup = {}
+            for record_sets in self._record_sets:
+                for record in record_sets:
+                    self._lookup[record] = record.ttl
         return self._lookup
 
     def suppresses(self, record: _DNSRecord) -> bool:

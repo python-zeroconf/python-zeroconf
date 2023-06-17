@@ -104,5 +104,8 @@ cdef class DNSRRSet:
     @cython.locals(other=DNSRecord)
     cpdef suppresses(self, DNSRecord record)
 
-    @cython.locals(lookup=cython.dict)
+    @cython.locals(
+        record=DNSRecord,
+        record_sets=cython.list,
+    )
     cdef cython.dict _get_lookup(self)
