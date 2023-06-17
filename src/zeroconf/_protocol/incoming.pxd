@@ -80,7 +80,7 @@ cdef class DNSIncoming:
     )
     cdef cython.int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
-    cdef void _read_header(self)
+    cdef _read_header(self)
 
     cdef _initial_parse(self)
 
