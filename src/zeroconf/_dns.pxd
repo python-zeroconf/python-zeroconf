@@ -98,7 +98,7 @@ cdef class DNSNsec(DNSRecord):
 
 cdef class DNSRRSet:
 
-    cdef _record_sets
+    cdef cython.list _record_sets
     cdef cython.dict _lookup
 
     @cython.locals(other=DNSRecord)

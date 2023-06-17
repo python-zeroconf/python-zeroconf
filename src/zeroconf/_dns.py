@@ -22,7 +22,7 @@
 
 import enum
 import socket
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
@@ -516,7 +516,7 @@ class DNSRRSet:
 
     __slots__ = ('_record_sets', '_lookup')
 
-    def __init__(self, record_sets: Iterable[List[DNSRecord]]) -> None:
+    def __init__(self, record_sets: List[List[DNSRecord]]) -> None:
         """Create an RRset from records sets."""
         self._record_sets = record_sets
         self._lookup: Optional[Dict[DNSRecord, float]] = None
