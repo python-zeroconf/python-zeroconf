@@ -64,6 +64,7 @@ cdef class DNSIncoming:
     cdef public object now
     cdef public object scope_id
     cdef public object source
+    cdef public cython.bint has_qu_question
 
     @cython.locals(
         question=DNSQuestion

@@ -301,7 +301,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
             self.data == data
             and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
             and self.last_message is not None
-            and not self.last_message.has_qu_question()
+            and not self.last_message.has_qu_question
         ):
             # Guard against duplicate packets
             if debug:

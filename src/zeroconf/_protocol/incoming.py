@@ -90,6 +90,7 @@ class DNSIncoming:
         'now',
         'scope_id',
         'source',
+        'has_qu_question',
     )
 
     def __init__(
@@ -117,6 +118,7 @@ class DNSIncoming:
         self.now = now or current_time_millis()
         self.source = source
         self.scope_id = scope_id
+        self.has_qu_question = False
         try:
             self._initial_parse()
         except DECODE_EXCEPTIONS:
@@ -134,16 +136,6 @@ class DNSIncoming:
     def is_response(self) -> bool:
         """Returns true if this is a response."""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
-
-    def has_qu_question(self) -> bool:
-        """Returns true if any question is a QU question."""
-        if not self.num_questions:
-            return False
-        for question in self.questions:
-            # QU questions use the same bit as unique
-            if question.unique:
-                return True
-        return False
 
     @property
     def truncated(self) -> bool:
@@ -223,6 +215,8 @@ class DNSIncoming:
             type_, class_ = UNPACK_HH(self.data, self.offset)
             self.offset += 4
             question = DNSQuestion(name, type_, class_)
+            if not self.has_qu_question and question.unique:
+                self.has_qu_question = True
             self.questions.append(question)
 
     def _read_character_string(self) -> bytes:
