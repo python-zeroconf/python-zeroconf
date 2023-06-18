@@ -761,6 +761,22 @@ def test_guard_against_oversized_packets():
         is None
     )
 
+    logging.getLogger('zeroconf').setLevel(logging.INFO)
+
+    listener.datagram_received(over_sized_packet, ('::1', const._MDNS_PORT, 1, 1))
+    assert (
+        zc.cache.async_get_unique(
+            r.DNSText(
+                "packet0.local.",
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                500,
+                b'path=/~paulsm/',
+            )
+        )
+        is None
+    )
+
     zc.close()
 
 
