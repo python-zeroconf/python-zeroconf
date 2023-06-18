@@ -282,18 +282,20 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         else:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs  # type: ignore
-            log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
+            if debug:
+                log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
 
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
             # the system.
-            log.debug(
-                "Discarding incoming packet with length %s, which is larger "
-                "than the absolute maximum size of %s",
-                data_len,
-                _MAX_MSG_ABSOLUTE,
-            )
+            if debug:
+                log.debug(
+                    "Discarding incoming packet with length %s, which is larger "
+                    "than the absolute maximum size of %s",
+                    data_len,
+                    _MAX_MSG_ABSOLUTE,
+                )
             return
 
         now = current_time_millis()
