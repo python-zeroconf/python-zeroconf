@@ -271,20 +271,8 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
         assert self.transport is not None
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         data_len = len(data)
         debug = log.isEnabledFor(logging.DEBUG)
-
-        if len(addrs) == 2:
-            # https://github.com/python/mypy/issues/1178
-            addr, port = addrs  # type: ignore
-            scope = None
-        else:
-            # https://github.com/python/mypy/issues/1178
-            addr, port, flow, scope = addrs  # type: ignore
-            if debug:
-                log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
-            v6_flow_scope = (flow, scope)
 
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
@@ -316,6 +304,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
                 )
             return
 
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         if len(addrs) == 2:
             # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
