@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.68.1 (2023-06-18)
+
+### Fix
+
+* Reduce debug logging overhead by adding missing checks to datagram_received ([#1188](https://github.com/python-zeroconf/python-zeroconf/issues/1188)) ([`ac5c50a`](https://github.com/python-zeroconf/python-zeroconf/commit/ac5c50afc70aaa33fcd20bf02222ff4f0c596fa3))
+
 ## v0.68.0 (2023-06-17)
 
 ### Feature
