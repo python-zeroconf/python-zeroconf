@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.68.0 (2023-06-17)
+
+### Feature
+
+* Reduce overhead to handle queries and responses ([#1184](https://github.com/python-zeroconf/python-zeroconf/issues/1184)) ([`81126b7`](https://github.com/python-zeroconf/python-zeroconf/commit/81126b7600f94848ef8c58b70bac0c6ab993c6ae))
+
+## v0.67.0 (2023-06-17)
+
+### Feature
+
+* Speed up answering incoming questions ([#1186](https://github.com/python-zeroconf/python-zeroconf/issues/1186)) ([`8f37665`](https://github.com/python-zeroconf/python-zeroconf/commit/8f376658d2a3bef0353646e6fddfda15626b73a9))
+
 ## v0.66.0 (2023-06-13)
 ### Feature
 * Optimize construction of outgoing dns records ([#1182](https://github.com/python-zeroconf/python-zeroconf/issues/1182)) ([`fc0341f`](https://github.com/python-zeroconf/python-zeroconf/commit/fc0341f281cdb71428c0f1cf90c12d34cbb4acae))
