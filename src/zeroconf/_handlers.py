@@ -124,9 +124,25 @@ def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsTy
 class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
 
+    __slots__ = (
+        "_is_probe",
+        "_msg",
+        "_now",
+        "_cache",
+        "_additionals",
+        "_ucast",
+        "_mcast_now",
+        "_mcast_aggregate",
+        "_mcast_aggregate_last_second",
+    )
+
     def __init__(self, cache: DNSCache, msgs: List[DNSIncoming]) -> None:
         """Build a query response."""
-        self._is_probe = any(msg.is_probe for msg in msgs)
+        self._is_probe = False
+        for msg in msgs:
+            if msg.is_probe:
+                self._is_probe = True
+                break
         self._msg = msgs[0]
         self._now = self._msg.now
         self._cache = cache
@@ -211,6 +227,8 @@ class _QueryResponse:
 
 class QueryHandler:
     """Query the ServiceRegistry."""
+
+    __slots__ = ("registry", "cache", "question_history")
 
     def __init__(self, registry: ServiceRegistry, cache: DNSCache, question_history: QuestionHistory) -> None:
         """Init the query handler."""
@@ -322,7 +340,7 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        known_answers = DNSRRSet(msg.answers for msg in msgs if not msg.is_probe)
+        known_answers = DNSRRSet([msg.answers for msg in msgs if not msg.is_probe])
         query_res = _QueryResponse(self.cache, msgs)
 
         for msg in msgs:
@@ -344,6 +362,8 @@ class QueryHandler:
 
 class RecordManager:
     """Process records into the cache and notify listeners."""
+
+    __slots__ = ("zc", "cache", "listeners")
 
     def __init__(self, zeroconf: 'Zeroconf') -> None:
         """Init the record manager."""
@@ -515,6 +535,8 @@ class RecordManager:
 
 class MulticastOutgoingQueue:
     """An outgoing queue used to aggregate multicast responses."""
+
+    __slots__ = ("zc", "queue", "additional_delay", "aggregation_delay")
 
     def __init__(self, zeroconf: 'Zeroconf', additional_delay: int, max_aggregation_delay: int) -> None:
         self.zc = zeroconf
