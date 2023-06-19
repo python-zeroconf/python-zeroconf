@@ -46,6 +46,14 @@ cdef class DNSRecord(DNSEntry):
 
     cpdef set_created_ttl(self, cython.float created, cython.float ttl)
 
+    cpdef get_remaining_ttl(self, cython.float current_time)
+
+    cpdef is_expired(self, cython.float current_time)
+
+    cpdef is_stale(self, cython.float current_time)
+
+    cpdef is_recent(self, cython.float current_time)
+
 cdef class DNSAddress(DNSRecord):
 
     cdef public cython.int _hash

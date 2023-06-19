@@ -192,19 +192,19 @@ class DNSRecord(DNSEntry):
         return self.created + (percent * self.ttl * 10)
 
     # TODO: Switch to just int here
-    def get_remaining_ttl(self, now: float) -> int_or_float_:
+    def get_remaining_ttl(self, now: float_) -> int_or_float_:
         """Returns the remaining TTL in seconds."""
         return max(0, millis_to_seconds((self.created + (_EXPIRE_FULL_TIME_MS * self.ttl)) - now))
 
-    def is_expired(self, now: float) -> bool:
+    def is_expired(self, now: float_) -> bool:
         """Returns true if this record has expired."""
         return self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) <= now
 
-    def is_stale(self, now: float) -> bool:
+    def is_stale(self, now: float_) -> bool:
         """Returns true if this record is at least half way expired."""
         return self.created + (_EXPIRE_STALE_TIME_MS * self.ttl) <= now
 
-    def is_recent(self, now: float) -> bool:
+    def is_recent(self, now: float_) -> bool:
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
