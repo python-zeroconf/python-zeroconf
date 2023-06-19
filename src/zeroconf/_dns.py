@@ -41,6 +41,10 @@ _EXPIRE_STALE_TIME_MS = 500
 _RECENT_TIME_MS = 250
 
 
+int_ = int
+float_ = float
+int_or_float_ = Union[int, float]
+
 if TYPE_CHECKING:
     from ._protocol.incoming import DNSIncoming
     from ._protocol.outgoing import DNSOutgoing
@@ -159,7 +163,7 @@ class DNSRecord(DNSEntry):
 
     # TODO: Switch to just int ttl
     def __init__(
-        self, name: str, type_: int, class_: int, ttl: Union[float, int], created: Optional[float] = None
+        self, name: str, type_: int, class_: int, ttl: int_or_float_, created: Optional[float] = None
     ) -> None:
         super().__init__(name, type_, class_)
         self.ttl = ttl
@@ -172,20 +176,23 @@ class DNSRecord(DNSEntry):
     def suppressed_by(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
-        return any(self._suppressed_by_answer(record) for record in msg.answers)
+        for record in msg.answers:
+            if self._suppressed_by_answer(record):
+                return True
+        return False
 
     def _suppressed_by_answer(self, other) -> bool:  # type: ignore[no-untyped-def]
         """Returns true if another record has same name, type and class,
         and if its TTL is at least half of this record's."""
-        return self == other and other.ttl > (self.ttl / 2)
+        return bool(self == other and other.ttl > (self.ttl / 2))
 
-    def get_expiration_time(self, percent: int) -> float:
+    def get_expiration_time(self, percent: int_) -> float:
         """Returns the time at which this record will have expired
         by a certain percentage."""
         return self.created + (percent * self.ttl * 10)
 
     # TODO: Switch to just int here
-    def get_remaining_ttl(self, now: float) -> Union[int, float]:
+    def get_remaining_ttl(self, now: float) -> int_or_float_:
         """Returns the remaining TTL in seconds."""
         return max(0, millis_to_seconds((self.created + (_EXPIRE_FULL_TIME_MS * self.ttl)) - now))
 
@@ -206,7 +213,7 @@ class DNSRecord(DNSEntry):
         another record."""
         self.set_created_ttl(other.created, other.ttl)
 
-    def set_created_ttl(self, created: float, ttl: Union[float, int]) -> None:
+    def set_created_ttl(self, created: float_, ttl: int_or_float_) -> None:
         """Set the created and ttl of a record."""
         self.created = created
         self.ttl = ttl
@@ -403,7 +410,7 @@ class DNSService(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: Union[float, int],
+        ttl: int_or_float_,
         priority: int,
         weight: int,
         port: int,

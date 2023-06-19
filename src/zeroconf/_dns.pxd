@@ -9,14 +9,15 @@ cdef object _LEN_INT
 cdef object _NAME_COMPRESSION_MIN_SIZE
 cdef object _BASE_MAX_SIZE
 
-cdef object _EXPIRE_FULL_TIME_MS
-cdef object _EXPIRE_STALE_TIME_MS
-cdef object _RECENT_TIME_MS
+cdef cython.float _EXPIRE_FULL_TIME_MS
+cdef cython.float _EXPIRE_STALE_TIME_MS
+cdef cython.float _RECENT_TIME_MS
 
 cdef object _CLASS_UNIQUE
 cdef object _CLASS_MASK
 
 cdef object current_time_millis
+cdef object millis_to_seconds
 
 cdef class DNSEntry:
 
@@ -34,11 +35,16 @@ cdef class DNSQuestion(DNSEntry):
 
 cdef class DNSRecord(DNSEntry):
 
-    cdef public object ttl
-    cdef public object created
+    cdef public cython.float ttl
+    cdef public cython.float created
 
     cdef _suppressed_by_answer(self, DNSRecord answer)
 
+    cpdef get_expiration_time(self, cython.float percent)
+
+    cpdef reset_ttl(self, DNSRecord other)
+
+    cpdef set_created_ttl(self, cython.float created, cython.float ttl)
 
 cdef class DNSAddress(DNSRecord):
 
