@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.70.0 (2023-07-02)
+
+### Feature
+
+* Add support for sending to a specific `addr` and `port` with `ServiceInfo.async_request` and `ServiceInfo.request` ([#1192](https://github.com/python-zeroconf/python-zeroconf/issues/1192)) ([`405f547`](https://github.com/python-zeroconf/python-zeroconf/commit/405f54762d3f61e97de9c1787e837e953de31412))
+
 ## v0.69.0 (2023-06-18)
 
 ### Feature
