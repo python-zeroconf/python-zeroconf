@@ -55,6 +55,7 @@ from ..const import (
     _DNS_OTHER_TTL,
     _FLAGS_QR_QUERY,
     _LISTENER_TIME,
+    _MDNS_PORT,
     _TYPE_A,
     _TYPE_AAAA,
     _TYPE_NSEC,
@@ -616,7 +617,12 @@ class ServiceInfo(RecordUpdateListener):
         return bool(self.text is not None and (self._ipv4_addresses or self._ipv6_addresses))
 
     def request(
-        self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None
+        self,
+        zc: 'Zeroconf',
+        timeout: float,
+        question_type: Optional[DNSQuestionType] = None,
+        addr: Optional[str] = None,
+        port: int = _MDNS_PORT,
     ) -> bool:
         """Returns true if the service could be discovered on the
         network, and updates this object with details discovered.
@@ -628,13 +634,29 @@ class ServiceInfo(RecordUpdateListener):
         assert zc.loop is not None and zc.loop.is_running()
         if zc.loop == get_running_loop():
             raise RuntimeError("Use AsyncServiceInfo.async_request from the event loop")
-        return bool(run_coro_with_timeout(self.async_request(zc, timeout, question_type), zc.loop, timeout))
+        return bool(
+            run_coro_with_timeout(
+                self.async_request(zc, timeout, question_type, addr, port), zc.loop, timeout
+            )
+        )
 
     async def async_request(
-        self, zc: 'Zeroconf', timeout: float, question_type: Optional[DNSQuestionType] = None
+        self,
+        zc: 'Zeroconf',
+        timeout: float,
+        question_type: Optional[DNSQuestionType] = None,
+        addr: Optional[str] = None,
+        port: int = _MDNS_PORT,
     ) -> bool:
         """Returns true if the service could be discovered on the
         network, and updates this object with details discovered.
+
+        This method will be run in the event loop.
+
+        Passing addr and port is optional, and will default to the
+        mDNS multicast address and port. This is useful for directing
+        requests to a specific host that may be able to respond across
+        subnets.
         """
         if not zc.started:
             await zc.async_wait_for_start()
@@ -658,7 +680,7 @@ class ServiceInfo(RecordUpdateListener):
                     first_request = False
                     if not out.questions:
                         return self.load_from_cache(zc)
-                    zc.async_send(out)
+                    zc.async_send(out, addr, port)
                     next_ = now + delay
                     delay *= 2
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
