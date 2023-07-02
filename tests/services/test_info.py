@@ -957,6 +957,89 @@ async def test_port_changes_are_seen():
 
 
 @pytest.mark.asyncio
+async def test_port_changes_are_seen_with_directed_request():
+    """Test that port changes are seen by async_request with a directed request."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiarec.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    host = "multahost.local."
+
+    # New kwarg way
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            registration_name,
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            registration_name,
+            [const._TYPE_AAAA],
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            0,
+            0,
+            80,
+            host,
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x01',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(
+            registration_name,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+        ),
+        0,
+    )
+    await aiozc.zeroconf.async_wait_for_start()
+    await asyncio.sleep(0)
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            90,
+            90,
+            81,
+            host,
+        ),
+        0,
+    )
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+
+    info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
+    await info.async_request(aiozc.zeroconf, timeout=200, addr="127.0.0.1", port=5353)
+    assert info.port == 81
+    assert info.priority == 90
+    assert info.weight == 90
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
 async def test_ipv4_changes_are_seen():
     """Test that ipv4 changes are seen by async_request."""
     type_ = "_http._tcp.local."
