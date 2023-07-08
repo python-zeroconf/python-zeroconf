@@ -46,6 +46,9 @@ class ServiceListener:
 
 
 class Signal:
+
+    __slots__ = ('_handlers',)
+
     def __init__(self) -> None:
         self._handlers: List[Callable[..., None]] = []
 
@@ -59,6 +62,9 @@ class Signal:
 
 
 class SignalRegistrationInterface:
+
+    __slots__ = ('_handlers',)
+
     def __init__(self, handlers: List[Callable[..., None]]) -> None:
         self._handlers = handlers
 
