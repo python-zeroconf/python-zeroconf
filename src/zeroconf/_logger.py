@@ -38,6 +38,7 @@ set_logger_level_if_unset()
 
 
 class QuietLogger:
+
     _seen_logs: Dict[str, Union[int, tuple]] = {}
 
     @classmethod

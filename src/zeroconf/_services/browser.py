@@ -85,6 +85,8 @@ _QuestionWithKnownAnswers = Dict[DNSQuestion, Set[DNSPointer]]
 class _DNSPointerOutgoingBucket:
     """A DNSOutgoing bucket."""
 
+    __slots__ = ('now', 'out', 'bytes')
+
     def __init__(self, now: float, multicast: bool) -> None:
         """Create a bucke to wrap a DNSOutgoing."""
         self.now = now
@@ -196,12 +198,14 @@ class QueryScheduler:
 
     """
 
+    __slots__ = ('_schedule_changed_event', '_types', '_next_time', '_first_random_delay_interval', '_delay')
+
     def __init__(
         self,
         types: Set[str],
         delay: int,
         first_random_delay_interval: Tuple[int, int],
-    ):
+    ) -> None:
         self._schedule_changed_event: Optional[asyncio.Event] = None
         self._types = types
         self._next_time: Dict[str, float] = {}
@@ -260,6 +264,22 @@ class QueryScheduler:
 
 class _ServiceBrowserBase(RecordUpdateListener):
     """Base class for ServiceBrowser."""
+
+    __slots__ = (
+        'types',
+        'zc',
+        'addr',
+        'port',
+        'multicast',
+        'question_type',
+        '_pending_handlers',
+        '_service_state_changed',
+        'query_scheduler',
+        'done',
+        '_first_request',
+        '_next_send_timer',
+        '_query_sender_task',
+    )
 
     def __init__(
         self,

@@ -151,6 +151,18 @@ def _make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTra
 class AsyncEngine:
     """An engine wraps sockets in the event loop."""
 
+    __slots__ = (
+        'loop',
+        'zc',
+        'protocols',
+        'readers',
+        'senders',
+        'running_event',
+        '_listen_socket',
+        '_respond_sockets',
+        '_cleanup_timer',
+    )
+
     def __init__(
         self,
         zeroconf: 'Zeroconf',
