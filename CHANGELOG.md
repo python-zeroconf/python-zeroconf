@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.71.0 (2023-07-08)
+
+### Feature
+
+* Improve incoming data processing performance ([#1194](https://github.com/python-zeroconf/python-zeroconf/issues/1194)) ([`a56c776`](https://github.com/python-zeroconf/python-zeroconf/commit/a56c776008ef86f99db78f5997e45a57551be725))
+
 ## v0.70.0 (2023-07-02)
 
 ### Feature
