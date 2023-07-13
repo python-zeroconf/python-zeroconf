@@ -386,14 +386,14 @@ class ServiceInfo(RecordUpdateListener):
         """Set IPv6 addresses from the cache."""
         ipv6_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA)
         if TYPE_CHECKING:
-            ipv6_addresses = cast("List[ipaddress.IPv6Address]", ipv6_addresses)
+            ipv6_addresses = cast(List[ipaddress.IPv6Address], ipv6_addresses)
         self._ipv6_addresses = ipv6_addresses
 
     def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Set IPv4 addresses from the cache."""
         ipv4_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
         if TYPE_CHECKING:
-            ipv4_addresses = cast("List[ipaddress.IPv4Address]", ipv4_addresses)
+            ipv4_addresses = cast(List[ipaddress.IPv4Address], ipv4_addresses)
         self._ipv4_addresses = ipv4_addresses
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
@@ -584,7 +584,7 @@ class ServiceInfo(RecordUpdateListener):
             return []
         result = zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN)
         if TYPE_CHECKING:
-            result = cast("List[DNSAddress]", result)
+            result = cast(List[DNSAddress], result)
         return result
 
     def set_server_if_missing(self) -> None:
