@@ -23,6 +23,7 @@
 import asyncio
 import ipaddress
 import random
+from collections.abc import Sequence
 from functools import lru_cache
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
@@ -366,7 +367,7 @@ class ServiceInfo(RecordUpdateListener):
 
     def _get_ip_addresses_from_cache_lifo(
         self, zc: 'Zeroconf', now: float, type: int
-    ) -> List[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]]:
+    ) -> Sequence[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]]:
         """Set IPv6 addresses from the cache."""
         address_list: List[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]] = []
         for record in self._get_address_records_from_cache_by_type(zc, type):
@@ -383,15 +384,17 @@ class ServiceInfo(RecordUpdateListener):
 
     def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Set IPv6 addresses from the cache."""
-        self._ipv6_addresses = cast(
-            "List[ipaddress.IPv6Address]", self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA)
-        )
+        ipv6_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA)
+        if TYPE_CHECKING:
+            ipv6_addresses = cast("List[ipaddress.IPv6Address]", ipv6_addresses)
+        self._ipv6_addresses = ipv6_addresses
 
     def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
         """Set IPv4 addresses from the cache."""
-        self._ipv4_addresses = cast(
-            "List[ipaddress.IPv4Address]", self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
-        )
+        ipv4_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
+        if TYPE_CHECKING:
+            ipv4_addresses = cast("List[ipaddress.IPv4Address]", ipv4_addresses)
+        self._ipv4_addresses = ipv4_addresses
 
     def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
         """Updates service information from a DNS record.
@@ -520,6 +523,9 @@ class ServiceInfo(RecordUpdateListener):
 
     def dns_service(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSService:
         """Return DNSService from ServiceInfo."""
+        port = self.port
+        if TYPE_CHECKING:
+            port = cast(int, port)
         return DNSService(
             self.name,
             _TYPE_SRV,
@@ -527,7 +533,7 @@ class ServiceInfo(RecordUpdateListener):
             override_ttl if override_ttl is not None else self.host_ttl,
             self.priority,
             self.weight,
-            cast(int, self.port),
+            port,
             self.server or self.name,
             created,
         )
@@ -576,7 +582,10 @@ class ServiceInfo(RecordUpdateListener):
         """Get the addresses from the cache."""
         if self.server_key is None:
             return []
-        return cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
+        result = zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN)
+        if TYPE_CHECKING:
+            result = cast("List[DNSAddress]", result)
+        return result
 
     def set_server_if_missing(self) -> None:
         """Set the server if it is missing.

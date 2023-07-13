@@ -21,6 +21,7 @@
 """
 
 import itertools
+from collections.abc import Sequence
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from ._dns import (
@@ -208,7 +209,7 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
+    def get_all_by_details(self, name: str, type_: int, class_: int) -> Sequence[DNSRecord]:
         """Gets all matching entries by details."""
         key = name.lower()
         return [
