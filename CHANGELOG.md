@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.71.2 (2023-07-23)
+
+### Fix
+
+* No change re-release to fix wheel builds ([#1199](https://github.com/python-zeroconf/python-zeroconf/issues/1199)) ([`8c3a4c8`](https://github.com/python-zeroconf/python-zeroconf/commit/8c3a4c80c221bea7401c12e1c6a525e75b7ffea2))
+
 ## v0.71.1 (2023-07-23)
 
 ### Fix
