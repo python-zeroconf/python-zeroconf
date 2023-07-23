@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.71.3 (2023-07-23)
+
+### Fix
+
+* Pin python-semantic-release to fix release process ([#1200](https://github.com/python-zeroconf/python-zeroconf/issues/1200)) ([`c145a23`](https://github.com/python-zeroconf/python-zeroconf/commit/c145a238d768aa17c3aebe120c20a46bfbec6b99))
+
 ## v0.71.2 (2023-07-23)
 
 ### Fix
