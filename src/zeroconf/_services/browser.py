@@ -166,7 +166,11 @@ def generate_service_query(
         if not qu_question and zc.question_history.suppresses(question, now, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
-        questions_with_known_answers[question] = cast(Set[DNSPointer], known_answers)
+        if TYPE_CHECKING:
+            pointer_known_answers = cast(Set[DNSPointer], known_answers)
+        else:
+            pointer_known_answers = known_answers
+        questions_with_known_answers[question] = pointer_known_answers
         if not qu_question:
             zc.question_history.add_question_at_time(question, now, known_answers)
 
