@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.71.1 (2023-07-23)
+
+### Fix
+
+* Add missing if TYPE_CHECKING guard to generate_service_query ([#1198](https://github.com/python-zeroconf/python-zeroconf/issues/1198)) ([`ac53adf`](https://github.com/python-zeroconf/python-zeroconf/commit/ac53adf7e71db14c1a0f9adbfd1d74033df36898))
+
 ## v0.71.0 (2023-07-08)
 
 ### Feature
