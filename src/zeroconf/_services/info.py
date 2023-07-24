@@ -440,10 +440,10 @@ class ServiceInfo(RecordUpdateListener):
                 return False
 
             if type(ip_addr) is IPv4Address:
-                ipv4_addresses = self._ipv4_addresses
-                if ipv4_addresses:
+                if self._ipv4_addresses:
                     self._set_ipv4_addresses_from_cache(zc, now)
 
+                ipv4_addresses = self._ipv4_addresses
                 if ip_addr not in ipv4_addresses:
                     ipv4_addresses.insert(0, ip_addr)
                     return True
@@ -453,10 +453,10 @@ class ServiceInfo(RecordUpdateListener):
 
                 return False
 
-            ipv6_addresses = self._ipv6_addresses
-            if not ipv6_addresses:
+            if not self._ipv6_addresses:
                 self._set_ipv6_addresses_from_cache(zc, now)
 
+            ipv6_addresses = self._ipv6_addresses
             if ip_addr not in self._ipv6_addresses:
                 ipv6_addresses.insert(0, ip_addr)
                 return True
