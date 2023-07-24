@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.71.4 (2023-07-24)
+
+### Fix
+
+* Cleanup naming from previous refactoring in ServiceInfo ([#1202](https://github.com/python-zeroconf/python-zeroconf/issues/1202)) ([`b272d75`](https://github.com/python-zeroconf/python-zeroconf/commit/b272d75abd982f3be1f4b20f683cac38011cc6f4))
+
 ## v0.71.3 (2023-07-23)
 
 ### Fix
