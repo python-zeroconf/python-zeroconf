@@ -502,13 +502,13 @@ class ServiceInfo(RecordUpdateListener):
         return [
             DNSAddress(
                 name,
-                _TYPE_AAAA if type(ip) is IPv6Address else _TYPE_A,
+                _TYPE_AAAA if type(ip_addr) is IPv6Address else _TYPE_A,
                 class_,
                 ttl,
-                ip.packed,
+                ip_addr.packed,
                 created=created,
             )
-            for ip in self._ip_addresses_by_version_value(version_value)
+            for ip_addr in self._ip_addresses_by_version_value(version_value)
         ]
 
     def dns_pointer(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSPointer:
