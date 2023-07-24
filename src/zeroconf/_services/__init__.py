@@ -46,7 +46,6 @@ class ServiceListener:
 
 
 class Signal:
-
     __slots__ = ('_handlers',)
 
     def __init__(self) -> None:
@@ -62,7 +61,6 @@ class Signal:
 
 
 class SignalRegistrationInterface:
-
     __slots__ = ('_handlers',)
 
     def __init__(self, handlers: List[Callable[..., None]]) -> None:
