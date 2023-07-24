@@ -373,11 +373,11 @@ class ServiceInfo(RecordUpdateListener):
             if record.is_expired(now):
                 continue
             try:
-                ip_address = _cached_ip_addresses(record.address)
+                ip_addr = _cached_ip_addresses(record.address)
             except ValueError:
                 continue
             else:
-                address_list.append(ip_address)
+                address_list.append(ip_addr)
         address_list.reverse()  # Reverse to get LIFO order
         return address_list
 
