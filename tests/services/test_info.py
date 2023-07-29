@@ -18,6 +18,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import DNSAddress, const
+from zeroconf._services import info
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
@@ -1426,4 +1427,76 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
     await info.async_request(aiozc.zeroconf, timeout=200)
     assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x02']
 
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+@patch.object(info, "_LISTENER_TIME", 10000000)
+async def test_release_wait_when_new_recorded_added_concurrency():
+    """Test that concurrent async_request returns as soon as new matching records are added to the cache."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiareccon.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    host = "multahostcon.local."
+    await aiozc.zeroconf.async_wait_for_start()
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    tasks = [asyncio.create_task(info.async_request(aiozc.zeroconf, timeout=200000)) for _ in range(10)]
+    await asyncio.sleep(0.1)
+    for task in tasks:
+        assert not task.done()
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            registration_name,
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            registration_name,
+            [const._TYPE_AAAA],
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            0,
+            0,
+            80,
+            host,
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x01',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(
+            registration_name,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+        ),
+        0,
+    )
+    await asyncio.sleep(0)
+    for task in tasks:
+        assert not task.done()
+    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    _, pending = await asyncio.wait(tasks, timeout=2)
+    assert not pending
+    assert info.addresses == [b'\x7f\x00\x00\x01']
     await aiozc.async_close()
