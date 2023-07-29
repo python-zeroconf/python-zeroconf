@@ -1435,10 +1435,10 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
 async def test_release_wait_when_new_recorded_added_concurrency():
     """Test that concurrent async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = "multiareccon.%s" % type_
     desc = {'path': '/~paulsm/'}
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    host = "multahost.local."
+    host = "multahostcon.local."
     await aiozc.zeroconf.async_wait_for_start()
 
     # New kwarg way
