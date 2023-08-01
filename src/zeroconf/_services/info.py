@@ -411,12 +411,11 @@ class ServiceInfo(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        if self._process_records_threadsafe(zc, now, records):
-            notify_futures = self._new_records_futures
-            for future in notify_futures:
+        if self._process_records_threadsafe(zc, now, records) and self._new_records_futures:
+            for future in self._new_records_futures:
                 if not future.done():
                     future.set_result(None)
-            notify_futures.clear()
+            self._new_records_futures.clear()
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
         """Thread safe record updating.
