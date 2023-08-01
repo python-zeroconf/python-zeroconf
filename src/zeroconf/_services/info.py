@@ -174,7 +174,7 @@ class ServiceInfo(RecordUpdateListener):
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self.interface_index = interface_index
-        self._new_records_futures: List[asyncio.Future[None]] = []
+        self._new_records_futures: List[asyncio.Future] = []
 
     @property
     def name(self) -> str:
@@ -230,7 +230,7 @@ class ServiceInfo(RecordUpdateListener):
         """
         return self._properties
 
-    def _timeout_waiting_new_records(self, future: asyncio.Future[None]) -> None:
+    def _timeout_waiting_new_records(self, future: asyncio.Future) -> None:
         """Timeout waiting for new records to arrive."""
         if not future.done():
             future.set_result(None)
