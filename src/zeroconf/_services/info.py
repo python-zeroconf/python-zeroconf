@@ -39,11 +39,7 @@ from .._exceptions import BadTypeInNameException
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.asyncio import (
-    get_running_loop,
-    run_coro_with_timeout,
-    wait_event_or_timeout,
-)
+from .._utils.asyncio import get_running_loop, run_coro_with_timeout
 from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis, millis_to_seconds
@@ -131,6 +127,7 @@ class ServiceInfo(RecordUpdateListener):
         "host_ttl",
         "other_ttl",
         "interface_index",
+        "_new_records_futures",
     )
 
     def __init__(
@@ -177,7 +174,7 @@ class ServiceInfo(RecordUpdateListener):
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self.interface_index = interface_index
-        self._notify_event: Optional[asyncio.Event] = None
+        self._new_records_futures: List[asyncio.Future[None]] = []
 
     @property
     def name(self) -> str:
@@ -233,11 +230,21 @@ class ServiceInfo(RecordUpdateListener):
         """
         return self._properties
 
+    def _timeout_waiting_new_records(self, future: asyncio.Future[None]) -> None:
+        """Timeout waiting for new records to arrive."""
+        if not future.done():
+            future.set_result(None)
+
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
-        if self._notify_event is None:
-            self._notify_event = asyncio.Event()
-        await wait_event_or_timeout(self._notify_event, timeout=millis_to_seconds(timeout))
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        self._new_records_futures.append(future)
+        handle = loop.call_later(millis_to_seconds(timeout), self._timeout_waiting_new_records, future)
+        try:
+            await future
+        finally:
+            handle.cancel()
 
     def addresses_by_version(self, version: IPVersion) -> List[bytes]:
         """List addresses matching IP version.
@@ -409,9 +416,12 @@ class ServiceInfo(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        if self._process_records_threadsafe(zc, now, records) and self._notify_event:
-            self._notify_event.set()
-            self._notify_event.clear()
+        if self._process_records_threadsafe(zc, now, records):
+            notify_futures = self._new_records_futures
+            for future in notify_futures:
+                if not future.done():
+                    future.set_result(None)
+            notify_futures.clear()
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
         """Thread safe record updating.
