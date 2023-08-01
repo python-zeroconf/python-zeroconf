@@ -230,17 +230,12 @@ class ServiceInfo(RecordUpdateListener):
         """
         return self._properties
 
-    def _timeout_waiting_new_records(self, future: asyncio.Future) -> None:
-        """Timeout waiting for new records to arrive."""
-        if not future.done():
-            future.set_result(None)
-
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         self._new_records_futures.append(future)
-        handle = loop.call_later(millis_to_seconds(timeout), self._timeout_waiting_new_records, future)
+        handle = loop.call_later(millis_to_seconds(timeout), future.set_result, None)
         try:
             await future
         finally:
