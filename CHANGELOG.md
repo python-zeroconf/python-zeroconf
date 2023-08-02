@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.71.5 (2023-08-02)
+
+### Fix
+
+* Improve performance of ServiceInfo.async_request ([#1205](https://github.com/python-zeroconf/python-zeroconf/issues/1205)) ([`8019a73`](https://github.com/python-zeroconf/python-zeroconf/commit/8019a73c952f2fc4c88d849aab970fafedb316d8))
+
 ## v0.71.4 (2023-07-24)
 
 ### Fix
