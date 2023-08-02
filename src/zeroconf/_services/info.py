@@ -595,12 +595,13 @@ class ServiceInfo(RecordUpdateListener):
             self.server = self.name
             self.server_key = self.server.lower()
 
-    def load_from_cache(self, zc: 'Zeroconf') -> bool:
+    def load_from_cache(self, zc: 'Zeroconf', now: Optional[float]) -> bool:
         """Populate the service info from the cache.
 
         This method is designed to be threadsafe.
         """
-        now = current_time_millis()
+        if not now:
+            now = current_time_millis()
         original_server_key = self.server_key
         cached_srv_record = zc.cache.get_by_details(self.name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
@@ -668,11 +669,13 @@ class ServiceInfo(RecordUpdateListener):
         """
         if not zc.started:
             await zc.async_wait_for_start()
-        if self.load_from_cache(zc):
+
+        now = current_time_millis()
+
+        if self.load_from_cache(zc, now):
             return True
 
         first_request = True
-        now = current_time_millis()
         delay = _LISTENER_TIME
         next_ = now
         last = now + timeout
@@ -687,7 +690,7 @@ class ServiceInfo(RecordUpdateListener):
                     )
                     first_request = False
                     if not out.questions:
-                        return self.load_from_cache(zc)
+                        return self.load_from_cache(zc, now)
                     zc.async_send(out, addr, port)
                     next_ = now + delay
                     delay *= 2
