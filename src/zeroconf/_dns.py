@@ -40,6 +40,8 @@ _EXPIRE_FULL_TIME_MS = 1000
 _EXPIRE_STALE_TIME_MS = 500
 _RECENT_TIME_MS = 250
 
+_float = float
+_int = int
 
 if TYPE_CHECKING:
     from ._protocol.incoming import DNSIncoming
@@ -172,32 +174,36 @@ class DNSRecord(DNSEntry):
     def suppressed_by(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
-        return any(self._suppressed_by_answer(record) for record in msg.answers)
+        answers = msg.answers
+        for record in answers:
+            if self._suppressed_by_answer(record):
+                return True
+        return False
 
-    def _suppressed_by_answer(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _suppressed_by_answer(self, other: 'DNSRecord') -> bool:
         """Returns true if another record has same name, type and class,
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
 
-    def get_expiration_time(self, percent: int) -> float:
+    def get_expiration_time(self, percent: _int) -> float:
         """Returns the time at which this record will have expired
         by a certain percentage."""
         return self.created + (percent * self.ttl * 10)
 
     # TODO: Switch to just int here
-    def get_remaining_ttl(self, now: float) -> Union[int, float]:
+    def get_remaining_ttl(self, now: _float) -> Union[int, float]:
         """Returns the remaining TTL in seconds."""
         return max(0, millis_to_seconds((self.created + (_EXPIRE_FULL_TIME_MS * self.ttl)) - now))
 
-    def is_expired(self, now: float) -> bool:
+    def is_expired(self, now: _float) -> bool:
         """Returns true if this record has expired."""
         return self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) <= now
 
-    def is_stale(self, now: float) -> bool:
+    def is_stale(self, now: _float) -> bool:
         """Returns true if this record is at least half way expired."""
         return self.created + (_EXPIRE_STALE_TIME_MS * self.ttl) <= now
 
-    def is_recent(self, now: float) -> bool:
+    def is_recent(self, now: _float) -> bool:
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
