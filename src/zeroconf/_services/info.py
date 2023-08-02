@@ -595,7 +595,7 @@ class ServiceInfo(RecordUpdateListener):
             self.server = self.name
             self.server_key = self.server.lower()
 
-    def load_from_cache(self, zc: 'Zeroconf', now: Optional[float]) -> bool:
+    def load_from_cache(self, zc: 'Zeroconf', now: Optional[float] = None) -> bool:
         """Populate the service info from the cache.
 
         This method is designed to be threadsafe.
