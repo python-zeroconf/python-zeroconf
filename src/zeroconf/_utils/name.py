@@ -35,6 +35,7 @@ from ..const import (
 )
 
 
+@lru_cache(maxsize=512)
 def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: disable=too-many-branches
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
