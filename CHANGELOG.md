@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.72.3 (2023-08-03)
+
+### Fix
+
+* Revert adding typing to DNSRecord.suppressed_by ([#1210](https://github.com/python-zeroconf/python-zeroconf/issues/1210)) ([`3dba5ae`](https://github.com/python-zeroconf/python-zeroconf/commit/3dba5ae0c0e9473b7b20fd6fc79fa1a3b298dc5a))
+
 ## v0.72.2 (2023-08-03)
 
 ### Fix
