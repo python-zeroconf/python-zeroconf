@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.72.1 (2023-08-03)
+
+### Fix
+
+* Race with InvalidStateError when async_request times out ([#1208](https://github.com/python-zeroconf/python-zeroconf/issues/1208)) ([`2233b6b`](https://github.com/python-zeroconf/python-zeroconf/commit/2233b6bc4ceeee5524d2ee88ecae8234173feb5f))
+
 ## v0.72.0 (2023-08-02)
 
 ### Feature
