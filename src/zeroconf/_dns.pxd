@@ -1,8 +1,6 @@
 
 import cython
 
-from ._protocol.incoming cimport DNSIncoming
-
 
 cdef object _LEN_BYTE
 cdef object _LEN_SHORT
