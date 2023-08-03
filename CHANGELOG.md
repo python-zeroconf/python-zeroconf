@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.73.0 (2023-08-03)
+
+### Feature
+
+* Add a cache to service_type_name ([#1211](https://github.com/python-zeroconf/python-zeroconf/issues/1211)) ([`53a694f`](https://github.com/python-zeroconf/python-zeroconf/commit/53a694f60e675ae0560e727be6b721b401c2b68f))
+
 ## v0.72.3 (2023-08-03)
 
 ### Fix
