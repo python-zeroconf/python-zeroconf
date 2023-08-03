@@ -91,7 +91,7 @@ _cached_ip_addresses = lru_cache(maxsize=256)(ip_address)
 
 def _set_future_none_if_not_done(fut: asyncio.Future) -> None:
     """Set a future to None if it is not done."""
-    if not fut.done():
+    if not fut.done():  # pragma: no branch
         fut.set_result(None)
 
 
