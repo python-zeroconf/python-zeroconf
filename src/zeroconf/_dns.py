@@ -180,7 +180,7 @@ class DNSRecord(DNSEntry):
                 return True
         return False
 
-    def _suppressed_by_answer(self, other: 'DNSRecord') -> bool:
+    def _suppressed_by_answer(self, other) -> bool:  # type: ignore[no-untyped-def]
         """Returns true if another record has same name, type and class,
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
