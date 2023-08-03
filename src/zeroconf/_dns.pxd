@@ -42,7 +42,7 @@ cdef class DNSRecord(DNSEntry):
     @cython.locals(
         answers=cython.list,
     )
-    cpdef suppressed_by(self, DNSIncoming msg)
+    cpdef suppressed_by(self, object msg)
 
     cpdef get_expiration_time(self, cython.uint percent)
 
