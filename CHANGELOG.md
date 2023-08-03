@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.72.2 (2023-08-03)
+
+### Fix
+
+* Revert DNSIncoming cimport in _dns.pxd ([#1209](https://github.com/python-zeroconf/python-zeroconf/issues/1209)) ([`5f14b6d`](https://github.com/python-zeroconf/python-zeroconf/commit/5f14b6dc687b3a0716d0ca7f61ccf1e93dfe5fa1))
+
 ## v0.72.1 (2023-08-03)
 
 ### Fix
