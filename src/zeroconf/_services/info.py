@@ -317,10 +317,10 @@ class ServiceInfo(RecordUpdateListener):
             for addr in self._ip_addresses_by_version_value(version.value)
         ]
 
-    def _set_properties(self, properties: Dict) -> None:
+    def _set_properties(self, properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]]) -> None:
         """Sets properties and text of this info from a dictionary"""
         self._properties = properties
-        list_ = []
+        list_: List[bytes] = []
         result = b''
         for key, value in properties.items():
             if isinstance(key, str):
@@ -345,7 +345,7 @@ class ServiceInfo(RecordUpdateListener):
             return
         result: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
         index = 0
-        strs = []
+        strs: List[bytes] = []
         while index < end:
             length = text[index]
             index += 1
@@ -355,15 +355,16 @@ class ServiceInfo(RecordUpdateListener):
         key: bytes
         value: Optional[bytes]
         for s in strs:
-            try:
-                key, value = s.split(b'=', 1)
-            except ValueError:
+            key_value = s.split(b'=', 1)
+            if len(key_value) == 2:
+                key, value = key_value
+            else:
                 # No equals sign at all
                 key = s
                 value = None
 
             # Only update non-existent properties
-            if key and result.get(key) is None:
+            if key and key not in result:
                 result[key] = value
 
         self._properties = result
