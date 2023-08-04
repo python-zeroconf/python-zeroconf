@@ -172,7 +172,7 @@ class ServiceInfo(RecordUpdateListener):
         self.priority = priority
         self.server = server if server else None
         self.server_key = server.lower() if server else None
-        self._properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
+        self._properties: Optional[Dict[Union[str, bytes], Optional[Union[str, bytes]]]] = None
         if isinstance(properties, bytes):
             self._set_text(properties)
         else:
@@ -226,7 +226,7 @@ class ServiceInfo(RecordUpdateListener):
                 self._ipv6_addresses.append(addr)
 
     @property
-    def properties(self) -> Dict:
+    def properties(self) -> Dict[Union[str, bytes], Optional[Union[str, bytes]]]:
         """If properties were set in the constructor this property returns the original dictionary
         of type `Dict[Union[bytes, str], Any]`.
 
@@ -234,6 +234,10 @@ class ServiceInfo(RecordUpdateListener):
         bytes and the values are either bytes, if there was a value, even empty, or `None`, if there
         was none. No further decoding is attempted. The type returned is `Dict[bytes, Optional[bytes]]`.
         """
+        if self._properties is None:
+            self._unpack_text_into_properties()
+        if TYPE_CHECKING:
+            assert self._properties is not None
         return self._properties
 
     async def async_wait(self, timeout: float) -> None:
@@ -338,11 +342,22 @@ class ServiceInfo(RecordUpdateListener):
 
     def _set_text(self, text: bytes) -> None:
         """Sets properties and text given a text field"""
+        if text == self.text:
+            return
         self.text = text
+        # Clear the properties cache
+        self._properties = None
+
+    def _unpack_text_into_properties(self) -> None:
+        """Unpacks the text field into properties"""
+        text = self.text
         end = len(text)
         if end == 0:
+            # Properties should be set atomically
+            # in case another thread is reading them
             self._properties = {}
             return
+
         result: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
         index = 0
         strs: List[bytes] = []
@@ -367,6 +382,8 @@ class ServiceInfo(RecordUpdateListener):
             if key and key not in result:
                 result[key] = value
 
+        # Properties should be set atomically
+        # in case another thread is reading them
         self._properties = result
 
     def get_name(self) -> str:
