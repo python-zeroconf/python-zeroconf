@@ -76,11 +76,11 @@ if TYPE_CHECKING:
     from .._core import Zeroconf
 
 
-def instance_name_from_service_info(info: "ServiceInfo") -> str:
+def instance_name_from_service_info(info: "ServiceInfo", strict: bool = True) -> str:
     """Calculate the instance name from the ServiceInfo."""
     # This is kind of funky because of the subtype based tests
     # need to make subtypes a first class citizen
-    service_name = service_type_name(info.name)
+    service_name = service_type_name(info.name, strict=strict)
     if not info.type.endswith(service_name):
         raise BadTypeInNameException
     return info.name[: -len(service_name) - 1]
