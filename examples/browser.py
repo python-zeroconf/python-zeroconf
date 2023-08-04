@@ -36,7 +36,7 @@ def on_service_state_change(
             if info.properties:
                 print("  Properties are:")
                 for key, value in info.properties.items():
-                    print(f"    {key}: {value}")
+                    print(f"    {key!r}: {value!r}")
             else:
                 print("  No properties")
         else:
