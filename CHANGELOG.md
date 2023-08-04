@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.74.0 (2023-08-04)
+
+### Feature
+
+* Speed up unpacking text records in ServiceInfo ([#1212](https://github.com/python-zeroconf/python-zeroconf/issues/1212)) ([`99a6f98`](https://github.com/python-zeroconf/python-zeroconf/commit/99a6f98e44a1287ba537eabb852b1b69923402f0))
+
+### Fix
+
+* Remove typing on reset_ttl for cython compat ([#1213](https://github.com/python-zeroconf/python-zeroconf/issues/1213)) ([`0094e26`](https://github.com/python-zeroconf/python-zeroconf/commit/0094e2684344c6b7edd7948924f093f1b4c19901))
+
 ## v0.73.0 (2023-08-03)
 
 ### Feature
