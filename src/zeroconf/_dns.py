@@ -212,7 +212,7 @@ class DNSRecord(DNSEntry):
         another record."""
         self.set_created_ttl(other.created, other.ttl)
 
-    def set_created_ttl(self, created: float, ttl: Union[float, int]) -> None:
+    def set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
         """Set the created and ttl of a record."""
         self.created = created
         self.ttl = ttl
