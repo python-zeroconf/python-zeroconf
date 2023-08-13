@@ -54,6 +54,8 @@ cdef class DNSRecord(DNSEntry):
 
     cpdef reset_ttl(self, DNSRecord other)
 
+    cpdef set_created_ttl(self, cython.float now, cython.float ttl)
+
 cdef class DNSAddress(DNSRecord):
 
     cdef public cython.int _hash

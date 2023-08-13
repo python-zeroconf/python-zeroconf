@@ -408,6 +408,7 @@ class RecordManager:
         removes: Set[DNSRecord] = set()
         now = msg.now
         unique_types: Set[Tuple[str, int, int]] = set()
+        cache = self.cache
 
         for record in msg.answers:
             # Protect zeroconf from records that can cause denial of service.
@@ -416,7 +417,9 @@ class RecordManager:
             # ServiceBrowsers generating excessive queries refresh queries.
             # Apple uses a 15s minimum TTL, however we do not have the same
             # level of rate limit and safe guards so we use 1/4 of the recommended value.
-            if record.ttl and record.type == _TYPE_PTR and record.ttl < _DNS_PTR_MIN_TTL:
+            record_type = record.type
+            record_ttl = record.ttl
+            if record_ttl and record_type == _TYPE_PTR and record_ttl < _DNS_PTR_MIN_TTL:
                 log.debug(
                     "Increasing effective ttl of %s to minimum of %s to protect against excessive refreshes.",
                     record,
@@ -425,12 +428,12 @@ class RecordManager:
                 record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
 
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
-                unique_types.add((record.name, record.type, record.class_))
+                unique_types.add((record.name, record_type, record.class_))
 
             if TYPE_CHECKING:
                 record = cast(_UniqueRecordsType, record)
 
-            maybe_entry = self.cache.async_get_unique(record)
+            maybe_entry = cache.async_get_unique(record)
             if not record.is_expired(now):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
@@ -447,7 +450,7 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            self.cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, msg.answers, now)
+            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, msg.answers, now)
 
         if updates:
             self.async_updates(now, updates)
@@ -468,12 +471,12 @@ class RecordManager:
         # processsed.
         new = False
         if other_adds or address_adds:
-            new = self.cache.async_add_records(itertools.chain(address_adds, other_adds))
+            new = cache.async_add_records(itertools.chain(address_adds, other_adds))
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
         if removes:
-            self.cache.async_remove_records(removes)
+            cache.async_remove_records(removes)
         if updates:
             self.async_updates_complete(new)
 
