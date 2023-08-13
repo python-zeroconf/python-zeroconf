@@ -44,6 +44,8 @@ cdef class DNSRecord(DNSEntry):
     )
     cpdef suppressed_by(self, object msg)
 
+    cpdef get_remaining_ttl(self, cython.float now)
+
     cpdef get_expiration_time(self, cython.uint percent)
 
     cpdef is_expired(self, cython.float now)
@@ -53,6 +55,8 @@ cdef class DNSRecord(DNSEntry):
     cpdef is_recent(self, cython.float now)
 
     cpdef reset_ttl(self, DNSRecord other)
+
+    cpdef set_created_ttl(self, cython.float now, cython.float ttl)
 
 cdef class DNSAddress(DNSRecord):
 
