@@ -457,6 +457,41 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
 
 
 @pytest.mark.asyncio
+async def test_async_service_registration_name_strict_check() -> None:
+    """Test registering services throws when the name does not comply."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    type_ = "_ibisip_http._tcp.local."
+    name = "CustomerInformationService-F4D4895E9EEB"
+    registration_name = f"{name}.{type_}"
+
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    with pytest.raises(BadTypeInNameException):
+        await zc.async_check_service(info, allow_name_change=False)
+
+    with pytest.raises(BadTypeInNameException):
+        task = await aiozc.async_register_service(info)
+        await task
+
+    await zc.async_check_service(info, allow_name_change=False, strict=False)
+    task = await aiozc.async_register_service(info, strict=False)
+    await task
+
+    await aiozc.async_unregister_service(info)
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
 async def test_async_tasks() -> None:
     """Test awaiting broadcast tasks"""
 

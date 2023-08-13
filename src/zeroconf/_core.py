@@ -620,6 +620,7 @@ class Zeroconf(QuietLogger):
         ttl: Optional[int] = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
+        strict: bool = True,
     ) -> None:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
@@ -635,7 +636,7 @@ class Zeroconf(QuietLogger):
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(
-                self.async_register_service(info, ttl, allow_name_change, cooperating_responders)
+                self.async_register_service(info, ttl, allow_name_change, cooperating_responders, strict)
             ),
             self.loop,
             _REGISTER_TIME * _REGISTER_BROADCASTS,
@@ -647,6 +648,7 @@ class Zeroconf(QuietLogger):
         ttl: Optional[int] = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
+        strict: bool = True,
     ) -> Awaitable:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
@@ -662,7 +664,7 @@ class Zeroconf(QuietLogger):
 
         info.set_server_if_missing()
         await self.async_wait_for_start()
-        await self.async_check_service(info, allow_name_change, cooperating_responders)
+        await self.async_check_service(info, allow_name_change, cooperating_responders, strict)
         self.registry.async_add(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
@@ -810,11 +812,15 @@ class Zeroconf(QuietLogger):
         )
 
     async def async_check_service(
-        self, info: ServiceInfo, allow_name_change: bool, cooperating_responders: bool = False
+        self,
+        info: ServiceInfo,
+        allow_name_change: bool,
+        cooperating_responders: bool = False,
+        strict: bool = True,
     ) -> None:
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
-        instance_name = instance_name_from_service_info(info)
+        instance_name = instance_name_from_service_info(info, strict=strict)
         if cooperating_responders:
             return
         next_instance_number = 2
@@ -829,7 +835,7 @@ class Zeroconf(QuietLogger):
                 # change the name and look for a conflict
                 info.name = f'{instance_name}-{next_instance_number}.{info.type}'
                 next_instance_number += 1
-                service_type_name(info.name)
+                service_type_name(info.name, strict=strict)
                 next_time = now
                 i = 0
 
