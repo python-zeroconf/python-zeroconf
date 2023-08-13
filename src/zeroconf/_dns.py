@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
-from ._utils.time import current_time_millis, millis_to_seconds
+from ._utils.time import current_time_millis
 from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
 
 _LEN_BYTE = 1
@@ -193,7 +193,10 @@ class DNSRecord(DNSEntry):
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: _float) -> Union[int, float]:
         """Returns the remaining TTL in seconds."""
-        return max(0, millis_to_seconds((self.created + (_EXPIRE_FULL_TIME_MS * self.ttl)) - now))
+        remaining = self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) - now
+        if remaining < 0:
+            return 0
+        return remaining / 1000.0
 
     def is_expired(self, now: _float) -> bool:
         """Returns true if this record has expired."""
