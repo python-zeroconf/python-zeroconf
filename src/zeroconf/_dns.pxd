@@ -44,9 +44,6 @@ cdef class DNSRecord(DNSEntry):
     )
     cpdef suppressed_by(self, object msg)
 
-    @cython.locals(
-        remaining=cython.float,
-    )
     cpdef get_remaining_ttl(self, cython.float now)
 
     cpdef get_expiration_time(self, cython.uint percent)
