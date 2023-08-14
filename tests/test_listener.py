@@ -157,7 +157,7 @@ def test_guard_against_duplicate_packets():
 
     addrs = ("1.2.3.4", 43)
 
-    with patch.object(_engine, "current_time_millis") as _current_time_millis, patch.object(
+    with patch.object(_listener, "current_time_millis") as _current_time_millis, patch.object(
         listener, "handle_query_or_defer"
     ) as _handle_query_or_defer:
         start_time = current_time_millis()
