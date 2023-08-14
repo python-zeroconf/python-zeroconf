@@ -37,6 +37,11 @@ if TYPE_CHECKING:
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
 
+_bytes = bytes
+
+logging_DEBUG = logging.DEBUG
+
+
 class AsyncListener:
 
     """A Listener is used by this module to listen on the multicast
@@ -69,11 +74,11 @@ class AsyncListener:
         super().__init__()
 
     def datagram_received(
-        self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
+        self, data: _bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
         assert self.transport is not None
         data_len = len(data)
-        debug = log.isEnabledFor(logging.DEBUG)
+        debug = log.isEnabledFor(logging_DEBUG)
 
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
