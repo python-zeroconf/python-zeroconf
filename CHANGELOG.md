@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.79.0 (2023-08-14)
+
+### Feature
+
+* Refactor notify implementation to reduce overhead of adding and removing listeners ([#1224](https://github.com/python-zeroconf/python-zeroconf/issues/1224)) ([`ceb92cf`](https://github.com/python-zeroconf/python-zeroconf/commit/ceb92cfe42d885dbb38cee7aaeebf685d97627a9))
+
 ## v0.78.0 (2023-08-14)
 
 ### Feature
