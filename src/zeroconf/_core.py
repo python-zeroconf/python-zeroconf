@@ -49,6 +49,7 @@ from ._services.registry import ServiceRegistry
 from ._transport import _WrappedTransport
 from ._updates import RecordUpdateListener
 from ._utils.asyncio import (
+    _resolve_all_futures_to_none,
     _set_future_none_if_not_done,
     await_awaitable,
     get_running_loop,
@@ -264,12 +265,8 @@ class Zeroconf(QuietLogger):
     def async_notify_all(self) -> None:
         """Schedule an async_notify_all."""
         notify_futures = self._notify_futures
-        if not notify_futures:
-            return
-        for future in notify_futures:
-            if not future.done():
-                future.set_result(None)
-        notify_futures.clear()
+        if notify_futures:
+            _resolve_all_futures_to_none(notify_futures)
 
     def get_service_info(
         self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None

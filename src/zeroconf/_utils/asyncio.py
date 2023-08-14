@@ -47,6 +47,13 @@ def _set_future_none_if_not_done(fut: asyncio.Future) -> None:
         fut.set_result(None)
 
 
+def _resolve_all_futures_to_none(futures: Set[asyncio.Future]) -> None:
+    """Resolve all futures to None."""
+    for fut in futures:
+        _set_future_none_if_not_done(fut)
+    futures.clear()
+
+
 async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
     """Wait for an event or timeout."""
     with contextlib.suppress(asyncio.TimeoutError):

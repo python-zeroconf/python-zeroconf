@@ -40,6 +40,7 @@ from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.asyncio import (
+    _resolve_all_futures_to_none,
     _set_future_none_if_not_done,
     get_running_loop,
     run_coro_with_timeout,
@@ -443,10 +444,7 @@ class ServiceInfo(RecordUpdateListener):
         """
         new_records_futures = self._new_records_futures
         if self._process_records_threadsafe(zc, now, records) and new_records_futures:
-            for future in new_records_futures:
-                if not future.done():
-                    future.set_result(None)
-            new_records_futures.clear()
+            _resolve_all_futures_to_none(new_records_futures)
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
         """Thread safe record updating.
