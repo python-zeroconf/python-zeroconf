@@ -20,7 +20,7 @@ from zeroconf import (
     DNSPointer,
     DNSQuestion,
     Zeroconf,
-    _core,
+    _engine,
     _handlers,
     const,
     current_time_millis,
@@ -1118,7 +1118,7 @@ def test_service_browser_matching():
 
 
 @patch.object(_handlers, '_DNS_PTR_MIN_TTL', 1)
-@patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 0.01)
+@patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01)
 def test_service_browser_expire_callbacks():
     """Test that the ServiceBrowser matching does not match partial names."""
     # instantiate a zeroconf instance
