@@ -46,6 +46,10 @@ _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
 _CLOSE_TIMEOUT = 3000  # ms
 
+_bytes = bytes
+
+logging_DEBUG = logging.DEBUG
+
 
 class _WrappedTransport:
     """A wrapper for transports."""
@@ -229,14 +233,13 @@ class AsyncListener:
         self.sock_description: Optional[str] = None
         self._deferred: Dict[str, List[DNSIncoming]] = {}
         self._timers: Dict[str, asyncio.TimerHandle] = {}
-        super().__init__()
 
     def datagram_received(
-        self, data: bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
+        self, data: _bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
         assert self.transport is not None
         data_len = len(data)
-        debug = log.isEnabledFor(logging.DEBUG)
+        debug = log.isEnabledFor(logging_DEBUG)
 
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
