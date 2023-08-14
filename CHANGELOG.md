@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.77.0 (2023-08-14)
+
+### Feature
+
+* Cythonize _listener.py to improve incoming message processing performance ([#1220](https://github.com/python-zeroconf/python-zeroconf/issues/1220)) ([`9efde8c`](https://github.com/python-zeroconf/python-zeroconf/commit/9efde8c8c1ed14c5d3c162f185b49212fcfcb5c9))
+
 ## v0.76.0 (2023-08-14)
 
 ### Feature
