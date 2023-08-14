@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.78.0 (2023-08-14)
+
+### Feature
+
+* Add cython pxd file for _listener.py to improve incoming message processing performance ([#1221](https://github.com/python-zeroconf/python-zeroconf/issues/1221)) ([`f459856`](https://github.com/python-zeroconf/python-zeroconf/commit/f459856a0a61b8afa8a541926d7e15d51f8e4aea))
+
 ## v0.77.0 (2023-08-14)
 
 ### Feature
