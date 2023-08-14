@@ -264,6 +264,8 @@ class Zeroconf(QuietLogger):
     def async_notify_all(self) -> None:
         """Schedule an async_notify_all."""
         notify_futures = self._notify_futures
+        if not notify_futures:
+            return
         for future in notify_futures:
             if not future.done():
                 future.set_result(None)
