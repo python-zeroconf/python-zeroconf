@@ -14,7 +14,7 @@ from unittest.mock import patch
 import pytest
 
 from zeroconf import EventLoopBlocked
-from zeroconf._core import _CLOSE_TIMEOUT
+from zeroconf._engine import _CLOSE_TIMEOUT
 from zeroconf._utils import asyncio as aioutils
 from zeroconf.const import _LOADED_SYSTEM_TIMEOUT
 
