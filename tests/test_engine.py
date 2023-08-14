@@ -8,7 +8,7 @@ import itertools
 import logging
 import unittest
 import unittest.mock
-from typing import Set
+from typing import Set, Tuple, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,6 +16,7 @@ import pytest
 import zeroconf as r
 from zeroconf import Zeroconf, _engine, const, current_time_millis
 from zeroconf._protocol import outgoing
+from zeroconf._protocol.incoming import DNSIncoming
 from zeroconf.asyncio import AsyncZeroconf
 
 log = logging.getLogger('zeroconf')
@@ -188,7 +189,20 @@ def test_guard_against_duplicate_packets():
     These packets can quickly overwhelm the system.
     """
     zc = Zeroconf(interfaces=['127.0.0.1'])
-    listener = _engine.AsyncListener(zc)
+
+    class SubListener(_engine.AsyncListener):
+        def handle_query_or_defer(
+            self,
+            msg: DNSIncoming,
+            addr: str,
+            port: int,
+            transport: _engine._WrappedTransport,
+            v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+        ) -> None:
+            """Handle a query or defer it for later processing."""
+            super().handle_query_or_defer(msg, addr, port, transport, v6_flow_scope)
+
+    listener = SubListener(zc)
     listener.transport = MagicMock()
 
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
