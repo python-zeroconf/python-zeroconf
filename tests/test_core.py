@@ -13,7 +13,7 @@ import time
 import unittest
 import unittest.mock
 from typing import cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -669,7 +669,7 @@ def test_shutdown_while_register_in_process():
 @pytest.mark.asyncio
 @unittest.skipIf(sys.version_info[:3][1] < 8, 'Requires Python 3.8 or later to patch _async_setup')
 @patch("zeroconf._core._STARTUP_TIMEOUT", 0)
-@patch("zeroconf._core.AsyncEngine._async_setup")
+@patch("zeroconf._core.AsyncEngine._async_setup", new_callable=AsyncMock)
 async def test_event_loop_blocked(mock_start):
     """Test we raise NotRunningException when waiting for startup that times out."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
