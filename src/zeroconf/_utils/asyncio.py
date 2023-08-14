@@ -41,6 +41,12 @@ _GET_ALL_TASKS_TIMEOUT = 3
 _WAIT_FOR_LOOP_TASKS_TIMEOUT = 3  # Must be larger than _TASK_AWAIT_TIMEOUT
 
 
+def _set_future_none_if_not_done(fut: asyncio.Future) -> None:
+    """Set a future to None if it is not done."""
+    if not fut.done():  # pragma: no branch
+        fut.set_result(None)
+
+
 async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
     """Wait for an event or timeout."""
     with contextlib.suppress(asyncio.TimeoutError):

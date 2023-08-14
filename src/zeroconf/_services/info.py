@@ -39,7 +39,11 @@ from .._exceptions import BadTypeInNameException
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
-from .._utils.asyncio import get_running_loop, run_coro_with_timeout
+from .._utils.asyncio import (
+    _set_future_none_if_not_done,
+    get_running_loop,
+    run_coro_with_timeout,
+)
 from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis, millis_to_seconds
@@ -87,12 +91,6 @@ def instance_name_from_service_info(info: "ServiceInfo", strict: bool = True) ->
 
 
 _cached_ip_addresses = lru_cache(maxsize=256)(ip_address)
-
-
-def _set_future_none_if_not_done(fut: asyncio.Future) -> None:
-    """Set a future to None if it is not done."""
-    if not fut.done():  # pragma: no branch
-        fut.set_result(None)
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -180,7 +178,7 @@ class ServiceInfo(RecordUpdateListener):
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self.interface_index = interface_index
-        self._new_records_futures: List[asyncio.Future] = []
+        self._new_records_futures: Set[asyncio.Future] = set()
 
     @property
     def name(self) -> str:
@@ -244,12 +242,14 @@ class ServiceInfo(RecordUpdateListener):
         """Calling task waits for a given number of milliseconds or until notified."""
         loop = asyncio.get_running_loop()
         future = loop.create_future()
-        self._new_records_futures.append(future)
+        new_records_futures = self._new_records_futures
+        new_records_futures.add(future)
         handle = loop.call_later(millis_to_seconds(timeout), _set_future_none_if_not_done, future)
         try:
             await future
         finally:
             handle.cancel()
+            new_records_futures.discard(future)
 
     def addresses_by_version(self, version: IPVersion) -> List[bytes]:
         """List addresses matching IP version.
@@ -441,11 +441,12 @@ class ServiceInfo(RecordUpdateListener):
 
         This method will be run in the event loop.
         """
-        if self._process_records_threadsafe(zc, now, records) and self._new_records_futures:
-            for future in self._new_records_futures:
+        new_records_futures = self._new_records_futures
+        if self._process_records_threadsafe(zc, now, records) and new_records_futures:
+            for future in new_records_futures:
                 if not future.done():
                     future.set_result(None)
-            self._new_records_futures.clear()
+            new_records_futures.clear()
 
     def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
         """Thread safe record updating.

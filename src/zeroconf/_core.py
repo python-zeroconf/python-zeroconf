@@ -25,7 +25,7 @@ import logging
 import sys
 import threading
 from types import TracebackType
-from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union
+from typing import Awaitable, Dict, List, Optional, Set, Tuple, Type, Union
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
@@ -49,6 +49,7 @@ from ._services.registry import ServiceRegistry
 from ._transport import _WrappedTransport
 from ._updates import RecordUpdateListener
 from ._utils.asyncio import (
+    _set_future_none_if_not_done,
     await_awaitable,
     get_running_loop,
     run_coro_with_timeout,
@@ -188,7 +189,7 @@ class Zeroconf(QuietLogger):
         self.query_handler = QueryHandler(self.registry, self.cache, self.question_history)
         self.record_manager = RecordManager(self)
 
-        self.notify_event: Optional[asyncio.Event] = None
+        self._notify_futures: Set[asyncio.Future] = set()
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
 
@@ -206,7 +207,6 @@ class Zeroconf(QuietLogger):
         """Start Zeroconf."""
         self.loop = get_running_loop()
         if self.loop:
-            self.notify_event = asyncio.Event()
             self.engine.setup(self.loop, None)
             return
         self._start_thread()
@@ -218,7 +218,6 @@ class Zeroconf(QuietLogger):
         def _run_loop() -> None:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
-            self.notify_event = asyncio.Event()
             self.engine.setup(self.loop, loop_thread_ready)
             self.loop.run_forever()
 
@@ -245,8 +244,17 @@ class Zeroconf(QuietLogger):
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
-        assert self.notify_event is not None
-        await wait_event_or_timeout(self.notify_event, timeout=millis_to_seconds(timeout))
+        loop = self.loop
+        assert loop is not None
+        future = loop.create_future()
+        notify_futures = self._notify_futures
+        notify_futures.add(future)
+        handle = loop.call_later(millis_to_seconds(timeout), _set_future_none_if_not_done, future)
+        try:
+            await future
+        finally:
+            handle.cancel()
+            notify_futures.discard(future)
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""
@@ -255,9 +263,11 @@ class Zeroconf(QuietLogger):
 
     def async_notify_all(self) -> None:
         """Schedule an async_notify_all."""
-        assert self.notify_event is not None
-        self.notify_event.set()
-        self.notify_event.clear()
+        notify_futures = self._notify_futures
+        for future in notify_futures:
+            if not future.done():
+                future.set_result(None)
+        notify_futures.clear()
 
     def get_service_info(
         self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
