@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.76.0 (2023-08-14)
+
+### Feature
+
+* Improve performance responding to queries ([#1217](https://github.com/python-zeroconf/python-zeroconf/issues/1217)) ([`69b33be`](https://github.com/python-zeroconf/python-zeroconf/commit/69b33be3b2f9d4a27ef5154cae94afca048efffa))
+
 ## v0.75.0 (2023-08-13)
 
 ### Feature
