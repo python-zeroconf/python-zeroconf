@@ -2,12 +2,9 @@
 import cython
 
 
-cdef object current_time_millis
 cdef object millis_to_seconds
 cdef object log
 cdef object logging_DEBUG
-
-cdef cython.float _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 
 from ._protocol.incoming cimport DNSIncoming
 
