@@ -54,6 +54,20 @@ def _resolve_all_futures_to_none(futures: Set[asyncio.Future]) -> None:
     futures.clear()
 
 
+async def wait_for_future_set_or_timeout(
+    loop: asyncio.AbstractEventLoop, future_set: Set[asyncio.Future], timeout: float
+) -> None:
+    """Wait for a future or timeout (in milliseconds)."""
+    future = loop.create_future()
+    future_set.add(future)
+    handle = loop.call_later(millis_to_seconds(timeout), _set_future_none_if_not_done, future)
+    try:
+        await future
+    finally:
+        handle.cancel()
+        future_set.discard(future)
+
+
 async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
     """Wait for an event or timeout."""
     with contextlib.suppress(asyncio.TimeoutError):

@@ -50,12 +50,12 @@ from ._transport import _WrappedTransport
 from ._updates import RecordUpdateListener
 from ._utils.asyncio import (
     _resolve_all_futures_to_none,
-    _set_future_none_if_not_done,
     await_awaitable,
     get_running_loop,
     run_coro_with_timeout,
     shutdown_loop,
     wait_event_or_timeout,
+    wait_for_future_set_or_timeout,
 )
 from ._utils.name import service_type_name
 from ._utils.net import (
@@ -247,15 +247,7 @@ class Zeroconf(QuietLogger):
         """Calling task waits for a given number of milliseconds or until notified."""
         loop = self.loop
         assert loop is not None
-        future = loop.create_future()
-        notify_futures = self._notify_futures
-        notify_futures.add(future)
-        handle = loop.call_later(millis_to_seconds(timeout), _set_future_none_if_not_done, future)
-        try:
-            await future
-        finally:
-            handle.cancel()
-            notify_futures.discard(future)
+        await wait_for_future_set_or_timeout(loop, self._notify_futures, timeout)
 
     def notify_all(self) -> None:
         """Notifies all waiting threads and notify listeners."""

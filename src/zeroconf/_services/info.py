@@ -41,13 +41,13 @@ from .._protocol.outgoing import DNSOutgoing
 from .._updates import RecordUpdate, RecordUpdateListener
 from .._utils.asyncio import (
     _resolve_all_futures_to_none,
-    _set_future_none_if_not_done,
     get_running_loop,
     run_coro_with_timeout,
+    wait_for_future_set_or_timeout,
 )
 from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
-from .._utils.time import current_time_millis, millis_to_seconds
+from .._utils.time import current_time_millis
 from ..const import (
     _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
@@ -241,16 +241,9 @@ class ServiceInfo(RecordUpdateListener):
 
     async def async_wait(self, timeout: float) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
-        loop = asyncio.get_running_loop()
-        future = loop.create_future()
-        new_records_futures = self._new_records_futures
-        new_records_futures.add(future)
-        handle = loop.call_later(millis_to_seconds(timeout), _set_future_none_if_not_done, future)
-        try:
-            await future
-        finally:
-            handle.cancel()
-            new_records_futures.discard(future)
+        loop = get_running_loop()
+        assert loop is not None
+        await wait_for_future_set_or_timeout(loop, self._new_records_futures, timeout)
 
     def addresses_by_version(self, version: IPVersion) -> List[bytes]:
         """List addresses matching IP version.
