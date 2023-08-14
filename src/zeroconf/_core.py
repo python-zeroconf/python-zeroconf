@@ -29,7 +29,7 @@ from typing import Awaitable, Dict, List, Optional, Tuple, Type, Union
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
-from ._engine import AsyncEngine, _WrappedTransport
+from ._engine import AsyncEngine
 from ._exceptions import NonUniqueNameException, NotRunningException
 from ._handlers import (
     MulticastOutgoingQueue,
@@ -46,6 +46,7 @@ from ._services import ServiceListener
 from ._services.browser import ServiceBrowser
 from ._services.info import ServiceInfo, instance_name_from_service_info
 from ._services.registry import ServiceRegistry
+from ._transport import _WrappedTransport
 from ._updates import RecordUpdateListener
 from ._utils.asyncio import (
     await_awaitable,
