@@ -265,7 +265,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         else:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs  # type: ignore
-            if debug:
+            if debug:  # pragma: no branch
                 log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
 
