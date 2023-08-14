@@ -150,7 +150,9 @@ class AsyncEngine:
             sender_sockets.append(s)
 
         for s in reader_sockets:
-            transport, protocol = await loop.create_datagram_endpoint(lambda: AsyncListener(self.zc), sock=s)
+            transport, protocol = await loop.create_datagram_endpoint(
+                lambda: AsyncListener(self.zc), sock=s  # type: ignore[arg-type, return-value]
+            )
             self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(_make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
             if s in sender_sockets:
@@ -198,7 +200,7 @@ class AsyncEngine:
         run_coro_with_timeout(self._async_close(), self.loop, _CLOSE_TIMEOUT)
 
 
-class AsyncListener(asyncio.Protocol, QuietLogger):
+class AsyncListener:
 
     """A Listener is used by this module to listen on the multicast
     group to which DNS messages are sent, allowing the implementation
@@ -207,7 +209,16 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
     It requires registration with an Engine object in order to have
     the read() method called when a socket is available for reading."""
 
-    __slots__ = ('zc', 'data', 'last_time', 'transport', 'sock_description', '_deferred', '_timers')
+    __slots__ = (
+        'zc',
+        'data',
+        'last_time',
+        'last_message',
+        'transport',
+        'sock_description',
+        '_deferred',
+        '_timers',
+    )
 
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
@@ -357,7 +368,7 @@ class AsyncListener(asyncio.Protocol, QuietLogger):
         # different socket in case there are problems with multiple
         # sockets
         msg_str = f"Error with socket {self.sock_description}): %s"
-        self.log_exception_once(exc, msg_str, exc)
+        QuietLogger.log_exception_once(exc, msg_str, exc)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         wrapped_transport = _make_wrapped_transport(cast(asyncio.DatagramTransport, transport))
