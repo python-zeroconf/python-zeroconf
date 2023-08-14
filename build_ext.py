@@ -25,6 +25,7 @@ def build(setup_kwargs: Any) -> None:
                     [
                         "src/zeroconf/_dns.py",
                         "src/zeroconf/_cache.py",
+                        "src/zeroconf/_listener.py",
                         "src/zeroconf/_protocol/incoming.py",
                         "src/zeroconf/_protocol/outgoing.py",
                     ],
