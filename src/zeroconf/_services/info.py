@@ -361,20 +361,11 @@ class ServiceInfo(RecordUpdateListener):
             strs.append(text[index : index + length])
             index += length
 
-        key: bytes
-        value: Optional[bytes]
         for s in strs:
-            key_value = s.split(b'=', 1)
-            if len(key_value) == 2:
-                key, value = key_value
-            else:
-                # No equals sign at all
-                key = s
-                value = None
-
+            key, _, value = s.partition(b'=')
             # Only update non-existent properties
             if key and key not in result:
-                result[key] = value
+                result[key] = value or None
 
         # Properties should be set atomically
         # in case another thread is reading them
