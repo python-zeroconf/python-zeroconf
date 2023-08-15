@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.80.0 (2023-08-15)
+
+### Feature
+
+* Optimize unpacking properties in ServiceInfo ([#1225](https://github.com/python-zeroconf/python-zeroconf/issues/1225)) ([`1492e41`](https://github.com/python-zeroconf/python-zeroconf/commit/1492e41b3d5cba5598cc9dd6bd2bc7d238f13555))
+
 ## v0.79.0 (2023-08-14)
 
 ### Feature
