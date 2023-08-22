@@ -23,6 +23,7 @@
 import itertools
 import random
 from collections import deque
+from operator import attrgetter
 from typing import (
     TYPE_CHECKING,
     Dict,
@@ -71,6 +72,8 @@ _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 _MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
+NAME_GETTER = attrgetter('name')
+
 
 class QuestionAnswers(NamedTuple):
     ucast: _AnswerWithAdditionalsType
@@ -109,13 +112,13 @@ def construct_outgoing_unicast_answers(
 
 def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
-    sending: Set[DNSRecord] = set(answers.keys())
+    sending: Set[DNSRecord] = set(answers)
     # Answers are sorted to group names together to increase the chance
     # that similar names will end up in the same packet and can reduce the
     # overall size of the outgoing response via name compression
-    for answer, additionals in sorted(answers.items(), key=lambda kv: kv[0].name):
+    for answer in sorted(answers, key=NAME_GETTER):
         out.add_answer_at_time(answer, 0)
-        for additional in additionals:
+        for additional in answers[answer]:
             if additional not in sending:
                 out.add_additional_answer(additional)
                 sending.add(additional)
@@ -166,7 +169,7 @@ class _QueryResponse:
     def add_ucast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a unicast query."""
         self._additionals.update(answers)
-        self._ucast.update(answers.keys())
+        self._ucast.update(answers)
 
     def add_mcast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast query."""
@@ -543,7 +546,7 @@ class MulticastOutgoingQueue:
 
     def __init__(self, zeroconf: 'Zeroconf', additional_delay: int, max_aggregation_delay: int) -> None:
         self.zc = zeroconf
-        self.queue: deque = deque()
+        self.queue: deque[AnswerGroup] = deque()
         # Additional delay is used to implement
         # Protect the network against excessive packet flooding
         # https://datatracker.ietf.org/doc/html/rfc6762#section-14

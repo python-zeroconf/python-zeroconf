@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.81.0 (2023-08-22)
+
+### Feature
+
+* Speed up the service registry with a cython pxd ([#1226](https://github.com/python-zeroconf/python-zeroconf/issues/1226)) ([`47d3c7a`](https://github.com/python-zeroconf/python-zeroconf/commit/47d3c7ad4bc5f2247631c3ad5e6b6156d45a0a4e))
+* Optimizing sending answers to questions ([#1227](https://github.com/python-zeroconf/python-zeroconf/issues/1227)) ([`cd7b56b`](https://github.com/python-zeroconf/python-zeroconf/commit/cd7b56b2aa0c8ee429da430e9a36abd515512011))
+
 ## v0.80.0 (2023-08-15)
 
 ### Feature

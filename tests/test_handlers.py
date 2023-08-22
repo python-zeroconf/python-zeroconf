@@ -577,7 +577,7 @@ def test_qu_response():
 
     def _validate_complete_response(answers):
         has_srv = has_txt = has_a = has_aaaa = has_nsec = False
-        nbr_answers = len(answers.keys())
+        nbr_answers = len(answers)
         additionals = set().union(*answers.values())
         nbr_additionals = len(additionals)
 
