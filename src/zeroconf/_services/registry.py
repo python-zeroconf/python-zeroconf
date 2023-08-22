@@ -78,7 +78,10 @@ class ServiceRegistry:
 
     def _async_get_by_index(self, records: Dict[str, List], key: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
-        return [self._services[name] for name in records.get(key, [])]
+        record_list = records.get(key)
+        if record_list is None:
+            return []
+        return [self._services[name] for name in record_list]
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
