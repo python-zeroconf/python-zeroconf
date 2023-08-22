@@ -66,7 +66,7 @@ class ServiceRegistry:
 
     def async_get_types(self) -> List[str]:
         """Return all types."""
-        return list(self.types.keys())
+        return list(self.types)
 
     def async_get_infos_type(self, type_: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching type."""
