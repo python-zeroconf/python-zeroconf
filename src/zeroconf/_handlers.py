@@ -166,7 +166,7 @@ class _QueryResponse:
     def add_ucast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a unicast query."""
         self._additionals.update(answers)
-        self._ucast.update(answers.keys())
+        self._ucast.update(answers)
 
     def add_mcast_question_response(self, answers: _AnswerWithAdditionalsType) -> None:
         """Generate a response to a multicast query."""
