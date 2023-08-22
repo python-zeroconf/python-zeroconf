@@ -56,7 +56,7 @@ class RecordUpdateListener:
         All records that are received in a single packet are passed
         to update_records.
 
-        This implementation is a compatiblity shim to ensure older code
+        This implementation is a compatibility shim to ensure older code
         that uses RecordUpdateListener as a base class will continue to
         get calls to update_record. This method will raise
         NotImplementedError in a future version.

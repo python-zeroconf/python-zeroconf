@@ -410,35 +410,17 @@ class ServiceInfo(RecordUpdateListener):
         else:
             self._ipv4_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
 
-    def update_record(self, zc: 'Zeroconf', now: float, record: Optional[DNSRecord]) -> None:
-        """Updates service information from a DNS record.
-
-        This method is deprecated and will be removed in a future version.
-        update_records should be implemented instead.
-
-        This method will be run in the event loop.
-        """
-        if record is not None:
-            self._process_record_threadsafe(zc, record, now)
-
     def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
         """Updates service information from a DNS record.
 
         This method will be run in the event loop.
         """
         new_records_futures = self._new_records_futures
-        if self._process_records_threadsafe(zc, now, records) and new_records_futures:
-            _resolve_all_futures_to_none(new_records_futures)
-
-    def _process_records_threadsafe(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> bool:
-        """Thread safe record updating.
-
-        Returns True if new records were added.
-        """
         updated: bool = False
         for record_update in records:
             updated |= self._process_record_threadsafe(zc, record_update.new, now)
-        return updated
+        if updated and new_records_futures:
+            _resolve_all_futures_to_none(new_records_futures)
 
     def _process_record_threadsafe(self, zc: 'Zeroconf', record: DNSRecord, now: float) -> bool:
         """Thread safe record updating.
