@@ -17,7 +17,7 @@ from unittest.mock import patch
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSAddress, const
+from zeroconf import DNSAddress, RecordUpdate, const
 from zeroconf._services import info
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
@@ -68,89 +68,119 @@ class TestServiceInfo(unittest.TestCase):
             service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
         )
         # Verify backwards compatiblity with calling with None
-        info.update_record(zc, now, None)
+        info.async_update_records(zc, now, [])
         # Matching updates
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSText(
-                service_name,
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.properties[b"ci"] == b"2"
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSService(
-                service_name,
-                const._TYPE_SRV,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                0,
-                0,
-                80,
-                'ASH-2.local.',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSService(
+                        service_name,
+                        const._TYPE_SRV,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        0,
+                        0,
+                        80,
+                        'ASH-2.local.',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.server_key == 'ash-2.local.'
         assert info.server == 'ASH-2.local.'
         new_address = socket.inet_aton("10.0.1.3")
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSAddress(
-                'ASH-2.local.',
-                const._TYPE_A,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                new_address,
-            ),
+            [
+                RecordUpdate(
+                    r.DNSAddress(
+                        'ASH-2.local.',
+                        const._TYPE_A,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        new_address,
+                    ),
+                    None,
+                )
+            ],
         )
         assert new_address in info.addresses
         # Non-matching updates
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSText(
-                "incorrect.name.",
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSText(
+                        "incorrect.name.",
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.properties[b"ci"] == b"2"
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSService(
-                "incorrect.name.",
-                const._TYPE_SRV,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                0,
-                0,
-                80,
-                'ASH-2.local.',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSService(
+                        "incorrect.name.",
+                        const._TYPE_SRV,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        0,
+                        0,
+                        80,
+                        'ASH-2.local.',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.server_key == 'ash-2.local.'
         assert info.server == 'ASH-2.local.'
         new_address = socket.inet_aton("10.0.1.4")
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSAddress(
-                "incorrect.name.",
-                const._TYPE_A,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                new_address,
-            ),
+            [
+                RecordUpdate(
+                    r.DNSAddress(
+                        "incorrect.name.",
+                        const._TYPE_A,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        new_address,
+                    ),
+                    None,
+                )
+            ],
         )
         assert new_address not in info.addresses
         zc.close()
@@ -169,16 +199,21 @@ class TestServiceInfo(unittest.TestCase):
             service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
         )
         # Matching updates
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSText(
-                service_name,
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.properties[b"ci"] == b"2"
         # Expired record
@@ -190,7 +225,7 @@ class TestServiceInfo(unittest.TestCase):
             b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
         )
         expired_record.set_created_ttl(1000, 1)
-        info.update_record(zc, now, expired_record)
+        info.async_update_records(zc, now, [RecordUpdate(expired_record, None)])
         assert info.properties[b"ci"] == b"2"
         zc.close()
 
