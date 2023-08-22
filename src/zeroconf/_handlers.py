@@ -543,7 +543,7 @@ class MulticastOutgoingQueue:
 
     def __init__(self, zeroconf: 'Zeroconf', additional_delay: int, max_aggregation_delay: int) -> None:
         self.zc = zeroconf
-        self.queue: deque = deque()
+        self.queue: deque[AnswerGroup] = deque()
         # Additional delay is used to implement
         # Protect the network against excessive packet flooding
         # https://datatracker.ietf.org/doc/html/rfc6762#section-14
