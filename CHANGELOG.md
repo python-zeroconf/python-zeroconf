@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.82.1 (2023-08-22)
+
+### Fix
+
+* Build failures with older cython 0.29 series ([#1232](https://github.com/python-zeroconf/python-zeroconf/issues/1232)) ([`30c3ad9`](https://github.com/python-zeroconf/python-zeroconf/commit/30c3ad9d1bc6b589e1ca6675fea21907ebcd1ced))
+
 ## v0.82.0 (2023-08-22)
 
 ### Feature
