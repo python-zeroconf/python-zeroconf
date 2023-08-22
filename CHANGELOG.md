@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.82.0 (2023-08-22)
+
+### Feature
+
+* Optimize processing of records in RecordUpdateListener subclasses ([#1231](https://github.com/python-zeroconf/python-zeroconf/issues/1231)) ([`3e89294`](https://github.com/python-zeroconf/python-zeroconf/commit/3e89294ea0ecee1122e1c1ffdc78925add8ca40e))
+
 ## v0.81.0 (2023-08-22)
 
 ### Feature
