@@ -26,6 +26,7 @@ import random
 import threading
 import warnings
 from abc import abstractmethod
+from types import TracebackType  # noqa # used in type hints
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -35,6 +36,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -576,3 +578,15 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         for pending in self._pending_handlers.items():
             self.queue.put(pending)
         self._pending_handlers.clear()
+
+    def __enter__(self) -> 'ServiceBrowser':
+        return self
+
+    def __exit__(  # pylint: disable=useless-return
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Optional[bool]:
+        self.cancel()
+        return None
