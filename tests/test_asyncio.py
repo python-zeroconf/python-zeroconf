@@ -43,7 +43,7 @@ from zeroconf.asyncio import (
 )
 from zeroconf.const import _LISTENER_TIME
 
-from . import _clear_cache, has_working_ipv6
+from . import QuestionHistoryWithoutSuppression, _clear_cache, has_working_ipv6
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -951,6 +951,7 @@ async def test_integration():
 
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
     zeroconf_browser = aiozc.zeroconf
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
     await zeroconf_browser.async_wait_for_start()
 
     # we are going to patch the zeroconf send to check packet sizes
@@ -990,11 +991,9 @@ async def test_integration():
     # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
     # Disable duplicate question suppression and duplicate packet suppression for this test as it works
     # by asking the same question over and over
-    with patch.object(zeroconf_browser.question_history, "suppresses", return_value=False), patch.object(
-        zeroconf_browser, "async_send", send
-    ), patch("zeroconf._services.browser.current_time_millis", _new_current_time_millis), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)
-    ):
+    with patch.object(zeroconf_browser, "async_send", send), patch(
+        "zeroconf._services.browser.current_time_millis", _new_current_time_millis
+    ), patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 

@@ -31,7 +31,12 @@ from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import _inject_response, _wait_for_start, has_working_ipv6
+from .. import (
+    QuestionHistoryWithoutSuppression,
+    _inject_response,
+    _wait_for_start,
+    has_working_ipv6,
+)
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -444,6 +449,7 @@ def test_backoff():
     type_ = "_http._tcp.local."
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
     _wait_for_start(zeroconf_browser)
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
 
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
@@ -465,10 +471,8 @@ def test_backoff():
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
     with patch.object(zeroconf_browser, "async_send", send), patch.object(
-        zeroconf_browser.question_history, "suppresses", return_value=False
-    ), patch.object(_services_browser, "current_time_millis", current_time_millis), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
-    ), patch.object(
+        _services_browser, "current_time_millis", current_time_millis
+    ), patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10), patch.object(
         _services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)
     ):
         # dummy service callback
