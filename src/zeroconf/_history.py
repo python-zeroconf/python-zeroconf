@@ -73,3 +73,7 @@ class QuestionHistory:
                 removes.append(question)
         for question in removes:
             del self._history[question]
+
+    def clear(self) -> None:
+        """Clear the history."""
+        self._history.clear()
