@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.83.0 (2023-08-26)
+
+### Feature
+
+* Speed up question and answer history with a cython pxd ([#1234](https://github.com/python-zeroconf/python-zeroconf/issues/1234)) ([`703ecb2`](https://github.com/python-zeroconf/python-zeroconf/commit/703ecb2901b2150fb72fac3deed61d7302561298))
+
 ## v0.82.1 (2023-08-22)
 
 ### Fix
