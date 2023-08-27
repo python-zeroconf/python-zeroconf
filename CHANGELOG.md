@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.83.1 (2023-08-27)
+
+### Fix
+
+* Rebuild wheels with cython 3.0.2 ([#1236](https://github.com/python-zeroconf/python-zeroconf/issues/1236)) ([`dd637fb`](https://github.com/python-zeroconf/python-zeroconf/commit/dd637fb2e5a87ba283750e69d116e124bef54e7c))
+
 ## v0.83.0 (2023-08-26)
 
 ### Feature
