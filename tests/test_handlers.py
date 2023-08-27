@@ -1131,7 +1131,7 @@ async def test_cache_flush_bit():
     for record in new_records:
         assert zc.cache.async_get_unique(record) is not None
 
-    original_a_record.created = current_time_millis() - 1001
+    original_a_record.created = current_time_millis() - 1500
 
     # Do the run within 1s to verify the original record is not going to be expired
     out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA, multicast=True)
@@ -1146,7 +1146,7 @@ async def test_cache_flush_bit():
     cached_records = [zc.cache.async_get_unique(record) for record in new_records]
     for cached_record in cached_records:
         assert cached_record is not None
-        cached_record.created = current_time_millis() - 1001
+        cached_record.created = current_time_millis() - 1500
 
     fresh_address = socket.inet_aton("4.4.4.4")
     info.addresses = [fresh_address]

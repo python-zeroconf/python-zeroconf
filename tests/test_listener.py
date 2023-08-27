@@ -14,6 +14,8 @@ from zeroconf import Zeroconf, _engine, _listener, const, current_time_millis
 from zeroconf._protocol import outgoing
 from zeroconf._protocol.incoming import DNSIncoming
 
+from . import QuestionHistoryWithoutSuppression
+
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
 
@@ -123,6 +125,7 @@ def test_guard_against_duplicate_packets():
     These packets can quickly overwhelm the system.
     """
     zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc.question_history = QuestionHistoryWithoutSuppression()
 
     class SubListener(_listener.AsyncListener):
         def handle_query_or_defer(
