@@ -3,13 +3,14 @@
 
 """ Unit tests for zeroconf._services.browser. """
 
+import asyncio
 import logging
 import os
 import socket
 import time
 import unittest
 from threading import Event
-from typing import Iterable, Set
+from typing import Iterable, Set, cast
 from unittest.mock import patch
 
 import pytest
@@ -71,6 +72,35 @@ def test_service_browser_cancel_multiple_times():
     browser.cancel()
     browser.cancel()
     browser.cancel()
+
+    zc.close()
+
+
+def test_service_browser_cancel_context_manager():
+    """Test we can cancel a ServiceBrowser with it being used as a context manager."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    assert cast(bool, browser.done) is False
+
+    with browser:
+        pass
+
+    # ensure call_soon_threadsafe in ServiceBrowser.cancel is run
+    assert zc.loop is not None
+    asyncio.run_coroutine_threadsafe(asyncio.sleep(0), zc.loop).result()
+
+    assert cast(bool, browser.done) is True
 
     zc.close()
 

@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.84.0 (2023-08-27)
+
+### Feature
+
+* Context managers in ServiceBrowser and AsyncServiceBrowser ([#1233](https://github.com/python-zeroconf/python-zeroconf/issues/1233)) ([`bd8d846`](https://github.com/python-zeroconf/python-zeroconf/commit/bd8d8467dec2a39a0b525043ea1051259100fded))
+
 ## v0.83.1 (2023-08-27)
 
 ### Fix
