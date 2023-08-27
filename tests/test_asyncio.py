@@ -9,6 +9,7 @@ import os
 import socket
 import threading
 import time
+from typing import cast
 from unittest.mock import ANY, call, patch
 
 import pytest
@@ -777,6 +778,32 @@ async def test_async_context_manager() -> None:
         await task
         aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
         assert aiosinfo is not None
+
+
+@pytest.mark.asyncio
+async def test_service_browser_cancel_async_context_manager():
+    """Test we can cancel an AsyncServiceBrowser with it being used as an async context manager."""
+
+    # instantiate a zeroconf instance
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = aiozc.zeroconf
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = AsyncServiceBrowser(zc, type_, None, listener)
+
+    assert cast(bool, browser.done) is False
+
+    async with browser:
+        pass
+
+    assert cast(bool, browser.done) is True
+
+    await aiozc.async_close()
 
 
 @pytest.mark.asyncio

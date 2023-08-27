@@ -93,6 +93,18 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
             self._fire_service_state_changed_event(pending)
         self._pending_handlers.clear()
 
+    async def __aenter__(self) -> 'AsyncServiceBrowser':
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Optional[bool]:
+        await self.async_cancel()
+        return None
+
 
 class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
     """An async version of ZeroconfServiceTypes."""
