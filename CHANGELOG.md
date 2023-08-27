@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.85.0 (2023-08-27)
+
+### Feature
+
+* Simplify code to unpack properties ([#1237](https://github.com/python-zeroconf/python-zeroconf/issues/1237)) ([`68d9998`](https://github.com/python-zeroconf/python-zeroconf/commit/68d99985a0e9d2c72ff670b2e2af92271a6fe934))
+
 ## v0.84.0 (2023-08-27)
 
 ### Feature
