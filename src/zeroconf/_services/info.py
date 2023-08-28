@@ -586,7 +586,7 @@ class ServiceInfo(RecordUpdateListener):
         """
         if self.server is None:
             self.server = self._name
-            self.server_key = self.server.lower()
+            self.server_key = self.key
 
     def load_from_cache(self, zc: 'Zeroconf', now: Optional[float] = None) -> bool:
         """Populate the service info from the cache.
