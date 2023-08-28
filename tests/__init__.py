@@ -81,6 +81,6 @@ def has_working_ipv6():
     return False
 
 
-def _clear_cache(zc):
+def _clear_cache(zc: Zeroconf) -> None:
     zc.cache.cache.clear()
     zc.question_history.clear()
