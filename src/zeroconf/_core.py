@@ -31,13 +31,13 @@ from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
 from ._engine import AsyncEngine
 from ._exceptions import NonUniqueNameException, NotRunningException
-from ._handlers import (
-    MulticastOutgoingQueue,
-    QueryHandler,
-    RecordManager,
+from ._handlers.answers import (
     construct_outgoing_multicast_answers,
     construct_outgoing_unicast_answers,
 )
+from ._handlers.multicast_outgoing_queue import MulticastOutgoingQueue
+from ._handlers.query_handler import QueryHandler
+from ._handlers.record_manager import RecordManager
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol.incoming import DNSIncoming
