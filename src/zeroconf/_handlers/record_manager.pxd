@@ -14,7 +14,7 @@ cdef class RecordManager:
 
     cdef object zc
     cdef DNSCache cache
-    cdef object listeners
+    cdef cython.list listeners
 
     @cython.locals(
         cache=DNSCache,
