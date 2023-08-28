@@ -15,7 +15,8 @@ from typing import List, cast
 import pytest
 
 import zeroconf as r
-from zeroconf import ServiceInfo, Zeroconf, _handlers, const, current_time_millis
+from zeroconf import ServiceInfo, Zeroconf, const, current_time_millis
+from zeroconf._handlers import multicast_outgoing_queue
 from zeroconf._handlers.multicast_outgoing_queue import (
     MulticastOutgoingQueue,
     construct_outgoing_multicast_answers,
@@ -1575,15 +1576,15 @@ async def test_response_aggregation_random_delay():
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 500)
 
     now = current_time_millis()
-    with unittest.mock.patch.object(_handlers, "MULTICAST_DELAY_RANDOM_INTERVAL", (500, 600)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (500, 600)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     # The second group should always be coalesced into first group since it will always come before
-    with unittest.mock.patch.object(_handlers, "MULTICAST_DELAY_RANDOM_INTERVAL", (300, 400)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (300, 400)):
         outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
 
     # The third group should always be coalesced into first group since it will always come before
-    with unittest.mock.patch.object(_handlers, "MULTICAST_DELAY_RANDOM_INTERVAL", (100, 200)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (100, 200)):
         outgoing_queue.async_add(now, {info3.dns_pointer(): set(), info4.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
@@ -1593,7 +1594,7 @@ async def test_response_aggregation_random_delay():
     assert info4.dns_pointer() in outgoing_queue.queue[0].answers
 
     # The forth group should not be coalesced because its scheduled after the last group in the queue
-    with unittest.mock.patch.object(_handlers, "MULTICAST_DELAY_RANDOM_INTERVAL", (700, 800)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (700, 800)):
         outgoing_queue.async_add(now, {info5.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
@@ -1624,17 +1625,19 @@ async def test_future_answers_are_removed_on_send():
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 0)
 
     now = current_time_millis()
-    with unittest.mock.patch.object(_handlers, "MULTICAST_DELAY_RANDOM_INTERVAL", (1, 1)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (1, 1)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
 
-    with unittest.mock.patch.object(_handlers, "MULTICAST_DELAY_RANDOM_INTERVAL", (2, 2)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (2, 2)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
 
-    with unittest.mock.patch.object(_handlers, "MULTICAST_DELAY_RANDOM_INTERVAL", (1000, 1000)):
+    with unittest.mock.patch.object(
+        multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (1000, 1000)
+    ):
         outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
