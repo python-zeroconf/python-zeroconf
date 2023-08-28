@@ -440,8 +440,8 @@ class Zeroconf(QuietLogger):
         # If another server uses the same addresses, we do not want to send
         # goodbye packets for the address records
 
-        assert info.server is not None
-        entries = self.registry.async_get_infos_server(info.server.lower())
+        assert info.server_key is not None
+        entries = self.registry.async_get_infos_server(info.server_key)
         broadcast_addresses = not bool(entries)
         return asyncio.ensure_future(
             self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
