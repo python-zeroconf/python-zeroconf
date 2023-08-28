@@ -472,7 +472,7 @@ class ServiceInfo(RecordUpdateListener):
             old_server_key = self.server_key
             self.name = record.name
             self.server = record.server
-            self.server_key = record.server.lower()
+            self.server_key = record.server_key
             self.port = record.port
             self.weight = record.weight
             self.priority = record.priority
