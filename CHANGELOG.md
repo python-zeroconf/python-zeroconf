@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.86.0 (2023-08-28)
+
+### Feature
+
+* Build wheels for cpython 3.12 ([#1239](https://github.com/python-zeroconf/python-zeroconf/issues/1239)) ([`58bc154`](https://github.com/python-zeroconf/python-zeroconf/commit/58bc154f55b06b4ddfc4a141592488abe76f062a))
+* Use server_key when processing DNSService records ([#1238](https://github.com/python-zeroconf/python-zeroconf/issues/1238)) ([`cc8feb1`](https://github.com/python-zeroconf/python-zeroconf/commit/cc8feb110fefc3fb714fd482a52f16e2b620e8c4))
+
 ## v0.85.0 (2023-08-27)
 
 ### Feature
