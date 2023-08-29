@@ -33,6 +33,8 @@ from ..const import _ADDRESS_RECORD_TYPES, _DNS_PTR_MIN_TTL, _TYPE_PTR
 if TYPE_CHECKING:
     from .._core import Zeroconf
 
+_float = float
+
 
 class RecordManager:
     """Process records into the cache and notify listeners."""
@@ -45,7 +47,7 @@ class RecordManager:
         self.cache = zeroconf.cache
         self.listeners: List[RecordUpdateListener] = []
 
-    def async_updates(self, now: float, records: List[RecordUpdate]) -> None:
+    def async_updates(self, now: _float, records: List[RecordUpdate]) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
@@ -81,6 +83,7 @@ class RecordManager:
         other_adds: List[DNSRecord] = []
         removes: Set[DNSRecord] = set()
         now = msg.now
+        now_float = now
         unique_types: Set[Tuple[str, int, int]] = set()
         cache = self.cache
 
@@ -108,11 +111,11 @@ class RecordManager:
                 record = cast(_UniqueRecordsType, record)
 
             maybe_entry = cache.async_get_unique(record)
-            if not record.is_expired(now):
+            if not record.is_expired(now_float):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
-                    if record.type in _ADDRESS_RECORD_TYPES:
+                    if record_type in _ADDRESS_RECORD_TYPES:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
@@ -146,7 +149,8 @@ class RecordManager:
         new = False
         if other_adds or address_adds:
             new = cache.async_add_records(address_adds)
-            new |= cache.async_add_records(other_adds)
+            if cache.async_add_records(other_adds):
+                new = True
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
