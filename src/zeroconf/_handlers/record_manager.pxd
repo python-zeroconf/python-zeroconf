@@ -14,9 +14,9 @@ cdef object _TYPE_PTR
 
 cdef class RecordManager:
 
-    cdef object zc
-    cdef DNSCache cache
-    cdef cython.list listeners
+    cdef public object zc
+    cdef public DNSCache cache
+    cdef public cython.list listeners
 
     cpdef async_updates(self, object now, object records)
 
