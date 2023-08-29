@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.88.0 (2023-08-29)
+
+### Feature
+
+* Speed up RecordManager with additional cython defs ([#1242](https://github.com/python-zeroconf/python-zeroconf/issues/1242)) ([`5a76fc5`](https://github.com/python-zeroconf/python-zeroconf/commit/5a76fc5ff74f2941ffbf7570e45390f35e0b7e01))
+
 ## v0.87.0 (2023-08-29)
 
 ### Feature
