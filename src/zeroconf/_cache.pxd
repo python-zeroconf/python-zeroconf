@@ -23,6 +23,12 @@ cdef class DNSCache:
     cdef public cython.dict cache
     cdef public cython.dict service_cache
 
+    cpdef async_add_records(self, object entries)
+
+    cpdef async_remove_records(self, object entries)
+
+    cpdef async_get_unique(self, DNSRecord entry)
+
     @cython.locals(
         records=cython.dict,
         record=DNSRecord,
@@ -32,6 +38,8 @@ cdef class DNSCache:
     cdef _async_add(self, DNSRecord record)
 
     cdef _async_remove(self, DNSRecord record)
+
+    cpdef async_mark_unique_records_older_than_1s_to_expire(self, object unique_types, object answers, object now)
 
     @cython.locals(
         record=DNSRecord,
