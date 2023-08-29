@@ -20,7 +20,6 @@
     USA
 """
 
-import itertools
 from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Union, cast
 
 from .._cache import _UniqueRecordsType
@@ -146,7 +145,8 @@ class RecordManager:
         # processsed.
         new = False
         if other_adds or address_adds:
-            new = cache.async_add_records(itertools.chain(address_adds, other_adds))
+            new = cache.async_add_records(address_adds)
+            new |= cache.async_add_records(other_adds)
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
