@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.87.0 (2023-08-29)
+
+### Feature
+
+* Improve performance by adding cython pxd for RecordManager ([#1241](https://github.com/python-zeroconf/python-zeroconf/issues/1241)) ([`a7dad3d`](https://github.com/python-zeroconf/python-zeroconf/commit/a7dad3d9743586f352e21eea1e129c6875f9a713))
+
 ## v0.86.0 (2023-08-28)
 
 ### Feature
