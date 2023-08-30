@@ -400,7 +400,7 @@ class Zeroconf(QuietLogger):
         #
         # _CLASS_UNIQUE is the "QU" bit
         out.add_question(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN | _CLASS_UNIQUE))
-        out.add_authorative_answer(info.dns_pointer(created=current_time_millis()))
+        out.add_authorative_answer(info.dns_pointer())
         return out
 
     def _add_broadcast_answer(  # pylint: disable=no-self-use
@@ -411,14 +411,14 @@ class Zeroconf(QuietLogger):
         broadcast_addresses: bool = True,
     ) -> None:
         """Add answers to broadcast a service."""
-        now = current_time_millis()
+        current_time_millis()
         other_ttl = info.other_ttl if override_ttl is None else override_ttl
         host_ttl = info.host_ttl if override_ttl is None else override_ttl
-        out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl, created=now), 0)
-        out.add_answer_at_time(info.dns_service(override_ttl=host_ttl, created=now), 0)
-        out.add_answer_at_time(info.dns_text(override_ttl=other_ttl, created=now), 0)
+        out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl), 0)
+        out.add_answer_at_time(info.dns_service(override_ttl=host_ttl), 0)
+        out.add_answer_at_time(info.dns_text(override_ttl=other_ttl), 0)
         if broadcast_addresses:
-            for record in info.get_address_and_nsec_records(override_ttl=host_ttl, created=now):
+            for record in info.get_address_and_nsec_records(override_ttl=host_ttl):
                 out.add_answer_at_time(record, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:

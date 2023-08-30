@@ -183,13 +183,13 @@ class QueryHandler:
         for service in self.registry.async_get_infos_type(lower_name):
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
-            dns_pointer = service.dns_pointer(created=now)
+            dns_pointer = service.dns_pointer()
             if known_answers.suppresses(dns_pointer):
                 continue
             answer_set[dns_pointer] = {
-                service.dns_service(created=now),
-                service.dns_text(created=now),
-            } | service.get_address_and_nsec_records(created=now)
+                service.dns_service(),
+                service.dns_text(),
+            } | service.get_address_and_nsec_records()
 
     def _add_address_answers(
         self,
@@ -204,7 +204,7 @@ class QueryHandler:
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             seen_types: Set[int] = set()
-            for dns_address in service.dns_addresses(created=now):
+            for dns_address in service.dns_addresses():
                 seen_types.add(dns_address.type)
                 if dns_address.type != type_:
                     additionals.add(dns_address)
@@ -214,12 +214,12 @@ class QueryHandler:
             if answers:
                 if missing_types:
                     assert service.server is not None, "Service server must be set for NSEC record."
-                    additionals.add(service.dns_nsec(list(missing_types), created=now))
+                    additionals.add(service.dns_nsec(list(missing_types)))
                 for answer in answers:
                     answer_set[answer] = additionals
             elif type_ in missing_types:
                 assert service.server is not None, "Service server must be set for NSEC record."
-                answer_set[service.dns_nsec(list(missing_types), created=now)] = set()
+                answer_set[service.dns_nsec(list(missing_types))] = set()
 
     def _answer_question(
         self,
@@ -248,11 +248,11 @@ class QueryHandler:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     # Add recommended additional answers according to
                     # https://tools.ietf.org/html/rfc6763#section-12.2.
-                    dns_service = service.dns_service(created=now)
+                    dns_service = service.dns_service()
                     if not known_answers.suppresses(dns_service):
-                        answer_set[dns_service] = service.get_address_and_nsec_records(created=now)
+                        answer_set[dns_service] = service.get_address_and_nsec_records()
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
-                    dns_text = service.dns_text(created=now)
+                    dns_text = service.dns_text()
                     if not known_answers.suppresses(dns_text):
                         answer_set[dns_text] = set()
 

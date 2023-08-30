@@ -487,7 +487,6 @@ class ServiceInfo(RecordUpdateListener):
         self,
         override_ttl: Optional[int] = None,
         version: IPVersion = IPVersion.All,
-        created: Optional[float] = None,
     ) -> List[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
         name = self.server or self._name
@@ -501,12 +500,12 @@ class ServiceInfo(RecordUpdateListener):
                 class_,
                 ttl,
                 ip_addr.packed,
-                created=created,
+                created=0,
             )
             for ip_addr in self._ip_addresses_by_version_value(version_value)
         ]
 
-    def dns_pointer(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSPointer:
+    def dns_pointer(self, override_ttl: Optional[int] = None) -> DNSPointer:
         """Return DNSPointer from ServiceInfo."""
         return DNSPointer(
             self.type,
@@ -514,10 +513,10 @@ class ServiceInfo(RecordUpdateListener):
             _CLASS_IN,
             override_ttl if override_ttl is not None else self.other_ttl,
             self._name,
-            created,
+            0,
         )
 
-    def dns_service(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSService:
+    def dns_service(self, override_ttl: Optional[int] = None) -> DNSService:
         """Return DNSService from ServiceInfo."""
         port = self.port
         if TYPE_CHECKING:
@@ -531,10 +530,10 @@ class ServiceInfo(RecordUpdateListener):
             self.weight,
             port,
             self.server or self._name,
-            created,
+            0,
         )
 
-    def dns_text(self, override_ttl: Optional[int] = None, created: Optional[float] = None) -> DNSText:
+    def dns_text(self, override_ttl: Optional[int] = None) -> DNSText:
         """Return DNSText from ServiceInfo."""
         return DNSText(
             self._name,
@@ -542,12 +541,10 @@ class ServiceInfo(RecordUpdateListener):
             _CLASS_IN_UNIQUE,
             override_ttl if override_ttl is not None else self.other_ttl,
             self.text,
-            created,
+            0,
         )
 
-    def dns_nsec(
-        self, missing_types: List[int], override_ttl: Optional[int] = None, created: Optional[float] = None
-    ) -> DNSNsec:
+    def dns_nsec(self, missing_types: List[int], override_ttl: Optional[int] = None) -> DNSNsec:
         """Return DNSNsec from ServiceInfo."""
         return DNSNsec(
             self._name,
@@ -556,21 +553,19 @@ class ServiceInfo(RecordUpdateListener):
             override_ttl if override_ttl is not None else self.host_ttl,
             self._name,
             missing_types,
-            created,
+            0,
         )
 
-    def get_address_and_nsec_records(
-        self, override_ttl: Optional[int] = None, created: Optional[float] = None
-    ) -> Set[DNSRecord]:
+    def get_address_and_nsec_records(self, override_ttl: Optional[int] = None) -> Set[DNSRecord]:
         """Build a set of address records and NSEC records for non-present record types."""
         missing_types: Set[int] = _ADDRESS_RECORD_TYPES.copy()
         records: Set[DNSRecord] = set()
-        for dns_address in self.dns_addresses(override_ttl, IPVersion.All, created):
+        for dns_address in self.dns_addresses(override_ttl, IPVersion.All):
             missing_types.discard(dns_address.type)
             records.add(dns_address)
         if missing_types:
             assert self.server is not None, "Service server must be set for NSEC record."
-            records.add(self.dns_nsec(list(missing_types), override_ttl, created))
+            records.add(self.dns_nsec(list(missing_types), override_ttl))
         return records
 
     def _get_address_records_from_cache_by_type(self, zc: 'Zeroconf', _type: int) -> List[DNSAddress]:
