@@ -55,6 +55,7 @@ class AsyncListener:
 
     __slots__ = (
         'zc',
+        '_record_manager',
         'data',
         'last_time',
         'last_message',
@@ -66,6 +67,7 @@ class AsyncListener:
 
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
+        self._record_manager = zc.record_manager
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.last_message: Optional[DNSIncoming] = None
@@ -156,7 +158,7 @@ class AsyncListener:
             return
 
         if not msg.is_query():
-            self.zc.record_manager.async_updates_from_response(msg)
+            self._record_manager.async_updates_from_response(msg)
             return
 
         self.handle_query_or_defer(msg, addr, port, self.transport, v6_flow_scope)
