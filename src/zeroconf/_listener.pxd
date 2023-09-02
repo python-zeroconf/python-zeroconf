@@ -9,6 +9,8 @@ cdef object logging_DEBUG
 from ._protocol.incoming cimport DNSIncoming
 
 
+cdef cython.uint _MAX_MSG_ABSOLUTE
+
 cdef class AsyncListener:
 
     cdef public object zc
