@@ -271,7 +271,7 @@ class QueryHandler:
         for msg in msgs:
             for question in msg.questions:
                 if not question.unicast:
-                    if not known_answers_set:
+                    if not known_answers_set:  # pragma: no branch
                         known_answers_set = set(known_answers.lookup)
                     self.question_history.add_question_at_time(question, msg.now, known_answers_set)
                 answer_set = self._answer_question(question, known_answers)
