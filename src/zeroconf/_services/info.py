@@ -523,7 +523,8 @@ class ServiceInfo(RecordUpdateListener):
 
     def dns_pointer(self, override_ttl: Optional[int] = None) -> DNSPointer:
         """Return DNSPointer from ServiceInfo."""
-        if self._dns_pointer_cache is not None and override_ttl is None:
+        cacheable = override_ttl is None
+        if self._dns_pointer_cache is not None and cacheable:
             return self._dns_pointer_cache
         record = DNSPointer(
             self.type,
@@ -533,12 +534,14 @@ class ServiceInfo(RecordUpdateListener):
             self._name,
             0,
         )
-        self._dns_pointer_cache = record
+        if cacheable:
+            self._dns_pointer_cache = record
         return record
 
     def dns_service(self, override_ttl: Optional[int] = None) -> DNSService:
         """Return DNSService from ServiceInfo."""
-        if self._dns_service_cache is not None and override_ttl is None:
+        cacheable = override_ttl is None
+        if self._dns_service_cache is not None and cacheable:
             return self._dns_service_cache
         port = self.port
         if TYPE_CHECKING:
@@ -554,12 +557,14 @@ class ServiceInfo(RecordUpdateListener):
             self.server or self._name,
             0,
         )
-        self._dns_service_cache = record
+        if cacheable:
+            self._dns_service_cache = record
         return record
 
     def dns_text(self, override_ttl: Optional[int] = None) -> DNSText:
         """Return DNSText from ServiceInfo."""
-        if self._dns_text_cache is not None and override_ttl is None:
+        cacheable = override_ttl is None
+        if self._dns_text_cache is not None and cacheable:
             return self._dns_text_cache
         record = DNSText(
             self._name,
@@ -569,7 +574,8 @@ class ServiceInfo(RecordUpdateListener):
             self.text,
             0,
         )
-        self._dns_text_cache = record
+        if cacheable:
+            self._dns_text_cache = record
         return record
 
     def dns_nsec(self, missing_types: List[int], override_ttl: Optional[int] = None) -> DNSNsec:
