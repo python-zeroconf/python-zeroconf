@@ -171,7 +171,7 @@ class QueryHandler:
         """
         for stype in self.registry.async_get_types():
             dns_pointer = DNSPointer(
-                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0
+                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0.0
             )
             if not known_answers.suppresses(dns_pointer):
                 answer_set[dns_pointer] = set()
