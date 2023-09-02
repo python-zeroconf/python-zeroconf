@@ -182,10 +182,11 @@ class AsyncListener:
                 return
         deferred.append(msg)
         delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
-        assert self.zc.loop is not None
+        loop = self.zc.loop
+        assert loop is not None
         self._cancel_any_timers_for_addr(addr)
-        self._timers[addr] = self.zc.loop.call_later(
-            delay, self._respond_query, None, addr, port, transport, v6_flow_scope
+        self._timers[addr] = loop.call_at(
+            loop.time() + delay, self._respond_query, None, addr, port, transport, v6_flow_scope
         )
 
     def _cancel_any_timers_for_addr(self, addr: _str) -> None:
