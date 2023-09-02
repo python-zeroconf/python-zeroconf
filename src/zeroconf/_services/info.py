@@ -133,6 +133,10 @@ class ServiceInfo(RecordUpdateListener):
         "other_ttl",
         "interface_index",
         "_new_records_futures",
+        "_dns_pointer_cache",
+        "_dns_service_cache",
+        "_dns_text_cache",
+        "_dns_address_cache",
     )
 
     def __init__(
@@ -180,6 +184,10 @@ class ServiceInfo(RecordUpdateListener):
         self.other_ttl = other_ttl
         self.interface_index = interface_index
         self._new_records_futures: Set[asyncio.Future] = set()
+        self._dns_address_cache: Optional[List[DNSAddress]] = None
+        self._dns_pointer_cache: Optional[DNSPointer] = None
+        self._dns_service_cache: Optional[DNSService] = None
+        self._dns_text_cache: Optional[DNSText] = None
 
     @property
     def name(self) -> str:
@@ -491,11 +499,14 @@ class ServiceInfo(RecordUpdateListener):
         version: IPVersion = IPVersion.All,
     ) -> List[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
+        cacheable = version is IPVersion.All and override_ttl is None
+        if self._dns_address_cache is not None and cacheable:
+            return self._dns_address_cache
         name = self.server or self._name
         ttl = override_ttl if override_ttl is not None else self.host_ttl
         class_ = _CLASS_IN_UNIQUE
         version_value = version.value
-        return [
+        records = [
             DNSAddress(
                 name,
                 _TYPE_AAAA if type(ip_addr) is IPv6Address else _TYPE_A,
@@ -506,10 +517,15 @@ class ServiceInfo(RecordUpdateListener):
             )
             for ip_addr in self._ip_addresses_by_version_value(version_value)
         ]
+        if cacheable:
+            self._dns_address_cache = records
+        return records
 
     def dns_pointer(self, override_ttl: Optional[int] = None) -> DNSPointer:
         """Return DNSPointer from ServiceInfo."""
-        return DNSPointer(
+        if self._dns_pointer_cache is not None and override_ttl is None:
+            return self._dns_pointer_cache
+        record = DNSPointer(
             self.type,
             _TYPE_PTR,
             _CLASS_IN,
@@ -517,13 +533,17 @@ class ServiceInfo(RecordUpdateListener):
             self._name,
             0,
         )
+        self._dns_pointer_cache = record
+        return record
 
     def dns_service(self, override_ttl: Optional[int] = None) -> DNSService:
         """Return DNSService from ServiceInfo."""
+        if self._dns_service_cache is not None and override_ttl is None:
+            return self._dns_service_cache
         port = self.port
         if TYPE_CHECKING:
             assert isinstance(port, int)
-        return DNSService(
+        record = DNSService(
             self._name,
             _TYPE_SRV,
             _CLASS_IN_UNIQUE,
@@ -534,10 +554,14 @@ class ServiceInfo(RecordUpdateListener):
             self.server or self._name,
             0,
         )
+        self._dns_service_cache = record
+        return record
 
     def dns_text(self, override_ttl: Optional[int] = None) -> DNSText:
         """Return DNSText from ServiceInfo."""
-        return DNSText(
+        if self._dns_text_cache is not None and override_ttl is None:
+            return self._dns_text_cache
+        record = DNSText(
             self._name,
             _TYPE_TXT,
             _CLASS_IN_UNIQUE,
@@ -545,6 +569,8 @@ class ServiceInfo(RecordUpdateListener):
             self.text,
             0,
         )
+        self._dns_text_cache = record
+        return record
 
     def dns_nsec(self, missing_types: List[int], override_ttl: Optional[int] = None) -> DNSNsec:
         """Return DNSNsec from ServiceInfo."""
