@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.91.1 (2023-09-02)
+
+### Fix
+
+* Remove useless calls in ServiceInfo ([#1248](https://github.com/python-zeroconf/python-zeroconf/issues/1248)) ([`4e40fae`](https://github.com/python-zeroconf/python-zeroconf/commit/4e40fae20bf50b4608e28fad4a360c4ed48ac86b))
+
 ## v0.91.0 (2023-09-02)
 
 ### Feature
