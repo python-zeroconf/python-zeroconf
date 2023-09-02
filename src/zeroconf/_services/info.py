@@ -579,7 +579,11 @@ class ServiceInfo(RecordUpdateListener):
         """Get the addresses from the cache."""
         if self.server_key is None:
             return []
-        return cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
+        if TYPE_CHECKING:
+            records = cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
+        else:
+            records = zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN)
+        return records
 
     def set_server_if_missing(self) -> None:
         """Set the server if it is missing.
