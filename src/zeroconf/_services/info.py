@@ -471,7 +471,8 @@ class ServiceInfo(RecordUpdateListener):
             if TYPE_CHECKING:
                 assert isinstance(record, DNSService)
             old_server_key = self.server_key
-            self.name = record.name
+            self._name = record.name
+            self.key = record.key
             self.server = record.server
             self.server_key = record.server_key
             self.port = record.port
