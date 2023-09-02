@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.92.0 (2023-09-02)
+
+### Feature
+
+* Cache construction of records used to answer queries from the service registry ([#1243](https://github.com/python-zeroconf/python-zeroconf/issues/1243)) ([`0890f62`](https://github.com/python-zeroconf/python-zeroconf/commit/0890f628dbbd577fb77d3e6f2e267052b2b2b515))
+
 ## v0.91.1 (2023-09-02)
 
 ### Fix
