@@ -412,8 +412,8 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Add answers to broadcast a service."""
         current_time_millis()
-        other_ttl = info.other_ttl if override_ttl is None else override_ttl
-        host_ttl = info.host_ttl if override_ttl is None else override_ttl
+        other_ttl = None if override_ttl is None else override_ttl
+        host_ttl = None if override_ttl is None else override_ttl
         out.add_answer_at_time(info.dns_pointer(override_ttl=other_ttl), 0)
         out.add_answer_at_time(info.dns_service(override_ttl=host_ttl), 0)
         out.add_answer_at_time(info.dns_text(override_ttl=other_ttl), 0)
