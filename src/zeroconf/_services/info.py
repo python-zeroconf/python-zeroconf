@@ -199,6 +199,9 @@ class ServiceInfo(RecordUpdateListener):
         """Replace the the name and reset the key."""
         self._name = name
         self.key = name.lower()
+        self._dns_service_cache = None
+        self._dns_pointer_cache = None
+        self._dns_text_cache = None
 
     @property
     def addresses(self) -> List[bytes]:
