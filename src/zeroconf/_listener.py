@@ -38,6 +38,8 @@ _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
 
 _bytes = bytes
+_str = str
+_int = int
 
 logging_DEBUG = logging.DEBUG
 
@@ -110,10 +112,13 @@ class AsyncListener:
                 )
             return
 
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         if len(addrs) == 2:
+            v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
             # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
+            addr_port = addrs
+            if TYPE_CHECKING:
+                addr_port = cast(Tuple[str, int], addr_port)
             scope = None
         else:
             # https://github.com/python/mypy/issues/1178
@@ -121,8 +126,9 @@ class AsyncListener:
             if debug:  # pragma: no branch
                 log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
+            addr_port = (addr, port)
 
-        msg = DNSIncoming(data, (addr, port), scope, now)
+        msg = DNSIncoming(data, addr_port, scope, now)
         self.data = data
         self.last_time = now
         self.last_message = msg
@@ -176,13 +182,14 @@ class AsyncListener:
                 return
         deferred.append(msg)
         delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
-        assert self.zc.loop is not None
+        loop = self.zc.loop
+        assert loop is not None
         self._cancel_any_timers_for_addr(addr)
-        self._timers[addr] = self.zc.loop.call_later(
-            delay, self._respond_query, None, addr, port, transport, v6_flow_scope
+        self._timers[addr] = loop.call_at(
+            loop.time() + delay, self._respond_query, None, addr, port, transport, v6_flow_scope
         )
 
-    def _cancel_any_timers_for_addr(self, addr: str) -> None:
+    def _cancel_any_timers_for_addr(self, addr: _str) -> None:
         """Cancel any future truncated packet timers for the address."""
         if addr in self._timers:
             self._timers.pop(addr).cancel()
@@ -190,8 +197,8 @@ class AsyncListener:
     def _respond_query(
         self,
         msg: Optional[DNSIncoming],
-        addr: str,
-        port: int,
+        addr: _str,
+        port: _int,
         transport: _WrappedTransport,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
