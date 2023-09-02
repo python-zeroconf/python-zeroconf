@@ -218,6 +218,7 @@ class ServiceInfo(RecordUpdateListener):
         """
         self._ipv4_addresses.clear()
         self._ipv6_addresses.clear()
+        self._dns_address_cache = None
 
         for address in value:
             try:
