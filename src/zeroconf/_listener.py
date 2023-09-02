@@ -110,10 +110,13 @@ class AsyncListener:
                 )
             return
 
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
         if len(addrs) == 2:
+            v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
             # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
+            addr_port = addrs
+            if TYPE_CHECKING:
+                addr_port = cast(Tuple[str, int], addr_port)
             scope = None
         else:
             # https://github.com/python/mypy/issues/1178
@@ -121,8 +124,9 @@ class AsyncListener:
             if debug:  # pragma: no branch
                 log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
             v6_flow_scope = (flow, scope)
+            addr_port = (addr, port)
 
-        msg = DNSIncoming(data, (addr, port), scope, now)
+        msg = DNSIncoming(data, addr_port, scope, now)
         self.data = data
         self.last_time = now
         self.last_message = msg
