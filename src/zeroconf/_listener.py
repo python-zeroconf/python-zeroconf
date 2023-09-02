@@ -38,6 +38,8 @@ _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
 
 _bytes = bytes
+_str = str
+_int = int
 
 logging_DEBUG = logging.DEBUG
 
@@ -186,7 +188,7 @@ class AsyncListener:
             delay, self._respond_query, None, addr, port, transport, v6_flow_scope
         )
 
-    def _cancel_any_timers_for_addr(self, addr: str) -> None:
+    def _cancel_any_timers_for_addr(self, addr: _str) -> None:
         """Cancel any future truncated packet timers for the address."""
         if addr in self._timers:
             self._timers.pop(addr).cancel()
@@ -194,8 +196,8 @@ class AsyncListener:
     def _respond_query(
         self,
         msg: Optional[DNSIncoming],
-        addr: str,
-        port: int,
+        addr: _str,
+        port: _int,
         transport: _WrappedTransport,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
     ) -> None:
