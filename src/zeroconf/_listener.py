@@ -156,7 +156,7 @@ class AsyncListener:
             return
 
         if not msg.is_query():
-            self.zc.handle_response(msg)
+            self.zc.record_manager.async_updates_from_response(msg)
             return
 
         self.handle_query_or_defer(msg, addr, port, self.transport, v6_flow_scope)
