@@ -23,6 +23,8 @@
 
 import time
 
+_float = float
+
 
 def current_time_millis() -> float:
     """Current time in milliseconds.
@@ -33,6 +35,6 @@ def current_time_millis() -> float:
     return time.monotonic() * 1000
 
 
-def millis_to_seconds(millis: float) -> float:
+def millis_to_seconds(millis: _float) -> float:
     """Convert milliseconds to seconds."""
     return millis / 1000.0
