@@ -517,7 +517,7 @@ class ServiceInfo(RecordUpdateListener):
                 class_,
                 ttl,
                 ip_addr.packed,
-                created=0,
+                created=0.0,
             )
             for ip_addr in self._ip_addresses_by_version_value(version_value)
         ]
@@ -536,7 +536,7 @@ class ServiceInfo(RecordUpdateListener):
             _CLASS_IN,
             override_ttl if override_ttl is not None else self.other_ttl,
             self._name,
-            0,
+            0.0,
         )
         if cacheable:
             self._dns_pointer_cache = record
@@ -559,7 +559,7 @@ class ServiceInfo(RecordUpdateListener):
             self.weight,
             port,
             self.server or self._name,
-            0,
+            0.0,
         )
         if cacheable:
             self._dns_service_cache = record
@@ -576,7 +576,7 @@ class ServiceInfo(RecordUpdateListener):
             _CLASS_IN_UNIQUE,
             override_ttl if override_ttl is not None else self.other_ttl,
             self.text,
-            0,
+            0.0,
         )
         if cacheable:
             self._dns_text_cache = record
@@ -591,7 +591,7 @@ class ServiceInfo(RecordUpdateListener):
             override_ttl if override_ttl is not None else self.host_ttl,
             self._name,
             missing_types,
-            0,
+            0.0,
         )
 
     def get_address_and_nsec_records(self, override_ttl: Optional[int] = None) -> Set[DNSRecord]:
