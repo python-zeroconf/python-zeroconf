@@ -109,19 +109,20 @@ class _QueryResponse:
             else:
                 self._mcast_aggregate.add(answer)
 
-    def _generate_answers_with_additionals(self, rrset: Set[DNSRecord]) -> _AnswerWithAdditionalsType:
-        """Create answers with additionals from an rrset."""
-        return {record: self._additionals[record] for record in rrset}
-
     def answers(
         self,
     ) -> QuestionAnswers:
         """Return answer sets that will be queued."""
         return QuestionAnswers(
-            self._generate_answers_with_additionals(self._ucast),
-            self._generate_answers_with_additionals(self._mcast_now),
-            self._generate_answers_with_additionals(self._mcast_aggregate),
-            self._generate_answers_with_additionals(self._mcast_aggregate_last_second),
+            *(
+                {record: self._additionals[record] for record in rrset}
+                for rrset in (
+                    self._ucast,
+                    self._mcast_now,
+                    self._mcast_aggregate,
+                    self._mcast_aggregate_last_second,
+                )
+            )
         )
 
     def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord) -> bool:
