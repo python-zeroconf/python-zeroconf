@@ -1,12 +1,12 @@
 
 import cython
 
+from ._protocol.incoming cimport DNSIncoming
+from ._utils.time cimport current_time_millis, millis_to_seconds
 
-cdef object millis_to_seconds
+
 cdef object log
 cdef object logging_DEBUG
-
-from ._protocol.incoming cimport DNSIncoming
 
 
 cdef class AsyncListener:
