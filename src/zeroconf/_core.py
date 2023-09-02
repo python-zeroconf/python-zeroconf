@@ -564,6 +564,7 @@ class Zeroconf(QuietLogger):
     def handle_response(self, msg: DNSIncoming) -> None:
         """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified."""
+        self.log_warning_once("handle_response is deprecated, use record_manager.async_updates_from_response")
         self.record_manager.async_updates_from_response(msg)
 
     def handle_assembled_query(

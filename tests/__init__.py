@@ -42,7 +42,7 @@ def _inject_responses(zc: Zeroconf, msgs: List[DNSIncoming]) -> None:
 
     async def _wait_for_response():
         for msg in msgs:
-            zc.handle_response(msg)
+            zc.record_manager.async_updates_from_response(msg)
 
     asyncio.run_coroutine_threadsafe(_wait_for_response(), zc.loop).result()
 

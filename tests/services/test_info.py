@@ -903,7 +903,7 @@ async def test_release_wait_when_new_recorded_added():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     assert await asyncio.wait_for(task, timeout=2)
     assert info.addresses == [b'\x7f\x00\x00\x01']
     await aiozc.async_close()
@@ -966,7 +966,7 @@ async def test_port_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     generated.add_answer_at_time(
@@ -982,7 +982,7 @@ async def test_port_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1049,7 +1049,7 @@ async def test_port_changes_are_seen_with_directed_request():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     generated.add_answer_at_time(
@@ -1065,7 +1065,7 @@ async def test_port_changes_are_seen_with_directed_request():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
     await info.async_request(aiozc.zeroconf, timeout=200, addr="127.0.0.1", port=5353)
@@ -1131,7 +1131,7 @@ async def test_ipv4_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x01']
@@ -1147,7 +1147,7 @@ async def test_ipv4_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
@@ -1213,7 +1213,7 @@ async def test_ipv6_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V6Only) == [
@@ -1231,7 +1231,7 @@ async def test_ipv6_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
@@ -1295,7 +1295,7 @@ async def test_bad_ip_addresses_ignored_in_cache():
 
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x01']
@@ -1354,7 +1354,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1374,7 +1374,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1426,7 +1426,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1456,7 +1456,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1530,7 +1530,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
     await asyncio.sleep(0)
     for task in tasks:
         assert not task.done()
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     _, pending = await asyncio.wait(tasks, timeout=2)
     assert not pending
     assert info.addresses == [b'\x7f\x00\x00\x01']

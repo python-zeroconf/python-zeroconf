@@ -1,6 +1,7 @@
 
 import cython
 
+from ._handlers.record_manager cimport RecordManager
 from ._protocol.incoming cimport DNSIncoming
 from ._utils.time cimport current_time_millis, millis_to_seconds
 
@@ -12,9 +13,12 @@ cdef object TYPE_CHECKING
 cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 
+
+
 cdef class AsyncListener:
 
     cdef public object zc
+    cdef RecordManager _record_manager
     cdef public cython.bytes data
     cdef public cython.float last_time
     cdef public DNSIncoming last_message
