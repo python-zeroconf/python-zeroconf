@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.89.0 (2023-09-02)
+
+### Feature
+
+* Reduce overhead to process incoming questions ([#1244](https://github.com/python-zeroconf/python-zeroconf/issues/1244)) ([`18b65d1`](https://github.com/python-zeroconf/python-zeroconf/commit/18b65d1c75622869b0c29258215d3db3ae520d6c))
+
 ## v0.88.0 (2023-08-29)
 
 ### Feature
