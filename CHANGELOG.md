@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.90.0 (2023-09-02)
+
+### Feature
+
+* Avoid python float conversion in listener hot path ([#1245](https://github.com/python-zeroconf/python-zeroconf/issues/1245)) ([`816ad4d`](https://github.com/python-zeroconf/python-zeroconf/commit/816ad4dceb3859bad4bb136bdb1d1ee2daa0bf5a))
+
 ## v0.89.0 (2023-09-02)
 
 ### Feature
