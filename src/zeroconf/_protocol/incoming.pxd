@@ -70,6 +70,10 @@ cdef class DNSIncoming:
     )
     cpdef has_qu_question(self)
 
+    cpdef is_query(self)
+
+    cpdef is_response(self)
+
     @cython.locals(
         off=cython.uint,
         label_idx=cython.uint,

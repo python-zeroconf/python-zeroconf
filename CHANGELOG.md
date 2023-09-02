@@ -2,6 +2,30 @@
 
 <!--next-version-placeholder-->
 
+## v0.91.1 (2023-09-02)
+
+### Fix
+
+* Remove useless calls in ServiceInfo ([#1248](https://github.com/python-zeroconf/python-zeroconf/issues/1248)) ([`4e40fae`](https://github.com/python-zeroconf/python-zeroconf/commit/4e40fae20bf50b4608e28fad4a360c4ed48ac86b))
+
+## v0.91.0 (2023-09-02)
+
+### Feature
+
+* Reduce overhead to process incoming updates by avoiding the handle_response shim ([#1247](https://github.com/python-zeroconf/python-zeroconf/issues/1247)) ([`5e31f0a`](https://github.com/python-zeroconf/python-zeroconf/commit/5e31f0afe4c341fbdbbbe50348a829ea553cbda0))
+
+## v0.90.0 (2023-09-02)
+
+### Feature
+
+* Avoid python float conversion in listener hot path ([#1245](https://github.com/python-zeroconf/python-zeroconf/issues/1245)) ([`816ad4d`](https://github.com/python-zeroconf/python-zeroconf/commit/816ad4dceb3859bad4bb136bdb1d1ee2daa0bf5a))
+
+## v0.89.0 (2023-09-02)
+
+### Feature
+
+* Reduce overhead to process incoming questions ([#1244](https://github.com/python-zeroconf/python-zeroconf/issues/1244)) ([`18b65d1`](https://github.com/python-zeroconf/python-zeroconf/commit/18b65d1c75622869b0c29258215d3db3ae520d6c))
+
 ## v0.88.0 (2023-08-29)
 
 ### Feature

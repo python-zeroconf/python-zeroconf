@@ -105,7 +105,7 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(apple_p2p=True)
         rv.close()
 
-    def test_handle_response(self):
+    def test_async_updates_from_response(self):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
             ttl = 120
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)

@@ -1423,7 +1423,7 @@ async def test_response_aggregation_timings(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
+        zc.record_manager.async_updates_from_response(incoming)
         assert info.dns_pointer() in incoming.answers
         assert info2.dns_pointer() in incoming.answers
         send_mock.reset_mock()
@@ -1437,7 +1437,7 @@ async def test_response_aggregation_timings(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
+        zc.record_manager.async_updates_from_response(incoming)
         assert info3.dns_pointer() in incoming.answers
         send_mock.reset_mock()
 
@@ -1499,7 +1499,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
+        zc.record_manager.async_updates_from_response(incoming)
         assert info2.dns_pointer() in incoming.answers
 
         send_mock.reset_mock()
@@ -1509,7 +1509,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
+        zc.record_manager.async_updates_from_response(incoming)
         assert info2.dns_pointer() in incoming.answers
 
         send_mock.reset_mock()
@@ -1532,7 +1532,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
+        zc.record_manager.async_updates_from_response(incoming)
         assert info2.dns_pointer() in incoming.answers
 
 

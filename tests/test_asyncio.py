@@ -1192,6 +1192,7 @@ async def test_service_browser_ignores_unrelated_updates():
         0,
     )
 
+    zc.record_manager.async_updates_from_response(DNSIncoming(generated.packets()[0]))
     zc.handle_response(DNSIncoming(generated.packets()[0]))
 
     await browser.async_cancel()
