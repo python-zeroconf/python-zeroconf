@@ -163,7 +163,7 @@ class QueryHandler:
         self.question_history = question_history
 
     def _add_service_type_enumeration_query_answers(
-        self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
+        self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
     ) -> None:
         """Provide an answer to a service type enumeration query.
 
@@ -171,13 +171,13 @@ class QueryHandler:
         """
         for stype in self.registry.async_get_types():
             dns_pointer = DNSPointer(
-                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, now
+                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0
             )
             if not known_answers.suppresses(dns_pointer):
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
-        self, lower_name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
+        self, lower_name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
     ) -> None:
         """Answer PTR/ANY question."""
         for service in self.registry.async_get_infos_type(lower_name):
@@ -196,7 +196,6 @@ class QueryHandler:
         lower_name: str,
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
-        now: float,
         type_: int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
@@ -231,16 +230,16 @@ class QueryHandler:
         question_lower_name = question.name.lower()
 
         if question.type == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
-            self._add_service_type_enumeration_query_answers(answer_set, known_answers, now)
+            self._add_service_type_enumeration_query_answers(answer_set, known_answers)
             return answer_set
 
         type_ = question.type
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
-            self._add_pointer_answers(question_lower_name, answer_set, known_answers, now)
+            self._add_pointer_answers(question_lower_name, answer_set, known_answers)
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
-            self._add_address_answers(question_lower_name, answer_set, known_answers, now, type_)
+            self._add_address_answers(question_lower_name, answer_set, known_answers, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
             service = self.registry.async_get_info_name(question_lower_name)
