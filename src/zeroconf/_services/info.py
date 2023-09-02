@@ -427,7 +427,10 @@ class ServiceInfo(RecordUpdateListener):
             return False
 
         record_key = record.key
-        if record_key == self.server_key and type(record) is DNSAddress:
+        record_type = type(record)
+        if record_key == self.server_key and record_type is DNSAddress:
+            if TYPE_CHECKING:
+                assert isinstance(record, DNSAddress)
             try:
                 ip_addr = _cached_ip_addresses(record.address)
             except ValueError as ex:
@@ -435,9 +438,6 @@ class ServiceInfo(RecordUpdateListener):
                 return False
 
             if type(ip_addr) is IPv4Address:
-                if self._ipv4_addresses:
-                    self._set_ipv4_addresses_from_cache(zc, now)
-
                 ipv4_addresses = self._ipv4_addresses
                 if ip_addr not in ipv4_addresses:
                     ipv4_addresses.insert(0, ip_addr)
@@ -447,9 +447,6 @@ class ServiceInfo(RecordUpdateListener):
                     ipv4_addresses.insert(0, ip_addr)
 
                 return False
-
-            if not self._ipv6_addresses:
-                self._set_ipv6_addresses_from_cache(zc, now)
 
             ipv6_addresses = self._ipv6_addresses
             if ip_addr not in self._ipv6_addresses:
@@ -464,13 +461,18 @@ class ServiceInfo(RecordUpdateListener):
         if record_key != self.key:
             return False
 
-        if record.type == _TYPE_TXT and type(record) is DNSText:
+        if record_type is DNSText:
+            if TYPE_CHECKING:
+                assert isinstance(record, DNSText)
             self._set_text(record.text)
             return True
 
-        if record.type == _TYPE_SRV and type(record) is DNSService:
+        if record_type is DNSService:
+            if TYPE_CHECKING:
+                assert isinstance(record, DNSService)
             old_server_key = self.server_key
-            self.name = record.name
+            self._name = record.name
+            self.key = record.key
             self.server = record.server
             self.server_key = record.server_key
             self.port = record.port
@@ -577,7 +579,11 @@ class ServiceInfo(RecordUpdateListener):
         """Get the addresses from the cache."""
         if self.server_key is None:
             return []
-        return cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
+        if TYPE_CHECKING:
+            records = cast("List[DNSAddress]", zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN))
+        else:
+            records = zc.cache.get_all_by_details(self.server_key, _type, _CLASS_IN)
+        return records
 
     def set_server_if_missing(self) -> None:
         """Set the server if it is missing.
