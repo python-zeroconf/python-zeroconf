@@ -7,7 +7,7 @@ from ._utils.time cimport current_time_millis, millis_to_seconds
 
 cdef object log
 cdef object logging_DEBUG
-
+cdef object TYPE_CHECKING
 
 cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
