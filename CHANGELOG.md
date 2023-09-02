@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.91.0 (2023-09-02)
+
+### Feature
+
+* Reduce overhead to process incoming updates by avoiding the handle_response shim ([#1247](https://github.com/python-zeroconf/python-zeroconf/issues/1247)) ([`5e31f0a`](https://github.com/python-zeroconf/python-zeroconf/commit/5e31f0afe4c341fbdbbbe50348a829ea553cbda0))
+
 ## v0.90.0 (2023-09-02)
 
 ### Feature
