@@ -792,6 +792,8 @@ def test_service_browser_is_aware_of_port_changes():
     assert service_info.port == 80
 
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),
@@ -856,6 +858,8 @@ def test_service_browser_listeners_update_service():
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
     )
     time.sleep(0.2)
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     info.port = 400
     _inject_response(
         zc,
@@ -914,6 +918,8 @@ def test_service_browser_listeners_no_update_service():
     )
     time.sleep(0.2)
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),
@@ -1131,6 +1137,8 @@ def test_service_browser_matching():
     )
     time.sleep(0.2)
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),
@@ -1210,6 +1218,8 @@ def test_service_browser_expire_callbacks():
     )
     time.sleep(0.3)
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),

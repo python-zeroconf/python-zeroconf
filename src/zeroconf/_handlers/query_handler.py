@@ -163,7 +163,7 @@ class QueryHandler:
         self.question_history = question_history
 
     def _add_service_type_enumeration_query_answers(
-        self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
+        self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
     ) -> None:
         """Provide an answer to a service type enumeration query.
 
@@ -171,32 +171,31 @@ class QueryHandler:
         """
         for stype in self.registry.async_get_types():
             dns_pointer = DNSPointer(
-                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, now
+                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0.0
             )
             if not known_answers.suppresses(dns_pointer):
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
-        self, lower_name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet, now: float
+        self, lower_name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
     ) -> None:
         """Answer PTR/ANY question."""
         for service in self.registry.async_get_infos_type(lower_name):
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
-            dns_pointer = service.dns_pointer(created=now)
+            dns_pointer = service.dns_pointer()
             if known_answers.suppresses(dns_pointer):
                 continue
             answer_set[dns_pointer] = {
-                service.dns_service(created=now),
-                service.dns_text(created=now),
-            } | service.get_address_and_nsec_records(created=now)
+                service.dns_service(),
+                service.dns_text(),
+            } | service.get_address_and_nsec_records()
 
     def _add_address_answers(
         self,
         lower_name: str,
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
-        now: float,
         type_: int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
@@ -204,7 +203,7 @@ class QueryHandler:
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             seen_types: Set[int] = set()
-            for dns_address in service.dns_addresses(created=now):
+            for dns_address in service.dns_addresses():
                 seen_types.add(dns_address.type)
                 if dns_address.type != type_:
                     additionals.add(dns_address)
@@ -214,12 +213,12 @@ class QueryHandler:
             if answers:
                 if missing_types:
                     assert service.server is not None, "Service server must be set for NSEC record."
-                    additionals.add(service.dns_nsec(list(missing_types), created=now))
+                    additionals.add(service.dns_nsec(list(missing_types)))
                 for answer in answers:
                     answer_set[answer] = additionals
             elif type_ in missing_types:
                 assert service.server is not None, "Service server must be set for NSEC record."
-                answer_set[service.dns_nsec(list(missing_types), created=now)] = set()
+                answer_set[service.dns_nsec(list(missing_types))] = set()
 
     def _answer_question(
         self,
@@ -231,16 +230,16 @@ class QueryHandler:
         question_lower_name = question.name.lower()
 
         if question.type == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
-            self._add_service_type_enumeration_query_answers(answer_set, known_answers, now)
+            self._add_service_type_enumeration_query_answers(answer_set, known_answers)
             return answer_set
 
         type_ = question.type
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
-            self._add_pointer_answers(question_lower_name, answer_set, known_answers, now)
+            self._add_pointer_answers(question_lower_name, answer_set, known_answers)
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
-            self._add_address_answers(question_lower_name, answer_set, known_answers, now, type_)
+            self._add_address_answers(question_lower_name, answer_set, known_answers, type_)
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
             service = self.registry.async_get_info_name(question_lower_name)
@@ -248,11 +247,11 @@ class QueryHandler:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     # Add recommended additional answers according to
                     # https://tools.ietf.org/html/rfc6763#section-12.2.
-                    dns_service = service.dns_service(created=now)
+                    dns_service = service.dns_service()
                     if not known_answers.suppresses(dns_service):
-                        answer_set[dns_service] = service.get_address_and_nsec_records(created=now)
+                        answer_set[dns_service] = service.get_address_and_nsec_records()
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
-                    dns_text = service.dns_text(created=now)
+                    dns_text = service.dns_text()
                     if not known_answers.suppresses(dns_text):
                         answer_set[dns_text] = set()
 
