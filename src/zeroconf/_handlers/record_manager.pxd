@@ -11,7 +11,7 @@ cdef object _ADDRESS_RECORD_TYPES
 cdef object RecordUpdate
 cdef object TYPE_CHECKING
 cdef object _TYPE_PTR
-cdef object RecordUpdateListener
+
 
 cdef class RecordManager:
 
