@@ -237,8 +237,8 @@ class DNSCache:
         # and rrclass that were received more than one second ago are declared
         # invalid, and marked to expire from the cache in one second.
         answers_rrset = set(answers)
-        for name_type_class in unique_types:
-            for record in self.async_all_by_details(*name_type_class):
+        for name, type_, class_ in unique_types:
+            for record in self.async_all_by_details(name, type_, class_):
                 created_float = record.created
                 if (now - created_float > _ONE_SECOND) and record not in answers_rrset:
                     # Expire in 1s
