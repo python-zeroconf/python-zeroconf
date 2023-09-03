@@ -45,7 +45,7 @@ class RecordManager:
         """Init the record manager."""
         self.zc = zeroconf
         self.cache = zeroconf.cache
-        self.listeners: List[RecordUpdateListener] = []
+        self.listeners: Set[RecordUpdateListener] = set()
 
     def async_updates(self, now: _float, records: List[RecordUpdate]) -> None:
         """Used to notify listeners of new information that has updated
@@ -175,7 +175,7 @@ class RecordManager:
                 " In the future this will fail"
             )
 
-        self.listeners.append(listener)
+        self.listeners.add(listener)
 
         if question is None:
             return

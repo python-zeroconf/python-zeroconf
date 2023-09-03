@@ -12,11 +12,12 @@ cdef object RecordUpdate
 cdef object TYPE_CHECKING
 cdef object _TYPE_PTR
 
+
 cdef class RecordManager:
 
     cdef public object zc
     cdef public DNSCache cache
-    cdef public cython.list listeners
+    cdef public cython.set listeners
 
     cpdef async_updates(self, object now, object records)
 
@@ -29,3 +30,7 @@ cdef class RecordManager:
         now_float=cython.float
     )
     cpdef async_updates_from_response(self, DNSIncoming msg)
+
+    cpdef async_add_listener(self, object listener, object question)
+
+    cpdef async_remove_listener(self, object listener)
