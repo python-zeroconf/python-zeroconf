@@ -71,5 +71,3 @@ cdef class DNSCache:
         created_float=cython.float,
     )
     cpdef async_mark_unique_records_older_than_1s_to_expire(self, cython.set unique_types, object answers, float now)
-
-cdef _dns_record_matches(DNSRecord record, object key, object type_, object class_)
