@@ -16,3 +16,11 @@ cdef class ServiceRegistry:
     cdef _add(self, object info)
 
     cdef _remove(self, cython.list infos)
+
+    cpdef async_get_info_name(self, str name)
+
+    cpdef async_get_types(self)
+
+    cpdef async_get_infos_type(self, str type_)
+
+    cpdef async_get_infos_server(self, str server)
