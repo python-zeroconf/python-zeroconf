@@ -86,8 +86,9 @@ class RecordManager:
         now_float = now
         unique_types: Set[Tuple[str, int, int]] = set()
         cache = self.cache
+        answers = msg.answers
 
-        for record in msg.answers:
+        for record in answers:
             # Protect zeroconf from records that can cause denial of service.
             #
             # We enforce a minimum TTL for PTR records to avoid
@@ -127,7 +128,7 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, msg.answers, now)
+            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now)
 
         if updates:
             self.async_updates(now, updates)
