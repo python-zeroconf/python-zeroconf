@@ -147,7 +147,7 @@ class DNSCache:
         if records is None:
             return matches
         for record in records:
-            if _dns_record_matches(record, key, type_, class_):
+            if type_ == record.type and class_ == record.class_:
                 matches.append(record)
         return matches
 
@@ -181,7 +181,7 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
+    def get_by_details(self, name: str, type_: _int, class_: _int) -> Optional[DNSRecord]:
         """Gets the first matching entry by details. Returns None if no entries match.
 
         Calling this function is not recommended as it will only
@@ -194,17 +194,21 @@ class DNSCache:
         Use get_all_by_details instead.
         """
         key = name.lower()
-        for cached_entry in reversed(list(self.cache.get(key, []))):
-            if _dns_record_matches(cached_entry, key, type_, class_):
+        records = self.cache.get(key)
+        if records is None:
+            return None
+        for cached_entry in reversed(list(records)):
+            if type_ == cached_entry.type and class_ == cached_entry.class_:
                 return cached_entry
         return None
 
-    def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
+    def get_all_by_details(self, name: str, type_: _int, class_: _int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
         key = name.lower()
-        return [
-            entry for entry in list(self.cache.get(key, [])) if _dns_record_matches(entry, key, type_, class_)
-        ]
+        records = self.cache.get(key)
+        if records is None:
+            return []
+        return [entry for entry in list(records) if type_ == entry.type and class_ == entry.class_]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
@@ -243,7 +247,3 @@ class DNSCache:
                 if (now - created_float > _ONE_SECOND) and record not in answers_rrset:
                     # Expire in 1s
                     record.set_created_ttl(now, 1)
-
-
-def _dns_record_matches(record: _DNSRecord, key: _str, type_: _int, class_: _int) -> bool:
-    return key == record.key and type_ == record.type and class_ == record.class_
