@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.94.0 (2023-09-03)
+
+### Feature
+
+* Optimize cache implementation ([#1252](https://github.com/python-zeroconf/python-zeroconf/issues/1252)) ([`8d3ec79`](https://github.com/python-zeroconf/python-zeroconf/commit/8d3ec792277aaf7ef790318b5b35ab00839ca3b3))
+
 ## v0.93.1 (2023-09-03)
 
 ### Fix
