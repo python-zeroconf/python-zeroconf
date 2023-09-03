@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.96.0 (2023-09-03)
+
+### Feature
+
+* Optimize DNSCache.get_by_details ([#1254](https://github.com/python-zeroconf/python-zeroconf/issues/1254)) ([`ce59787`](https://github.com/python-zeroconf/python-zeroconf/commit/ce59787a170781ffdaa22425018d288b395ac081))
+
 ## v0.95.0 (2023-09-03)
 
 ### Feature
