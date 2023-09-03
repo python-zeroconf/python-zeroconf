@@ -758,10 +758,6 @@ class ServiceInfo(RecordUpdateListener):
                 question.unicast = True
         return out
 
-    def __eq__(self, other: object) -> bool:
-        """Tests equality of service name"""
-        return isinstance(other, ServiceInfo) and other._name == self._name
-
     def __repr__(self) -> str:
         """String representation"""
         return '{}({})'.format(
