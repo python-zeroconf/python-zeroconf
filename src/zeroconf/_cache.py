@@ -202,12 +202,13 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_all_by_details(self, name: str, type_: int, class_: int) -> List[DNSRecord]:
+    def get_all_by_details(self, name: str, type_: _int, class_: _int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
         key = name.lower()
-        return [
-            entry for entry in list(self.cache.get(key, [])) if _dns_record_matches(entry, key, type_, class_)
-        ]
+        records = self.cache.get(key)
+        if records is None:
+            return []
+        return [entry for entry in list(records) if _dns_record_matches(entry, key, type_, class_)]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""

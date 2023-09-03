@@ -54,6 +54,12 @@ cdef class DNSCache:
     cpdef get_by_details(self, str name, object type_, object class_)
 
     @cython.locals(
+        records=cython.dict,
+        entry=DNSRecord,
+    )
+    cpdef get_all_by_details(self, str name, object type_, object class_)
+
+    @cython.locals(
         store=cython.dict,
     )
     cdef _async_add(self, DNSRecord record)
