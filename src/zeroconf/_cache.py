@@ -181,7 +181,7 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_by_details(self, name: str, type_: int, class_: int) -> Optional[DNSRecord]:
+    def get_by_details(self, name: str, type_: _int, class_: _int) -> Optional[DNSRecord]:
         """Gets the first matching entry by details. Returns None if no entries match.
 
         Calling this function is not recommended as it will only
@@ -194,7 +194,10 @@ class DNSCache:
         Use get_all_by_details instead.
         """
         key = name.lower()
-        for cached_entry in reversed(list(self.cache.get(key, []))):
+        records = self.cache.get(key)
+        if records is None:
+            return None
+        for cached_entry in reversed(list(records)):
             if _dns_record_matches(cached_entry, key, type_, class_):
                 return cached_entry
         return None
