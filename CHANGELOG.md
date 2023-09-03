@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.95.0 (2023-09-03)
+
+### Feature
+
+* Speed up adding and removing RecordUpdateListeners ([#1253](https://github.com/python-zeroconf/python-zeroconf/issues/1253)) ([`22e4a29`](https://github.com/python-zeroconf/python-zeroconf/commit/22e4a296d440b3038c0ff5ed6fc8878304ec4937))
+
 ## v0.94.0 (2023-09-03)
 
 ### Feature
