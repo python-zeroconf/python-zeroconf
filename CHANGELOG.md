@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.93.1 (2023-09-03)
+
+### Fix
+
+* No change re-release due to unrecoverable failed CI run ([#1251](https://github.com/python-zeroconf/python-zeroconf/issues/1251)) ([`730921b`](https://github.com/python-zeroconf/python-zeroconf/commit/730921b155dfb9c62251c8c643b1302e807aff3b))
+
 ## v0.93.0 (2023-09-02)
 
 ### Feature
