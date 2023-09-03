@@ -46,6 +46,8 @@ from .answers import QuestionAnswers, _AnswerWithAdditionalsType
 
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
+_int = int
+
 
 class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
@@ -113,17 +115,11 @@ class _QueryResponse:
         self,
     ) -> QuestionAnswers:
         """Return answer sets that will be queued."""
-        return QuestionAnswers(
-            *(
-                {record: self._additionals[record] for record in rrset}
-                for rrset in (
-                    self._ucast,
-                    self._mcast_now,
-                    self._mcast_aggregate,
-                    self._mcast_aggregate_last_second,
-                )
-            )
-        )
+        ucast = {r: self._additionals[r] for r in self._ucast}
+        mcast_now = {r: self._additionals[r] for r in self._mcast_now}
+        mcast_aggregate = {r: self._additionals[r] for r in self._mcast_aggregate}
+        mcast_aggregate_last_second = {r: self._additionals[r] for r in self._mcast_aggregate_last_second}
+        return QuestionAnswers(ucast, mcast_now, mcast_aggregate, mcast_aggregate_last_second)
 
     def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord) -> bool:
         """Check to see if a record has been mcasted recently.
@@ -197,7 +193,7 @@ class QueryHandler:
         lower_name: str,
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
-        type_: int,
+        type_: _int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
         for service in self.registry.async_get_infos_server(lower_name):
