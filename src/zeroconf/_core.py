@@ -240,7 +240,7 @@ class Zeroconf(QuietLogger):
             raise NotRunningException
 
     @property
-    def listeners(self) -> List[RecordUpdateListener]:
+    def listeners(self) -> Set[RecordUpdateListener]:
         return self.record_manager.listeners
 
     async def async_wait(self, timeout: float) -> None:
