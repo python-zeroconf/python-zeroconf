@@ -226,11 +226,13 @@ class DNSIncoming:
             question = DNSQuestion(name, type_, class_)
             self.questions.append(question)
 
-    def _read_character_string(self) -> bytes:
+    def _read_character_string(self) -> str:
         """Reads a character string from the packet"""
         length = self.data[self.offset]
         self.offset += 1
-        return self._read_string(length)
+        info = self.data[self.offset : self.offset + length].decode('utf-8', 'replace')
+        self.offset += length
+        return info
 
     def _read_string(self, length: _int) -> bytes:
         """Reads a string of a given length from the packet"""
@@ -299,8 +301,8 @@ class DNSIncoming:
                 type_,
                 class_,
                 ttl,
-                self._read_character_string().decode('utf-8', 'replace'),
-                self._read_character_string().decode('utf-8', 'replace'),
+                self._read_character_string(),
+                self._read_character_string(),
                 self.now,
             )
         if type_ == _TYPE_AAAA:
@@ -377,7 +379,7 @@ class DNSIncoming:
             # We have a DNS compression pointer
             link_data = self.data[off + 1]
             link = (length & 0x3F) * 256 + link_data
-            lint_int = int(link)
+            link_py_int = link
             if link > self._data_len:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} points to {link} beyond packet from {self.source}"
@@ -386,16 +388,16 @@ class DNSIncoming:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} points to itself from {self.source}"
                 )
-            if lint_int in seen_pointers:
+            if link_py_int in seen_pointers:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} was seen again from {self.source}"
                 )
-            linked_labels = self.name_cache.get(lint_int)
+            linked_labels = self.name_cache.get(link_py_int)
             if not linked_labels:
                 linked_labels = []
-                seen_pointers.add(lint_int)
+                seen_pointers.add(link_py_int)
                 self._decode_labels_at_offset(link, linked_labels, seen_pointers)
-                self.name_cache[lint_int] = linked_labels
+                self.name_cache[link_py_int] = linked_labels
             labels.extend(linked_labels)
             if len(labels) > MAX_DNS_LABELS:
                 raise IncomingDecodeError(

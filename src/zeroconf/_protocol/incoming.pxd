@@ -79,7 +79,9 @@ cdef class DNSIncoming:
         label_idx=cython.uint,
         length=cython.uint,
         link=cython.uint,
-        link_data=cython.uint
+        link_data=cython.uint,
+        link_py_int=object,
+        linked_labels=cython.list
     )
     cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
@@ -95,9 +97,12 @@ cdef class DNSIncoming:
 
     cdef _read_questions(self)
 
-    cdef bytes _read_character_string(self)
+    @cython.locals(
+        length=cython.uint,
+    )
+    cdef str _read_character_string(self)
 
-    cdef _read_string(self, unsigned int length)
+    cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(
         name_start=cython.uint
