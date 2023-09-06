@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.98.0 (2023-09-06)
+
+### Feature
+
+* Speed up decoding incoming packets ([#1256](https://github.com/python-zeroconf/python-zeroconf/issues/1256)) ([`ac081cf`](https://github.com/python-zeroconf/python-zeroconf/commit/ac081cf00addde1ceea2c076f73905fdb293de3a))
+
 ## v0.97.0 (2023-09-03)
 
 ### Feature
