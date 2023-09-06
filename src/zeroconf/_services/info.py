@@ -91,7 +91,7 @@ def instance_name_from_service_info(info: "ServiceInfo", strict: bool = True) ->
     return info.name[: -len(service_name) - 1]
 
 
-@lru_cache(maxsize=1024)
+@lru_cache(maxsize=512)
 def _cached_ip_addresses(address: Union[str, bytes, int]) -> Optional[Union[IPv4Address, IPv6Address]]:
     """Cache IP addresses."""
     try:
