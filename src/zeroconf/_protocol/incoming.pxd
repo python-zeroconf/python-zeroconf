@@ -7,8 +7,6 @@ cdef cython.uint MAX_DNS_LABELS
 cdef cython.uint DNS_COMPRESSION_POINTER_LEN
 cdef cython.uint MAX_NAME_LENGTH
 
-cdef object current_time_millis
-
 cdef cython.uint _TYPE_A
 cdef cython.uint _TYPE_CNAME
 cdef cython.uint _TYPE_PTR
@@ -43,6 +41,7 @@ from .._dns cimport (
     DNSService,
     DNSText,
 )
+from .._utils.time cimport current_time_millis
 
 
 cdef class DNSIncoming:
@@ -62,6 +61,7 @@ cdef class DNSIncoming:
     cdef public cython.uint num_additionals
     cdef public object valid
     cdef public object now
+    cdef cython.float _now_float
     cdef public object scope_id
     cdef public object source
 
@@ -79,7 +79,9 @@ cdef class DNSIncoming:
         label_idx=cython.uint,
         length=cython.uint,
         link=cython.uint,
-        link_data=cython.uint
+        link_data=cython.uint,
+        link_py_int=object,
+        linked_labels=cython.list
     )
     cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
@@ -95,9 +97,12 @@ cdef class DNSIncoming:
 
     cdef _read_questions(self)
 
-    cdef bytes _read_character_string(self)
+    @cython.locals(
+        length=cython.uint,
+    )
+    cdef str _read_character_string(self)
 
-    cdef _read_string(self, unsigned int length)
+    cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(
         name_start=cython.uint
