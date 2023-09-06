@@ -7,8 +7,6 @@ cdef cython.uint MAX_DNS_LABELS
 cdef cython.uint DNS_COMPRESSION_POINTER_LEN
 cdef cython.uint MAX_NAME_LENGTH
 
-cdef object current_time_millis
-
 cdef cython.uint _TYPE_A
 cdef cython.uint _TYPE_CNAME
 cdef cython.uint _TYPE_PTR
@@ -43,6 +41,7 @@ from .._dns cimport (
     DNSService,
     DNSText,
 )
+from .._utils.time cimport current_time_millis
 
 
 cdef class DNSIncoming:
