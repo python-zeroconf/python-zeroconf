@@ -91,7 +91,13 @@ def instance_name_from_service_info(info: "ServiceInfo", strict: bool = True) ->
     return info.name[: -len(service_name) - 1]
 
 
-_cached_ip_addresses = lru_cache(maxsize=256)(ip_address)
+@lru_cache(maxsize=512)
+def _cached_ip_addresses(address: Union[str, bytes, int]) -> Optional[Union[IPv4Address, IPv6Address]]:
+    """Cache IP addresses."""
+    try:
+        return ip_address(address)
+    except ValueError:
+        return None
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -227,16 +233,19 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
-            try:
-                addr = _cached_ip_addresses(address)
-            except ValueError:
+            addr = _cached_ip_addresses(address)
+            if addr is None:
                 raise TypeError(
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
                     f" got {address!r}. Hint: convert string addresses with socket.inet_pton"
                 )
             if addr.version == 4:
+                if TYPE_CHECKING:
+                    assert isinstance(addr, IPv4Address)
                 self._ipv4_addresses.append(addr)
             else:
+                if TYPE_CHECKING:
+                    assert isinstance(addr, IPv6Address)
                 self._ipv6_addresses.append(addr)
 
     @property
@@ -394,11 +403,8 @@ class ServiceInfo(RecordUpdateListener):
         for record in self._get_address_records_from_cache_by_type(zc, type):
             if record.is_expired(now):
                 continue
-            try:
-                ip_addr = _cached_ip_addresses(record.address)
-            except ValueError:
-                continue
-            else:
+            ip_addr = _cached_ip_addresses(record.address)
+            if ip_addr is not None:
                 address_list.append(ip_addr)
         address_list.reverse()  # Reverse to get LIFO order
         return address_list
@@ -446,13 +452,14 @@ class ServiceInfo(RecordUpdateListener):
         if record_key == self.server_key and record_type is DNSAddress:
             if TYPE_CHECKING:
                 assert isinstance(record, DNSAddress)
-            try:
-                ip_addr = _cached_ip_addresses(record.address)
-            except ValueError as ex:
-                log.warning("Encountered invalid address while processing %s: %s", record, ex)
+            ip_addr = _cached_ip_addresses(record.address)
+            if ip_addr is None:
+                log.warning("Encountered invalid address while processing %s: %s", record, record.address)
                 return False
 
-            if type(ip_addr) is IPv4Address:
+            if ip_addr.version == 4:
+                if TYPE_CHECKING:
+                    assert isinstance(ip_addr, IPv4Address)
                 ipv4_addresses = self._ipv4_addresses
                 if ip_addr not in ipv4_addresses:
                     ipv4_addresses.insert(0, ip_addr)
@@ -463,6 +470,8 @@ class ServiceInfo(RecordUpdateListener):
 
                 return False
 
+            if TYPE_CHECKING:
+                assert isinstance(ip_addr, IPv6Address)
             ipv6_addresses = self._ipv6_addresses
             if ip_addr not in self._ipv6_addresses:
                 ipv6_addresses.insert(0, ip_addr)
@@ -516,7 +525,7 @@ class ServiceInfo(RecordUpdateListener):
         records = [
             DNSAddress(
                 name,
-                _TYPE_AAAA if type(ip_addr) is IPv6Address else _TYPE_A,
+                _TYPE_AAAA if ip_addr.version == 6 else _TYPE_A,
                 class_,
                 ttl,
                 ip_addr.packed,
