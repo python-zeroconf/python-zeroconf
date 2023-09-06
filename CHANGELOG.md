@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.99.0 (2023-09-06)
+
+### Feature
+
+* Reduce IP Address parsing overhead in ServiceInfo ([#1257](https://github.com/python-zeroconf/python-zeroconf/issues/1257)) ([`83d0b7f`](https://github.com/python-zeroconf/python-zeroconf/commit/83d0b7fda2eb09c9c6e18b85f329d1ddc701e3fb))
+
 ## v0.98.0 (2023-09-06)
 
 ### Feature
