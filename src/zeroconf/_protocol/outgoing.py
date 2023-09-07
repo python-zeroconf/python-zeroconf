@@ -22,7 +22,7 @@
 
 import enum
 import logging
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 
 from .._cache import DNSCache
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
@@ -176,7 +176,7 @@ class DNSOutgoing:
         self.additionals.append(record)
 
     def add_question_or_one_cache(
-        self, cache: DNSCache, now: float, name: str, type_: int, class_: int
+        self, cache: DNSCache, now: float_, name: str_, type_: int_, class_: int_
     ) -> None:
         """Add a question if it is not already cached."""
         cached_entry = cache.get_by_details(name, type_, class_)
@@ -186,7 +186,7 @@ class DNSOutgoing:
             self.add_answer_at_time(cached_entry, now)
 
     def add_question_or_all_cache(
-        self, cache: DNSCache, now: float, name: str, type_: int, class_: int
+        self, cache: DNSCache, now: float_, name: str_, type_: int_, class_: int_
     ) -> None:
         """Add a question if it is not already cached.
         This is currently only used for IPv6 addresses.
@@ -223,7 +223,8 @@ class DNSOutgoing:
 
     def write_string(self, value: bytes) -> None:
         """Writes a string to the packet"""
-        assert isinstance(value, bytes)
+        if TYPE_CHECKING:
+            assert isinstance(value, bytes)
         self.data.append(value)
         self.size += len(value)
 
@@ -237,7 +238,8 @@ class DNSOutgoing:
         self.write_string(utfstr)
 
     def write_character_string(self, value: bytes) -> None:
-        assert isinstance(value, bytes)
+        if TYPE_CHECKING:
+            assert isinstance(value, bytes)
         length = len(value)
         if length > 256:
             raise NamePartTooLongException
