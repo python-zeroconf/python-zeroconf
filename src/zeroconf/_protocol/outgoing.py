@@ -467,9 +467,13 @@ class DNSOutgoing:
             self.packets_data.append(b''.join(self.data))
             self._reset_for_next_packet()
 
-            if (questions_written + answers_written + authorities_written + additionals_written) == 0 and (
-                len(self.questions) + len(self.answers) + len(self.authorities) + len(self.additionals)
-            ) > 0:
+            if (
+                not questions_written
+                and not answers_written
+                and not authorities_written
+                and not additionals_written
+                and (self.questions or self.answers or self.authorities or self.additionals)
+            ):
                 log.warning("packets() made no progress adding records; returning")
                 break
         self.state = State.finished
