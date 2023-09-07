@@ -22,6 +22,7 @@
 
 import enum
 import logging
+from struct import Struct
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 
 from .._cache import DNSCache
@@ -45,6 +46,11 @@ float_ = float
 int_ = int
 DNSQuestion_ = DNSQuestion
 DNSRecord_ = DNSRecord
+
+
+PACK_BYTE = Struct('B').pack
+PACK_SHORT = Struct('>H').pack
+PACK_LONG = Struct('>L').pack
 
 
 class State(enum.Enum):
@@ -200,25 +206,25 @@ class DNSOutgoing:
 
     def _write_byte(self, value: int_) -> None:
         """Writes a single byte to the packet"""
-        self.data.append(value.to_bytes(1, 'big'))
+        self.data.append(PACK_BYTE(value))
         self.size += 1
 
     def _insert_short_at_start(self, value: int_) -> None:
         """Inserts an unsigned short at the start of the packet"""
-        self.data.insert(0, value.to_bytes(2, 'big'))
+        self.data.insert(0, PACK_SHORT(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
-        self.data[index] = value.to_bytes(2, 'big')
+        self.data[index] = PACK_SHORT(value)
 
     def write_short(self, value: int_) -> None:
         """Writes an unsigned short to the packet"""
-        self.data.append(value.to_bytes(2, 'big'))
+        self.data.append(PACK_SHORT(value))
         self.size += 2
 
     def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self.data.append(int(value).to_bytes(4, 'big'))
+        self.data.append(PACK_LONG(int(value)))
         self.size += 4
 
     def write_string(self, value: bytes) -> None:
