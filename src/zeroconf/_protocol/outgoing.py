@@ -49,7 +49,7 @@ DNSQuestion_ = DNSQuestion
 DNSRecord_ = DNSRecord
 
 
-PACK_BYTE = Struct('B').pack
+PACK_BYTE = Struct('>B').pack
 PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
