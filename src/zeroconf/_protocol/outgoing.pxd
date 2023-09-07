@@ -65,7 +65,7 @@ cdef class DNSOutgoing:
 
     cdef _write_answers_from_offset(self, object answer_offset)
 
-    cdef _write_records_from_offset(self, object records, object offset)
+    cdef _write_records_from_offset(self, cython.list records, object offset)
 
     cdef _has_more_to_add(self, object questions_offset, object answer_offset, object authority_offset, object additional_offset)
 
