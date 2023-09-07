@@ -1,6 +1,8 @@
 
 import cython
 
+from ._protocol.outgoing cimport DNSOutgoing
+
 
 cdef object _LEN_BYTE
 cdef object _LEN_SHORT
@@ -66,6 +68,8 @@ cdef class DNSAddress(DNSRecord):
 
     cdef _eq(self, DNSAddress other)
 
+    cpdef write(self, DNSOutgoing out)
+
 
 cdef class DNSHinfo(DNSRecord):
 
@@ -75,6 +79,7 @@ cdef class DNSHinfo(DNSRecord):
 
     cdef _eq(self, DNSHinfo other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSPointer(DNSRecord):
 
@@ -84,6 +89,7 @@ cdef class DNSPointer(DNSRecord):
 
     cdef _eq(self, DNSPointer other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSText(DNSRecord):
 
@@ -92,6 +98,7 @@ cdef class DNSText(DNSRecord):
 
     cdef _eq(self, DNSText other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSService(DNSRecord):
 
@@ -104,6 +111,7 @@ cdef class DNSService(DNSRecord):
 
     cdef _eq(self, DNSService other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSNsec(DNSRecord):
 
@@ -113,6 +121,7 @@ cdef class DNSNsec(DNSRecord):
 
     cdef _eq(self, DNSNsec other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSRRSet:
 
