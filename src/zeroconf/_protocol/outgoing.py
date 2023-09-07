@@ -453,7 +453,8 @@ class DNSOutgoing:
                 questions_offset, answer_offset, authority_offset, additional_offset
             ):
                 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
-                log.debug("Setting TC flag")
+                if debug_enable:  # pragma: no branch
+                    log.debug("Setting TC flag")
                 self._insert_short_at_start(self.flags | _FLAGS_TC)
             else:
                 self._insert_short_at_start(self.flags)
