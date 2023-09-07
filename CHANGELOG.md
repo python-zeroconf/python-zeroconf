@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.100.0 (2023-09-07)
+
+### Feature
+
+* Small speed up to writing outgoing dns records ([#1258](https://github.com/python-zeroconf/python-zeroconf/issues/1258)) ([`1ed6bd2`](https://github.com/python-zeroconf/python-zeroconf/commit/1ed6bd2ec4db0612b71384f923ffff1efd3ce878))
+
 ## v0.99.0 (2023-09-06)
 
 ### Feature
