@@ -1,7 +1,8 @@
 
 import cython
 
-from .._dns cimport DNSEntry, DNSQuestion, DNSRecord
+from .._cache cimport DNSCache
+from .._dns cimport DNSEntry, DNSPointer, DNSQuestion, DNSRecord
 from .incoming cimport DNSIncoming
 
 
@@ -14,6 +15,7 @@ cdef cython.uint _FLAGS_TC
 cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _MAX_MSG_TYPICAL
 
+cdef object TYPE_CHECKING
 
 cdef class DNSOutgoing:
 
@@ -70,13 +72,31 @@ cdef class DNSOutgoing:
     cpdef write_short(self, object value)
 
     @cython.locals(
-        questions_offset=cython.uint,
-        answer_offset=cython.uint,
-        authority_offset=cython.uint,
-        additional_offset=cython.uint,
-        questions_written=cython.uint,
-        answers_written=cython.uint,
-        authorities_written=cython.uint,
-        additionals_written=cython.uint,
+        questions_offset=object,
+        answer_offset=object,
+        authority_offset=object,
+        additional_offset=object,
+        questions_written=object,
+        answers_written=object,
+        authorities_written=object,
+        additionals_written=object,
     )
     cdef _packets(self)
+
+    cpdef add_question_or_all_cache(self, DNSCache cache, object now, str name, object type_, object class_)
+
+    cpdef add_question_or_one_cache(self, DNSCache cache, object now, str name, object type_, object class_)
+
+    cpdef add_question(self, DNSQuestion question)
+
+    cpdef add_answer(self, DNSIncoming inp, DNSRecord record)
+
+    cpdef add_answer_at_time(self, DNSRecord record, object now)
+
+    cpdef add_authorative_answer(self, DNSPointer record)
+
+    cpdef add_additional_answer(self, DNSRecord record)
+
+    cpdef is_query(self)
+
+    cpdef is_response(self)
