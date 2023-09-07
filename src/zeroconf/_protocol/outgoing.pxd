@@ -28,7 +28,7 @@ cdef class DNSOutgoing:
     cdef public object id
     cdef public bint multicast
     cdef public cython.list packets_data
-    cdef public object names
+    cdef public cython.dict names
     cdef public cython.list data
     cdef public unsigned int size
     cdef public object allow_long
@@ -57,7 +57,7 @@ cdef class DNSOutgoing:
     )
     cdef _write_record(self, DNSRecord record, object now)
 
-    cdef _write_record_class(self, object record)
+    cdef _write_record_class(self, DNSEntry record)
 
     cdef _check_data_limit_or_rollback(self, object start_data_length, object start_size)
 
@@ -71,9 +71,17 @@ cdef class DNSOutgoing:
 
     cdef _write_ttl(self, DNSRecord record, object now)
 
-    cpdef write_name(self, object name)
+    @cython.locals(
+        labels=cython.list,
+        label=cython.str,
+    )
+    cpdef write_name(self, cython.str name)
 
     cpdef write_short(self, object value)
+
+    cpdef write_string(self, cython.bytes value)
+
+    cpdef _write_utf(self, cython.str value)
 
     @cython.locals(
         questions_offset=object,

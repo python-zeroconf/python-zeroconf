@@ -44,6 +44,7 @@ from .incoming import DNSIncoming
 str_ = str
 float_ = float
 int_ = int
+bytes_ = bytes
 DNSQuestion_ = DNSQuestion
 DNSRecord_ = DNSRecord
 
@@ -227,14 +228,14 @@ class DNSOutgoing:
         self.data.append(PACK_LONG(int(value)))
         self.size += 4
 
-    def write_string(self, value: bytes) -> None:
+    def write_string(self, value: bytes_) -> None:
         """Writes a string to the packet"""
         if TYPE_CHECKING:
             assert isinstance(value, bytes)
         self.data.append(value)
         self.size += len(value)
 
-    def _write_utf(self, s: str) -> None:
+    def _write_utf(self, s: str_) -> None:
         """Writes a UTF-8 string of a given length to the packet"""
         utfstr = s.encode('utf-8')
         length = len(utfstr)
