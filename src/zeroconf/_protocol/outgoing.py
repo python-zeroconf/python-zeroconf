@@ -22,6 +22,7 @@
 
 import enum
 import logging
+from struct import Struct
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 
 from .._cache import DNSCache
@@ -43,8 +44,14 @@ from .incoming import DNSIncoming
 str_ = str
 float_ = float
 int_ = int
+bytes_ = bytes
 DNSQuestion_ = DNSQuestion
 DNSRecord_ = DNSRecord
+
+
+PACK_BYTE = Struct('>B').pack
+PACK_SHORT = Struct('>H').pack
+PACK_LONG = Struct('>L').pack
 
 
 class State(enum.Enum):
@@ -200,35 +207,35 @@ class DNSOutgoing:
 
     def _write_byte(self, value: int_) -> None:
         """Writes a single byte to the packet"""
-        self.data.append(value.to_bytes(1, 'big'))
+        self.data.append(PACK_BYTE(value))
         self.size += 1
 
     def _insert_short_at_start(self, value: int_) -> None:
         """Inserts an unsigned short at the start of the packet"""
-        self.data.insert(0, value.to_bytes(2, 'big'))
+        self.data.insert(0, PACK_SHORT(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
-        self.data[index] = value.to_bytes(2, 'big')
+        self.data[index] = PACK_SHORT(value)
 
     def write_short(self, value: int_) -> None:
         """Writes an unsigned short to the packet"""
-        self.data.append(value.to_bytes(2, 'big'))
+        self.data.append(PACK_SHORT(value))
         self.size += 2
 
     def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self.data.append(int(value).to_bytes(4, 'big'))
+        self.data.append(PACK_LONG(int(value)))
         self.size += 4
 
-    def write_string(self, value: bytes) -> None:
+    def write_string(self, value: bytes_) -> None:
         """Writes a string to the packet"""
         if TYPE_CHECKING:
             assert isinstance(value, bytes)
         self.data.append(value)
         self.size += len(value)
 
-    def _write_utf(self, s: str) -> None:
+    def _write_utf(self, s: str_) -> None:
         """Writes a UTF-8 string of a given length to the packet"""
         utfstr = s.encode('utf-8')
         length = len(utfstr)
@@ -446,7 +453,8 @@ class DNSOutgoing:
                 questions_offset, answer_offset, authority_offset, additional_offset
             ):
                 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
-                log.debug("Setting TC flag")
+                if debug_enable:  # pragma: no branch
+                    log.debug("Setting TC flag")
                 self._insert_short_at_start(self.flags | _FLAGS_TC)
             else:
                 self._insert_short_at_start(self.flags)
@@ -459,9 +467,13 @@ class DNSOutgoing:
             self.packets_data.append(b''.join(self.data))
             self._reset_for_next_packet()
 
-            if (questions_written + answers_written + authorities_written + additionals_written) == 0 and (
-                len(self.questions) + len(self.answers) + len(self.authorities) + len(self.additionals)
-            ) > 0:
+            if (
+                not questions_written
+                and not answers_written
+                and not authorities_written
+                and not additionals_written
+                and (self.questions or self.answers or self.authorities or self.additionals)
+            ):
                 log.warning("packets() made no progress adding records; returning")
                 break
         self.state = State.finished
