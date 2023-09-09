@@ -263,11 +263,11 @@ class ServiceInfo(RecordUpdateListener):
             assert self._properties is not None
         return self._properties
 
-    async def async_wait(self, timeout: float) -> None:
+    async def async_wait(self, timeout: float, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
-        loop = get_running_loop()
-        assert loop is not None
-        await wait_for_future_set_or_timeout(loop, self._new_records_futures, timeout)
+        await wait_for_future_set_or_timeout(
+            loop or asyncio.get_running_loop(), self._new_records_futures, timeout
+        )
 
     def addresses_by_version(self, version: IPVersion) -> List[bytes]:
         """List addresses matching IP version.
@@ -722,6 +722,9 @@ class ServiceInfo(RecordUpdateListener):
         if self.load_from_cache(zc, now):
             return True
 
+        if TYPE_CHECKING:
+            assert zc.loop is not None
+
         first_request = True
         delay = _LISTENER_TIME
         next_ = now
@@ -743,7 +746,7 @@ class ServiceInfo(RecordUpdateListener):
                     delay *= 2
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
 
-                await self.async_wait(min(next_, last) - now)
+                await self.async_wait(min(next_, last) - now, zc.loop)
                 now = current_time_millis()
         finally:
             zc.async_remove_listener(self)
