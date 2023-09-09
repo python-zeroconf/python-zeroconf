@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.103.0 (2023-09-09)
+
+### Feature
+
+* Avoid calling get_running_loop when resolving ServiceInfo ([#1261](https://github.com/python-zeroconf/python-zeroconf/issues/1261)) ([`33a2714`](https://github.com/python-zeroconf/python-zeroconf/commit/33a2714cadff96edf016b869cc63b0661d16ef2c))
+
 ## v0.102.0 (2023-09-07)
 
 ### Feature
