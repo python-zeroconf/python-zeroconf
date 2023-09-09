@@ -722,6 +722,9 @@ class ServiceInfo(RecordUpdateListener):
         if self.load_from_cache(zc, now):
             return True
 
+        if TYPE_CHECKING:
+            assert zc.loop is not None
+
         first_request = True
         delay = _LISTENER_TIME
         next_ = now
@@ -743,8 +746,6 @@ class ServiceInfo(RecordUpdateListener):
                     delay *= 2
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
 
-                if TYPE_CHECKING:
-                    assert zc.loop is not None
                 await self.async_wait(min(next_, last) - now, zc.loop)
                 now = current_time_millis()
         finally:
