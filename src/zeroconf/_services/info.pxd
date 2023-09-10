@@ -21,7 +21,8 @@ cdef object _FLAGS_QR_QUERY
 
 cdef object service_type_name
 
-cdef object DNSQuestionType
+cdef object DNS_QUESTION_TYPE_QU
+cdef object DNS_QUESTION_TYPE_QM
 
 cdef object TYPE_CHECKING
 

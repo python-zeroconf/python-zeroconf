@@ -81,6 +81,8 @@ _AVOID_SYNC_DELAY_RANDOM_INTERVAL = (20, 120)
 float_ = float
 int_ = int
 
+DNS_QUESTION_TYPE_QU = DNSQuestionType.QU
+DNS_QUESTION_TYPE_QM = DNSQuestionType.QM
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -747,7 +749,9 @@ class ServiceInfo(RecordUpdateListener):
                     return False
                 if next_ <= now:
                     out = self.generate_request_query(
-                        zc, now, question_type or DNSQuestionType.QU if first_request else DNSQuestionType.QM
+                        zc,
+                        now,
+                        question_type or DNS_QUESTION_TYPE_QU if first_request else DNS_QUESTION_TYPE_QM,
                     )
                     first_request = False
                     if not out.questions:
@@ -776,7 +780,7 @@ class ServiceInfo(RecordUpdateListener):
         out.add_question_or_one_cache(cache, now, name, _TYPE_TXT, _CLASS_IN)
         out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_A, _CLASS_IN)
         out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN)
-        if question_type == DNSQuestionType.QU:
+        if question_type == DNS_QUESTION_TYPE_QU:
             for question in out.questions:
                 question.unicast = True
         return out
