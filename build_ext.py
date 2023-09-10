@@ -29,6 +29,7 @@ def build(setup_kwargs: Any) -> None:
                         "src/zeroconf/_listener.py",
                         "src/zeroconf/_protocol/incoming.py",
                         "src/zeroconf/_protocol/outgoing.py",
+                        "src/zeroconf/_handlers/answers.py",
                         "src/zeroconf/_handlers/record_manager.py",
                         "src/zeroconf/_handlers/query_handler.py",
                         "src/zeroconf/_services/registry.py",
