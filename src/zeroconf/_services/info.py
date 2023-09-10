@@ -309,7 +309,7 @@ class ServiceInfo(RecordUpdateListener):
         return self._ip_addresses_by_version_value(version.value)
 
     def _ip_addresses_by_version_value(
-        self, version_value: int
+        self, version_value: int_
     ) -> Union[List[IPv4Address], List[IPv6Address], List[_BaseAddress]]:
         """Backend for addresses_by_version that uses the raw value."""
         if version_value == _IPVersion_All_value:

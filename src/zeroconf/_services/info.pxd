@@ -78,3 +78,5 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef _set_ipv4_addresses_from_cache(self, object zc, object now)
 
     cdef _set_ipv6_addresses_from_cache(self, object zc, object now)
+
+    cdef cython.list _ip_addresses_by_version_value(self, object version_value)
