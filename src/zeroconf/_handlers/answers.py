@@ -29,10 +29,14 @@ from ..const import _FLAGS_AA, _FLAGS_QR_RESPONSE
 
 _AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
 
+int_ = int
+
 
 MULTICAST_DELAY_RANDOM_INTERVAL = (20, 120)
 
 NAME_GETTER = attrgetter('name')
+
+_FLAGS_QR_RESPONSE_AA = _FLAGS_QR_RESPONSE | _FLAGS_AA
 
 
 class QuestionAnswers(NamedTuple):
@@ -52,16 +56,16 @@ class AnswerGroup(NamedTuple):
 
 def construct_outgoing_multicast_answers(answers: _AnswerWithAdditionalsType) -> DNSOutgoing:
     """Add answers and additionals to a DNSOutgoing."""
-    out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=True)
+    out = DNSOutgoing(_FLAGS_QR_RESPONSE_AA, True)
     _add_answers_additionals(out, answers)
     return out
 
 
 def construct_outgoing_unicast_answers(
-    answers: _AnswerWithAdditionalsType, ucast_source: bool, questions: List[DNSQuestion], id_: int
+    answers: _AnswerWithAdditionalsType, ucast_source: bool, questions: List[DNSQuestion], id_: int_
 ) -> DNSOutgoing:
     """Add answers and additionals to a DNSOutgoing."""
-    out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA, multicast=False, id_=id_)
+    out = DNSOutgoing(_FLAGS_QR_RESPONSE_AA, False, id_)
     # Adding the questions back when the source is legacy unicast behavior
     if ucast_source:
         for question in questions:
