@@ -287,10 +287,9 @@ class ServiceInfo(RecordUpdateListener):
         """
         version_value = version.value
         if version_value == _IPVersion_All_value:
-            return [
-                *(addr.packed for addr in self._ipv4_addresses),
-                *(addr.packed for addr in self._ipv6_addresses),
-            ]
+            ip_v4_packed = [addr.packed for addr in self._ipv4_addresses]
+            ip_v6_packed = [addr.packed for addr in self._ipv6_addresses]
+            return [*ip_v4_packed, *ip_v6_packed]
         if version_value == _IPVersion_V4Only_value:
             return [addr.packed for addr in self._ipv4_addresses]
         return [addr.packed for addr in self._ipv6_addresses]
