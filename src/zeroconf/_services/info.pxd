@@ -24,6 +24,9 @@ cdef object service_type_name
 cdef object DNS_QUESTION_TYPE_QU
 cdef object DNS_QUESTION_TYPE_QM
 
+cdef object _IPVersion_All_value
+cdef object _IPVersion_V4Only_value
+
 cdef object TYPE_CHECKING
 
 cdef class ServiceInfo(RecordUpdateListener):
