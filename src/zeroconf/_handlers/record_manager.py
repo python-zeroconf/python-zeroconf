@@ -26,7 +26,8 @@ from .._cache import _UniqueRecordsType
 from .._dns import DNSQuestion, DNSRecord
 from .._logger import log
 from .._protocol.incoming import DNSIncoming
-from .._updates import RecordUpdate, RecordUpdateListener
+from .._record_update import RecordUpdate
+from .._updates import RecordUpdateListener
 from .._utils.time import current_time_millis
 from ..const import _ADDRESS_RECORD_TYPES, _DNS_PTR_MIN_TTL, _TYPE_PTR
 

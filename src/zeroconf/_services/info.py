@@ -38,7 +38,8 @@ from .._dns import (
 from .._exceptions import BadTypeInNameException
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
-from .._updates import RecordUpdate, RecordUpdateListener
+from .._record_update import RecordUpdate
+from .._updates import RecordUpdateListener
 from .._utils.asyncio import (
     _resolve_all_futures_to_none,
     get_running_loop,

@@ -44,13 +44,14 @@ from typing import (
 from .._dns import DNSPointer, DNSQuestion, DNSQuestionType
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
+from .._record_update import RecordUpdate
 from .._services import (
     ServiceListener,
     ServiceStateChange,
     Signal,
     SignalRegistrationInterface,
 )
-from .._updates import RecordUpdate, RecordUpdateListener
+from .._updates import RecordUpdateListener
 from .._utils.name import cached_possible_types, service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
