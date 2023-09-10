@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.105.0 (2023-09-10)
+
+### Feature
+
+* Speed up ServiceInfo with a cython pxd ([#1264](https://github.com/python-zeroconf/python-zeroconf/issues/1264)) ([`7ca690a`](https://github.com/python-zeroconf/python-zeroconf/commit/7ca690ac3fa75e7474d3412944bbd5056cb313dd))
+
 ## v0.104.0 (2023-09-10)
 
 ### Feature
