@@ -8,6 +8,8 @@ from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis
 
 
+cdef object _resolve_all_futures_to_none
+
 cdef object _TYPE_SRV
 cdef object _TYPE_TXT
 cdef object _TYPE_A
@@ -71,3 +73,7 @@ cdef class ServiceInfo(RecordUpdateListener):
         cache=DNSCache
     )
     cdef cython.list _get_address_records_from_cache_by_type(self, object zc, object _type)
+
+    cdef _set_ipv4_addresses_from_cache(self, object zc, object now)
+
+    cdef _set_ipv6_addresses_from_cache(self, object zc, object now)

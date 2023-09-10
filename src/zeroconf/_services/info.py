@@ -414,7 +414,7 @@ class ServiceInfo(RecordUpdateListener):
         address_list.reverse()  # Reverse to get LIFO order
         return address_list
 
-    def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
+    def _set_ipv6_addresses_from_cache(self, zc: 'Zeroconf', now: float_) -> None:
         """Set IPv6 addresses from the cache."""
         if TYPE_CHECKING:
             self._ipv6_addresses = cast(
@@ -423,7 +423,7 @@ class ServiceInfo(RecordUpdateListener):
         else:
             self._ipv6_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA)
 
-    def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf', now: float) -> None:
+    def _set_ipv4_addresses_from_cache(self, zc: 'Zeroconf', now: float_) -> None:
         """Set IPv4 addresses from the cache."""
         if TYPE_CHECKING:
             self._ipv4_addresses = cast(
