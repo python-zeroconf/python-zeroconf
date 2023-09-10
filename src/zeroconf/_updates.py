@@ -20,17 +20,16 @@
     USA
 """
 
-from typing import TYPE_CHECKING, List, NamedTuple, Optional
+from typing import TYPE_CHECKING, List
 
 from ._dns import DNSRecord
+from ._record_update import RecordUpdate
 
 if TYPE_CHECKING:
     from ._core import Zeroconf
 
 
-class RecordUpdate(NamedTuple):
-    new: DNSRecord
-    old: Optional[DNSRecord]
+float_ = float
 
 
 class RecordUpdateListener:
@@ -50,7 +49,7 @@ class RecordUpdateListener:
         """
         raise RuntimeError("update_record is deprecated and will be removed in a future version.")
 
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float_, records: List[RecordUpdate]) -> None:
         """Update multiple records in one shot.
 
         All records that are received in a single packet are passed

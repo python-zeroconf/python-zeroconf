@@ -26,7 +26,7 @@ import socket
 import threading
 from typing import TYPE_CHECKING, List, Optional, cast
 
-from ._updates import RecordUpdate
+from ._record_update import RecordUpdate
 from ._utils.asyncio import get_running_loop, run_coro_with_timeout
 from ._utils.time import current_time_millis
 from .const import _CACHE_CLEANUP_INTERVAL

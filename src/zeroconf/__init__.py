@@ -50,6 +50,7 @@ from ._exceptions import (
 from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
 from ._protocol.incoming import DNSIncoming  # noqa # import needed for backwards compat
 from ._protocol.outgoing import DNSOutgoing  # noqa # import needed for backwards compat
+from ._record_update import RecordUpdate
 from ._services import (  # noqa # import needed for backwards compat
     ServiceListener,
     ServiceStateChange,
@@ -65,7 +66,7 @@ from ._services.registry import (  # noqa # import needed for backwards compat
     ServiceRegistry,
 )
 from ._services.types import ZeroconfServiceTypes
-from ._updates import RecordUpdate, RecordUpdateListener
+from ._updates import RecordUpdateListener
 from ._utils.name import service_type_name  # noqa # import needed for backwards compat
 from ._utils.net import (  # noqa # import needed for backwards compat
     InterfaceChoice,
