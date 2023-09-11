@@ -22,7 +22,6 @@
 
 import enum
 import logging
-from functools import lru_cache
 from struct import Struct
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -54,15 +53,7 @@ PACK_BYTE = Struct('>B').pack
 PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
-BYTE_TABLE = [PACK_BYTE(i) for i in range(256)]
-
-
-@lru_cache(maxsize=256)
-def _cached_pack_short(value: int_) -> bytes_:
-    return PACK_SHORT(value)
-
-
-CACHED_PACK_SHORT = _cached_pack_short
+BYTE_TABLE = tuple(PACK_BYTE(i) for i in range(256))
 
 
 class State(enum.Enum):
@@ -224,15 +215,15 @@ class DNSOutgoing:
 
     def _insert_short_at_start(self, value: int_) -> None:
         """Inserts an unsigned short at the start of the packet"""
-        self.data.insert(0, CACHED_PACK_SHORT(value))
+        self.data.insert(0, PACK_SHORT(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
-        self.data[index] = CACHED_PACK_SHORT(value)
+        self.data[index] = PACK_SHORT(value)
 
     def write_short(self, value: int_) -> None:
         """Writes an unsigned short to the packet"""
-        self.data.append(CACHED_PACK_SHORT(value))
+        self.data.append(PACK_SHORT(value))
         self.size += 2
 
     def _write_int(self, value: Union[float, int]) -> None:
