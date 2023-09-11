@@ -2,7 +2,7 @@
 import cython
 
 from .._cache cimport DNSCache
-from .._dns cimport DNSPointer, DNSRecord, DNSService, DNSText
+from .._dns cimport DNSNsec, DNSPointer, DNSRecord, DNSService, DNSText
 from .._protocol.outgoing cimport DNSOutgoing
 from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis
@@ -26,6 +26,8 @@ cdef object DNS_QUESTION_TYPE_QM
 
 cdef object _IPVersion_All_value
 cdef object _IPVersion_V4Only_value
+
+cdef cython.set _ADDRESS_RECORD_TYPES
 
 cdef object TYPE_CHECKING
 
@@ -85,3 +87,20 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef cython.list _ip_addresses_by_version_value(self, object version_value)
 
     cdef addresses_by_version(self, object version)
+
+    @cython.locals(cacheable=cython.bint)
+    cdef cython.list _dns_addresses(self, object override_ttls, object version)
+
+    @cython.locals(cacheable=cython.bint)
+    cdef DNSPointer _dns_pointer(self, object override_ttl)
+
+    @cython.locals(cacheable=cython.bint)
+    cdef DNSService _dns_service(self, object override_ttl)
+
+    @cython.locals(cacheable=cython.bint)
+    cdef DNSText _dns_text(self, object override_ttl)
+
+    cdef DNSNsec _dns_nsec(self, cython.list missing_types, object override_ttl)
+
+    @cython.locals(cacheable=cython.bint)
+    cdef cython.set _get_address_and_nsec_records(self, object override_ttl)

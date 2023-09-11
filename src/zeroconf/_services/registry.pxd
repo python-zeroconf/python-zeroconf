@@ -1,6 +1,8 @@
 
 import cython
 
+from .info cimport ServiceInfo
+
 
 cdef class ServiceRegistry:
 
@@ -11,16 +13,16 @@ cdef class ServiceRegistry:
     @cython.locals(
         record_list=cython.list,
     )
-    cdef _async_get_by_index(self, cython.dict records, str key)
+    cdef cython.list _async_get_by_index(self, cython.dict records, str key)
 
-    cdef _add(self, object info)
+    cdef _add(self, ServiceInfo info)
 
     cdef _remove(self, cython.list infos)
 
-    cpdef async_get_info_name(self, str name)
+    cpdef ServiceInfo async_get_info_name(self, str name)
 
-    cpdef async_get_types(self)
+    cpdef cython.list async_get_types(self)
 
-    cpdef async_get_infos_type(self, str type_)
+    cpdef cython.list async_get_infos_type(self, str type_)
 
-    cpdef async_get_infos_server(self, str server)
+    cpdef cython.list async_get_infos_server(self, str server)
