@@ -5,6 +5,7 @@ from .._cache cimport DNSCache
 from .._dns cimport DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
 from .._history cimport QuestionHistory
 from .._protocol.incoming cimport DNSIncoming
+from .._services.info cimport ServiceInfo
 from .._services.registry cimport ServiceRegistry
 
 
@@ -12,6 +13,9 @@ cdef object TYPE_CHECKING, QuestionAnswers
 cdef cython.uint _ONE_SECOND, _TYPE_PTR, _TYPE_ANY, _TYPE_A, _TYPE_AAAA, _TYPE_SRV, _TYPE_TXT
 cdef str _SERVICE_TYPE_ENUMERATION_NAME
 cdef cython.set _RESPOND_IMMEDIATE_TYPES
+cdef cython.set _ADDRESS_RECORD_TYPES
+cdef object IPVersion
+cdef object _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL
 
 cdef class _QueryResponse:
 
@@ -45,13 +49,16 @@ cdef class QueryHandler:
     cdef DNSCache cache
     cdef QuestionHistory question_history
 
+    @cython.locals(service=ServiceInfo)
     cdef _add_service_type_enumeration_query_answers(self, cython.dict answer_set, DNSRRSet known_answers)
 
+    @cython.locals(service=ServiceInfo)
     cdef _add_pointer_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers)
 
+    @cython.locals(service=ServiceInfo)
     cdef _add_address_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
-    @cython.locals(question_lower_name=str, type_=cython.uint)
+    @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
     cdef _answer_question(self, DNSQuestion question, DNSRRSet known_answers)
 
     @cython.locals(

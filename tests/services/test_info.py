@@ -1535,3 +1535,18 @@ async def test_release_wait_when_new_recorded_added_concurrency():
     assert not pending
     assert info.addresses == [b'\x7f\x00\x00\x01']
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_service_info_nsec_records():
+    """Test we can generate nsec records from ServiceInfo."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiareccon.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    host = "multahostcon.local."
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    nsec_record = info.dns_nsec([const._TYPE_A, const._TYPE_AAAA], 50)
+    assert nsec_record.name == registration_name
+    assert nsec_record.type == const._TYPE_NSEC
+    assert nsec_record.ttl == 50
+    assert nsec_record.rdtypes == [const._TYPE_A, const._TYPE_AAAA]
