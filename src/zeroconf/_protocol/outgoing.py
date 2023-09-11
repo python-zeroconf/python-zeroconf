@@ -54,7 +54,8 @@ PACK_BYTE = Struct('>B').pack
 PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
-CACHED_PACK_SHORT = lru_cache(maxsize=None)(PACK_SHORT)
+BYTE_TABLE = [PACK_BYTE(i) for i in range(256)]
+CACHED_PACK_SHORT = lru_cache(maxsize=256)(PACK_SHORT)
 
 
 class State(enum.Enum):
@@ -211,7 +212,7 @@ class DNSOutgoing:
 
     def _write_byte(self, value: int_) -> None:
         """Writes a single byte to the packet"""
-        self.data.append(PACK_BYTE(value))
+        self.data.append(BYTE_TABLE[value])
         self.size += 1
 
     def _insert_short_at_start(self, value: int_) -> None:

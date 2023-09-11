@@ -22,6 +22,8 @@ cdef object PACK_SHORT
 cdef object PACK_LONG
 cdef object CACHED_PACK_SHORT
 
+cdef cython.dict BYTE_TABLE
+
 cdef class DNSOutgoing:
 
     cdef public unsigned int flags
