@@ -74,6 +74,9 @@ cdef class DNSOutgoing:
     @cython.locals(
         labels=cython.list,
         label=cython.str,
+        index=cython.uint,
+        start_size=cython.uint,
+        name_length=cython.uint,
     )
     cpdef write_name(self, cython.str name)
 
@@ -103,6 +106,7 @@ cdef class DNSOutgoing:
 
     cpdef add_answer(self, DNSIncoming inp, DNSRecord record)
 
+    @cython.locals(now_float=cython.float)
     cpdef add_answer_at_time(self, DNSRecord record, object now)
 
     cpdef add_authorative_answer(self, DNSPointer record)

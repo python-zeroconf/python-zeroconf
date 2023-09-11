@@ -1,6 +1,7 @@
 
 import cython
 
+from .._dns cimport DNSRecord
 from .._protocol.outgoing cimport DNSOutgoing
 
 
@@ -10,7 +11,8 @@ cdef object NAME_GETTER
 cpdef construct_outgoing_multicast_answers(cython.dict answers)
 
 cpdef construct_outgoing_unicast_answers(
-    cython.dict answers, object ucast_source, cython.list questions, object id_
+    cython.dict answers, bint ucast_source, cython.list questions, object id_
 )
 
+@cython.locals(answer=DNSRecord, additionals=cython.set, additional=DNSRecord)
 cdef _add_answers_additionals(DNSOutgoing out, cython.dict answers)

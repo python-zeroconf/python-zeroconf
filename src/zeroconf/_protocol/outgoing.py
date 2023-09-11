@@ -137,7 +137,8 @@ class DNSOutgoing:
 
     def add_answer_at_time(self, record: Optional[DNSRecord], now: Union[float, int]) -> None:
         """Adds an answer if it does not expire by a certain time"""
-        if record is not None and (now == 0 or not record.is_expired(now)):
+        now_float = now
+        if record is not None and (now_float == 0 or not record.is_expired(now_float)):
             self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
@@ -267,7 +268,7 @@ class DNSOutgoing:
         """
 
         # split name into each label
-        name_length = None
+        name_length = 0
         if name.endswith('.'):
             name = name[: len(name) - 1]
         labels = name.split('.')
@@ -283,7 +284,7 @@ class DNSOutgoing:
                 self._write_byte((index >> 8) | 0xC0)
                 self._write_byte(index & 0xFF)
                 return
-            if name_length is None:
+            if name_length == 0:
                 name_length = len(name.encode('utf-8'))
             self.names[label] = start_size + name_length - len(label.encode('utf-8'))
             self._write_utf(labels[count])
