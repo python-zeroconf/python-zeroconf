@@ -22,7 +22,7 @@
 
 import enum
 import socket
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
@@ -532,6 +532,10 @@ class DNSRRSet:
     def lookup(self) -> Dict[DNSRecord, float]:
         """Return the lookup table."""
         return self._get_lookup()
+
+    def lookup_set(self) -> Set[DNSRecord]:
+        """Return the lookup table as aset."""
+        return set(self._get_lookup())
 
     def _get_lookup(self) -> Dict[DNSRecord, float]:
         """Return the lookup table, building it if needed."""

@@ -59,7 +59,7 @@ cdef class QueryHandler:
     cdef _add_address_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
-    cdef _answer_question(self, DNSQuestion question, DNSRRSet known_answers)
+    cdef cython.dict _answer_question(self, DNSQuestion question, DNSRRSet known_answers)
 
     @cython.locals(
         msg=DNSIncoming,
@@ -68,4 +68,4 @@ cdef class QueryHandler:
         known_answers=DNSRRSet,
         known_answers_set=cython.set,
     )
-    cpdef async_response(self, cython.list msgs, object unicast_source)
+    cpdef async_response(self, cython.list msgs, cython.bint unicast_source)
