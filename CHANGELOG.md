@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.106.0 (2023-09-11)
+
+### Feature
+
+* Speed up answering questions ([#1265](https://github.com/python-zeroconf/python-zeroconf/issues/1265)) ([`37bfaf2`](https://github.com/python-zeroconf/python-zeroconf/commit/37bfaf2f630358e8c68652f3b3120931a6f94910))
+
 ## v0.105.0 (2023-09-10)
 
 ### Feature
