@@ -20,6 +20,7 @@ cdef object TYPE_CHECKING
 cdef object PACK_BYTE
 cdef object PACK_SHORT
 cdef object PACK_LONG
+cdef object CACHED_PACK_SHORT
 
 cdef class DNSOutgoing:
 
