@@ -21,17 +21,25 @@ cdef object PACK_BYTE
 cdef object PACK_SHORT
 cdef object PACK_LONG
 
+cdef object STATE_INIT
+cdef object STATE_FINISHED
+
+cdef object LOGGING_IS_ENABLED_FOR
+cdef object LOGGING_DEBUG
+
+cdef cython.tuple BYTE_TABLE
+
 cdef class DNSOutgoing:
 
     cdef public unsigned int flags
-    cdef public object finished
+    cdef public bint finished
     cdef public object id
     cdef public bint multicast
     cdef public cython.list packets_data
     cdef public cython.dict names
     cdef public cython.list data
     cdef public unsigned int size
-    cdef public object allow_long
+    cdef public bint allow_long
     cdef public object state
     cdef public cython.list questions
     cdef public cython.list answers
@@ -48,18 +56,21 @@ cdef class DNSOutgoing:
 
     cdef _write_int(self, object value)
 
-    cdef _write_question(self, DNSQuestion question)
+    cdef cython.bint _write_question(self, DNSQuestion question)
 
     @cython.locals(
         d=cython.bytes,
         data_view=cython.list,
         length=cython.uint
     )
-    cdef _write_record(self, DNSRecord record, object now)
+    cdef cython.bint _write_record(self, DNSRecord record, object now)
 
     cdef _write_record_class(self, DNSEntry record)
 
-    cdef _check_data_limit_or_rollback(self, object start_data_length, object start_size)
+    @cython.locals(
+        start_size_int=object
+    )
+    cdef cython.bint _check_data_limit_or_rollback(self, cython.uint start_data_length, cython.uint start_size)
 
     cdef _write_questions_from_offset(self, object questions_offset)
 
@@ -74,6 +85,9 @@ cdef class DNSOutgoing:
     @cython.locals(
         labels=cython.list,
         label=cython.str,
+        index=cython.uint,
+        start_size=cython.uint,
+        name_length=cython.uint,
     )
     cpdef write_name(self, cython.str name)
 
@@ -103,6 +117,7 @@ cdef class DNSOutgoing:
 
     cpdef add_answer(self, DNSIncoming inp, DNSRecord record)
 
+    @cython.locals(now_float=cython.float)
     cpdef add_answer_at_time(self, DNSRecord record, object now)
 
     cpdef add_authorative_answer(self, DNSPointer record)

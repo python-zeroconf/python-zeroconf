@@ -82,7 +82,8 @@ def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsTy
     # overall size of the outgoing response via name compression
     for answer in sorted(answers, key=NAME_GETTER):
         out.add_answer_at_time(answer, 0)
-        for additional in answers[answer]:
+        additionals = answers[answer]
+        for additional in additionals:
             if additional not in sending:
                 out.add_additional_answer(additional)
                 sending.add(additional)
