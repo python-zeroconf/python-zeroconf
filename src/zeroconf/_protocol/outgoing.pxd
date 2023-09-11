@@ -24,6 +24,9 @@ cdef object PACK_LONG
 cdef object STATE_INIT
 cdef object STATE_FINISHED
 
+cdef object LOGGING_IS_ENABLED_FOR
+cdef object LOGGING_DEBUG
+
 cdef cython.tuple BYTE_TABLE
 
 cdef class DNSOutgoing:
@@ -64,6 +67,9 @@ cdef class DNSOutgoing:
 
     cdef _write_record_class(self, DNSEntry record)
 
+    @cython.locals(
+        start_size_int=object
+    )
     cdef cython.bint _check_data_limit_or_rollback(self, cython.uint start_data_length, cython.uint start_size)
 
     cdef _write_questions_from_offset(self, object questions_offset)

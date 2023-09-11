@@ -64,6 +64,9 @@ class State(enum.Enum):
 STATE_INIT = State.init
 STATE_FINISHED = State.finished
 
+LOGGING_IS_ENABLED_FOR = log.isEnabledFor
+LOGGING_DEBUG = logging.DEBUG
+
 
 class DNSOutgoing:
 
@@ -348,11 +351,13 @@ class DNSOutgoing:
         if self.size <= len_limit:
             return True
 
-        log.debug("Reached data limit (size=%d) > (limit=%d) - rolling back", self.size, len_limit)
+        if LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG):  # pragma: no branch
+            log.debug("Reached data limit (size=%d) > (limit=%d) - rolling back", self.size, len_limit)
         del self.data[start_data_length:]
         self.size = start_size
 
-        rollback_names = [name for name, idx in self.names.items() if idx >= start_size]
+        start_size_int = start_size
+        rollback_names = [name for name, idx in self.names.items() if idx >= start_size_int]
         for name in rollback_names:
             del self.names[name]
         return False
@@ -413,7 +418,7 @@ class DNSOutgoing:
         additional_offset = 0
         # we have to at least write out the question
         first_time = True
-        debug_enable = log.isEnabledFor(logging.DEBUG)
+        debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG)
 
         while first_time or self._has_more_to_add(
             questions_offset, answer_offset, authority_offset, additional_offset
