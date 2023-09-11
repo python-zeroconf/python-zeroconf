@@ -55,7 +55,14 @@ PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
 BYTE_TABLE = [PACK_BYTE(i) for i in range(256)]
-CACHED_PACK_SHORT = lru_cache(maxsize=256)(PACK_SHORT)
+
+
+@lru_cache(maxsize=256)
+def _cached_pack_short(value: int_) -> bytes_:
+    return PACK_SHORT(value)
+
+
+CACHED_PACK_SHORT = _cached_pack_short
 
 
 class State(enum.Enum):
