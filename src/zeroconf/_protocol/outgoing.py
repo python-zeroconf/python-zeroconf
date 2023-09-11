@@ -294,7 +294,8 @@ class DNSOutgoing:
 
     def _write_question(self, question: DNSQuestion_) -> bool:
         """Writes a question to the packet"""
-        start_data_length, start_size = len(self.data), self.size
+        start_data_length = len(self.data)
+        start_size = self.size
         self.write_name(question.name)
         self.write_short(question.type)
         self._write_record_class(question)
@@ -315,7 +316,8 @@ class DNSOutgoing:
         """Writes a record (answer, authoritative answer, additional) to
         the packet.  Returns True on success, or False if we did not
         because the packet because the record does not fit."""
-        start_data_length, start_size = len(self.data), self.size
+        start_data_length = len(self.data)
+        start_size = self.size
         self.write_name(record.name)
         self.write_short(record.type)
         self._write_record_class(record)

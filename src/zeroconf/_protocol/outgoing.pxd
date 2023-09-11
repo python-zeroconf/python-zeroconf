@@ -31,7 +31,7 @@ cdef class DNSOutgoing:
     cdef public cython.dict names
     cdef public cython.list data
     cdef public unsigned int size
-    cdef public object allow_long
+    cdef public bint allow_long
     cdef public object state
     cdef public cython.list questions
     cdef public cython.list answers
@@ -48,18 +48,18 @@ cdef class DNSOutgoing:
 
     cdef _write_int(self, object value)
 
-    cdef _write_question(self, DNSQuestion question)
+    cdef cython.bint _write_question(self, DNSQuestion question)
 
     @cython.locals(
         d=cython.bytes,
         data_view=cython.list,
         length=cython.uint
     )
-    cdef _write_record(self, DNSRecord record, object now)
+    cdef cython.bint _write_record(self, DNSRecord record, object now)
 
     cdef _write_record_class(self, DNSEntry record)
 
-    cdef _check_data_limit_or_rollback(self, object start_data_length, object start_size)
+    cdef cython.bint _check_data_limit_or_rollback(self, cython.uint start_data_length, cython.uint start_size)
 
     cdef _write_questions_from_offset(self, object questions_offset)
 
