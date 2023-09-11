@@ -68,4 +68,4 @@ cdef class QueryHandler:
         known_answers=DNSRRSet,
         known_answers_set=cython.set,
     )
-    cpdef async_response(self, cython.list msgs, object unicast_source)
+    cpdef async_response(self, cython.list msgs, cython.bint unicast_source)
