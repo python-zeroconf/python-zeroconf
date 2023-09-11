@@ -21,12 +21,15 @@ cdef object PACK_BYTE
 cdef object PACK_SHORT
 cdef object PACK_LONG
 
+cdef object STATE_INIT
+cdef object STATE_FINISHED
+
 cdef cython.tuple BYTE_TABLE
 
 cdef class DNSOutgoing:
 
     cdef public unsigned int flags
-    cdef public object finished
+    cdef public bint finished
     cdef public object id
     cdef public bint multicast
     cdef public cython.list packets_data

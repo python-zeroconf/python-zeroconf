@@ -61,6 +61,10 @@ class State(enum.Enum):
     finished = 1
 
 
+STATE_INIT = State.init
+STATE_FINISHED = State.finished
+
+
 class DNSOutgoing:
 
     """Object representation of an outgoing packet"""
@@ -95,7 +99,7 @@ class DNSOutgoing:
         self.size: int = _DNS_PACKET_HEADER_LEN
         self.allow_long: bool = True
 
-        self.state = State.init
+        self.state = STATE_INIT
 
         self.questions: List[DNSQuestion] = []
         self.answers: List[Tuple[DNSRecord, float]] = []
@@ -400,7 +404,7 @@ class DNSOutgoing:
         return self._packets()
 
     def _packets(self) -> List[bytes]:
-        if self.state == State.finished:
+        if self.state == STATE_FINISHED:
             return self.packets_data
 
         questions_offset = 0
@@ -481,5 +485,5 @@ class DNSOutgoing:
             ):
                 log.warning("packets() made no progress adding records; returning")
                 break
-        self.state = State.finished
+        self.state = STATE_FINISHED
         return self.packets_data
