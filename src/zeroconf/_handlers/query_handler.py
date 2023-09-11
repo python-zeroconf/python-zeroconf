@@ -268,12 +268,12 @@ class QueryHandler:
 
         for msg in msgs:
             for question in msg.questions:
-                if not question.unicast:
+                if not question.unique:  # unique and unicast are the same flag
                     if not known_answers_set:  # pragma: no branch
-                        known_answers_set = set(known_answers.lookup)
+                        known_answers_set = known_answers.lookup_set()
                     self.question_history.add_question_at_time(question, msg.now, known_answers_set)
                 answer_set = self._answer_question(question, known_answers)
-                if not ucast_source and question.unicast:
+                if not ucast_source and question.unique:  # unique and unicast are the same flag
                     query_res.add_qu_question_response(answer_set)
                     continue
                 if ucast_source:

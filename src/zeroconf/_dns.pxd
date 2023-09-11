@@ -136,3 +136,5 @@ cdef class DNSRRSet:
         record_sets=cython.list,
     )
     cdef cython.dict _get_lookup(self)
+
+    cpdef cython.set lookup_set(self)

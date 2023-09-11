@@ -59,7 +59,7 @@ cdef class QueryHandler:
     cdef _add_address_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
-    cdef _answer_question(self, DNSQuestion question, DNSRRSet known_answers)
+    cdef cython.dict _answer_question(self, DNSQuestion question, DNSRRSet known_answers)
 
     @cython.locals(
         msg=DNSIncoming,
