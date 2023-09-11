@@ -277,7 +277,7 @@ class DNSOutgoing:
         start_size = self.size
         for count in range(len(labels)):
             label = name if count == 0 else '.'.join(labels[count:])
-            index = self.names.get(label)
+            index = self.names.get(label, 0)
             if index:
                 # If part of the name already exists in the packet,
                 # create a pointer to it
