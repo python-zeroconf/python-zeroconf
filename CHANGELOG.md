@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.108.0 (2023-09-11)
+
+### Feature
+
+* Improve performance of constructing outgoing queries ([#1267](https://github.com/python-zeroconf/python-zeroconf/issues/1267)) ([`00c439a`](https://github.com/python-zeroconf/python-zeroconf/commit/00c439a6400b7850ef9fdd75bc8d82d4e64b1da0))
+
 ## v0.107.0 (2023-09-11)
 
 ### Feature
