@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.111.0 (2023-09-14)
+
+### Feature
+
+* Speed up question and answer internals ([#1272](https://github.com/python-zeroconf/python-zeroconf/issues/1272)) ([`d24722b`](https://github.com/python-zeroconf/python-zeroconf/commit/d24722bfa4201d48ab482d35b0ef004f070ada80))
+
 ## v0.110.0 (2023-09-14)
 
 ### Feature
