@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.112.0 (2023-09-14)
+
+### Feature
+
+* Improve AsyncServiceBrowser performance ([#1273](https://github.com/python-zeroconf/python-zeroconf/issues/1273)) ([`0c88ecf`](https://github.com/python-zeroconf/python-zeroconf/commit/0c88ecf5ef6b9b256f991e7a630048de640999a6))
+
 ## v0.111.0 (2023-09-14)
 
 ### Feature
