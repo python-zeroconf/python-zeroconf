@@ -7,17 +7,17 @@ from .._protocol.outgoing cimport DNSOutgoing
 
 cdef class QuestionAnswers:
 
-    cdef public cython.dict ucast
-    cdef public cython.dict mcast_now
-    cdef public cython.dict mcast_aggregate
-    cdef public cython.dict mcast_aggregate_last_second
+    cdef public object ucast
+    cdef public object mcast_now
+    cdef public object mcast_aggregate
+    cdef public object mcast_aggregate_last_second
 
 
 cdef class AnswerGroup:
 
     cdef public object send_after
     cdef public object send_before
-    cdef public cython.dict answers
+    cdef public object answers
 
 
 
