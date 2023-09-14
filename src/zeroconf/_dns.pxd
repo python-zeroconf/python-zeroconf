@@ -22,8 +22,8 @@ cdef object current_time_millis
 
 cdef class DNSEntry:
 
-    cdef public object key
-    cdef public object name
+    cdef public str key
+    cdef public str name
     cdef public object type
     cdef public object class_
     cdef public object unique
@@ -84,8 +84,8 @@ cdef class DNSHinfo(DNSRecord):
 cdef class DNSPointer(DNSRecord):
 
     cdef public cython.int _hash
-    cdef public object alias
-    cdef public object alias_key
+    cdef public str alias
+    cdef public str alias_key
 
     cdef _eq(self, DNSPointer other)
 
