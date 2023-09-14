@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.109.0 (2023-09-14)
+
+### Feature
+
+* Speed up ServiceBrowsers with a cython pxd ([#1270](https://github.com/python-zeroconf/python-zeroconf/issues/1270)) ([`4837876`](https://github.com/python-zeroconf/python-zeroconf/commit/48378769c3887b5746ca00de30067a4c0851765c))
+
 ## v0.108.0 (2023-09-11)
 
 ### Feature
