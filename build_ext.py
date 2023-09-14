@@ -32,6 +32,7 @@ def build(setup_kwargs: Any) -> None:
                         "src/zeroconf/_handlers/answers.py",
                         "src/zeroconf/_handlers/record_manager.py",
                         "src/zeroconf/_handlers/query_handler.py",
+                        "src/zeroconf/_services/browser.py",
                         "src/zeroconf/_services/info.py",
                         "src/zeroconf/_services/registry.py",
                         "src/zeroconf/_updates.py",

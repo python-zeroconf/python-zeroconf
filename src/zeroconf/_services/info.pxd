@@ -56,9 +56,9 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public cython.set _get_address_and_nsec_records_cache
 
     @cython.locals(
-        cache=DNSCache
+        cache=DNSCache,
     )
-    cpdef async_update_records(self, object zc, object now, cython.list records)
+    cpdef async_update_records(self, object zc, cython.float now, cython.list records)
 
     @cython.locals(
         cache=DNSCache
@@ -73,7 +73,7 @@ cdef class ServiceInfo(RecordUpdateListener):
 
     cdef _get_ip_addresses_from_cache_lifo(self, object zc, object now, object type)
 
-    cdef _process_record_threadsafe(self, object zc, DNSRecord record, object now)
+    cdef _process_record_threadsafe(self, object zc, DNSRecord record, cython.float now)
 
     @cython.locals(
         cache=DNSCache
