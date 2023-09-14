@@ -21,7 +21,7 @@
 """
 
 from operator import attrgetter
-from typing import Dict, List, NamedTuple, Set
+from typing import Dict, List, Set
 
 from .._dns import DNSQuestion, DNSRecord
 from .._protocol.outgoing import DNSOutgoing
@@ -38,20 +38,37 @@ NAME_GETTER = attrgetter('name')
 
 _FLAGS_QR_RESPONSE_AA = _FLAGS_QR_RESPONSE | _FLAGS_AA
 
-
-class QuestionAnswers(NamedTuple):
-    ucast: _AnswerWithAdditionalsType
-    mcast_now: _AnswerWithAdditionalsType
-    mcast_aggregate: _AnswerWithAdditionalsType
-    mcast_aggregate_last_second: _AnswerWithAdditionalsType
+float_ = float
 
 
-class AnswerGroup(NamedTuple):
+class QuestionAnswers:
+    """A group of answers to a question."""
+
+    __slots__ = ('ucast', 'mcast_now', 'mcast_aggregate', 'mcast_aggregate_last_second')
+
+    def __init__(
+        self,
+        ucast: _AnswerWithAdditionalsType,
+        mcast_now: _AnswerWithAdditionalsType,
+        mcast_aggregate: _AnswerWithAdditionalsType,
+        mcast_aggregate_last_second: _AnswerWithAdditionalsType,
+    ) -> None:
+        """Initialize a QuestionAnswers."""
+        self.ucast = ucast
+        self.mcast_now = mcast_now
+        self.mcast_aggregate = mcast_aggregate
+        self.mcast_aggregate_last_second = mcast_aggregate_last_second
+
+
+class AnswerGroup:
     """A group of answers scheduled to be sent at the same time."""
 
-    send_after: float  # Must be sent after this time
-    send_before: float  # Must be sent before this time
-    answers: _AnswerWithAdditionalsType
+    __slots__ = ('send_after', 'send_before', 'answers')
+
+    def __init__(self, send_after: float_, send_before: float_, answers: _AnswerWithAdditionalsType) -> None:
+        self.send_after = send_after  # Must be sent after this time
+        self.send_before = send_before  # Must be sent before this time
+        self.answers = answers
 
 
 def construct_outgoing_multicast_answers(answers: _AnswerWithAdditionalsType) -> DNSOutgoing:
