@@ -5,6 +5,23 @@ from .._dns cimport DNSRecord
 from .._protocol.outgoing cimport DNSOutgoing
 
 
+cdef class QuestionAnswers:
+
+    cdef public object ucast
+    cdef public object mcast_now
+    cdef public object mcast_aggregate
+    cdef public object mcast_aggregate_last_second
+
+
+cdef class AnswerGroup:
+
+    cdef public object send_after
+    cdef public object send_before
+    cdef public object answers
+
+
+
+
 cdef object _FLAGS_QR_RESPONSE_AA
 cdef object NAME_GETTER
 
