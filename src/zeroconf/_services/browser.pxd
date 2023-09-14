@@ -74,3 +74,5 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cpdef _async_send_ready_queries(self, object now)
 
     cpdef _cancel_send_timer(self)
+
+    cpdef async_update_records_complete(self)

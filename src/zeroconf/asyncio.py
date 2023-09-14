@@ -82,17 +82,6 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         """Cancel the browser."""
         self._async_cancel()
 
-    def async_update_records_complete(self) -> None:
-        """Called when a record update has completed for all handlers.
-
-        At this point the cache will have the new records.
-
-        This method will be run in the event loop.
-        """
-        for pending in self._pending_handlers.items():
-            self._fire_service_state_changed_event(pending)
-        self._pending_handlers.clear()
-
     async def __aenter__(self) -> 'AsyncServiceBrowser':
         return self
 

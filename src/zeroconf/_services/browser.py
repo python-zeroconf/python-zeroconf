@@ -25,7 +25,6 @@ import queue
 import random
 import threading
 import warnings
-from abc import abstractmethod
 from types import TracebackType  # noqa # used in type hints
 from typing import (
     TYPE_CHECKING,
@@ -437,14 +436,18 @@ class _ServiceBrowserBase(RecordUpdateListener):
             for type_, name in self._names_matching_types((record.name,)):
                 self._enqueue_callback(SERVICE_STATE_CHANGE_UPDATED, type_, name)
 
-    @abstractmethod
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
 
         At this point the cache will have the new records.
 
         This method will be run in the event loop.
+
+        This method is expected to be overridden by subclasses.
         """
+        for pending in self._pending_handlers.items():
+            self._fire_service_state_changed_event(pending)
+        self._pending_handlers.clear()
 
     def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
         """Fire a service state changed event.
@@ -454,7 +457,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         When running with AsyncServiceBrowser, this will happen in the event loop.
         """
-        name_type, state_change = event
+        name_type = event[0]
+        state_change = event[1]
         self._service_state_changed.fire(
             zeroconf=self.zc,
             service_type=name_type[1],
