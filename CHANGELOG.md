@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.110.0 (2023-09-14)
+
+### Feature
+
+* Small speed ups to ServiceBrowser ([#1271](https://github.com/python-zeroconf/python-zeroconf/issues/1271)) ([`22c433d`](https://github.com/python-zeroconf/python-zeroconf/commit/22c433ddaea3049ac49933325ba938fd87a529c0))
+
 ## v0.109.0 (2023-09-14)
 
 ### Feature
