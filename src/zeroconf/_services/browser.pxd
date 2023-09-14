@@ -46,9 +46,9 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cdef public object port
     cdef public object multicast
     cdef public object question_type
-    cdef cython.dict _pending_handlers
-    cdef object _service_state_changed
-    cdef QueryScheduler query_scheduler
+    cdef public cython.dict _pending_handlers
+    cdef public object _service_state_changed
+    cdef public QueryScheduler query_scheduler
     cdef public bint done
     cdef public object _first_request
     cdef public object _next_send_timer
