@@ -58,7 +58,7 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cpdef _enqueue_callback(self, object state_change, object type_, object name)
 
-    @cython.locals(record=DNSRecord, cache=DNSCache, service=DNSRecord, record_update=cython.tuple)
+    @cython.locals(record=DNSRecord, cache=DNSCache, service=DNSRecord)
     cpdef async_update_records(self, object zc, cython.float now, cython.list records)
 
     cpdef _names_matching_types(self, object types)
