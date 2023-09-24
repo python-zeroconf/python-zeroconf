@@ -107,6 +107,9 @@ def _cached_ip_addresses(address: Union[str, bytes, int]) -> Optional[Union[IPv4
         return None
 
 
+_cached_ip_addresses_wrapper = _cached_ip_addresses
+
+
 class ServiceInfo(RecordUpdateListener):
     """Service information.
 
@@ -197,7 +200,7 @@ class ServiceInfo(RecordUpdateListener):
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self.interface_index = interface_index
-        self._new_records_futures: Set[asyncio.Future] = set()
+        self._new_records_futures: Optional[Set[asyncio.Future]] = None
         self._dns_address_cache: Optional[List[DNSAddress]] = None
         self._dns_pointer_cache: Optional[DNSPointer] = None
         self._dns_service_cache: Optional[DNSService] = None
@@ -240,7 +243,7 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
-            addr = _cached_ip_addresses(address)
+            addr = _cached_ip_addresses_wrapper(address)
             if addr is None:
                 raise TypeError(
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
@@ -272,6 +275,8 @@ class ServiceInfo(RecordUpdateListener):
 
     async def async_wait(self, timeout: float, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
+        if not self._new_records_futures:
+            self._new_records_futures = set()
         await wait_for_future_set_or_timeout(
             loop or asyncio.get_running_loop(), self._new_records_futures, timeout
         )
@@ -409,7 +414,7 @@ class ServiceInfo(RecordUpdateListener):
         for record in self._get_address_records_from_cache_by_type(zc, type):
             if record.is_expired(now):
                 continue
-            ip_addr = _cached_ip_addresses(record.address)
+            ip_addr = _cached_ip_addresses_wrapper(record.address)
             if ip_addr is not None:
                 address_list.append(ip_addr)
         address_list.reverse()  # Reverse to get LIFO order
@@ -455,12 +460,17 @@ class ServiceInfo(RecordUpdateListener):
 
         record_key = record.key
         record_type = type(record)
-        if record_key == self.server_key and record_type is DNSAddress:
+        if record_type is DNSAddress and record_key == self.server_key:
+            dns_address_record = record
             if TYPE_CHECKING:
-                assert isinstance(record, DNSAddress)
-            ip_addr = _cached_ip_addresses(record.address)
+                assert isinstance(dns_address_record, DNSAddress)
+            ip_addr = _cached_ip_addresses_wrapper(dns_address_record.address)
             if ip_addr is None:
-                log.warning("Encountered invalid address while processing %s: %s", record, record.address)
+                log.warning(
+                    "Encountered invalid address while processing %s: %s",
+                    dns_address_record,
+                    dns_address_record.address,
+                )
                 return False
 
             if ip_addr.version == 4:
@@ -492,22 +502,24 @@ class ServiceInfo(RecordUpdateListener):
             return False
 
         if record_type is DNSText:
+            dns_text_record = record
             if TYPE_CHECKING:
-                assert isinstance(record, DNSText)
-            self._set_text(record.text)
+                assert isinstance(dns_text_record, DNSText)
+            self._set_text(dns_text_record.text)
             return True
 
         if record_type is DNSService:
+            dns_service_record = record
             if TYPE_CHECKING:
-                assert isinstance(record, DNSService)
+                assert isinstance(dns_service_record, DNSService)
             old_server_key = self.server_key
-            self._name = record.name
-            self.key = record.key
-            self.server = record.server
-            self.server_key = record.server_key
-            self.port = record.port
-            self.weight = record.weight
-            self.priority = record.priority
+            self._name = dns_service_record.name
+            self.key = dns_service_record.key
+            self.server = dns_service_record.server
+            self.server_key = dns_service_record.server_key
+            self.port = dns_service_record.port
+            self.weight = dns_service_record.weight
+            self.priority = dns_service_record.priority
             if old_server_key != self.server_key:
                 self._set_ipv4_addresses_from_cache(zc, now)
                 self._set_ipv6_addresses_from_cache(zc, now)

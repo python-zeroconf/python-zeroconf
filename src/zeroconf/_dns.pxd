@@ -106,8 +106,8 @@ cdef class DNSService(DNSRecord):
     cdef public object priority
     cdef public object weight
     cdef public object port
-    cdef public object server
-    cdef public object server_key
+    cdef public str server
+    cdef public str server_key
 
     cdef _eq(self, DNSService other)
 
