@@ -172,7 +172,6 @@ class DNSIncoming:
             log_exc_info = True
         log.debug(*(logger_data or ['Exception occurred']), exc_info=log_exc_info)
 
-    @property
     def answers(self) -> List[DNSRecord]:
         """Answers in the packet."""
         if not self._did_read_others:

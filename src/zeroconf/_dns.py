@@ -174,7 +174,7 @@ class DNSRecord(DNSEntry):
     def suppressed_by(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
-        answers = msg.answers
+        answers = msg.answers()
         for record in answers:
             if self._suppressed_by_answer(record):
                 return True

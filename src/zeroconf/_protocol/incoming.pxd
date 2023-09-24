@@ -74,6 +74,8 @@ cdef class DNSIncoming:
 
     cpdef is_probe(self)
 
+    cpdef answers(self)
+
     cpdef is_response(self)
 
     @cython.locals(

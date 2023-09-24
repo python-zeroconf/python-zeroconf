@@ -270,7 +270,7 @@ class QueryHandler:
         now = msg.now
         for msg in msgs:
             if not msg.is_probe():
-                answers.extend(msg.answers)
+                answers.extend(msg.answers())
             else:
                 is_probe = True
         known_answers = DNSRRSet(answers)
