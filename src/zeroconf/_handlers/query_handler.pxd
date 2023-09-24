@@ -21,7 +21,7 @@ cdef object _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL
 cdef class _QueryResponse:
 
     cdef bint _is_probe
-    cdef DNSIncoming _msg
+    cdef cython.list _questions
     cdef float _now
     cdef DNSCache _cache
     cdef cython.dict _additionals
@@ -31,12 +31,12 @@ cdef class _QueryResponse:
     cdef cython.set _mcast_aggregate_last_second
 
     @cython.locals(record=DNSRecord)
-    cpdef add_qu_question_response(self, cython.dict answers)
+    cdef add_qu_question_response(self, cython.dict answers)
 
-    cpdef add_ucast_question_response(self, cython.dict answers)
+    cdef add_ucast_question_response(self, cython.dict answers)
 
-    @cython.locals(answer=DNSRecord)
-    cpdef add_mcast_question_response(self, cython.dict answers)
+    @cython.locals(answer=DNSRecord, question=DNSQuestion)
+    cdef add_mcast_question_response(self, cython.dict answers)
 
     @cython.locals(maybe_entry=DNSRecord)
     cdef bint _has_mcast_within_one_quarter_ttl(self, DNSRecord record)
@@ -44,7 +44,7 @@ cdef class _QueryResponse:
     @cython.locals(maybe_entry=DNSRecord)
     cdef bint _has_mcast_record_in_last_second(self, DNSRecord record)
 
-    cpdef answers(self)
+    cdef QuestionAnswers answers(self)
 
 cdef class QueryHandler:
 
@@ -70,5 +70,7 @@ cdef class QueryHandler:
         answer_set=cython.dict,
         known_answers=DNSRRSet,
         known_answers_set=cython.set,
+        is_probe=object,
+        now=object
     )
     cpdef async_response(self, cython.list msgs, cython.bint unicast_source)
