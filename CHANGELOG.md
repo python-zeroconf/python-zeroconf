@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.113.0 (2023-09-24)
+
+### Feature
+
+* Improve performance of loading records from cache in ServiceInfo ([#1274](https://github.com/python-zeroconf/python-zeroconf/issues/1274)) ([`6257d49`](https://github.com/python-zeroconf/python-zeroconf/commit/6257d49952e02107f800f4ad4894716508edfcda))
+
 ## v0.112.0 (2023-09-14)
 
 ### Feature
