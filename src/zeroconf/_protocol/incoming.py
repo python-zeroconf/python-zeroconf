@@ -201,7 +201,7 @@ class DNSIncoming:
                 'n_auth=%s' % self.num_authorities,
                 'n_add=%s' % self.num_additionals,
                 'questions=%s' % self.questions,
-                'answers=%s' % self.answers,
+                'answers=%s' % self.answers(),
             ]
         )
 
