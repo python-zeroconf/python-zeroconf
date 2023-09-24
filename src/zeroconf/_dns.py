@@ -526,10 +526,10 @@ class DNSRRSet:
     def __init__(self, records: List[DNSRecord]) -> None:
         """Create an RRset from records sets."""
         self._records = records
-        self._lookup: Optional[Dict[DNSRecord, float]] = None
+        self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
 
     @property
-    def lookup(self) -> Dict[DNSRecord, float]:
+    def lookup(self) -> Dict[DNSRecord, DNSRecord]:
         """Return the lookup table."""
         return self._get_lookup()
 
@@ -537,18 +537,18 @@ class DNSRRSet:
         """Return the lookup table as aset."""
         return set(self._get_lookup())
 
-    def _get_lookup(self) -> Dict[DNSRecord, float]:
+    def _get_lookup(self) -> Dict[DNSRecord, DNSRecord]:
         """Return the lookup table, building it if needed."""
         if self._lookup is None:
             # Build the hash table so we can lookup the record ttl
-            self._lookup = {record: record.ttl for record in self._records}
+            self._lookup = {record: record for record in self._records}
         return self._lookup
 
     def suppresses(self, record: _DNSRecord) -> bool:
         """Returns true if any answer in the rrset can suffice for the
         information held in this record."""
         lookup = self._get_lookup()
-        other_ttl = lookup.get(record)
-        if other_ttl is None:
+        other = lookup.get(record)
+        if other is None:
             return False
-        return other_ttl > (record.ttl / 2)
+        return other.ttl > (record.ttl / 2)
