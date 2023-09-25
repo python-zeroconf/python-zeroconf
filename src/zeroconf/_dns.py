@@ -174,7 +174,7 @@ class DNSRecord(DNSEntry):
     def suppressed_by(self, msg: 'DNSIncoming') -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
-        answers = msg.answers
+        answers = msg.answers()
         for record in answers:
             if self._suppressed_by_answer(record):
                 return True
@@ -521,15 +521,15 @@ _DNSRecord = DNSRecord
 class DNSRRSet:
     """A set of dns records with a lookup to get the ttl."""
 
-    __slots__ = ('_record_sets', '_lookup')
+    __slots__ = ('_records', '_lookup')
 
-    def __init__(self, record_sets: List[List[DNSRecord]]) -> None:
+    def __init__(self, records: List[DNSRecord]) -> None:
         """Create an RRset from records sets."""
-        self._record_sets = record_sets
-        self._lookup: Optional[Dict[DNSRecord, float]] = None
+        self._records = records
+        self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
 
     @property
-    def lookup(self) -> Dict[DNSRecord, float]:
+    def lookup(self) -> Dict[DNSRecord, DNSRecord]:
         """Return the lookup table."""
         return self._get_lookup()
 
@@ -537,21 +537,18 @@ class DNSRRSet:
         """Return the lookup table as aset."""
         return set(self._get_lookup())
 
-    def _get_lookup(self) -> Dict[DNSRecord, float]:
+    def _get_lookup(self) -> Dict[DNSRecord, DNSRecord]:
         """Return the lookup table, building it if needed."""
         if self._lookup is None:
             # Build the hash table so we can lookup the record ttl
-            self._lookup = {}
-            for record_sets in self._record_sets:
-                for record in record_sets:
-                    self._lookup[record] = record.ttl
+            self._lookup = {record: record for record in self._records}
         return self._lookup
 
     def suppresses(self, record: _DNSRecord) -> bool:
         """Returns true if any answer in the rrset can suffice for the
         information held in this record."""
         lookup = self._get_lookup()
-        other_ttl = lookup.get(record)
-        if other_ttl is None:
+        other = lookup.get(record)
+        if other is None:
             return False
-        return other_ttl > (record.ttl / 2)
+        return other.ttl > (record.ttl / 2)

@@ -392,7 +392,7 @@ def test_rrset_does_not_consider_ttl():
     longaaaarec = r.DNSAddress('irrelevant', const._TYPE_AAAA, const._CLASS_IN, 100, b'same')
     shortaaaarec = r.DNSAddress('irrelevant', const._TYPE_AAAA, const._CLASS_IN, 10, b'same')
 
-    rrset = DNSRRSet([[longarec, shortaaaarec]])
+    rrset = DNSRRSet([longarec, shortaaaarec])
 
     assert rrset.suppresses(longarec)
     assert rrset.suppresses(shortarec)
@@ -404,7 +404,7 @@ def test_rrset_does_not_consider_ttl():
     mediumarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 60, b'same')
     shortarec = r.DNSAddress('irrelevant', const._TYPE_A, const._CLASS_IN, 10, b'same')
 
-    rrset2 = DNSRRSet([[mediumarec]])
+    rrset2 = DNSRRSet([mediumarec])
     assert not rrset2.suppresses(verylongarec)
     assert rrset2.suppresses(longarec)
     assert rrset2.suppresses(mediumarec)

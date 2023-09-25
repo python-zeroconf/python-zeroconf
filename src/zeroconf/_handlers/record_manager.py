@@ -87,7 +87,7 @@ class RecordManager:
         now_float = now
         unique_types: Set[Tuple[str, int, int]] = set()
         cache = self.cache
-        answers = msg.answers
+        answers = msg.answers()
 
         for record in answers:
             # Protect zeroconf from records that can cause denial of service.

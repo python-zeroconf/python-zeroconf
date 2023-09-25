@@ -63,7 +63,7 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(answer, 0)
         parsed = r.DNSIncoming(generated.packets()[0])
-        assert answer in parsed.answers
+        assert answer in parsed.answers()
 
         # Types > 255 should be ignored
         answer_invalid_types = r.DNSNsec(
@@ -77,7 +77,7 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(answer_invalid_types, 0)
         parsed = r.DNSIncoming(generated.packets()[0])
-        assert answer in parsed.answers
+        assert answer in parsed.answers()
 
     def test_parse_own_packet_response(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -96,7 +96,7 @@ class PacketGeneration(unittest.TestCase):
         )
         parsed = r.DNSIncoming(generated.packets()[0])
         assert len(generated.answers) == 1
-        assert len(generated.answers) == len(parsed.answers)
+        assert len(generated.answers) == len(parsed.answers())
 
     def test_adding_empty_answer(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -119,7 +119,7 @@ class PacketGeneration(unittest.TestCase):
         )
         parsed = r.DNSIncoming(generated.packets()[0])
         assert len(generated.answers) == 1
-        assert len(generated.answers) == len(parsed.answers)
+        assert len(generated.answers) == len(parsed.answers())
 
     def test_adding_expired_answer(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -138,7 +138,7 @@ class PacketGeneration(unittest.TestCase):
         )
         parsed = r.DNSIncoming(generated.packets()[0])
         assert len(generated.answers) == 0
-        assert len(generated.answers) == len(parsed.answers)
+        assert len(generated.answers) == len(parsed.answers())
 
     def test_match_question(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -221,7 +221,7 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(0)
         generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'os'))
         parsed = r.DNSIncoming(generated.packets()[0])
-        answer = cast(r.DNSHinfo, parsed.answers[0])
+        answer = cast(r.DNSHinfo, parsed.answers()[0])
         assert answer.cpu == 'cpu'
         assert answer.os == 'os'
 
@@ -276,15 +276,15 @@ class PacketGeneration(unittest.TestCase):
 
         parsed1 = r.DNSIncoming(packets[0])
         assert len(parsed1.questions) == 30
-        assert len(parsed1.answers) == 88
+        assert len(parsed1.answers()) == 88
         assert parsed1.truncated
         parsed2 = r.DNSIncoming(packets[1])
         assert len(parsed2.questions) == 0
-        assert len(parsed2.answers) == 101
+        assert len(parsed2.answers()) == 101
         assert parsed2.truncated
         parsed3 = r.DNSIncoming(packets[2])
         assert len(parsed3.questions) == 0
-        assert len(parsed3.answers) == 11
+        assert len(parsed3.answers()) == 11
         assert not parsed3.truncated
 
     def test_massive_probe_packet_split(self):
@@ -375,7 +375,7 @@ class PacketGeneration(unittest.TestCase):
 
         for packet in packets:
             parsed = r.DNSIncoming(packet)
-            assert len(parsed.answers) == 1
+            assert len(parsed.answers()) == 1
 
     def test_questions_do_not_end_up_every_packet(self):
         """Test that questions are not sent again when multiple packets are needed.
@@ -413,11 +413,11 @@ class PacketGeneration(unittest.TestCase):
 
         parsed1 = r.DNSIncoming(packets[0])
         assert len(parsed1.questions) == 35
-        assert len(parsed1.answers) == 33
+        assert len(parsed1.answers()) == 33
 
         parsed2 = r.DNSIncoming(packets[1])
         assert len(parsed2.questions) == 0
-        assert len(parsed2.answers) == 2
+        assert len(parsed2.answers()) == 2
 
 
 class PacketForm(unittest.TestCase):
@@ -482,7 +482,7 @@ class TestDnsIncoming(unittest.TestCase):
         generated.add_additional_answer(answer)
         packet = generated.packets()[0]
         parsed = r.DNSIncoming(packet)
-        assert len(parsed.answers) == 0
+        assert len(parsed.answers()) == 0
         assert parsed.is_query() != parsed.is_response()
 
     def test_incoming_circular_reference(self):
@@ -505,7 +505,7 @@ class TestDnsIncoming(unittest.TestCase):
         generated.add_additional_answer(answer)
         packet = generated.packets()[0]
         parsed = r.DNSIncoming(packet)
-        record = parsed.answers[0]
+        record = parsed.answers()[0]
         assert isinstance(record, r.DNSAddress)
         assert record.address == packed
 
@@ -662,7 +662,7 @@ def test_dns_compression_rollback_for_corruption():
         incoming = r.DNSIncoming(packet)
         assert incoming.valid is True
         assert (
-            len(incoming.answers)
+            len(incoming.answers())
             == incoming.num_answers + incoming.num_authorities + incoming.num_additionals
         )
 
@@ -767,7 +767,7 @@ def test_parse_packet_with_nsec_record():
         b"\x00\x00\x80\x00@"
     )
     parsed = DNSIncoming(nsec_packet)
-    nsec_record = cast(r.DNSNsec, parsed.answers[3])
+    nsec_record = cast(r.DNSNsec, parsed.answers()[3])
     assert "nsec," in str(nsec_record)
     assert nsec_record.rdtypes == [16, 33]
     assert nsec_record.next_name == "MyHome54 (2)._meshcop._udp.local."
@@ -794,8 +794,8 @@ def test_records_same_packet_share_fate():
 
     for packet in out.packets():
         dnsin = DNSIncoming(packet)
-        first_time = dnsin.answers[0].created
-        for answer in dnsin.answers:
+        first_time = dnsin.answers()[0].created
+        for answer in dnsin.answers():
             assert answer.created == first_time
 
 
@@ -828,7 +828,7 @@ def test_dns_compression_all_invalid(caplog):
     )
     parsed = r.DNSIncoming(packet, ("2.4.5.4", 5353))
     assert len(parsed.questions) == 0
-    assert len(parsed.answers) == 0
+    assert len(parsed.answers()) == 0
 
     assert " Unable to parse; skipping record" in caplog.text
 
@@ -845,7 +845,7 @@ def test_invalid_next_name_ignored():
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.questions) == 1
-    assert len(parsed.answers) == 2
+    assert len(parsed.answers()) == 2
 
 
 def test_dns_compression_invalid_skips_record():
@@ -868,7 +868,7 @@ def test_dns_compression_invalid_skips_record():
         'eufy HomeBase2-2464._hap._tcp.local.',
         [const._TYPE_TXT, const._TYPE_SRV],
     )
-    assert answer in parsed.answers
+    assert answer in parsed.answers()
 
 
 def test_dns_compression_points_forward():
@@ -893,7 +893,7 @@ def test_dns_compression_points_forward():
         'TV Beneden (2)._androidtvremote._tcp.local.',
         [const._TYPE_TXT, const._TYPE_SRV],
     )
-    assert answer in parsed.answers
+    assert answer in parsed.answers()
 
 
 def test_dns_compression_points_to_itself():
@@ -904,7 +904,7 @@ def test_dns_compression_points_to_itself():
         b"\x01\x00\x04\xc0\xa8\xd0\x06"
     )
     parsed = r.DNSIncoming(packet)
-    assert len(parsed.answers) == 1
+    assert len(parsed.answers()) == 1
 
 
 def test_dns_compression_points_beyond_packet():
@@ -915,7 +915,7 @@ def test_dns_compression_points_beyond_packet():
         b'\x00\x01\x00\x04\xc0\xa8\xd0\x06'
     )
     parsed = r.DNSIncoming(packet)
-    assert len(parsed.answers) == 1
+    assert len(parsed.answers()) == 1
 
 
 def test_dns_compression_generic_failure(caplog):
@@ -926,7 +926,7 @@ def test_dns_compression_generic_failure(caplog):
         b'\x00\x01\x00\x04\xc0\xa8\xd0\x06'
     )
     parsed = r.DNSIncoming(packet, ("1.2.3.4", 5353))
-    assert len(parsed.answers) == 1
+    assert len(parsed.answers()) == 1
     assert "Received invalid packet from ('1.2.3.4', 5353)" in caplog.text
 
 
@@ -946,7 +946,7 @@ def test_label_length_attack():
         b'\x01\x00\x04\xc0\xa8\xd0\x06'
     )
     parsed = r.DNSIncoming(packet)
-    assert len(parsed.answers) == 0
+    assert len(parsed.answers()) == 0
 
 
 def test_label_compression_attack():
@@ -976,7 +976,7 @@ def test_label_compression_attack():
         b'\x0c\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x06'
     )
     parsed = r.DNSIncoming(packet)
-    assert len(parsed.answers) == 1
+    assert len(parsed.answers()) == 1
 
 
 def test_dns_compression_loop_attack():
@@ -993,7 +993,7 @@ def test_dns_compression_loop_attack():
         b'\x04\xc0\xa8\xd0\x05'
     )
     parsed = r.DNSIncoming(packet)
-    assert len(parsed.answers) == 0
+    assert len(parsed.answers()) == 0
 
 
 def test_txt_after_invalid_nsec_name_still_usable():
@@ -1013,7 +1013,7 @@ def test_txt_after_invalid_nsec_name_still_usable():
         b'ce=0'
     )
     parsed = r.DNSIncoming(packet)
-    txt_record = cast(r.DNSText, parsed.answers[4])
+    txt_record = cast(r.DNSText, parsed.answers()[4])
     # The NSEC record with the invalid name compression should be skipped
     assert txt_record.text == (
         b'2info=/api/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers'
@@ -1022,4 +1022,4 @@ def test_txt_after_invalid_nsec_name_still_usable():
         b'00/xml/device_description.xml\x0csslport=1443\x0ehhsslport=1843\tvarian'
         b't=2\x0emdnssequence=0'
     )
-    assert len(parsed.answers) == 5
+    assert len(parsed.answers()) == 5

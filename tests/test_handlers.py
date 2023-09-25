@@ -1425,8 +1425,8 @@ async def test_response_aggregation_timings(run_isolated):
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
         zc.record_manager.async_updates_from_response(incoming)
-        assert info.dns_pointer() in incoming.answers
-        assert info2.dns_pointer() in incoming.answers
+        assert info.dns_pointer() in incoming.answers()
+        assert info2.dns_pointer() in incoming.answers()
         send_mock.reset_mock()
 
         protocol.datagram_received(query3.packets()[0], ('127.0.0.1', const._MDNS_PORT))
@@ -1439,7 +1439,7 @@ async def test_response_aggregation_timings(run_isolated):
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
         zc.record_manager.async_updates_from_response(incoming)
-        assert info3.dns_pointer() in incoming.answers
+        assert info3.dns_pointer() in incoming.answers()
         send_mock.reset_mock()
 
         # Because the response was sent in the last second we need to make
@@ -1461,7 +1461,7 @@ async def test_response_aggregation_timings(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        assert info.dns_pointer() in incoming.answers
+        assert info.dns_pointer() in incoming.answers()
 
     await aiozc.async_close()
 
@@ -1501,7 +1501,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
         zc.record_manager.async_updates_from_response(incoming)
-        assert info2.dns_pointer() in incoming.answers
+        assert info2.dns_pointer() in incoming.answers()
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
@@ -1511,7 +1511,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
         zc.record_manager.async_updates_from_response(incoming)
-        assert info2.dns_pointer() in incoming.answers
+        assert info2.dns_pointer() in incoming.answers()
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
@@ -1534,7 +1534,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
         zc.record_manager.async_updates_from_response(incoming)
-        assert info2.dns_pointer() in incoming.answers
+        assert info2.dns_pointer() in incoming.answers()
 
 
 @pytest.mark.asyncio
