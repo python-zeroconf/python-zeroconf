@@ -997,7 +997,7 @@ async def test_integration():
         """Sends an outgoing packet."""
         pout = DNSIncoming(out.packets()[0])
         nonlocal nbr_answers
-        for answer in pout.answers:
+        for answer in pout.answers():
             nbr_answers += 1
             if not answer.ttl > expected_ttl / 2:
                 unexpected_ttl.set()

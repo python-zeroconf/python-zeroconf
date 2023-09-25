@@ -55,7 +55,7 @@ class _QueryResponse:
 
     __slots__ = (
         "_is_probe",
-        "_msg",
+        "_questions",
         "_now",
         "_cache",
         "_additionals",
@@ -65,15 +65,11 @@ class _QueryResponse:
         "_mcast_aggregate_last_second",
     )
 
-    def __init__(self, cache: DNSCache, msgs: List[DNSIncoming]) -> None:
+    def __init__(self, cache: DNSCache, questions: List[DNSQuestion], is_probe: bool, now: float) -> None:
         """Build a query response."""
-        self._is_probe = False
-        for msg in msgs:
-            if msg.is_probe:
-                self._is_probe = True
-                break
-        self._msg = msgs[0]
-        self._now = self._msg.now
+        self._is_probe = is_probe
+        self._questions = questions
+        self._now = now
         self._cache = cache
         self._additionals: _AnswerWithAdditionalsType = {}
         self._ucast: Set[DNSRecord] = set()
@@ -107,10 +103,15 @@ class _QueryResponse:
 
             if self._has_mcast_record_in_last_second(answer):
                 self._mcast_aggregate_last_second.add(answer)
-            elif len(self._msg.questions) == 1 and self._msg.questions[0].type in _RESPOND_IMMEDIATE_TYPES:
-                self._mcast_now.add(answer)
-            else:
-                self._mcast_aggregate.add(answer)
+                continue
+
+            if len(self._questions) == 1:
+                question = self._questions[0]
+                if question.type in _RESPOND_IMMEDIATE_TYPES:
+                    self._mcast_now.add(answer)
+                    continue
+
+            self._mcast_aggregate.add(answer)
 
     def answers(
         self,
@@ -262,8 +263,18 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        known_answers = DNSRRSet([msg.answers for msg in msgs if not msg.is_probe])
-        query_res = _QueryResponse(self.cache, msgs)
+        answers: List[DNSRecord] = []
+        is_probe = False
+        msg = msgs[0]
+        questions = msg.questions
+        now = msg.now
+        for msg in msgs:
+            if not msg.is_probe():
+                answers.extend(msg.answers())
+            else:
+                is_probe = True
+        known_answers = DNSRRSet(answers)
+        query_res = _QueryResponse(self.cache, questions, is_probe, now)
         known_answers_set: Optional[Set[DNSRecord]] = None
 
         for msg in msgs:
@@ -271,7 +282,7 @@ class QueryHandler:
                 if not question.unique:  # unique and unicast are the same flag
                     if not known_answers_set:  # pragma: no branch
                         known_answers_set = known_answers.lookup_set()
-                    self.question_history.add_question_at_time(question, msg.now, known_answers_set)
+                    self.question_history.add_question_at_time(question, now, known_answers_set)
                 answer_set = self._answer_question(question, known_answers)
                 if not ucast_source and question.unique:  # unique and unicast are the same flag
                     query_res.add_qu_question_response(answer_set)

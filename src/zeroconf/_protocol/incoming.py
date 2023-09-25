@@ -172,7 +172,6 @@ class DNSIncoming:
             log_exc_info = True
         log.debug(*(logger_data or ['Exception occurred']), exc_info=log_exc_info)
 
-    @property
     def answers(self) -> List[DNSRecord]:
         """Answers in the packet."""
         if not self._did_read_others:
@@ -187,7 +186,6 @@ class DNSIncoming:
                 )
         return self._answers
 
-    @property
     def is_probe(self) -> bool:
         """Returns true if this is a probe."""
         return self.num_authorities > 0
@@ -203,7 +201,7 @@ class DNSIncoming:
                 'n_auth=%s' % self.num_authorities,
                 'n_add=%s' % self.num_additionals,
                 'questions=%s' % self.questions,
-                'answers=%s' % self.answers,
+                'answers=%s' % self.answers(),
             ]
         )
 
