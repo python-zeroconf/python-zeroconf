@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.115.0 (2023-09-26)
+
+### Feature
+
+* Speed up outgoing multicast queue ([#1277](https://github.com/python-zeroconf/python-zeroconf/issues/1277)) ([`a13fd49`](https://github.com/python-zeroconf/python-zeroconf/commit/a13fd49d77474fd5858de809e48cbab1ccf89173))
+
 ## v0.114.0 (2023-09-25)
 
 ### Feature
