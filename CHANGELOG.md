@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.115.1 (2023-10-01)
+
+### Fix
+
+* Add missing python definition for addresses_by_version ([#1278](https://github.com/python-zeroconf/python-zeroconf/issues/1278)) ([`52ee02b`](https://github.com/python-zeroconf/python-zeroconf/commit/52ee02b16860e344c402124f4b2e2869536ec839))
+
 ## v0.115.0 (2023-09-26)
 
 ### Feature
