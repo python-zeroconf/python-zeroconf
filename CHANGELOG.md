@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.115.2 (2023-10-05)
+
+### Fix
+
+* Ensure ServiceInfo cache is cleared when adding to the registry ([#1279](https://github.com/python-zeroconf/python-zeroconf/issues/1279)) ([`2060eb2`](https://github.com/python-zeroconf/python-zeroconf/commit/2060eb2cc43489c34bea08924c3f40b875d5a498))
+
 ## v0.115.1 (2023-10-01)
 
 ### Fix
