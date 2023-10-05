@@ -171,6 +171,12 @@ async def test_async_service_registration() -> None:
     )
     task = await aiozc.async_update_service(new_info)
     await task
+    assert new_info.dns_service().server_key == "ash-2.local."
+    new_info.server = "ash-3.local."
+    task = await aiozc.async_update_service(new_info)
+    await task
+    assert new_info.dns_service().server_key == "ash-3.local."
+
     task = await aiozc.async_unregister_service(new_info)
     await task
     await aiozc.async_close()
