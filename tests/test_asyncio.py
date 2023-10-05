@@ -184,6 +184,7 @@ async def test_async_service_registration() -> None:
     assert calls == [
         ('add', type_, registration_name),
         ('update', type_, registration_name),
+        ('update', type_, registration_name),
         ('remove', type_, registration_name),
     ]
 

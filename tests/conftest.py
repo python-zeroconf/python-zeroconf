@@ -12,6 +12,13 @@ from zeroconf import _core, _listener, const
 
 
 @pytest.fixture(autouse=True)
+def fast_register():
+    """Make the register call faster."""
+    with patch.object(_core, "_REGISTER_TIME", 0.0), patch.object(const, "_REGISTER_TIME", 0.0):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def verify_threads_ended():
     """Verify that the threads are not running after the test."""
     threads_before = frozenset(threading.enumerate())
