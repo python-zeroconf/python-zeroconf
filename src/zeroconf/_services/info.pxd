@@ -107,3 +107,5 @@ cdef class ServiceInfo(RecordUpdateListener):
 
     @cython.locals(cacheable=cython.bint)
     cdef cython.set _get_address_and_nsec_records(self, object override_ttl)
+
+    cpdef async_clear_cache(self)
