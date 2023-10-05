@@ -273,6 +273,14 @@ class ServiceInfo(RecordUpdateListener):
             assert self._properties is not None
         return self._properties
 
+    def async_clear_cache(self) -> None:
+        """Clear the cache for this service info."""
+        self._dns_address_cache = None
+        self._dns_pointer_cache = None
+        self._dns_service_cache = None
+        self._dns_text_cache = None
+        self._get_address_and_nsec_records_cache = None
+
     async def async_wait(self, timeout: float, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         if not self._new_records_futures:
