@@ -2,6 +2,24 @@
 
 <!--next-version-placeholder-->
 
+## v0.115.2 (2023-10-05)
+
+### Fix
+
+* Ensure ServiceInfo cache is cleared when adding to the registry ([#1279](https://github.com/python-zeroconf/python-zeroconf/issues/1279)) ([`2060eb2`](https://github.com/python-zeroconf/python-zeroconf/commit/2060eb2cc43489c34bea08924c3f40b875d5a498))
+
+## v0.115.1 (2023-10-01)
+
+### Fix
+
+* Add missing python definition for addresses_by_version ([#1278](https://github.com/python-zeroconf/python-zeroconf/issues/1278)) ([`52ee02b`](https://github.com/python-zeroconf/python-zeroconf/commit/52ee02b16860e344c402124f4b2e2869536ec839))
+
+## v0.115.0 (2023-09-26)
+
+### Feature
+
+* Speed up outgoing multicast queue ([#1277](https://github.com/python-zeroconf/python-zeroconf/issues/1277)) ([`a13fd49`](https://github.com/python-zeroconf/python-zeroconf/commit/a13fd49d77474fd5858de809e48cbab1ccf89173))
+
 ## v0.114.0 (2023-09-25)
 
 ### Feature

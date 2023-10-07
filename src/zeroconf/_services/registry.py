@@ -91,6 +91,7 @@ class ServiceRegistry:
         if info.key in self._services:
             raise ServiceNameAlreadyRegistered
 
+        info.async_clear_cache()
         self._services[info.key] = info
         self.types.setdefault(info.type.lower(), []).append(info.key)
         self.servers.setdefault(info.server_key, []).append(info.key)
