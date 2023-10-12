@@ -7,7 +7,7 @@ from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis, millis_to_seconds
 
 
-cdef object TYPE_CHECKING
+cdef bint TYPE_CHECKING
 cdef object cached_possible_types
 cdef cython.uint _EXPIRE_REFRESH_TIME_PERCENT
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED

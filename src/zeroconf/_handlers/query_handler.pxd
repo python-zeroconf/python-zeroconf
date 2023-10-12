@@ -10,7 +10,7 @@ from .._services.registry cimport ServiceRegistry
 from .answers cimport QuestionAnswers
 
 
-cdef object TYPE_CHECKING
+cdef bint TYPE_CHECKING
 cdef cython.uint _ONE_SECOND, _TYPE_PTR, _TYPE_ANY, _TYPE_A, _TYPE_AAAA, _TYPE_SRV, _TYPE_TXT
 cdef str _SERVICE_TYPE_ENUMERATION_NAME
 cdef cython.set _RESPOND_IMMEDIATE_TYPES

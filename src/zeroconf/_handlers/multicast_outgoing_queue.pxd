@@ -5,7 +5,7 @@ from .._utils.time cimport current_time_millis, millis_to_seconds
 from .answers cimport AnswerGroup, construct_outgoing_multicast_answers
 
 
-cdef object TYPE_CHECKING
+cdef bint TYPE_CHECKING
 cdef tuple MULTICAST_DELAY_RANDOM_INTERVAL
 cdef object RAND_INT
 
