@@ -15,7 +15,7 @@ cdef cython.uint _FLAGS_TC
 cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _MAX_MSG_TYPICAL
 
-cdef object TYPE_CHECKING
+cdef bint TYPE_CHECKING
 
 cdef object PACK_BYTE
 cdef object PACK_SHORT

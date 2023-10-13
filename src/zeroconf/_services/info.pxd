@@ -30,7 +30,7 @@ cdef object _IPVersion_V4Only_value
 
 cdef cython.set _ADDRESS_RECORD_TYPES
 
-cdef object TYPE_CHECKING
+cdef bint TYPE_CHECKING
 
 cdef class ServiceInfo(RecordUpdateListener):
 

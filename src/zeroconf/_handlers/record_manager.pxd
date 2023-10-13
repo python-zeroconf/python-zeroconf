@@ -9,7 +9,7 @@ from .._protocol.incoming cimport DNSIncoming
 cdef cython.float _DNS_PTR_MIN_TTL
 cdef object _ADDRESS_RECORD_TYPES
 cdef object RecordUpdate
-cdef object TYPE_CHECKING
+cdef bint TYPE_CHECKING
 cdef object _TYPE_PTR
 
 
