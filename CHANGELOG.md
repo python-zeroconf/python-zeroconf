@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.116.0 (2023-10-13)
+
+### Feature
+
+* Reduce type checking overhead at run time ([#1281](https://github.com/python-zeroconf/python-zeroconf/issues/1281)) ([`8f30099`](https://github.com/python-zeroconf/python-zeroconf/commit/8f300996e5bd4316b2237f0502791dd0d6a855fe))
+
 ## v0.115.2 (2023-10-05)
 
 ### Fix
