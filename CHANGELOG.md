@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.117.0 (2023-10-14)
+
+### Feature
+
+* Small cleanups to incoming data handlers ([#1282](https://github.com/python-zeroconf/python-zeroconf/issues/1282)) ([`4f4bd9f`](https://github.com/python-zeroconf/python-zeroconf/commit/4f4bd9ff7c1e575046e5ea213d9b8c91ac7a24a9))
+
 ## v0.116.0 (2023-10-13)
 
 ### Feature
