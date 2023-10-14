@@ -10,6 +10,7 @@ from .._utils.time cimport current_time_millis, millis_to_seconds
 cdef bint TYPE_CHECKING
 cdef object cached_possible_types
 cdef cython.uint _EXPIRE_REFRESH_TIME_PERCENT
+cdef cython.uint _TYPE_PTR
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED
 
 cdef class _DNSPointerOutgoingBucket:
@@ -58,7 +59,7 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cpdef _enqueue_callback(self, object state_change, object type_, object name)
 
-    @cython.locals(record=DNSRecord, cache=DNSCache, service=DNSRecord)
+    @cython.locals(record=DNSRecord, cache=DNSCache, service=DNSRecord, pointer=DNSPointer)
     cpdef async_update_records(self, object zc, cython.float now, cython.list records)
 
     cpdef _names_matching_types(self, object types)
