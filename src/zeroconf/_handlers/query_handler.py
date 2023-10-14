@@ -47,6 +47,8 @@ from .answers import QuestionAnswers, _AnswerWithAdditionalsType
 
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
+_IPVersion_ALL = IPVersion.All
+
 _int = int
 
 
@@ -202,7 +204,7 @@ class QueryHandler:
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             seen_types: Set[int] = set()
-            for dns_address in service._dns_addresses(None, IPVersion.All):
+            for dns_address in service._dns_addresses(None, _IPVersion_ALL):
                 seen_types.add(dns_address.type)
                 if dns_address.type != type_:
                     additionals.add(dns_address)
@@ -269,7 +271,7 @@ class QueryHandler:
         questions = msg.questions
         now = msg.now
         for msg in msgs:
-            if not msg.is_probe():
+            if msg.is_probe() is False:
                 answers.extend(msg.answers())
             else:
                 is_probe = True

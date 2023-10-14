@@ -24,7 +24,7 @@ cdef class DNSEntry:
 
     cdef public str key
     cdef public str name
-    cdef public object type
+    cdef public cython.uint type
     cdef public object class_
     cdef public object unique
 
