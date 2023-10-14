@@ -41,6 +41,8 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
+          - "3.12"
+          - "pypy-3.7"
           - "pypy-3.8"
           - "pypy-3.9"
         os:
@@ -103,7 +105,7 @@ jobs:
       # - Create GitHub release
       # - Publish to PyPI
       - name: Python Semantic Release
-        uses: relekang/python-semantic-release@v7.33.1
+        uses: relekang/python-semantic-release@v7.34.6
         #        env:
         #          REPOSITORY_URL: https://test.pypi.org/legacy/
         #          TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
@@ -131,7 +133,7 @@ jobs:
         uses: actions/setup-python@v4
 
       - name: Install python-semantic-release
-        run: pipx install python-semantic-release
+        run: pipx install python-semantic-release==7.34.6
 
       - name: Get Release Tag
         id: release_tag
@@ -145,7 +147,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.3
+        uses: pypa/cibuildwheel@v2.15.0
         # to supply options, put them in 'env', like:
         env:
           CIBW_SKIP: cp36-*

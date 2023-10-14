@@ -3,13 +3,14 @@
 
 """ Unit tests for zeroconf._services.browser. """
 
+import asyncio
 import logging
 import os
 import socket
 import time
 import unittest
 from threading import Event
-from typing import Iterable, Set
+from typing import Iterable, Set, cast
 from unittest.mock import patch
 
 import pytest
@@ -20,18 +21,23 @@ from zeroconf import (
     DNSPointer,
     DNSQuestion,
     Zeroconf,
-    _core,
-    _handlers,
+    _engine,
     const,
     current_time_millis,
     millis_to_seconds,
 )
+from zeroconf._handlers import record_manager
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import _inject_response, _wait_for_start, has_working_ipv6
+from .. import (
+    QuestionHistoryWithoutSuppression,
+    _inject_response,
+    _wait_for_start,
+    has_working_ipv6,
+)
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -66,6 +72,35 @@ def test_service_browser_cancel_multiple_times():
     browser.cancel()
     browser.cancel()
     browser.cancel()
+
+    zc.close()
+
+
+def test_service_browser_cancel_context_manager():
+    """Test we can cancel a ServiceBrowser with it being used as a context manager."""
+
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    # start a browser
+    type_ = "_hap._tcp.local."
+
+    class MyServiceListener(r.ServiceListener):
+        pass
+
+    listener = MyServiceListener()
+
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    assert cast(bool, browser.done) is False
+
+    with browser:
+        pass
+
+    # ensure call_soon_threadsafe in ServiceBrowser.cancel is run
+    assert zc.loop is not None
+    asyncio.run_coroutine_threadsafe(asyncio.sleep(0), zc.loop).result()
+
+    assert cast(bool, browser.done) is True
 
     zc.close()
 
@@ -180,7 +215,6 @@ class TestServiceBrowser(unittest.TestCase):
                 service_updated_event.set()
 
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
-
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             assert generated.is_response() is True
 
@@ -331,7 +365,6 @@ class TestServiceBrowser(unittest.TestCase):
 
 class TestServiceBrowserMultipleTypes(unittest.TestCase):
     def test_update_record(self):
-
         service_names = ['name2._type2._tcp.local.', 'name._type._tcp.local.', 'name._type._udp.local']
         service_types = ['_type2._tcp.local.', '_type._tcp.local.', '_type._udp.local.']
 
@@ -446,6 +479,7 @@ def test_backoff():
     type_ = "_http._tcp.local."
     zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
     _wait_for_start(zeroconf_browser)
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
 
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
@@ -467,10 +501,8 @@ def test_backoff():
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
     with patch.object(zeroconf_browser, "async_send", send), patch.object(
-        zeroconf_browser.question_history, "suppresses", return_value=False
-    ), patch.object(_services_browser, "current_time_millis", current_time_millis), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
-    ), patch.object(
+        _services_browser, "current_time_millis", current_time_millis
+    ), patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10), patch.object(
         _services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)
     ):
         # dummy service callback
@@ -580,7 +612,7 @@ def test_asking_default_is_asking_qm_questions_after_the_first_qu():
             pass
 
         browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change], delay=5)
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 5))
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 50))
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
             assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
@@ -760,6 +792,8 @@ def test_service_browser_is_aware_of_port_changes():
     assert service_info.port == 80
 
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),
@@ -824,6 +858,8 @@ def test_service_browser_listeners_update_service():
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
     )
     time.sleep(0.2)
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     info.port = 400
     _inject_response(
         zc,
@@ -882,6 +918,8 @@ def test_service_browser_listeners_no_update_service():
     )
     time.sleep(0.2)
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),
@@ -1099,6 +1137,8 @@ def test_service_browser_matching():
     )
     time.sleep(0.2)
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),
@@ -1119,8 +1159,8 @@ def test_service_browser_matching():
     zc.close()
 
 
-@patch.object(_handlers, '_DNS_PTR_MIN_TTL', 1)
-@patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 0.01)
+@patch.object(record_manager, '_DNS_PTR_MIN_TTL', 1)
+@patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01)
 def test_service_browser_expire_callbacks():
     """Test that the ServiceBrowser matching does not match partial names."""
     # instantiate a zeroconf instance
@@ -1178,6 +1218,8 @@ def test_service_browser_expire_callbacks():
     )
     time.sleep(0.3)
     info.port = 400
+    info._dns_service_cache = None  # we are mutating the record so clear the cache
+
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_service()]),

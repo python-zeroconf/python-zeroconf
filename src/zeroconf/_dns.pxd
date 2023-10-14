@@ -1,6 +1,8 @@
 
 import cython
 
+from ._protocol.outgoing cimport DNSOutgoing
+
 
 cdef object _LEN_BYTE
 cdef object _LEN_SHORT
@@ -9,9 +11,9 @@ cdef object _LEN_INT
 cdef object _NAME_COMPRESSION_MIN_SIZE
 cdef object _BASE_MAX_SIZE
 
-cdef object _EXPIRE_FULL_TIME_MS
-cdef object _EXPIRE_STALE_TIME_MS
-cdef object _RECENT_TIME_MS
+cdef cython.uint _EXPIRE_FULL_TIME_MS
+cdef cython.uint _EXPIRE_STALE_TIME_MS
+cdef cython.uint _RECENT_TIME_MS
 
 cdef object _CLASS_UNIQUE
 cdef object _CLASS_MASK
@@ -20,9 +22,9 @@ cdef object current_time_millis
 
 cdef class DNSEntry:
 
-    cdef public object key
-    cdef public object name
-    cdef public object type
+    cdef public str key
+    cdef public str name
+    cdef public cython.uint type
     cdef public object class_
     cdef public object unique
 
@@ -34,11 +36,29 @@ cdef class DNSQuestion(DNSEntry):
 
 cdef class DNSRecord(DNSEntry):
 
-    cdef public object ttl
-    cdef public object created
+    cdef public cython.float ttl
+    cdef public cython.float created
 
     cdef _suppressed_by_answer(self, DNSRecord answer)
 
+    @cython.locals(
+        answers=cython.list,
+    )
+    cpdef suppressed_by(self, object msg)
+
+    cpdef get_remaining_ttl(self, cython.float now)
+
+    cpdef get_expiration_time(self, cython.uint percent)
+
+    cpdef is_expired(self, cython.float now)
+
+    cpdef is_stale(self, cython.float now)
+
+    cpdef is_recent(self, cython.float now)
+
+    cpdef reset_ttl(self, DNSRecord other)
+
+    cpdef set_created_ttl(self, cython.float now, cython.float ttl)
 
 cdef class DNSAddress(DNSRecord):
 
@@ -47,6 +67,8 @@ cdef class DNSAddress(DNSRecord):
     cdef public object scope_id
 
     cdef _eq(self, DNSAddress other)
+
+    cpdef write(self, DNSOutgoing out)
 
 
 cdef class DNSHinfo(DNSRecord):
@@ -57,15 +79,17 @@ cdef class DNSHinfo(DNSRecord):
 
     cdef _eq(self, DNSHinfo other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSPointer(DNSRecord):
 
     cdef public cython.int _hash
-    cdef public object alias
-    cdef public object alias_key
+    cdef public str alias
+    cdef public str alias_key
 
     cdef _eq(self, DNSPointer other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSText(DNSRecord):
 
@@ -74,6 +98,7 @@ cdef class DNSText(DNSRecord):
 
     cdef _eq(self, DNSText other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSService(DNSRecord):
 
@@ -81,11 +106,12 @@ cdef class DNSService(DNSRecord):
     cdef public object priority
     cdef public object weight
     cdef public object port
-    cdef public object server
-    cdef public object server_key
+    cdef public str server
+    cdef public str server_key
 
     cdef _eq(self, DNSService other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSNsec(DNSRecord):
 
@@ -95,14 +121,20 @@ cdef class DNSNsec(DNSRecord):
 
     cdef _eq(self, DNSNsec other)
 
+    cpdef write(self, DNSOutgoing out)
 
 cdef class DNSRRSet:
 
-    cdef _record_sets
+    cdef cython.list _records
     cdef cython.dict _lookup
 
     @cython.locals(other=DNSRecord)
     cpdef suppresses(self, DNSRecord record)
 
-    @cython.locals(lookup=cython.dict)
-    cdef _get_lookup(self)
+    @cython.locals(
+        record=DNSRecord,
+        record_sets=cython.list,
+    )
+    cdef cython.dict _get_lookup(self)
+
+    cpdef cython.set lookup_set(self)

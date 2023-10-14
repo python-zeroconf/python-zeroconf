@@ -26,7 +26,6 @@ def teardown_module():
 
 
 class Exceptions(unittest.TestCase):
-
     browser = None  # type: Zeroconf
 
     @classmethod

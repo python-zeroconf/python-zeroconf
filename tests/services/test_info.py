@@ -17,7 +17,8 @@ from unittest.mock import patch
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSAddress, const
+from zeroconf import DNSAddress, RecordUpdate, const
+from zeroconf._services import info
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
@@ -67,89 +68,119 @@ class TestServiceInfo(unittest.TestCase):
             service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
         )
         # Verify backwards compatiblity with calling with None
-        info.update_record(zc, now, None)
+        info.async_update_records(zc, now, [])
         # Matching updates
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSText(
-                service_name,
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.properties[b"ci"] == b"2"
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSService(
-                service_name,
-                const._TYPE_SRV,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                0,
-                0,
-                80,
-                'ASH-2.local.',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSService(
+                        service_name,
+                        const._TYPE_SRV,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        0,
+                        0,
+                        80,
+                        'ASH-2.local.',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.server_key == 'ash-2.local.'
         assert info.server == 'ASH-2.local.'
         new_address = socket.inet_aton("10.0.1.3")
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSAddress(
-                'ASH-2.local.',
-                const._TYPE_A,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                new_address,
-            ),
+            [
+                RecordUpdate(
+                    r.DNSAddress(
+                        'ASH-2.local.',
+                        const._TYPE_A,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        new_address,
+                    ),
+                    None,
+                )
+            ],
         )
         assert new_address in info.addresses
         # Non-matching updates
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSText(
-                "incorrect.name.",
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSText(
+                        "incorrect.name.",
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.properties[b"ci"] == b"2"
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSService(
-                "incorrect.name.",
-                const._TYPE_SRV,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                0,
-                0,
-                80,
-                'ASH-2.local.',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSService(
+                        "incorrect.name.",
+                        const._TYPE_SRV,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        0,
+                        0,
+                        80,
+                        'ASH-2.local.',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.server_key == 'ash-2.local.'
         assert info.server == 'ASH-2.local.'
         new_address = socket.inet_aton("10.0.1.4")
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSAddress(
-                "incorrect.name.",
-                const._TYPE_A,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                new_address,
-            ),
+            [
+                RecordUpdate(
+                    r.DNSAddress(
+                        "incorrect.name.",
+                        const._TYPE_A,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        new_address,
+                    ),
+                    None,
+                )
+            ],
         )
         assert new_address not in info.addresses
         zc.close()
@@ -168,16 +199,21 @@ class TestServiceInfo(unittest.TestCase):
             service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
         )
         # Matching updates
-        info.update_record(
+        info.async_update_records(
             zc,
             now,
-            r.DNSText(
-                service_name,
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                ttl,
-                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
-            ),
+            [
+                RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        ttl,
+                        b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+                    ),
+                    None,
+                )
+            ],
         )
         assert info.properties[b"ci"] == b"2"
         # Expired record
@@ -189,14 +225,13 @@ class TestServiceInfo(unittest.TestCase):
             b'\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==',
         )
         expired_record.set_created_ttl(1000, 1)
-        info.update_record(zc, now, expired_record)
+        info.async_update_records(zc, now, [RecordUpdate(expired_record, None)])
         assert info.properties[b"ci"] == b"2"
         zc.close()
 
     @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_get_info_partial(self):
-
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
 
         service_name = 'name._type._tcp.local.'
@@ -224,7 +259,6 @@ class TestServiceInfo(unittest.TestCase):
         with patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-
                 generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
                 for record in records:
@@ -343,7 +377,6 @@ class TestServiceInfo(unittest.TestCase):
                 zc.close()
 
     def test_get_info_single(self):
-
         zc = r.Zeroconf(interfaces=['127.0.0.1'])
 
         service_name = 'name._type._tcp.local.'
@@ -369,7 +402,6 @@ class TestServiceInfo(unittest.TestCase):
         with patch.object(zc, "async_send", send):
 
             def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-
                 generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
                 for record in records:
@@ -871,7 +903,7 @@ async def test_release_wait_when_new_recorded_added():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     assert await asyncio.wait_for(task, timeout=2)
     assert info.addresses == [b'\x7f\x00\x00\x01']
     await aiozc.async_close()
@@ -934,7 +966,7 @@ async def test_port_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     generated.add_answer_at_time(
@@ -950,10 +982,93 @@ async def test_port_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
     await info.async_request(aiozc.zeroconf, timeout=200)
+    assert info.port == 81
+    assert info.priority == 90
+    assert info.weight == 90
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_port_changes_are_seen_with_directed_request():
+    """Test that port changes are seen by async_request with a directed request."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiarec.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    host = "multahost.local."
+
+    # New kwarg way
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            registration_name,
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            registration_name,
+            [const._TYPE_AAAA],
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            0,
+            0,
+            80,
+            host,
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x01',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(
+            registration_name,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+        ),
+        0,
+    )
+    await aiozc.zeroconf.async_wait_for_start()
+    await asyncio.sleep(0)
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            90,
+            90,
+            81,
+            host,
+        ),
+        0,
+    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
+
+    info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
+    await info.async_request(aiozc.zeroconf, timeout=200, addr="127.0.0.1", port=5353)
     assert info.port == 81
     assert info.priority == 90
     assert info.weight == 90
@@ -1016,7 +1131,7 @@ async def test_ipv4_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x01']
@@ -1032,7 +1147,7 @@ async def test_ipv4_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
@@ -1098,7 +1213,7 @@ async def test_ipv6_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V6Only) == [
@@ -1116,7 +1231,7 @@ async def test_ipv6_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
@@ -1180,7 +1295,7 @@ async def test_bad_ip_addresses_ignored_in_cache():
 
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x01']
@@ -1239,7 +1354,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1259,7 +1374,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1311,7 +1426,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1341,10 +1456,97 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
         ),
         0,
     )
-    aiozc.zeroconf.handle_response(r.DNSIncoming(generated.packets()[0]))
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
     assert info.addresses_by_version(IPVersion.V4Only) == [b'\x7f\x00\x00\x02']
 
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+@patch.object(info, "_LISTENER_TIME", 10000000)
+async def test_release_wait_when_new_recorded_added_concurrency():
+    """Test that concurrent async_request returns as soon as new matching records are added to the cache."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiareccon.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    host = "multahostcon.local."
+    await aiozc.zeroconf.async_wait_for_start()
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    tasks = [asyncio.create_task(info.async_request(aiozc.zeroconf, timeout=200000)) for _ in range(10)]
+    await asyncio.sleep(0.1)
+    for task in tasks:
+        assert not task.done()
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            registration_name,
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            registration_name,
+            [const._TYPE_AAAA],
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            0,
+            0,
+            80,
+            host,
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b'\x7f\x00\x00\x01',
+        ),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(
+            registration_name,
+            const._TYPE_TXT,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            10000,
+            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+        ),
+        0,
+    )
+    await asyncio.sleep(0)
+    for task in tasks:
+        assert not task.done()
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
+    _, pending = await asyncio.wait(tasks, timeout=2)
+    assert not pending
+    assert info.addresses == [b'\x7f\x00\x00\x01']
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_service_info_nsec_records():
+    """Test we can generate nsec records from ServiceInfo."""
+    type_ = "_http._tcp.local."
+    registration_name = "multiareccon.%s" % type_
+    desc = {'path': '/~paulsm/'}
+    host = "multahostcon.local."
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    nsec_record = info.dns_nsec([const._TYPE_A, const._TYPE_AAAA], 50)
+    assert nsec_record.name == registration_name
+    assert nsec_record.type == const._TYPE_NSEC
+    assert nsec_record.ttl == 50
+    assert nsec_record.rdtypes == [const._TYPE_A, const._TYPE_AAAA]

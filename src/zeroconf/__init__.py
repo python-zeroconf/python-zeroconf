@@ -50,6 +50,7 @@ from ._exceptions import (
 from ._logger import QuietLogger, log  # noqa # import needed for backwards compat
 from ._protocol.incoming import DNSIncoming  # noqa # import needed for backwards compat
 from ._protocol.outgoing import DNSOutgoing  # noqa # import needed for backwards compat
+from ._record_update import RecordUpdate
 from ._services import (  # noqa # import needed for backwards compat
     ServiceListener,
     ServiceStateChange,
@@ -65,7 +66,7 @@ from ._services.registry import (  # noqa # import needed for backwards compat
     ServiceRegistry,
 )
 from ._services.types import ZeroconfServiceTypes
-from ._updates import RecordUpdate, RecordUpdateListener
+from ._updates import RecordUpdateListener
 from ._utils.name import service_type_name  # noqa # import needed for backwards compat
 from ._utils.net import (  # noqa # import needed for backwards compat
     InterfaceChoice,
@@ -84,7 +85,7 @@ from ._utils.time import (  # noqa # import needed for backwards compat
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.55.0'
+__version__ = '0.118.0'
 __license__ = 'LGPL'
 
 

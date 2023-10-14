@@ -25,7 +25,7 @@ import queue
 import random
 import threading
 import warnings
-from abc import abstractmethod
+from types import TracebackType  # noqa # used in type hints
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -35,20 +35,22 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Type,
     Union,
     cast,
 )
 
-from .._dns import DNSPointer, DNSQuestion, DNSQuestionType, DNSRecord
+from .._dns import DNSPointer, DNSQuestion, DNSQuestionType
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
+from .._record_update import RecordUpdate
 from .._services import (
     ServiceListener,
     ServiceStateChange,
     Signal,
     SignalRegistrationInterface,
 )
-from .._updates import RecordUpdate, RecordUpdateListener
+from .._updates import RecordUpdateListener
 from .._utils.name import cached_possible_types, service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
@@ -75,9 +77,17 @@ _ON_CHANGE_DISPATCH = {
     ServiceStateChange.Updated: "update_service",
 }
 
+SERVICE_STATE_CHANGE_ADDED = ServiceStateChange.Added
+SERVICE_STATE_CHANGE_REMOVED = ServiceStateChange.Removed
+SERVICE_STATE_CHANGE_UPDATED = ServiceStateChange.Updated
+
 if TYPE_CHECKING:
     from .._core import Zeroconf
 
+float_ = float
+int_ = int
+bool_ = bool
+str_ = str
 
 _QuestionWithKnownAnswers = Dict[DNSQuestion, Set[DNSPointer]]
 
@@ -85,13 +95,15 @@ _QuestionWithKnownAnswers = Dict[DNSQuestion, Set[DNSPointer]]
 class _DNSPointerOutgoingBucket:
     """A DNSOutgoing bucket."""
 
+    __slots__ = ('now', 'out', 'bytes')
+
     def __init__(self, now: float, multicast: bool) -> None:
         """Create a bucke to wrap a DNSOutgoing."""
         self.now = now
         self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=multicast)
         self.bytes = 0
 
-    def add(self, max_compressed_size: int, question: DNSQuestion, answers: Set[DNSPointer]) -> None:
+    def add(self, max_compressed_size: int_, question: DNSQuestion, answers: Set[DNSPointer]) -> None:
         """Add a new set of questions and known answers to the outgoing."""
         self.out.add_question(question)
         for answer in answers:
@@ -100,7 +112,7 @@ class _DNSPointerOutgoingBucket:
 
 
 def _group_ptr_queries_with_known_answers(
-    now: float, multicast: bool, question_with_known_answers: _QuestionWithKnownAnswers
+    now: float_, multicast: bool_, question_with_known_answers: _QuestionWithKnownAnswers
 ) -> List[DNSOutgoing]:
     """Aggregate queries so that as many known answers as possible fit in the same packet
     without having known answers spill over into the next packet unless the
@@ -157,18 +169,20 @@ def generate_service_query(
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
         question.unicast = qu_question
         known_answers = {
-            cast(DNSPointer, record)
+            record
             for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             if not record.is_stale(now)
         }
-        if not qu_question and zc.question_history.suppresses(
-            question, now, cast(Set[DNSRecord], known_answers)
-        ):
+        if not qu_question and zc.question_history.suppresses(question, now, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
-        questions_with_known_answers[question] = known_answers
+        if TYPE_CHECKING:
+            pointer_known_answers = cast(Set[DNSPointer], known_answers)
+        else:
+            pointer_known_answers = known_answers
+        questions_with_known_answers[question] = pointer_known_answers
         if not qu_question:
-            zc.question_history.add_question_at_time(question, now, cast(Set[DNSRecord], known_answers))
+            zc.question_history.add_question_at_time(question, now, known_answers)
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
@@ -198,24 +212,24 @@ class QueryScheduler:
 
     """
 
+    __slots__ = ('_types', '_next_time', '_first_random_delay_interval', '_delay')
+
     def __init__(
         self,
         types: Set[str],
         delay: int,
         first_random_delay_interval: Tuple[int, int],
-    ):
-        self._schedule_changed_event: Optional[asyncio.Event] = None
+    ) -> None:
         self._types = types
         self._next_time: Dict[str, float] = {}
         self._first_random_delay_interval = first_random_delay_interval
         self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self._types}
 
-    def start(self, now: float) -> None:
+    def start(self, now: float_) -> None:
         """Start the scheduler."""
-        self._schedule_changed_event = asyncio.Event()
         self._generate_first_next_time(now)
 
-    def _generate_first_next_time(self, now: float) -> None:
+    def _generate_first_next_time(self, now: float_) -> None:
         """Generate the initial next query times.
 
         https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
@@ -229,20 +243,20 @@ class QueryScheduler:
         next_time = now + delay
         self._next_time = {check_type_: next_time for check_type_ in self._types}
 
-    def millis_to_wait(self, now: float) -> float:
+    def millis_to_wait(self, now: float_) -> float:
         """Returns the number of milliseconds to wait for the next event."""
         # Wait for the type has the smallest next time
         next_time = min(self._next_time.values())
         return 0 if next_time <= now else next_time - now
 
-    def reschedule_type(self, type_: str, next_time: float) -> bool:
+    def reschedule_type(self, type_: str_, next_time: float_) -> bool:
         """Reschedule the query for a type to happen sooner."""
         if next_time >= self._next_time[type_]:
             return False
         self._next_time[type_] = next_time
         return True
 
-    def process_ready_types(self, now: float) -> List[str]:
+    def process_ready_types(self, now: float_) -> List[str]:
         """Generate a list of ready types that is due and schedule the next time."""
         if self.millis_to_wait(now):
             return []
@@ -262,6 +276,23 @@ class QueryScheduler:
 
 class _ServiceBrowserBase(RecordUpdateListener):
     """Base class for ServiceBrowser."""
+
+    __slots__ = (
+        'types',
+        'zc',
+        '_loop',
+        'addr',
+        'port',
+        'multicast',
+        'question_type',
+        '_pending_handlers',
+        '_service_state_changed',
+        'query_scheduler',
+        'done',
+        '_first_request',
+        '_next_send_timer',
+        '_query_sender_task',
+    )
 
     def __init__(
         self,
@@ -297,6 +328,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
             # Will generate BadTypeInNameException on a bad name
             service_type_name(check_type_, strict=False)
         self.zc = zc
+        assert zc.loop is not None
+        self._loop = zc.loop
         self.addr = addr
         self.port = port
         self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
@@ -345,75 +378,78 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def _enqueue_callback(
         self,
         state_change: ServiceStateChange,
-        type_: str,
-        name: str,
+        type_: str_,
+        name: str_,
     ) -> None:
         # Code to ensure we only do a single update message
         # Precedence is; Added, Remove, Update
         key = (name, type_)
         if (
-            state_change is ServiceStateChange.Added
+            state_change is SERVICE_STATE_CHANGE_ADDED
             or (
-                state_change is ServiceStateChange.Removed
-                and self._pending_handlers.get(key) != ServiceStateChange.Added
+                state_change is SERVICE_STATE_CHANGE_REMOVED
+                and self._pending_handlers.get(key) != SERVICE_STATE_CHANGE_ADDED
             )
-            or (state_change is ServiceStateChange.Updated and key not in self._pending_handlers)
+            or (state_change is SERVICE_STATE_CHANGE_UPDATED and key not in self._pending_handlers)
         ):
             self._pending_handlers[key] = state_change
 
-    def _async_process_record_update(
-        self, now: float, record: DNSRecord, old_record: Optional[DNSRecord]
-    ) -> None:
-        """Process a single record update from a batch of updates."""
-        record_type = record.type
-
-        if record_type is _TYPE_PTR:
-            if TYPE_CHECKING:
-                record = cast(DNSPointer, record)
-            for type_ in self.types.intersection(cached_possible_types(record.name)):
-                if old_record is None:
-                    self._enqueue_callback(ServiceStateChange.Added, type_, record.alias)
-                elif record.is_expired(now):
-                    self._enqueue_callback(ServiceStateChange.Removed, type_, record.alias)
-                else:
-                    self.reschedule_type(type_, now, record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
-            return
-
-        # If its expired or already exists in the cache it cannot be updated.
-        if old_record or record.is_expired(now):
-            return
-
-        if record_type in _ADDRESS_RECORD_TYPES:
-            # Iterate through the DNSCache and callback any services that use this address
-            for type_, name in self._names_matching_types(
-                {service.name for service in self.zc.cache.async_entries_with_server(record.name)}
-            ):
-                self._enqueue_callback(ServiceStateChange.Updated, type_, name)
-            return
-
-        for type_, name in self._names_matching_types((record.name,)):
-            self._enqueue_callback(ServiceStateChange.Updated, type_, name)
-
-    def async_update_records(self, zc: 'Zeroconf', now: float, records: List[RecordUpdate]) -> None:
+    def async_update_records(self, zc: 'Zeroconf', now: float_, records: List[RecordUpdate]) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache.
 
-        Ensures that there is are no unecessary duplicates in the list.
+        Ensures that there is are no unnecessary duplicates in the list.
 
         This method will be run in the event loop.
         """
-        for record in records:
-            self._async_process_record_update(now, record[0], record[1])
+        for record_update in records:
+            record = record_update[0]
+            old_record = record_update[1]
+            record_type = record.type
 
-    @abstractmethod
+            if record_type is _TYPE_PTR:
+                if TYPE_CHECKING:
+                    record = cast(DNSPointer, record)
+                pointer = record
+                for type_ in self.types.intersection(cached_possible_types(pointer.name)):
+                    if old_record is None:
+                        self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias)
+                    elif pointer.is_expired(now):
+                        self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias)
+                    else:
+                        expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+                        self.reschedule_type(type_, now, expire_time)
+                continue
+
+            # If its expired or already exists in the cache it cannot be updated.
+            if old_record or record.is_expired(now) is True:
+                continue
+
+            if record_type in _ADDRESS_RECORD_TYPES:
+                cache = self.zc.cache
+                # Iterate through the DNSCache and callback any services that use this address
+                for type_, name in self._names_matching_types(
+                    {service.name for service in cache.async_entries_with_server(record.name)}
+                ):
+                    self._enqueue_callback(SERVICE_STATE_CHANGE_UPDATED, type_, name)
+                continue
+
+            for type_, name in self._names_matching_types((record.name,)):
+                self._enqueue_callback(SERVICE_STATE_CHANGE_UPDATED, type_, name)
+
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.
 
         At this point the cache will have the new records.
 
         This method will be run in the event loop.
+
+        This method is expected to be overridden by subclasses.
         """
+        for pending in self._pending_handlers.items():
+            self._fire_service_state_changed_event(pending)
+        self._pending_handlers.clear()
 
     def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
         """Fire a service state changed event.
@@ -423,7 +459,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
         When running with AsyncServiceBrowser, this will happen in the event loop.
         """
-        name_type, state_change = event
+        name_type = event[0]
+        state_change = event[1]
         self._service_state_changed.fire(
             zeroconf=self.zc,
             service_type=name_type[1],
@@ -439,7 +476,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
         self._query_sender_task.cancel()
 
-    def _generate_ready_queries(self, first_request: bool, now: float) -> List[DNSOutgoing]:
+    def _generate_ready_queries(self, first_request: bool_, now: float_) -> List[DNSOutgoing]:
         """Generate the service browser query for any type that is due."""
         ready_types = self.query_scheduler.process_ready_types(now)
         if not ready_types:
@@ -462,15 +499,20 @@ class _ServiceBrowserBase(RecordUpdateListener):
         """Cancel the next send."""
         if self._next_send_timer:
             self._next_send_timer.cancel()
+            self._next_send_timer = None
 
-    def reschedule_type(self, type_: str, now: float, next_time: float) -> None:
+    def reschedule_type(self, type_: str_, now: float_, next_time: float_) -> None:
         """Reschedule a type to be refreshed in the future."""
         if self.query_scheduler.reschedule_type(type_, next_time):
+            # We need to send the queries before rescheduling the next one
+            # otherwise we may be scheduling a query to go out in the next
+            # iteration of the event loop which should be sent now.
+            if now >= next_time:
+                self._async_send_ready_queries(now)
             self._cancel_send_timer()
             self._async_schedule_next(now)
-        self._async_send_ready_queries(now)
 
-    def _async_send_ready_queries(self, now: float) -> None:
+    def _async_send_ready_queries(self, now: float_) -> None:
         """Send any ready queries."""
         outs = self._generate_ready_queries(self._first_request, now)
         if outs:
@@ -486,11 +528,10 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._async_send_ready_queries(now)
         self._async_schedule_next(now)
 
-    def _async_schedule_next(self, now: float) -> None:
+    def _async_schedule_next(self, now: float_) -> None:
         """Scheule the next time."""
-        assert self.zc.loop is not None
         delay = millis_to_seconds(self.query_scheduler.millis_to_wait(now))
-        self._next_send_timer = self.zc.loop.call_later(delay, self._async_send_ready_queries_schedule_next)
+        self._next_send_timer = self._loop.call_later(delay, self._async_send_ready_queries_schedule_next)
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
@@ -553,3 +594,15 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         for pending in self._pending_handlers.items():
             self.queue.put(pending)
         self._pending_handlers.clear()
+
+    def __enter__(self) -> 'ServiceBrowser':
+        return self
+
+    def __exit__(  # pylint: disable=useless-return
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Optional[bool]:
+        self.cancel()
+        return None

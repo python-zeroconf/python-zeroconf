@@ -4,7 +4,6 @@
 """ Unit tests for zeroconf._core """
 
 import asyncio
-import itertools
 import logging
 import os
 import socket
@@ -13,14 +12,20 @@ import threading
 import time
 import unittest
 import unittest.mock
-from typing import Set, cast
+from typing import cast
 from unittest.mock import patch
+
+if sys.version_info[:3][1] < 8:
+    from unittest.mock import Mock
+
+    AsyncMock = Mock
+else:
+    from unittest.mock import AsyncMock
 
 import pytest
 
 import zeroconf as r
-from zeroconf import NotRunningException, Zeroconf, _core, const, current_time_millis
-from zeroconf._protocol import outgoing
+from zeroconf import NotRunningException, Zeroconf, const, current_time_millis
 from zeroconf.asyncio import AsyncZeroconf
 
 from . import _clear_cache, _inject_response, _wait_for_start, has_working_ipv6
@@ -45,60 +50,6 @@ def threadsafe_query(zc, protocol, *args):
         protocol.handle_query_or_defer(*args)
 
     asyncio.run_coroutine_threadsafe(make_query(), zc.loop).result()
-
-
-# This test uses asyncio because it needs to access the cache directly
-# which is not threadsafe
-@pytest.mark.asyncio
-async def test_reaper():
-    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 0.01):
-        aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-        zeroconf = aiozc.zeroconf
-        cache = zeroconf.cache
-        original_entries = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
-        record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
-        record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
-        zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
-        question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
-        now = r.current_time_millis()
-        other_known_answers: Set[r.DNSRecord] = {
-            r.DNSPointer(
-                "_hap._tcp.local.",
-                const._TYPE_PTR,
-                const._CLASS_IN,
-                10000,
-                'known-to-other._hap._tcp.local.',
-            )
-        }
-        zeroconf.question_history.add_question_at_time(question, now, other_known_answers)
-        assert zeroconf.question_history.suppresses(question, now, other_known_answers)
-        entries_with_cache = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
-        await asyncio.sleep(1.2)
-        entries = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
-        assert zeroconf.cache.get(record_with_1s_ttl) is None
-        await aiozc.async_close()
-        assert not zeroconf.question_history.suppresses(question, now, other_known_answers)
-        assert entries != original_entries
-        assert entries_with_cache != original_entries
-        assert record_with_10s_ttl in entries
-        assert record_with_1s_ttl not in entries
-
-
-@pytest.mark.asyncio
-async def test_reaper_aborts_when_done():
-    """Ensure cache cleanup stops when zeroconf is done."""
-    with patch.object(_core, "_CACHE_CLEANUP_INTERVAL", 0.01):
-        aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-        zeroconf = aiozc.zeroconf
-        record_with_10s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 10, b'a')
-        record_with_1s_ttl = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'b')
-        zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
-        assert zeroconf.cache.get(record_with_10s_ttl) is not None
-        assert zeroconf.cache.get(record_with_1s_ttl) is not None
-        await aiozc.async_close()
-        await asyncio.sleep(1.2)
-        assert zeroconf.cache.get(record_with_10s_ttl) is not None
-        assert zeroconf.cache.get(record_with_1s_ttl) is not None
 
 
 class Framework(unittest.TestCase):
@@ -154,7 +105,7 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(apple_p2p=True)
         rv.close()
 
-    def test_handle_response(self):
+    def test_async_updates_from_response(self):
         def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
             ttl = 120
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -691,97 +642,6 @@ async def test_multiple_sync_instances_stared_from_async_close():
     await asyncio.sleep(0)
 
 
-def test_guard_against_oversized_packets():
-    """Ensure we do not process oversized packets.
-
-    These packets can quickly overwhelm the system.
-    """
-    zc = Zeroconf(interfaces=['127.0.0.1'])
-
-    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-
-    for i in range(5000):
-        generated.add_answer_at_time(
-            r.DNSText(
-                "packet{i}.local.",
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                500,
-                b'path=/~paulsm/',
-            ),
-            0,
-        )
-
-    try:
-        # We are patching to generate an oversized packet
-        with patch.object(outgoing, "_MAX_MSG_ABSOLUTE", 100000), patch.object(
-            outgoing, "_MAX_MSG_TYPICAL", 100000
-        ):
-            over_sized_packet = generated.packets()[0]
-            assert len(over_sized_packet) > const._MAX_MSG_ABSOLUTE
-    except AttributeError:
-        # cannot patch with cython
-        zc.close()
-        return
-
-    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-    okpacket_record = r.DNSText(
-        "okpacket.local.",
-        const._TYPE_TXT,
-        const._CLASS_IN | const._CLASS_UNIQUE,
-        500,
-        b'path=/~paulsm/',
-    )
-
-    generated.add_answer_at_time(
-        okpacket_record,
-        0,
-    )
-    ok_packet = generated.packets()[0]
-
-    # We cannot test though the network interface as some operating systems
-    # will guard against the oversized packet and we won't see it.
-    listener = _core.AsyncListener(zc)
-    listener.transport = unittest.mock.MagicMock()
-
-    listener.datagram_received(ok_packet, ('127.0.0.1', const._MDNS_PORT))
-    assert zc.cache.async_get_unique(okpacket_record) is not None
-
-    listener.datagram_received(over_sized_packet, ('127.0.0.1', const._MDNS_PORT))
-    assert (
-        zc.cache.async_get_unique(
-            r.DNSText(
-                "packet0.local.",
-                const._TYPE_TXT,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                500,
-                b'path=/~paulsm/',
-            )
-        )
-        is None
-    )
-
-    zc.close()
-
-
-def test_guard_against_duplicate_packets():
-    """Ensure we do not process duplicate packets.
-    These packets can quickly overwhelm the system.
-    """
-    zc = Zeroconf(interfaces=['127.0.0.1'])
-    listener = _core.AsyncListener(zc)
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is False
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis() + 1000) is False
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis()) is False
-    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis()) is True
-    assert listener.suppress_duplicate_packet(b"other packet", current_time_millis() + 1000) is False
-    assert listener.suppress_duplicate_packet(b"first packet", current_time_millis()) is False
-    zc.close()
-
-
 def test_shutdown_while_register_in_process():
     """Test we can shutdown while registering a service in another thread."""
 
@@ -816,7 +676,7 @@ def test_shutdown_while_register_in_process():
 @pytest.mark.asyncio
 @unittest.skipIf(sys.version_info[:3][1] < 8, 'Requires Python 3.8 or later to patch _async_setup')
 @patch("zeroconf._core._STARTUP_TIMEOUT", 0)
-@patch("zeroconf._core.AsyncEngine._async_setup")
+@patch("zeroconf._core.AsyncEngine._async_setup", new_callable=AsyncMock)
 async def test_event_loop_blocked(mock_start):
     """Test we raise NotRunningException when waiting for startup that times out."""
     aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])

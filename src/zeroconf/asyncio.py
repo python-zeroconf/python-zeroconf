@@ -82,16 +82,17 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         """Cancel the browser."""
         self._async_cancel()
 
-    def async_update_records_complete(self) -> None:
-        """Called when a record update has completed for all handlers.
+    async def __aenter__(self) -> 'AsyncServiceBrowser':
+        return self
 
-        At this point the cache will have the new records.
-
-        This method will be run in the event loop.
-        """
-        for pending in self._pending_handlers.items():
-            self._fire_service_state_changed_event(pending)
-        self._pending_handlers.clear()
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Optional[bool]:
+        await self.async_cancel()
+        return None
 
 
 class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
@@ -180,6 +181,7 @@ class AsyncZeroconf:
         ttl: Optional[int] = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
+        strict: bool = True,
     ) -> Awaitable:
         """Registers service information to the network with a default TTL.
         Zeroconf will then respond to requests for information for that
@@ -192,7 +194,7 @@ class AsyncZeroconf:
         and therefore can be awaited if necessary.
         """
         return await self.zeroconf.async_register_service(
-            info, ttl, allow_name_change, cooperating_responders
+            info, ttl, allow_name_change, cooperating_responders, strict
         )
 
     async def async_unregister_all_services(self) -> None:

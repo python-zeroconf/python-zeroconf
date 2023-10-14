@@ -15,8 +15,9 @@ from typing import List, cast
 import pytest
 
 import zeroconf as r
-from zeroconf import ServiceInfo, Zeroconf, _handlers, const, current_time_millis
-from zeroconf._handlers import (
+from zeroconf import ServiceInfo, Zeroconf, const, current_time_millis
+from zeroconf._handlers import multicast_outgoing_queue
+from zeroconf._handlers.multicast_outgoing_queue import (
     MulticastOutgoingQueue,
     construct_outgoing_multicast_answers,
 )
@@ -42,7 +43,6 @@ def teardown_module():
 
 class TestRegistrar(unittest.TestCase):
     def test_ttl(self):
-
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=['127.0.0.1'])
 
@@ -68,7 +68,7 @@ class TestRegistrar(unittest.TestCase):
         def get_ttl(record_type):
             if expected_ttl is not None:
                 return expected_ttl
-            elif record_type in [const._TYPE_A, const._TYPE_SRV]:
+            elif record_type in [const._TYPE_A, const._TYPE_SRV, const._TYPE_NSEC]:
                 return const._DNS_HOST_TTL
             else:
                 return const._DNS_OTHER_TTL
@@ -94,7 +94,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_add(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, None))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
@@ -120,7 +120,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         expected_ttl = None
@@ -132,7 +132,7 @@ class TestRegistrar(unittest.TestCase):
         assert expected_ttl != const._DNS_HOST_TTL
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, expected_ttl))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 3
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 3
         nbr_answers = nbr_additionals = nbr_authorities = 0
 
         # query
@@ -156,7 +156,7 @@ class TestRegistrar(unittest.TestCase):
         zc.registry.async_remove(info)
         for _ in range(3):
             _process_outgoing_packet(zc.generate_service_broadcast(info, 0))
-        assert nbr_answers == 12 and nbr_additionals == 0 and nbr_authorities == 0
+        assert nbr_answers == 15 and nbr_additionals == 0 and nbr_authorities == 0
         nbr_answers = nbr_additionals = nbr_authorities = 0
         zc.close()
 
@@ -222,7 +222,6 @@ class TestRegistrar(unittest.TestCase):
 
 
 def test_ptr_optimization():
-
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=['127.0.0.1'])
 
@@ -330,6 +329,32 @@ def test_aaaa_query():
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    mcast_answers = list(question_answers.mcast_now)
+    assert mcast_answers[0].address == ipv6_address  # type: ignore[attr-defined]
+    # unregister
+    zc.registry.async_remove(info)
+    zc.close()
+
+
+@unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+@unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
+def test_aaaa_query_upper_case():
+    """Test that queries for AAAA records work and should respond right away with an upper case name."""
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_knownaaaservice._tcp.local."
+    name = "knownname"
+    registration_name = f"{name}.{type_}"
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
+    zc.registry.async_add(info)
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(server_name.upper(), const._TYPE_AAAA, const._CLASS_IN)
     generated.add_question(question)
     packets = generated.packets()
     question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
@@ -481,6 +506,48 @@ async def test_probe_answered_immediately():
     zc.close()
 
 
+@pytest.mark.asyncio
+async def test_probe_answered_immediately_with_uppercase_name():
+    """Verify probes are responded to immediately with an uppercase name."""
+    # instantiate a zeroconf instance
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+
+    # service definition
+    type_ = "_test-srvc-type._tcp.local."
+    name = "xxxyyy"
+    registration_name = f"{name}.{type_}"
+    desc = {'path': '/~paulsm/'}
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.async_add(info)
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(info.type.upper(), const._TYPE_PTR, const._CLASS_IN)
+    query.add_question(question)
+    query.add_authorative_answer(info.dns_pointer())
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
+    )
+    assert not question_answers.ucast
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    assert question_answers.mcast_now
+
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
+    question.unicast = True
+    query.add_question(question)
+    query.add_authorative_answer(info.dns_pointer())
+    question_answers = zc.query_handler.async_response(
+        [r.DNSIncoming(packet) for packet in query.packets()], False
+    )
+    assert question_answers.ucast
+    assert question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    zc.close()
+
+
 def test_qu_response():
     """Handle multicast incoming with the QU bit set."""
     # instantiate a zeroconf instance
@@ -511,7 +578,7 @@ def test_qu_response():
 
     def _validate_complete_response(answers):
         has_srv = has_txt = has_a = has_aaaa = has_nsec = False
-        nbr_answers = len(answers.keys())
+        nbr_answers = len(answers)
         additionals = set().union(*answers.values())
         nbr_additionals = len(additionals)
 
@@ -842,6 +909,45 @@ def test_known_answer_supression_service_type_enumeration_query():
     zc.close()
 
 
+def test_upper_case_enumeration_query():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    type_ = "_otherknown._tcp.local."
+    name = "knownname"
+    registration_name = f"{name}.{type_}"
+    desc = {'path': '/~paulsm/'}
+    server_name = "ash-2.local."
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, server_name, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.async_add(info)
+
+    type_2 = "_otherknown2._tcp.local."
+    name = "knownname"
+    registration_name2 = f"{name}.{type_2}"
+    desc = {'path': '/~paulsm/'}
+    server_name2 = "ash-3.local."
+    info2 = ServiceInfo(
+        type_2, registration_name2, 80, 0, 0, desc, server_name2, addresses=[socket.inet_aton("10.0.1.2")]
+    )
+    zc.registry.async_add(info2)
+    _clear_cache(zc)
+
+    # Test PTR supression
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME.upper(), const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+    # unregister
+    zc.registry.async_remove(info)
+    zc.registry.async_remove(info2)
+    zc.close()
+
+
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
 @pytest.mark.asyncio
@@ -880,6 +986,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     a_record = info.dns_addresses()[0]
     a_record.set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
     assert not a_record.is_recent(current_time_millis())
+    info._dns_address_cache = None  # we are mutating the record so clear the cache
     zc.cache.async_add_records([a_record])
 
     # With QU should respond to only unicast when the answer has been recently multicast
@@ -1026,7 +1133,7 @@ async def test_cache_flush_bit():
     for record in new_records:
         assert zc.cache.async_get_unique(record) is not None
 
-    original_a_record.created = current_time_millis() - 1001
+    original_a_record.created = current_time_millis() - 1500
 
     # Do the run within 1s to verify the original record is not going to be expired
     out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA, multicast=True)
@@ -1041,7 +1148,7 @@ async def test_cache_flush_bit():
     cached_records = [zc.cache.async_get_unique(record) for record in new_records]
     for cached_record in cached_records:
         assert cached_record is not None
-        cached_record.created = current_time_millis() - 1001
+        cached_record.created = current_time_millis() - 1500
 
     fresh_address = socket.inet_aton("4.4.4.4")
     info.addresses = [fresh_address]
@@ -1317,9 +1424,9 @@ async def test_response_aggregation_timings(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
-        assert info.dns_pointer() in incoming.answers
-        assert info2.dns_pointer() in incoming.answers
+        zc.record_manager.async_updates_from_response(incoming)
+        assert info.dns_pointer() in incoming.answers()
+        assert info2.dns_pointer() in incoming.answers()
         send_mock.reset_mock()
 
         protocol.datagram_received(query3.packets()[0], ('127.0.0.1', const._MDNS_PORT))
@@ -1331,8 +1438,8 @@ async def test_response_aggregation_timings(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
-        assert info3.dns_pointer() in incoming.answers
+        zc.record_manager.async_updates_from_response(incoming)
+        assert info3.dns_pointer() in incoming.answers()
         send_mock.reset_mock()
 
         # Because the response was sent in the last second we need to make
@@ -1354,13 +1461,13 @@ async def test_response_aggregation_timings(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        assert info.dns_pointer() in incoming.answers
+        assert info.dns_pointer() in incoming.answers()
 
     await aiozc.async_close()
 
 
 @pytest.mark.asyncio
-async def test_response_aggregation_timings_multiple(run_isolated):
+async def test_response_aggregation_timings_multiple(run_isolated, disable_duplicate_packet_suppression):
     """Verify multicast responses that are aggregated do not take longer than 620ms to send.
 
     620ms is the maximum random delay of 120ms and 500ms additional for aggregation."""
@@ -1385,9 +1492,7 @@ async def test_response_aggregation_timings_multiple(run_isolated):
     zc = aiozc.zeroconf
     protocol = zc.engine.protocols[0]
 
-    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock, unittest.mock.patch.object(
-        protocol, "suppress_duplicate_packet", return_value=False
-    ):
+    with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock:
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
         await asyncio.sleep(0.2)
@@ -1395,8 +1500,8 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
-        assert info2.dns_pointer() in incoming.answers
+        zc.record_manager.async_updates_from_response(incoming)
+        assert info2.dns_pointer() in incoming.answers()
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
@@ -1405,8 +1510,8 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
-        assert info2.dns_pointer() in incoming.answers
+        zc.record_manager.async_updates_from_response(incoming)
+        assert info2.dns_pointer() in incoming.answers()
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
@@ -1428,8 +1533,8 @@ async def test_response_aggregation_timings_multiple(run_isolated):
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
         incoming = r.DNSIncoming(outgoing.packets()[0])
-        zc.handle_response(incoming)
-        assert info2.dns_pointer() in incoming.answers
+        zc.record_manager.async_updates_from_response(incoming)
+        assert info2.dns_pointer() in incoming.answers()
 
 
 @pytest.mark.asyncio
@@ -1472,15 +1577,15 @@ async def test_response_aggregation_random_delay():
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 500)
 
     now = current_time_millis()
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (500, 600)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (500, 600)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     # The second group should always be coalesced into first group since it will always come before
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (300, 400)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (300, 400)):
         outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
 
     # The third group should always be coalesced into first group since it will always come before
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (100, 200)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (100, 200)):
         outgoing_queue.async_add(now, {info3.dns_pointer(): set(), info4.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
@@ -1490,7 +1595,7 @@ async def test_response_aggregation_random_delay():
     assert info4.dns_pointer() in outgoing_queue.queue[0].answers
 
     # The forth group should not be coalesced because its scheduled after the last group in the queue
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (700, 800)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (700, 800)):
         outgoing_queue.async_add(now, {info5.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
@@ -1521,17 +1626,19 @@ async def test_future_answers_are_removed_on_send():
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 0)
 
     now = current_time_millis()
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (1, 1)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (1, 1)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
 
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (2, 2)):
+    with unittest.mock.patch.object(multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (2, 2)):
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
 
-    with unittest.mock.patch.object(_handlers, "_MULTICAST_DELAY_RANDOM_INTERVAL", (1000, 1000)):
+    with unittest.mock.patch.object(
+        multicast_outgoing_queue, "MULTICAST_DELAY_RANDOM_INTERVAL", (1000, 1000)
+    ):
         outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
         outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 

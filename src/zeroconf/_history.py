@@ -20,7 +20,7 @@
     USA
 """
 
-from typing import Dict, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from ._dns import DNSQuestion, DNSRecord
 from .const import _DUPLICATE_QUESTION_INTERVAL
@@ -28,16 +28,21 @@ from .const import _DUPLICATE_QUESTION_INTERVAL
 # The QuestionHistory is used to implement Duplicate Question Suppression
 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.3
 
+_float = float
+
 
 class QuestionHistory:
+    """Remember questions and known answers."""
+
     def __init__(self) -> None:
+        """Init a new QuestionHistory."""
         self._history: Dict[DNSQuestion, Tuple[float, Set[DNSRecord]]] = {}
 
-    def add_question_at_time(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> None:
+    def add_question_at_time(self, question: DNSQuestion, now: _float, known_answers: Set[DNSRecord]) -> None:
         """Remember a question with known answers."""
         self._history[question] = (now, known_answers)
 
-    def suppresses(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> bool:
+    def suppresses(self, question: DNSQuestion, now: _float, known_answers: Set[DNSRecord]) -> bool:
         """Check to see if a question should be suppressed.
 
         https://datatracker.ietf.org/doc/html/rfc6762#section-7.3
@@ -59,12 +64,16 @@ class QuestionHistory:
             return False
         return True
 
-    def async_expire(self, now: float) -> None:
+    def async_expire(self, now: _float) -> None:
         """Expire the history of old questions."""
-        removes = [
-            question
-            for question, now_known_answers in self._history.items()
-            if now - now_known_answers[0] > _DUPLICATE_QUESTION_INTERVAL
-        ]
+        removes: List[DNSQuestion] = []
+        for question, now_known_answers in self._history.items():
+            than, _ = now_known_answers
+            if now - than > _DUPLICATE_QUESTION_INTERVAL:
+                removes.append(question)
         for question in removes:
             del self._history[question]
+
+    def clear(self) -> None:
+        """Clear the history."""
+        self._history.clear()

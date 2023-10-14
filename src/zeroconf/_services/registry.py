@@ -25,6 +25,8 @@ from typing import Dict, List, Optional, Union
 from .._exceptions import ServiceNameAlreadyRegistered
 from .info import ServiceInfo
 
+_str = str
+
 
 class ServiceRegistry:
     """A registry to keep track of services.
@@ -32,6 +34,8 @@ class ServiceRegistry:
     The registry must only be accessed from
     the event loop as it is not thread safe.
     """
+
+    __slots__ = ("_services", "types", "servers")
 
     def __init__(
         self,
@@ -60,11 +64,11 @@ class ServiceRegistry:
 
     def async_get_info_name(self, name: str) -> Optional[ServiceInfo]:
         """Return all ServiceInfo for the name."""
-        return self._services.get(name.lower())
+        return self._services.get(name)
 
     def async_get_types(self) -> List[str]:
         """Return all types."""
-        return list(self.types.keys())
+        return list(self.types)
 
     def async_get_infos_type(self, type_: str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching type."""
@@ -74,9 +78,12 @@ class ServiceRegistry:
         """Return all ServiceInfo matching server."""
         return self._async_get_by_index(self.servers, server)
 
-    def _async_get_by_index(self, records: Dict[str, List], key: str) -> List[ServiceInfo]:
+    def _async_get_by_index(self, records: Dict[str, List], key: _str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
-        return [self._services[name] for name in records.get(key.lower(), [])]
+        record_list = records.get(key)
+        if record_list is None:
+            return []
+        return [self._services[name] for name in record_list]
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
@@ -84,6 +91,7 @@ class ServiceRegistry:
         if info.key in self._services:
             raise ServiceNameAlreadyRegistered
 
+        info.async_clear_cache()
         self._services[info.key] = info
         self.types.setdefault(info.type.lower(), []).append(info.key)
         self.servers.setdefault(info.server_key, []).append(info.key)

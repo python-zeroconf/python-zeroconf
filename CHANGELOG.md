@@ -2,6 +2,477 @@
 
 <!--next-version-placeholder-->
 
+## v0.118.0 (2023-10-14)
+
+### Feature
+
+* Small improvements to ServiceBrowser performance ([#1283](https://github.com/python-zeroconf/python-zeroconf/issues/1283)) ([`0fc031b`](https://github.com/python-zeroconf/python-zeroconf/commit/0fc031b1e7bf1766d5a1d39d70d300b86e36715e))
+
+## v0.117.0 (2023-10-14)
+
+### Feature
+
+* Small cleanups to incoming data handlers ([#1282](https://github.com/python-zeroconf/python-zeroconf/issues/1282)) ([`4f4bd9f`](https://github.com/python-zeroconf/python-zeroconf/commit/4f4bd9ff7c1e575046e5ea213d9b8c91ac7a24a9))
+
+## v0.116.0 (2023-10-13)
+
+### Feature
+
+* Reduce type checking overhead at run time ([#1281](https://github.com/python-zeroconf/python-zeroconf/issues/1281)) ([`8f30099`](https://github.com/python-zeroconf/python-zeroconf/commit/8f300996e5bd4316b2237f0502791dd0d6a855fe))
+
+## v0.115.2 (2023-10-05)
+
+### Fix
+
+* Ensure ServiceInfo cache is cleared when adding to the registry ([#1279](https://github.com/python-zeroconf/python-zeroconf/issues/1279)) ([`2060eb2`](https://github.com/python-zeroconf/python-zeroconf/commit/2060eb2cc43489c34bea08924c3f40b875d5a498))
+
+## v0.115.1 (2023-10-01)
+
+### Fix
+
+* Add missing python definition for addresses_by_version ([#1278](https://github.com/python-zeroconf/python-zeroconf/issues/1278)) ([`52ee02b`](https://github.com/python-zeroconf/python-zeroconf/commit/52ee02b16860e344c402124f4b2e2869536ec839))
+
+## v0.115.0 (2023-09-26)
+
+### Feature
+
+* Speed up outgoing multicast queue ([#1277](https://github.com/python-zeroconf/python-zeroconf/issues/1277)) ([`a13fd49`](https://github.com/python-zeroconf/python-zeroconf/commit/a13fd49d77474fd5858de809e48cbab1ccf89173))
+
+## v0.114.0 (2023-09-25)
+
+### Feature
+
+* Speed up responding to queries ([#1275](https://github.com/python-zeroconf/python-zeroconf/issues/1275)) ([`3c6b18c`](https://github.com/python-zeroconf/python-zeroconf/commit/3c6b18cdf4c94773ad6f4497df98feb337939ee9))
+
+## v0.113.0 (2023-09-24)
+
+### Feature
+
+* Improve performance of loading records from cache in ServiceInfo ([#1274](https://github.com/python-zeroconf/python-zeroconf/issues/1274)) ([`6257d49`](https://github.com/python-zeroconf/python-zeroconf/commit/6257d49952e02107f800f4ad4894716508edfcda))
+
+## v0.112.0 (2023-09-14)
+
+### Feature
+
+* Improve AsyncServiceBrowser performance ([#1273](https://github.com/python-zeroconf/python-zeroconf/issues/1273)) ([`0c88ecf`](https://github.com/python-zeroconf/python-zeroconf/commit/0c88ecf5ef6b9b256f991e7a630048de640999a6))
+
+## v0.111.0 (2023-09-14)
+
+### Feature
+
+* Speed up question and answer internals ([#1272](https://github.com/python-zeroconf/python-zeroconf/issues/1272)) ([`d24722b`](https://github.com/python-zeroconf/python-zeroconf/commit/d24722bfa4201d48ab482d35b0ef004f070ada80))
+
+## v0.110.0 (2023-09-14)
+
+### Feature
+
+* Small speed ups to ServiceBrowser ([#1271](https://github.com/python-zeroconf/python-zeroconf/issues/1271)) ([`22c433d`](https://github.com/python-zeroconf/python-zeroconf/commit/22c433ddaea3049ac49933325ba938fd87a529c0))
+
+## v0.109.0 (2023-09-14)
+
+### Feature
+
+* Speed up ServiceBrowsers with a cython pxd ([#1270](https://github.com/python-zeroconf/python-zeroconf/issues/1270)) ([`4837876`](https://github.com/python-zeroconf/python-zeroconf/commit/48378769c3887b5746ca00de30067a4c0851765c))
+
+## v0.108.0 (2023-09-11)
+
+### Feature
+
+* Improve performance of constructing outgoing queries ([#1267](https://github.com/python-zeroconf/python-zeroconf/issues/1267)) ([`00c439a`](https://github.com/python-zeroconf/python-zeroconf/commit/00c439a6400b7850ef9fdd75bc8d82d4e64b1da0))
+
+## v0.107.0 (2023-09-11)
+
+### Feature
+
+* Speed up responding to queries ([#1266](https://github.com/python-zeroconf/python-zeroconf/issues/1266)) ([`24a0a00`](https://github.com/python-zeroconf/python-zeroconf/commit/24a0a00b3e457979e279a2eeadc8fad2ab09e125))
+
+## v0.106.0 (2023-09-11)
+
+### Feature
+
+* Speed up answering questions ([#1265](https://github.com/python-zeroconf/python-zeroconf/issues/1265)) ([`37bfaf2`](https://github.com/python-zeroconf/python-zeroconf/commit/37bfaf2f630358e8c68652f3b3120931a6f94910))
+
+## v0.105.0 (2023-09-10)
+
+### Feature
+
+* Speed up ServiceInfo with a cython pxd ([#1264](https://github.com/python-zeroconf/python-zeroconf/issues/1264)) ([`7ca690a`](https://github.com/python-zeroconf/python-zeroconf/commit/7ca690ac3fa75e7474d3412944bbd5056cb313dd))
+
+## v0.104.0 (2023-09-10)
+
+### Feature
+
+* Speed up generating answers ([#1262](https://github.com/python-zeroconf/python-zeroconf/issues/1262)) ([`50a8f06`](https://github.com/python-zeroconf/python-zeroconf/commit/50a8f066b6ab90bc9e3300f81cf9332550b720df))
+
+## v0.103.0 (2023-09-09)
+
+### Feature
+
+* Avoid calling get_running_loop when resolving ServiceInfo ([#1261](https://github.com/python-zeroconf/python-zeroconf/issues/1261)) ([`33a2714`](https://github.com/python-zeroconf/python-zeroconf/commit/33a2714cadff96edf016b869cc63b0661d16ef2c))
+
+## v0.102.0 (2023-09-07)
+
+### Feature
+
+* Significantly speed up writing outgoing dns records ([#1260](https://github.com/python-zeroconf/python-zeroconf/issues/1260)) ([`bf2f366`](https://github.com/python-zeroconf/python-zeroconf/commit/bf2f3660a1f341e50ab0ae586dfbacbc5ddcc077))
+
+## v0.101.0 (2023-09-07)
+
+### Feature
+
+* Speed up writing outgoing dns records ([#1259](https://github.com/python-zeroconf/python-zeroconf/issues/1259)) ([`248655f`](https://github.com/python-zeroconf/python-zeroconf/commit/248655f0276223b089373c70ec13a0385dfaa4d6))
+
+## v0.100.0 (2023-09-07)
+
+### Feature
+
+* Small speed up to writing outgoing dns records ([#1258](https://github.com/python-zeroconf/python-zeroconf/issues/1258)) ([`1ed6bd2`](https://github.com/python-zeroconf/python-zeroconf/commit/1ed6bd2ec4db0612b71384f923ffff1efd3ce878))
+
+## v0.99.0 (2023-09-06)
+
+### Feature
+
+* Reduce IP Address parsing overhead in ServiceInfo ([#1257](https://github.com/python-zeroconf/python-zeroconf/issues/1257)) ([`83d0b7f`](https://github.com/python-zeroconf/python-zeroconf/commit/83d0b7fda2eb09c9c6e18b85f329d1ddc701e3fb))
+
+## v0.98.0 (2023-09-06)
+
+### Feature
+
+* Speed up decoding incoming packets ([#1256](https://github.com/python-zeroconf/python-zeroconf/issues/1256)) ([`ac081cf`](https://github.com/python-zeroconf/python-zeroconf/commit/ac081cf00addde1ceea2c076f73905fdb293de3a))
+
+## v0.97.0 (2023-09-03)
+
+### Feature
+
+* Speed up answering queries ([#1255](https://github.com/python-zeroconf/python-zeroconf/issues/1255)) ([`2d3aed3`](https://github.com/python-zeroconf/python-zeroconf/commit/2d3aed36e24c73013fcf4acc90803fc1737d0917))
+
+## v0.96.0 (2023-09-03)
+
+### Feature
+
+* Optimize DNSCache.get_by_details ([#1254](https://github.com/python-zeroconf/python-zeroconf/issues/1254)) ([`ce59787`](https://github.com/python-zeroconf/python-zeroconf/commit/ce59787a170781ffdaa22425018d288b395ac081))
+
+## v0.95.0 (2023-09-03)
+
+### Feature
+
+* Speed up adding and removing RecordUpdateListeners ([#1253](https://github.com/python-zeroconf/python-zeroconf/issues/1253)) ([`22e4a29`](https://github.com/python-zeroconf/python-zeroconf/commit/22e4a296d440b3038c0ff5ed6fc8878304ec4937))
+
+## v0.94.0 (2023-09-03)
+
+### Feature
+
+* Optimize cache implementation ([#1252](https://github.com/python-zeroconf/python-zeroconf/issues/1252)) ([`8d3ec79`](https://github.com/python-zeroconf/python-zeroconf/commit/8d3ec792277aaf7ef790318b5b35ab00839ca3b3))
+
+## v0.93.1 (2023-09-03)
+
+### Fix
+
+* No change re-release due to unrecoverable failed CI run ([#1251](https://github.com/python-zeroconf/python-zeroconf/issues/1251)) ([`730921b`](https://github.com/python-zeroconf/python-zeroconf/commit/730921b155dfb9c62251c8c643b1302e807aff3b))
+
+## v0.93.0 (2023-09-02)
+
+### Feature
+
+* Reduce overhead to answer questions ([#1250](https://github.com/python-zeroconf/python-zeroconf/issues/1250)) ([`7cb8da0`](https://github.com/python-zeroconf/python-zeroconf/commit/7cb8da0c6c5c944588009fe36012c1197c422668))
+
+## v0.92.0 (2023-09-02)
+
+### Feature
+
+* Cache construction of records used to answer queries from the service registry ([#1243](https://github.com/python-zeroconf/python-zeroconf/issues/1243)) ([`0890f62`](https://github.com/python-zeroconf/python-zeroconf/commit/0890f628dbbd577fb77d3e6f2e267052b2b2b515))
+
+## v0.91.1 (2023-09-02)
+
+### Fix
+
+* Remove useless calls in ServiceInfo ([#1248](https://github.com/python-zeroconf/python-zeroconf/issues/1248)) ([`4e40fae`](https://github.com/python-zeroconf/python-zeroconf/commit/4e40fae20bf50b4608e28fad4a360c4ed48ac86b))
+
+## v0.91.0 (2023-09-02)
+
+### Feature
+
+* Reduce overhead to process incoming updates by avoiding the handle_response shim ([#1247](https://github.com/python-zeroconf/python-zeroconf/issues/1247)) ([`5e31f0a`](https://github.com/python-zeroconf/python-zeroconf/commit/5e31f0afe4c341fbdbbbe50348a829ea553cbda0))
+
+## v0.90.0 (2023-09-02)
+
+### Feature
+
+* Avoid python float conversion in listener hot path ([#1245](https://github.com/python-zeroconf/python-zeroconf/issues/1245)) ([`816ad4d`](https://github.com/python-zeroconf/python-zeroconf/commit/816ad4dceb3859bad4bb136bdb1d1ee2daa0bf5a))
+
+## v0.89.0 (2023-09-02)
+
+### Feature
+
+* Reduce overhead to process incoming questions ([#1244](https://github.com/python-zeroconf/python-zeroconf/issues/1244)) ([`18b65d1`](https://github.com/python-zeroconf/python-zeroconf/commit/18b65d1c75622869b0c29258215d3db3ae520d6c))
+
+## v0.88.0 (2023-08-29)
+
+### Feature
+
+* Speed up RecordManager with additional cython defs ([#1242](https://github.com/python-zeroconf/python-zeroconf/issues/1242)) ([`5a76fc5`](https://github.com/python-zeroconf/python-zeroconf/commit/5a76fc5ff74f2941ffbf7570e45390f35e0b7e01))
+
+## v0.87.0 (2023-08-29)
+
+### Feature
+
+* Improve performance by adding cython pxd for RecordManager ([#1241](https://github.com/python-zeroconf/python-zeroconf/issues/1241)) ([`a7dad3d`](https://github.com/python-zeroconf/python-zeroconf/commit/a7dad3d9743586f352e21eea1e129c6875f9a713))
+
+## v0.86.0 (2023-08-28)
+
+### Feature
+
+* Build wheels for cpython 3.12 ([#1239](https://github.com/python-zeroconf/python-zeroconf/issues/1239)) ([`58bc154`](https://github.com/python-zeroconf/python-zeroconf/commit/58bc154f55b06b4ddfc4a141592488abe76f062a))
+* Use server_key when processing DNSService records ([#1238](https://github.com/python-zeroconf/python-zeroconf/issues/1238)) ([`cc8feb1`](https://github.com/python-zeroconf/python-zeroconf/commit/cc8feb110fefc3fb714fd482a52f16e2b620e8c4))
+
+## v0.85.0 (2023-08-27)
+
+### Feature
+
+* Simplify code to unpack properties ([#1237](https://github.com/python-zeroconf/python-zeroconf/issues/1237)) ([`68d9998`](https://github.com/python-zeroconf/python-zeroconf/commit/68d99985a0e9d2c72ff670b2e2af92271a6fe934))
+
+## v0.84.0 (2023-08-27)
+
+### Feature
+
+* Context managers in ServiceBrowser and AsyncServiceBrowser ([#1233](https://github.com/python-zeroconf/python-zeroconf/issues/1233)) ([`bd8d846`](https://github.com/python-zeroconf/python-zeroconf/commit/bd8d8467dec2a39a0b525043ea1051259100fded))
+
+## v0.83.1 (2023-08-27)
+
+### Fix
+
+* Rebuild wheels with cython 3.0.2 ([#1236](https://github.com/python-zeroconf/python-zeroconf/issues/1236)) ([`dd637fb`](https://github.com/python-zeroconf/python-zeroconf/commit/dd637fb2e5a87ba283750e69d116e124bef54e7c))
+
+## v0.83.0 (2023-08-26)
+
+### Feature
+
+* Speed up question and answer history with a cython pxd ([#1234](https://github.com/python-zeroconf/python-zeroconf/issues/1234)) ([`703ecb2`](https://github.com/python-zeroconf/python-zeroconf/commit/703ecb2901b2150fb72fac3deed61d7302561298))
+
+## v0.82.1 (2023-08-22)
+
+### Fix
+
+* Build failures with older cython 0.29 series ([#1232](https://github.com/python-zeroconf/python-zeroconf/issues/1232)) ([`30c3ad9`](https://github.com/python-zeroconf/python-zeroconf/commit/30c3ad9d1bc6b589e1ca6675fea21907ebcd1ced))
+
+## v0.82.0 (2023-08-22)
+
+### Feature
+
+* Optimize processing of records in RecordUpdateListener subclasses ([#1231](https://github.com/python-zeroconf/python-zeroconf/issues/1231)) ([`3e89294`](https://github.com/python-zeroconf/python-zeroconf/commit/3e89294ea0ecee1122e1c1ffdc78925add8ca40e))
+
+## v0.81.0 (2023-08-22)
+
+### Feature
+
+* Speed up the service registry with a cython pxd ([#1226](https://github.com/python-zeroconf/python-zeroconf/issues/1226)) ([`47d3c7a`](https://github.com/python-zeroconf/python-zeroconf/commit/47d3c7ad4bc5f2247631c3ad5e6b6156d45a0a4e))
+* Optimizing sending answers to questions ([#1227](https://github.com/python-zeroconf/python-zeroconf/issues/1227)) ([`cd7b56b`](https://github.com/python-zeroconf/python-zeroconf/commit/cd7b56b2aa0c8ee429da430e9a36abd515512011))
+
+## v0.80.0 (2023-08-15)
+
+### Feature
+
+* Optimize unpacking properties in ServiceInfo ([#1225](https://github.com/python-zeroconf/python-zeroconf/issues/1225)) ([`1492e41`](https://github.com/python-zeroconf/python-zeroconf/commit/1492e41b3d5cba5598cc9dd6bd2bc7d238f13555))
+
+## v0.79.0 (2023-08-14)
+
+### Feature
+
+* Refactor notify implementation to reduce overhead of adding and removing listeners ([#1224](https://github.com/python-zeroconf/python-zeroconf/issues/1224)) ([`ceb92cf`](https://github.com/python-zeroconf/python-zeroconf/commit/ceb92cfe42d885dbb38cee7aaeebf685d97627a9))
+
+## v0.78.0 (2023-08-14)
+
+### Feature
+
+* Add cython pxd file for _listener.py to improve incoming message processing performance ([#1221](https://github.com/python-zeroconf/python-zeroconf/issues/1221)) ([`f459856`](https://github.com/python-zeroconf/python-zeroconf/commit/f459856a0a61b8afa8a541926d7e15d51f8e4aea))
+
+## v0.77.0 (2023-08-14)
+
+### Feature
+
+* Cythonize _listener.py to improve incoming message processing performance ([#1220](https://github.com/python-zeroconf/python-zeroconf/issues/1220)) ([`9efde8c`](https://github.com/python-zeroconf/python-zeroconf/commit/9efde8c8c1ed14c5d3c162f185b49212fcfcb5c9))
+
+## v0.76.0 (2023-08-14)
+
+### Feature
+
+* Improve performance responding to queries ([#1217](https://github.com/python-zeroconf/python-zeroconf/issues/1217)) ([`69b33be`](https://github.com/python-zeroconf/python-zeroconf/commit/69b33be3b2f9d4a27ef5154cae94afca048efffa))
+
+## v0.75.0 (2023-08-13)
+
+### Feature
+
+* Expose flag to disable strict name checking in service registration ([#1215](https://github.com/python-zeroconf/python-zeroconf/issues/1215)) ([`5df8a57`](https://github.com/python-zeroconf/python-zeroconf/commit/5df8a57a14d59687a3c22ea8ee063e265031e278))
+* Speed up processing incoming records ([#1216](https://github.com/python-zeroconf/python-zeroconf/issues/1216)) ([`aff625d`](https://github.com/python-zeroconf/python-zeroconf/commit/aff625dc6a5e816dad519644c4adac4f96980c04))
+
+## v0.74.0 (2023-08-04)
+
+### Feature
+
+* Speed up unpacking text records in ServiceInfo ([#1212](https://github.com/python-zeroconf/python-zeroconf/issues/1212)) ([`99a6f98`](https://github.com/python-zeroconf/python-zeroconf/commit/99a6f98e44a1287ba537eabb852b1b69923402f0))
+
+### Fix
+
+* Remove typing on reset_ttl for cython compat ([#1213](https://github.com/python-zeroconf/python-zeroconf/issues/1213)) ([`0094e26`](https://github.com/python-zeroconf/python-zeroconf/commit/0094e2684344c6b7edd7948924f093f1b4c19901))
+
+## v0.73.0 (2023-08-03)
+
+### Feature
+
+* Add a cache to service_type_name ([#1211](https://github.com/python-zeroconf/python-zeroconf/issues/1211)) ([`53a694f`](https://github.com/python-zeroconf/python-zeroconf/commit/53a694f60e675ae0560e727be6b721b401c2b68f))
+
+## v0.72.3 (2023-08-03)
+
+### Fix
+
+* Revert adding typing to DNSRecord.suppressed_by ([#1210](https://github.com/python-zeroconf/python-zeroconf/issues/1210)) ([`3dba5ae`](https://github.com/python-zeroconf/python-zeroconf/commit/3dba5ae0c0e9473b7b20fd6fc79fa1a3b298dc5a))
+
+## v0.72.2 (2023-08-03)
+
+### Fix
+
+* Revert DNSIncoming cimport in _dns.pxd ([#1209](https://github.com/python-zeroconf/python-zeroconf/issues/1209)) ([`5f14b6d`](https://github.com/python-zeroconf/python-zeroconf/commit/5f14b6dc687b3a0716d0ca7f61ccf1e93dfe5fa1))
+
+## v0.72.1 (2023-08-03)
+
+### Fix
+
+* Race with InvalidStateError when async_request times out ([#1208](https://github.com/python-zeroconf/python-zeroconf/issues/1208)) ([`2233b6b`](https://github.com/python-zeroconf/python-zeroconf/commit/2233b6bc4ceeee5524d2ee88ecae8234173feb5f))
+
+## v0.72.0 (2023-08-02)
+
+### Feature
+
+* Speed up processing incoming records ([#1206](https://github.com/python-zeroconf/python-zeroconf/issues/1206)) ([`126849c`](https://github.com/python-zeroconf/python-zeroconf/commit/126849c92be8cec9253fba9faa591029d992fcc3))
+
+## v0.71.5 (2023-08-02)
+
+### Fix
+
+* Improve performance of ServiceInfo.async_request ([#1205](https://github.com/python-zeroconf/python-zeroconf/issues/1205)) ([`8019a73`](https://github.com/python-zeroconf/python-zeroconf/commit/8019a73c952f2fc4c88d849aab970fafedb316d8))
+
+## v0.71.4 (2023-07-24)
+
+### Fix
+
+* Cleanup naming from previous refactoring in ServiceInfo ([#1202](https://github.com/python-zeroconf/python-zeroconf/issues/1202)) ([`b272d75`](https://github.com/python-zeroconf/python-zeroconf/commit/b272d75abd982f3be1f4b20f683cac38011cc6f4))
+
+## v0.71.3 (2023-07-23)
+
+### Fix
+
+* Pin python-semantic-release to fix release process ([#1200](https://github.com/python-zeroconf/python-zeroconf/issues/1200)) ([`c145a23`](https://github.com/python-zeroconf/python-zeroconf/commit/c145a238d768aa17c3aebe120c20a46bfbec6b99))
+
+## v0.71.2 (2023-07-23)
+
+### Fix
+
+* No change re-release to fix wheel builds ([#1199](https://github.com/python-zeroconf/python-zeroconf/issues/1199)) ([`8c3a4c8`](https://github.com/python-zeroconf/python-zeroconf/commit/8c3a4c80c221bea7401c12e1c6a525e75b7ffea2))
+
+## v0.71.1 (2023-07-23)
+
+### Fix
+
+* Add missing if TYPE_CHECKING guard to generate_service_query ([#1198](https://github.com/python-zeroconf/python-zeroconf/issues/1198)) ([`ac53adf`](https://github.com/python-zeroconf/python-zeroconf/commit/ac53adf7e71db14c1a0f9adbfd1d74033df36898))
+
+## v0.71.0 (2023-07-08)
+
+### Feature
+
+* Improve incoming data processing performance ([#1194](https://github.com/python-zeroconf/python-zeroconf/issues/1194)) ([`a56c776`](https://github.com/python-zeroconf/python-zeroconf/commit/a56c776008ef86f99db78f5997e45a57551be725))
+
+## v0.70.0 (2023-07-02)
+
+### Feature
+
+* Add support for sending to a specific `addr` and `port` with `ServiceInfo.async_request` and `ServiceInfo.request` ([#1192](https://github.com/python-zeroconf/python-zeroconf/issues/1192)) ([`405f547`](https://github.com/python-zeroconf/python-zeroconf/commit/405f54762d3f61e97de9c1787e837e953de31412))
+
+## v0.69.0 (2023-06-18)
+
+### Feature
+
+* Cython3 support ([#1190](https://github.com/python-zeroconf/python-zeroconf/issues/1190)) ([`8ae8ba1`](https://github.com/python-zeroconf/python-zeroconf/commit/8ae8ba1af324b0c8c2da3bd12c264a5c0f3dcc3d))
+* Reorder incoming data handler to reduce overhead ([#1189](https://github.com/python-zeroconf/python-zeroconf/issues/1189)) ([`32756ff`](https://github.com/python-zeroconf/python-zeroconf/commit/32756ff113f675b7a9cf16d3c0ab840ba733e5e4))
+
+## v0.68.1 (2023-06-18)
+
+### Fix
+
+* Reduce debug logging overhead by adding missing checks to datagram_received ([#1188](https://github.com/python-zeroconf/python-zeroconf/issues/1188)) ([`ac5c50a`](https://github.com/python-zeroconf/python-zeroconf/commit/ac5c50afc70aaa33fcd20bf02222ff4f0c596fa3))
+
+## v0.68.0 (2023-06-17)
+
+### Feature
+
+* Reduce overhead to handle queries and responses ([#1184](https://github.com/python-zeroconf/python-zeroconf/issues/1184)) ([`81126b7`](https://github.com/python-zeroconf/python-zeroconf/commit/81126b7600f94848ef8c58b70bac0c6ab993c6ae))
+
+## v0.67.0 (2023-06-17)
+
+### Feature
+
+* Speed up answering incoming questions ([#1186](https://github.com/python-zeroconf/python-zeroconf/issues/1186)) ([`8f37665`](https://github.com/python-zeroconf/python-zeroconf/commit/8f376658d2a3bef0353646e6fddfda15626b73a9))
+
+## v0.66.0 (2023-06-13)
+### Feature
+* Optimize construction of outgoing dns records ([#1182](https://github.com/python-zeroconf/python-zeroconf/issues/1182)) ([`fc0341f`](https://github.com/python-zeroconf/python-zeroconf/commit/fc0341f281cdb71428c0f1cf90c12d34cbb4acae))
+
+## v0.65.0 (2023-06-13)
+### Feature
+* Reduce overhead to enumerate ip addresses in ServiceInfo ([#1181](https://github.com/python-zeroconf/python-zeroconf/issues/1181)) ([`6a85cbf`](https://github.com/python-zeroconf/python-zeroconf/commit/6a85cbf2b872cb0abd184c2dd728d9ae3eb8115c))
+
+## v0.64.1 (2023-06-05)
+### Fix
+* Small internal typing cleanups ([#1180](https://github.com/python-zeroconf/python-zeroconf/issues/1180)) ([`f03e511`](https://github.com/python-zeroconf/python-zeroconf/commit/f03e511f7aae72c5ccd4f7514d89e168847bd7a2))
+
+## v0.64.0 (2023-06-05)
+### Feature
+* Speed up processing incoming records ([#1179](https://github.com/python-zeroconf/python-zeroconf/issues/1179)) ([`d919316`](https://github.com/python-zeroconf/python-zeroconf/commit/d9193160b05beeca3755e19fd377ba13fe37b071))
+
+### Fix
+* Always answer QU questions when the exact same packet is received from different sources in sequence ([#1178](https://github.com/python-zeroconf/python-zeroconf/issues/1178)) ([`74d7ba1`](https://github.com/python-zeroconf/python-zeroconf/commit/74d7ba1aeeae56be087ee8142ee6ca1219744baa))
+
+## v0.63.0 (2023-05-25)
+### Feature
+* Small speed up to fetch dns addresses from ServiceInfo ([#1176](https://github.com/python-zeroconf/python-zeroconf/issues/1176)) ([`4deaa6e`](https://github.com/python-zeroconf/python-zeroconf/commit/4deaa6ed7c9161db55bf16ec068ab7260bbd4976))
+* Speed up the service registry ([#1174](https://github.com/python-zeroconf/python-zeroconf/issues/1174)) ([`360ceb2`](https://github.com/python-zeroconf/python-zeroconf/commit/360ceb2548c4c4974ff798aac43a6fff9803ea0e))
+* Improve dns cache performance ([#1172](https://github.com/python-zeroconf/python-zeroconf/issues/1172)) ([`bb496a1`](https://github.com/python-zeroconf/python-zeroconf/commit/bb496a1dd5fa3562c0412cb064d14639a542592e))
+
+## v0.62.0 (2023-05-04)
+### Feature
+* Improve performance of ServiceBrowser outgoing query scheduler ([#1170](https://github.com/python-zeroconf/python-zeroconf/issues/1170)) ([`963d022`](https://github.com/python-zeroconf/python-zeroconf/commit/963d022ef82b615540fa7521d164a98a6c6f5209))
+
+## v0.61.0 (2023-05-03)
+### Feature
+* Speed up parsing NSEC records ([#1169](https://github.com/python-zeroconf/python-zeroconf/issues/1169)) ([`06fa94d`](https://github.com/python-zeroconf/python-zeroconf/commit/06fa94d87b4f0451cb475a921ce1d8e9562e0f26))
+
+## v0.60.0 (2023-05-01)
+### Feature
+* Speed up processing incoming data ([#1167](https://github.com/python-zeroconf/python-zeroconf/issues/1167)) ([`fbaaf7b`](https://github.com/python-zeroconf/python-zeroconf/commit/fbaaf7bb6ff985bdabb85feb6cba144f12d4f1d6))
+
+## v0.59.0 (2023-05-01)
+### Feature
+* Speed up decoding dns questions when processing incoming data ([#1168](https://github.com/python-zeroconf/python-zeroconf/issues/1168)) ([`f927190`](https://github.com/python-zeroconf/python-zeroconf/commit/f927190cb24f70fd7c825c6e12151fcc0daf3973))
+
+## v0.58.2 (2023-04-26)
+### Fix
+* Re-release to rebuild failed wheels ([#1165](https://github.com/python-zeroconf/python-zeroconf/issues/1165)) ([`4986271`](https://github.com/python-zeroconf/python-zeroconf/commit/498627166a4976f1d9d8cd1f3654b0d50272d266))
+
+## v0.58.1 (2023-04-26)
+### Fix
+* Reduce cast calls in service browser ([#1164](https://github.com/python-zeroconf/python-zeroconf/issues/1164)) ([`c0d65ae`](https://github.com/python-zeroconf/python-zeroconf/commit/c0d65aeae7037a18ed1149336f5e7bdb8b2dd8cf))
+
+## v0.58.0 (2023-04-23)
+### Feature
+* Speed up incoming parser ([#1163](https://github.com/python-zeroconf/python-zeroconf/issues/1163)) ([`4626399`](https://github.com/python-zeroconf/python-zeroconf/commit/46263999c0c7ea5176885f1eadd2c8498834b70e))
+
+## v0.57.0 (2023-04-23)
+### Feature
+* Speed up incoming data parser ([#1161](https://github.com/python-zeroconf/python-zeroconf/issues/1161)) ([`cb4c3b2`](https://github.com/python-zeroconf/python-zeroconf/commit/cb4c3b2b80ca3b88b8de6e87062a45e03e8805a6))
+
+## v0.56.0 (2023-04-07)
+### Feature
+* Reduce denial of service protection overhead ([#1157](https://github.com/python-zeroconf/python-zeroconf/issues/1157)) ([`2c2f26a`](https://github.com/python-zeroconf/python-zeroconf/commit/2c2f26a87d0aac81a77205b06bc9ba499caa2321))
+
 ## v0.55.0 (2023-04-07)
 ### Feature
 * Improve performance of processing incoming records ([#1155](https://github.com/python-zeroconf/python-zeroconf/issues/1155)) ([`b65e279`](https://github.com/python-zeroconf/python-zeroconf/commit/b65e2792751c44e0fafe9ad3a55dadc5d8ee9d46))
@@ -20,6 +491,9 @@
 
 ### Fix
 * Make parsed_scoped_addresses return addresses in the same order as all other methods ([#1150](https://github.com/python-zeroconf/python-zeroconf/issues/1150)) ([`9b6adcf`](https://github.com/python-zeroconf/python-zeroconf/commit/9b6adcf5c04a469632ee866c32f5898c5cbf810a))
+
+### Technically breaking change
+* IP Addresses returned from `ServiceInfo.parsed_addresses` are now stringified using the python `ipaddress` library which may format them differently than `socket.inet_ntop` depending on the operating system. It is recommended to use `ServiceInfo.ip_addresses_by_version` instead going forward as it offers a stronger guarantee since it returns `ipaddress` objects.
 
 ## v0.52.0 (2023-04-02)
 ### Feature
