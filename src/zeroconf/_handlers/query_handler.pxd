@@ -15,7 +15,7 @@ cdef cython.uint _ONE_SECOND, _TYPE_PTR, _TYPE_ANY, _TYPE_A, _TYPE_AAAA, _TYPE_S
 cdef str _SERVICE_TYPE_ENUMERATION_NAME
 cdef cython.set _RESPOND_IMMEDIATE_TYPES
 cdef cython.set _ADDRESS_RECORD_TYPES
-cdef object IPVersion
+cdef object IPVersion, _IPVersion_ALL
 cdef object _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL
 
 cdef class _QueryResponse:
@@ -59,7 +59,7 @@ cdef class QueryHandler:
     cdef _add_pointer_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers)
 
     @cython.locals(service=ServiceInfo, dns_address=DNSAddress)
-    cdef _add_address_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers, object type_)
+    cdef _add_address_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
     cdef cython.dict _answer_question(self, DNSQuestion question, DNSRRSet known_answers)

@@ -106,14 +106,14 @@ class RecordManager:
                 )
                 record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
 
-            if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
+            if record.unique is True:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record_type, record.class_))
 
             if TYPE_CHECKING:
                 record = cast(_UniqueRecordsType, record)
 
             maybe_entry = cache.async_get_unique(record)
-            if not record.is_expired(now_float):
+            if record.is_expired(now_float) is False:
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
@@ -129,7 +129,7 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now)
+            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now_float)
 
         if updates:
             self.async_updates(now, updates)
@@ -151,7 +151,7 @@ class RecordManager:
         new = False
         if other_adds or address_adds:
             new = cache.async_add_records(address_adds)
-            if cache.async_add_records(other_adds):
+            if cache.async_add_records(other_adds) is True:
                 new = True
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
@@ -182,7 +182,6 @@ class RecordManager:
             return
 
         questions = [question] if isinstance(question, DNSQuestion) else question
-        assert self.zc.loop is not None
         self._async_update_matching_records(listener, questions)
 
     def _async_update_matching_records(
