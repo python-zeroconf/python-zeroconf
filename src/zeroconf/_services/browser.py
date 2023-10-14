@@ -404,24 +404,26 @@ class _ServiceBrowserBase(RecordUpdateListener):
         This method will be run in the event loop.
         """
         for record_update in records:
-            record, old_record = record_update
+            record = record_update[0]
+            old_record = record_update[1]
             record_type = record.type
 
             if record_type is _TYPE_PTR:
                 if TYPE_CHECKING:
                     record = cast(DNSPointer, record)
-                for type_ in self.types.intersection(cached_possible_types(record.name)):
+                pointer = record
+                for type_ in self.types.intersection(cached_possible_types(pointer.name)):
                     if old_record is None:
-                        self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, record.alias)
-                    elif record.is_expired(now):
-                        self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, record.alias)
+                        self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias)
+                    elif pointer.is_expired(now):
+                        self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias)
                     else:
-                        expire_time = record.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+                        expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
                         self.reschedule_type(type_, now, expire_time)
                 continue
 
             # If its expired or already exists in the cache it cannot be updated.
-            if old_record or record.is_expired(now):
+            if old_record or record.is_expired(now) is True:
                 continue
 
             if record_type in _ADDRESS_RECORD_TYPES:
