@@ -44,6 +44,7 @@ def build(setup_kwargs: Any) -> None:
                 cmdclass=dict(build_ext=BuildExt),
             )
         )
+        setup_kwargs["exclude_package_data"] = {pkg: ["*.c"] for pkg in setup_kwargs["packages"]}
     except Exception:
         if os.environ.get("REQUIRE_CYTHON"):
             raise
