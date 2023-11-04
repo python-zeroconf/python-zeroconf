@@ -26,7 +26,6 @@ from zeroconf import (
     current_time_millis,
     millis_to_seconds,
 )
-from zeroconf._handlers import record_manager
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
@@ -1159,7 +1158,6 @@ def test_service_browser_matching():
     zc.close()
 
 
-@patch.object(record_manager, '_DNS_PTR_MIN_TTL', 1)
 @patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01)
 def test_service_browser_expire_callbacks():
     """Test that the ServiceBrowser matching does not match partial names."""
@@ -1216,6 +1214,12 @@ def test_service_browser_expire_callbacks():
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
     )
+    # Force the ttl to be 1 second
+    now = current_time_millis()
+    for cache_record in zc.cache.cache.values():
+        for record in cache_record:
+            record.set_created_ttl(now, 1)
+
     time.sleep(0.3)
     info.port = 400
     info._dns_service_cache = None  # we are mutating the record so clear the cache
