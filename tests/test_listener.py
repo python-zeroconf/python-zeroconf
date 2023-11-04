@@ -160,62 +160,77 @@ def test_guard_against_duplicate_packets():
 
     addrs = ("1.2.3.4", 43)
 
-    with patch.object(_listener, "current_time_millis") as _current_time_millis, patch.object(
-        listener, "handle_query_or_defer"
-    ) as _handle_query_or_defer:
+    with patch.object(listener, "handle_query_or_defer") as _handle_query_or_defer:
         start_time = current_time_millis()
 
-        _current_time_millis.return_value = start_time
-        listener.datagram_received(packet_with_qm_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qm_question), start_time, packet_with_qm_question, addrs
+        )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the same packet again and handle_query_or_defer should not fire
-        listener.datagram_received(packet_with_qm_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qm_question), start_time, packet_with_qm_question, addrs
+        )
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 
-        # Now walk time forward 1000 seconds
-        _current_time_millis.return_value = start_time + 1000
+        # Now walk time forward 1100 milliseconds
+        new_time = start_time + 1100
         # Now call with the same packet again and handle_query_or_defer should fire
-        listener.datagram_received(packet_with_qm_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+        )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the different packet and handle_query_or_defer should fire
-        listener.datagram_received(packet_with_qm_question2, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qm_question2), new_time, packet_with_qm_question2, addrs
+        )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the different packet and handle_query_or_defer should fire
-        listener.datagram_received(packet_with_qm_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+        )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the different packet with qu question and handle_query_or_defer should fire
-        listener.datagram_received(packet_with_qu_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qu_question), new_time, packet_with_qu_question, addrs
+        )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call again with the same packet that has a qu question and handle_query_or_defer should fire
-        listener.datagram_received(packet_with_qu_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qu_question), new_time, packet_with_qu_question, addrs
+        )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         log.setLevel(logging.WARNING)
 
         # Call with the QM packet again
-        listener.datagram_received(packet_with_qm_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+        )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the same packet again and handle_query_or_defer should not fire
-        listener.datagram_received(packet_with_qm_question, addrs)
+        listener._process_datagram_at_time(
+            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+        )
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 
         # Now call with garbage
-        listener.datagram_received(b'garbage', addrs)
+        listener._process_datagram_at_time(False, len(b'garbage'), new_time, b'garbage', addrs)
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 

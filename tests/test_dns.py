@@ -10,6 +10,8 @@ import time
 import unittest
 import unittest.mock
 
+import pytest
+
 import zeroconf as r
 from zeroconf import DNSHinfo, DNSText, ServiceInfo, const, current_time_millis
 from zeroconf._dns import DNSRRSet
@@ -80,7 +82,8 @@ class TestDunder(unittest.TestCase):
     def test_dns_record_abc(self):
         record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
         self.assertRaises(r.AbstractMethodException, record.__eq__, record)
-        self.assertRaises(r.AbstractMethodException, record.write, None)
+        with pytest.raises((r.AbstractMethodException, TypeError)):
+            record.write(None)  # type: ignore[arg-type]
 
     def test_dns_record_reset_ttl(self):
         record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
