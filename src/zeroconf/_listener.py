@@ -23,6 +23,7 @@
 import asyncio
 import logging
 import random
+from functools import partial
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, cast
 
 from ._logger import QuietLogger, log
@@ -40,8 +41,9 @@ _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 _bytes = bytes
 _str = str
 _int = int
+_float = float
 
-logging_DEBUG = logging.DEBUG
+DEBUG_ENABLED = partial(log.isEnabledFor, logging.DEBUG)
 
 
 class AsyncListener:
@@ -80,9 +82,8 @@ class AsyncListener:
     def datagram_received(
         self, data: _bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
     ) -> None:
-        assert self.transport is not None
         data_len = len(data)
-        debug = log.isEnabledFor(logging_DEBUG)
+        debug = DEBUG_ENABLED()
 
         if data_len > _MAX_MSG_ABSOLUTE:
             # Guard against oversized packets to ensure bad implementations cannot overwhelm
@@ -95,13 +96,22 @@ class AsyncListener:
                     _MAX_MSG_ABSOLUTE,
                 )
             return
-
         now = current_time_millis()
+        self._process_datagram_at_time(debug, data_len, now, data, addrs)
+
+    def _process_datagram_at_time(
+        self,
+        debug: bool,
+        data_len: _int,
+        now: _float,
+        data: _bytes,
+        addrs: Union[Tuple[str, int], Tuple[str, int, int, int]],
+    ) -> None:
         if (
             self.data == data
             and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
             and self.last_message is not None
-            and not self.last_message.has_qu_question()
+            and self.last_message.has_qu_question() is False
         ):
             # Guard against duplicate packets
             if debug:
@@ -134,7 +144,7 @@ class AsyncListener:
         self.data = data
         self.last_time = now
         self.last_message = msg
-        if msg.valid:
+        if msg.valid is True:
             if debug:
                 log.debug(
                     'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
@@ -157,10 +167,12 @@ class AsyncListener:
                 )
             return
 
-        if not msg.is_query():
+        if msg.is_query() is False:
             self._record_manager.async_updates_from_response(msg)
             return
 
+        if TYPE_CHECKING:
+            assert self.transport is not None
         self.handle_query_or_defer(msg, addr, port, self.transport, v6_flow_scope)
 
     def handle_query_or_defer(

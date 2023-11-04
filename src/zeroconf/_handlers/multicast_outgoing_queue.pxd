@@ -12,11 +12,13 @@ cdef object RAND_INT
 cdef class MulticastOutgoingQueue:
 
     cdef object zc
-    cdef object queue
-    cdef cython.uint additional_delay
-    cdef cython.uint aggregation_delay
+    cdef public object queue
+    cdef public object _multicast_delay_random_min
+    cdef public object _multicast_delay_random_max
+    cdef object _additional_delay
+    cdef object _aggregation_delay
 
-    @cython.locals(last_group=AnswerGroup, random_int=cython.uint, random_delay=float, send_after=float, send_before=float)
+    @cython.locals(last_group=AnswerGroup, random_int=cython.uint)
     cpdef async_add(self, float now, cython.dict answers)
 
     @cython.locals(pending=AnswerGroup)
