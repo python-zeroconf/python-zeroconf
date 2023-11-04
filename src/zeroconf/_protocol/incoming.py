@@ -78,6 +78,7 @@ class DNSIncoming:
         'flags',
         'offset',
         'data',
+        'view',
         '_data_len',
         'name_cache',
         'questions',
@@ -105,6 +106,7 @@ class DNSIncoming:
         self.flags = 0
         self.offset = 0
         self.data = data
+        self.view = data
         self._data_len = len(data)
         self.name_cache: Dict[int, List[str]] = {}
         self.questions: List[DNSQuestion] = []
@@ -228,7 +230,7 @@ class DNSIncoming:
 
     def _read_character_string(self) -> str:
         """Reads a character string from the packet"""
-        length = self.data[self.offset]
+        length = self.view[self.offset]
         self.offset += 1
         info = self.data[self.offset : self.offset + length].decode('utf-8', 'replace')
         self.offset += length
@@ -334,8 +336,8 @@ class DNSIncoming:
             offset = self.offset
             offset_plus_one = offset + 1
             offset_plus_two = offset + 2
-            window = self.data[offset]
-            bitmap_length = self.data[offset_plus_one]
+            window = self.view[offset]
+            bitmap_length = self.view[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
             for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
                 for bit in range(0, 8):
@@ -361,7 +363,7 @@ class DNSIncoming:
     def _decode_labels_at_offset(self, off: _int, labels: List[str], seen_pointers: Set[int]) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
         while off < self._data_len:
-            length = self.data[off]
+            length = self.view[off]
             if length == 0:
                 return off + DNS_COMPRESSION_HEADER_LEN
 
@@ -377,7 +379,7 @@ class DNSIncoming:
                 )
 
             # We have a DNS compression pointer
-            link_data = self.data[off + 1]
+            link_data = self.view[off + 1]
             link = (length & 0x3F) * 256 + link_data
             link_py_int = link
             if link > self._data_len:

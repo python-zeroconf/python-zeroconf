@@ -50,6 +50,7 @@ cdef class DNSIncoming:
     cdef public unsigned int flags
     cdef cython.uint offset
     cdef public bytes data
+    cdef const unsigned char [:] view
     cdef unsigned int _data_len
     cdef public cython.dict name_cache
     cdef public cython.list questions
