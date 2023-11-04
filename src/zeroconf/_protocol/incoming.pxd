@@ -87,7 +87,7 @@ cdef class DNSIncoming:
         link_py_int=object,
         linked_labels=cython.list
     )
-    cdef _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
+    cdef cython.uint _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
     cdef _read_header(self)
 
