@@ -5,6 +5,7 @@ from .._cache cimport DNSCache
 from .._protocol.outgoing cimport DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis, millis_to_seconds
+from . cimport Signal, SignalRegistrationInterface
 
 
 cdef bint TYPE_CHECKING
@@ -23,7 +24,7 @@ cdef class _DNSPointerOutgoingBucket:
 
 
 @cython.locals(answer=DNSPointer)
-cdef _group_ptr_queries_with_known_answers(object now, object multicast, cython.dict question_with_known_answers)
+cpdef _group_ptr_queries_with_known_answers(object now, object multicast, cython.dict question_with_known_answers)
 
 cdef class QueryScheduler:
 
