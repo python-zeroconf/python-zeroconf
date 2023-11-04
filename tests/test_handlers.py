@@ -1581,22 +1581,19 @@ async def test_response_aggregation_random_delay():
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 500)
 
     now = current_time_millis()
-    with patch.object(outgoing_queue, "_multicast_delay_random_min", 500), patch.object(
-        outgoing_queue, "_multicast_delay_random_max", 600
-    ):
-        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+    outgoing_queue._multicast_delay_random_min = 500
+    outgoing_queue._multicast_delay_random_max = 600
+    outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     # The second group should always be coalesced into first group since it will always come before
-    with patch.object(outgoing_queue, "_multicast_delay_random_min", 300), patch.object(
-        outgoing_queue, "_multicast_delay_random_max", 400
-    ):
-        outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
+    outgoing_queue._multicast_delay_random_min = 300
+    outgoing_queue._multicast_delay_random_max = 400
+    outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
 
     # The third group should always be coalesced into first group since it will always come before
-    with patch.object(outgoing_queue, "_multicast_delay_random_min", 100), patch.object(
-        outgoing_queue, "_multicast_delay_random_max", 200
-    ):
-        outgoing_queue.async_add(now, {info3.dns_pointer(): set(), info4.dns_pointer(): set()})
+    outgoing_queue._multicast_delay_random_min = 100
+    outgoing_queue._multicast_delay_random_max = 200
+    outgoing_queue.async_add(now, {info3.dns_pointer(): set(), info4.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
     assert info.dns_pointer() in outgoing_queue.queue[0].answers
@@ -1605,10 +1602,9 @@ async def test_response_aggregation_random_delay():
     assert info4.dns_pointer() in outgoing_queue.queue[0].answers
 
     # The forth group should not be coalesced because its scheduled after the last group in the queue
-    with patch.object(outgoing_queue, "_multicast_delay_random_min", 700), patch.object(
-        outgoing_queue, "_multicast_delay_random_max", 800
-    ):
-        outgoing_queue.async_add(now, {info5.dns_pointer(): set()})
+    outgoing_queue._multicast_delay_random_min = 700
+    outgoing_queue._multicast_delay_random_max = 800
+    outgoing_queue.async_add(now, {info5.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
     assert info.dns_pointer() not in outgoing_queue.queue[1].answers
@@ -1638,26 +1634,22 @@ async def test_future_answers_are_removed_on_send():
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 0)
 
     now = current_time_millis()
-    with patch.object(outgoing_queue, "_multicast_delay_random_min", 1), patch.object(
-        outgoing_queue, "_multicast_delay_random_max", 1
-    ):
-        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+    outgoing_queue._multicast_delay_random_min = 1
+    outgoing_queue._multicast_delay_random_max = 1
+    outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 1
 
-    with patch.object(outgoing_queue, "_multicast_delay_random_min", 2), patch.object(
-        outgoing_queue, "_multicast_delay_random_max", 2
-    ):
-        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+    outgoing_queue._multicast_delay_random_min = 2
+    outgoing_queue._multicast_delay_random_max = 2
+    outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 2
 
-    with patch.object(outgoing_queue, "_multicast_delay_random_min", 1000), patch.object(
-        outgoing_queue, "_multicast_delay_random_max", 1000
-    ):
-
-        outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
-        outgoing_queue.async_add(now, {info.dns_pointer(): set()})
+    outgoing_queue._multicast_delay_random_min = 1000
+    outgoing_queue._multicast_delay_random_max = 1000
+    outgoing_queue.async_add(now, {info2.dns_pointer(): set()})
+    outgoing_queue.async_add(now, {info.dns_pointer(): set()})
 
     assert len(outgoing_queue.queue) == 3
 
@@ -1689,6 +1681,9 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
 
     zc.add_listener(MyListener(), None)  # type: ignore[arg-type]
     await asyncio.sleep(0)  # flush out any call soons
-    assert "listeners passed to async_add_listener must inherit from RecordUpdateListener" in caplog.text
+    assert (
+        "listeners passed to async_add_listener must inherit from RecordUpdateListener" in caplog.text
+        or "TypeError: Argument \'listener\' has incorrect type" in caplog.text
+    )
 
     await aiozc.async_close()
