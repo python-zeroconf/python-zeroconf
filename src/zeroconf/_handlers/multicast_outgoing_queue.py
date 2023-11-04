@@ -43,7 +43,14 @@ _float = float
 class MulticastOutgoingQueue:
     """An outgoing queue used to aggregate multicast responses."""
 
-    __slots__ = ("zc", "queue", "additional_delay", "aggregation_delay")
+    __slots__ = (
+        "zc",
+        "queue",
+        "_multicast_delay_random_min",
+        "_multicast_delay_random_max",
+        "additional_delay",
+        "aggregation_delay",
+    )
 
     def __init__(self, zeroconf: 'Zeroconf', additional_delay: int, max_aggregation_delay: int) -> None:
         self.zc = zeroconf
@@ -51,6 +58,8 @@ class MulticastOutgoingQueue:
         # Additional delay is used to implement
         # Protect the network against excessive packet flooding
         # https://datatracker.ietf.org/doc/html/rfc6762#section-14
+        self._multicast_delay_random_min = MULTICAST_DELAY_RANDOM_INTERVAL[0]
+        self._multicast_delay_random_max = MULTICAST_DELAY_RANDOM_INTERVAL[1]
         self.additional_delay = additional_delay
         self.aggregation_delay = max_aggregation_delay
 
@@ -59,7 +68,7 @@ class MulticastOutgoingQueue:
         loop = self.zc.loop
         if TYPE_CHECKING:
             assert loop is not None
-        random_int = RAND_INT(*MULTICAST_DELAY_RANDOM_INTERVAL)
+        random_int = RAND_INT(self._multicast_delay_random_min, self._multicast_delay_random_max)
         random_delay = random_int + self.additional_delay
         send_after = now + random_delay
         send_before = now + self.aggregation_delay + self.additional_delay
