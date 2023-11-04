@@ -1495,6 +1495,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
     with unittest.mock.patch.object(aiozc.zeroconf, "async_send") as send_mock:
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
         await asyncio.sleep(0.2)
         calls = send_mock.mock_calls
         assert len(calls) == 1
@@ -1505,6 +1506,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
         await asyncio.sleep(1.2)
         calls = send_mock.mock_calls
         assert len(calls) == 1
@@ -1515,7 +1517,9 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
         protocol.datagram_received(query2.packets()[0], ('127.0.0.1', const._MDNS_PORT))
+        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
         # The delay should increase with two packets and
         # 900ms is beyond the maximum aggregation delay
         # when there is no network protection delay

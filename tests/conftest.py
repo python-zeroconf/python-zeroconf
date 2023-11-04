@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from zeroconf import _core, _listener, const
+from zeroconf import _core, const
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +34,5 @@ def disable_duplicate_packet_suppression():
     Some tests run too slowly because of the duplicate
     packet suppression.
     """
-    with patch.object(_listener, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0), patch.object(
-        const, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0
-    ):
+    with patch.object(const, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0):
         yield
