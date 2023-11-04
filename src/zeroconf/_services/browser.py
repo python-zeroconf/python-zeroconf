@@ -25,6 +25,7 @@ import queue
 import random
 import threading
 import warnings
+from functools import partial
 from types import TracebackType  # noqa # used in type hints
 from typing import (
     TYPE_CHECKING,
@@ -111,7 +112,7 @@ class _DNSPointerOutgoingBucket:
         self.bytes += max_compressed_size
 
 
-def _group_ptr_queries_with_known_answers(
+def group_ptr_queries_with_known_answers(
     now: float_, multicast: bool_, question_with_known_answers: _QuestionWithKnownAnswers
 ) -> List[DNSOutgoing]:
     """Aggregate queries so that as many known answers as possible fit in the same packet
@@ -122,6 +123,13 @@ def _group_ptr_queries_with_known_answers(
     so we try to keep all the known answers in the same packet as the
     questions.
     """
+    return _group_ptr_queries_with_known_answers(now, multicast, question_with_known_answers)
+
+
+def _group_ptr_queries_with_known_answers(
+    now: float_, multicast: bool_, question_with_known_answers: _QuestionWithKnownAnswers
+) -> List[DNSOutgoing]:
+    """Inner wrapper for group_ptr_queries_with_known_answers."""
     # This is the maximum size the query + known answers can be with name compression.
     # The actual size of the query + known answers may be a bit smaller since other
     # parts may be shared when the final DNSOutgoing packets are constructed. The
@@ -187,6 +195,17 @@ def generate_service_query(
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
 
+def _on_change_dispatcher(
+    listener: ServiceListener,
+    zeroconf: 'Zeroconf',
+    service_type: str,
+    name: str,
+    state_change: ServiceStateChange,
+) -> None:
+    """Dispatch a service state change to a listener."""
+    getattr(listener, _ON_CHANGE_DISPATCH[state_change])(zeroconf, service_type, name)
+
+
 def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[..., None]:
     """Generate a service_state_changed handlers from a listener."""
     assert listener is not None
@@ -196,13 +215,7 @@ def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[
             "don't care about the updates), it'll become mandatory." % (listener,),
             FutureWarning,
         )
-
-    def on_change(
-        zeroconf: 'Zeroconf', service_type: str, name: str, state_change: ServiceStateChange
-    ) -> None:
-        getattr(listener, _ON_CHANGE_DISPATCH[state_change])(zeroconf, service_type, name)
-
-    return on_change
+    return partial(_on_change_dispatcher, listener)
 
 
 class QueryScheduler:
@@ -255,6 +268,10 @@ class QueryScheduler:
             return False
         self._next_time[type_] = next_time
         return True
+
+    def _force_reschedule_type(self, type_: str_, next_time: float_) -> None:
+        """Force a reschedule of a type."""
+        self._next_time[type_] = next_time
 
     def process_ready_types(self, now: float_) -> List[str]:
         """Generate a list of ready types that is due and schedule the next time."""
