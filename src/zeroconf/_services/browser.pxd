@@ -5,6 +5,7 @@ from .._cache cimport DNSCache
 from .._protocol.outgoing cimport DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
 from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis, millis_to_seconds
+from . cimport Signal, SignalRegistrationInterface
 
 
 cdef bint TYPE_CHECKING

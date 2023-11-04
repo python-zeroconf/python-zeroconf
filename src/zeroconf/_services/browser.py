@@ -388,7 +388,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             state_change is SERVICE_STATE_CHANGE_ADDED
             or (
                 state_change is SERVICE_STATE_CHANGE_REMOVED
-                and self._pending_handlers.get(key) != SERVICE_STATE_CHANGE_ADDED
+                and self._pending_handlers.get(key) is not SERVICE_STATE_CHANGE_ADDED
             )
             or (state_change is SERVICE_STATE_CHANGE_UPDATED and key not in self._pending_handlers)
         ):
