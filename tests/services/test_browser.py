@@ -965,7 +965,7 @@ def test_group_ptr_queries_with_known_answers():
             )
             for counter in range(i)
         }
-    outs = _services_browser._group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
+    outs = _services_browser.group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
     for out in outs:
         packets = out.packets()
         # If we generate multiple packets there must
