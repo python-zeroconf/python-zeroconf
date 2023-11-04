@@ -7,7 +7,7 @@ from ._utils.time cimport current_time_millis, millis_to_seconds
 
 
 cdef object log
-cdef object logging_DEBUG
+cdef object DEBUG_ENABLED
 cdef bint TYPE_CHECKING
 
 cdef cython.uint _MAX_MSG_ABSOLUTE
@@ -27,7 +27,10 @@ cdef class AsyncListener:
     cdef public cython.dict _deferred
     cdef public cython.dict _timers
 
-    @cython.locals(now=cython.float, msg=DNSIncoming)
+    @cython.locals(now=cython.float, debug=cython.bint)
     cpdef datagram_received(self, cython.bytes bytes, cython.tuple addrs)
+
+    @cython.locals(msg=DNSIncoming)
+    cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, cython.float now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)
