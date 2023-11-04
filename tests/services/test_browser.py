@@ -26,7 +26,6 @@ from zeroconf import (
     current_time_millis,
     millis_to_seconds,
 )
-from zeroconf._handlers import record_manager
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
@@ -488,7 +487,7 @@ def test_backoff():
     start_time = time.monotonic() * 1000
     initial_query_interval = _services_browser._BROWSER_TIME / 1000
 
-    def current_time_millis():
+    def _current_time_millis():
         """Current system time in milliseconds"""
         return start_time + time_offset * 1000
 
@@ -497,19 +496,34 @@ def test_backoff():
         got_query.set()
         old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
+    class ServiceBrowserWithPatchedTime(_services_browser.ServiceBrowser):
+        def _async_start(self) -> None:
+            """Generate the next time and setup listeners.
+
+            Must be called by uses of this base class after they
+            have finished setting their properties.
+            """
+            super()._async_start()
+            self.query_scheduler.start(_current_time_millis())
+
+        def _async_send_ready_queries_schedule_next(self):
+            if self.done or self.zc.done:
+                return
+            now = _current_time_millis()
+            self._async_send_ready_queries(now)
+            self._async_schedule_next(now)
+
     # patch the zeroconf send
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
     with patch.object(zeroconf_browser, "async_send", send), patch.object(
-        _services_browser, "current_time_millis", current_time_millis
-    ), patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", 10), patch.object(
-        _services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)
-    ):
+        _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
+    ), patch.object(_services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
 
-        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        browser = ServiceBrowserWithPatchedTime(zeroconf_browser, type_, [on_service_state_change])
 
         try:
             # Test that queries are sent at increasing intervals
@@ -966,7 +980,7 @@ def test_group_ptr_queries_with_known_answers():
             )
             for counter in range(i)
         }
-    outs = _services_browser._group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
+    outs = _services_browser.group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
     for out in outs:
         packets = out.packets()
         # If we generate multiple packets there must
@@ -1159,7 +1173,6 @@ def test_service_browser_matching():
     zc.close()
 
 
-@patch.object(record_manager, '_DNS_PTR_MIN_TTL', 1)
 @patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01)
 def test_service_browser_expire_callbacks():
     """Test that the ServiceBrowser matching does not match partial names."""
@@ -1216,6 +1229,12 @@ def test_service_browser_expire_callbacks():
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
     )
+    # Force the ttl to be 1 second
+    now = current_time_millis()
+    for cache_record in zc.cache.cache.values():
+        for record in cache_record:
+            record.set_created_ttl(now, 1)
+
     time.sleep(0.3)
     info.port = 400
     info._dns_service_cache = None  # we are mutating the record so clear the cache

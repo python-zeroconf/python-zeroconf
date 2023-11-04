@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.119.0 (2023-10-18)
+
+### Feature
+
+* Update cibuildwheel to build wheels on latest cython final release ([#1285](https://github.com/python-zeroconf/python-zeroconf/issues/1285)) ([`e8c9083`](https://github.com/python-zeroconf/python-zeroconf/commit/e8c9083bb118764a85b12fac9055152a2f62a212))
+
+## v0.118.1 (2023-10-18)
+
+### Fix
+
+* Reduce size of wheels by excluding generated .c files ([#1284](https://github.com/python-zeroconf/python-zeroconf/issues/1284)) ([`b6afa4b`](https://github.com/python-zeroconf/python-zeroconf/commit/b6afa4b2775a1fdb090145eccdc5711c98e7147a))
+
 ## v0.118.0 (2023-10-14)
 
 ### Feature
