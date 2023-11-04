@@ -112,7 +112,7 @@ class _DNSPointerOutgoingBucket:
         self.bytes += max_compressed_size
 
 
-def _group_ptr_queries_with_known_answers(
+def group_ptr_queries_with_known_answers(
     now: float_, multicast: bool_, question_with_known_answers: _QuestionWithKnownAnswers
 ) -> List[DNSOutgoing]:
     """Aggregate queries so that as many known answers as possible fit in the same packet
@@ -123,6 +123,13 @@ def _group_ptr_queries_with_known_answers(
     so we try to keep all the known answers in the same packet as the
     questions.
     """
+    return _group_ptr_queries_with_known_answers(now, multicast, question_with_known_answers)
+
+
+def _group_ptr_queries_with_known_answers(
+    now: float_, multicast: bool_, question_with_known_answers: _QuestionWithKnownAnswers
+) -> List[DNSOutgoing]:
+    """Inner wrapper for group_ptr_queries_with_known_answers."""
     # This is the maximum size the query + known answers can be with name compression.
     # The actual size of the query + known answers may be a bit smaller since other
     # parts may be shared when the final DNSOutgoing packets are constructed. The
