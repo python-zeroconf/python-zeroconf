@@ -26,7 +26,6 @@ from zeroconf import (
     current_time_millis,
     millis_to_seconds,
 )
-from zeroconf._handlers import record_manager
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
@@ -1159,7 +1158,6 @@ def test_service_browser_matching():
     zc.close()
 
 
-@patch.object(record_manager, '_DNS_PTR_MIN_TTL', 1)
 @patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01)
 def test_service_browser_expire_callbacks():
     """Test that the ServiceBrowser matching does not match partial names."""
