@@ -269,6 +269,10 @@ class QueryScheduler:
         self._next_time[type_] = next_time
         return True
 
+    def _force_reschedule_type(self, type_: str_, next_time: float_) -> None:
+        """Force a reschedule of a type."""
+        self._next_time[type_] = next_time
+
     def process_ready_types(self, now: float_) -> List[str]:
         """Generate a list of ready types that is due and schedule the next time."""
         if self.millis_to_wait(now):

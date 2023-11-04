@@ -1055,7 +1055,7 @@ async def test_integration():
                 now = _new_current_time_millis()
                 # Force the next query to be sent since we are testing
                 # to see if the query contains answers and not the scheduler
-                browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
+                browser.query_scheduler._force_reschedule_type(type_, now + (1000 * expected_ttl))
                 browser.reschedule_type(type_, now, now)
                 sleep_count += 1
                 await asyncio.wait_for(got_query.wait(), 1)
@@ -1350,7 +1350,7 @@ async def test_service_browser_does_not_try_to_send_if_not_ready():
             await asyncio.wait_for(service_added.wait(), 1)
             time_offset = 1000 * expected_ttl  # set the time to the end of the ttl
             now = _new_current_time_millis()
-            browser.query_scheduler._next_time[type_] = now + (1000 * expected_ttl)
+            browser.query_scheduler._force_reschedule_type(type_, now + (1000 * expected_ttl))
             # Make sure the query schedule is to a time in the future
             # so we will reschedule
             with patch.object(
