@@ -24,7 +24,7 @@ cdef class _DNSPointerOutgoingBucket:
 
 
 @cython.locals(answer=DNSPointer)
-cdef _group_ptr_queries_with_known_answers(object now, object multicast, cython.dict question_with_known_answers)
+cpdef _group_ptr_queries_with_known_answers(object now, object multicast, cython.dict question_with_known_answers)
 
 cdef class QueryScheduler:
 
