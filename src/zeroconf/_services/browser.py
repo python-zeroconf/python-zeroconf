@@ -25,6 +25,7 @@ import queue
 import random
 import threading
 import warnings
+from functools import partial
 from types import TracebackType  # noqa # used in type hints
 from typing import (
     TYPE_CHECKING,
@@ -187,6 +188,17 @@ def generate_service_query(
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 
 
+def _on_change_dispatcher(
+    listener: ServiceListener,
+    zeroconf: 'Zeroconf',
+    service_type: str,
+    name: str,
+    state_change: ServiceStateChange,
+) -> None:
+    """Dispatch a service state change to a listener."""
+    getattr(listener, _ON_CHANGE_DISPATCH[state_change])(zeroconf, service_type, name)
+
+
 def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[..., None]:
     """Generate a service_state_changed handlers from a listener."""
     assert listener is not None
@@ -196,13 +208,7 @@ def _service_state_changed_from_listener(listener: ServiceListener) -> Callable[
             "don't care about the updates), it'll become mandatory." % (listener,),
             FutureWarning,
         )
-
-    def on_change(
-        zeroconf: 'Zeroconf', service_type: str, name: str, state_change: ServiceStateChange
-    ) -> None:
-        getattr(listener, _ON_CHANGE_DISPATCH[state_change])(zeroconf, service_type, name)
-
-    return on_change
+    return partial(_on_change_dispatcher, listener)
 
 
 class QueryScheduler:
