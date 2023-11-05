@@ -33,6 +33,7 @@ def build(setup_kwargs: Any) -> None:
                         "src/zeroconf/_handlers/record_manager.py",
                         "src/zeroconf/_handlers/multicast_outgoing_queue.py",
                         "src/zeroconf/_handlers/query_handler.py",
+                        "src/zeroconf/_services/__init__.py",
                         "src/zeroconf/_services/browser.py",
                         "src/zeroconf/_services/info.py",
                         "src/zeroconf/_services/registry.py",
