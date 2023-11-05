@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zeroconf"
-version = "0.119.0"
+version = "0.120.0"
 description = "A pure python implementation of multicast DNS service discovery"
 authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Koston"]
 license = "LGPL"

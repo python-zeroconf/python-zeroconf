@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.120.0 (2023-11-05)
+
+### Feature
+
+* Speed up incoming packet processing with a memory view ([#1290](https://github.com/python-zeroconf/python-zeroconf/issues/1290)) ([`f1f0a25`](https://github.com/python-zeroconf/python-zeroconf/commit/f1f0a2504afd4d29bc6b7cf715cd3cb81b9049f7))
+* Speed up decoding labels from incoming data ([#1291](https://github.com/python-zeroconf/python-zeroconf/issues/1291)) ([`c37ead4`](https://github.com/python-zeroconf/python-zeroconf/commit/c37ead4d7000607e81706a97b4cdffd80cf8cf99))
+* Speed up ServiceBrowsers with a pxd for the signal interface ([#1289](https://github.com/python-zeroconf/python-zeroconf/issues/1289)) ([`8a17f20`](https://github.com/python-zeroconf/python-zeroconf/commit/8a17f2053a89db4beca9e8c1de4640faf27726b4))
+
 ## v0.119.0 (2023-10-18)
 
 ### Feature
