@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.121.0 (2023-11-08)
+
+### Feature
+
+* Speed up record updates ([#1301](https://github.com/python-zeroconf/python-zeroconf/issues/1301)) ([`d2af6a0`](https://github.com/python-zeroconf/python-zeroconf/commit/d2af6a0978f5abe4f8bb70d3e29d9836d0fd77c4))
+
 ## v0.120.0 (2023-11-05)
 
 ### Feature
