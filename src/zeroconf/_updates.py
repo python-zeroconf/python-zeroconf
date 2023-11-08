@@ -68,7 +68,7 @@ class RecordUpdateListener:
         This method will be run in the event loop.
         """
         for record in records:
-            self.update_record(zc, now, record[0])
+            self.update_record(zc, now, record.new)
 
     def async_update_records_complete(self) -> None:
         """Called when a record update has completed for all handlers.

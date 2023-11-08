@@ -20,11 +20,24 @@
     USA
 """
 
-from typing import NamedTuple, Optional
+from typing import Optional
 
 from ._dns import DNSRecord
 
 
-class RecordUpdate(NamedTuple):
-    new: DNSRecord
-    old: Optional[DNSRecord]
+class RecordUpdate:
+
+    __slots__ = ("new", "old")
+
+    def __init__(self, new: DNSRecord, old: Optional[DNSRecord] = None):
+        """RecordUpdate represents a change in a DNS record."""
+        self.new = new
+        self.old = old
+
+    def __getitem__(self, index: int) -> Optional[DNSRecord]:
+        """Get the new or old record."""
+        if index == 0:
+            return self.new
+        elif index == 1:
+            return self.old
+        raise IndexError(index)

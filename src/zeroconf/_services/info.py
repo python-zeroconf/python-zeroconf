@@ -420,7 +420,7 @@ class ServiceInfo(RecordUpdateListener):
         """Set IPv6 addresses from the cache."""
         address_list: List[Union[IPv4Address, IPv6Address]] = []
         for record in self._get_address_records_from_cache_by_type(zc, type):
-            if record.is_expired(now):
+            if record.is_expired(now) is True:
                 continue
             ip_addr = _cached_ip_addresses_wrapper(record.address)
             if ip_addr is not None:
@@ -463,7 +463,7 @@ class ServiceInfo(RecordUpdateListener):
 
         Returns True if a new record was added.
         """
-        if record.is_expired(now):
+        if record.is_expired(now) is True:
             return False
 
         record_key = record.key
@@ -779,7 +779,7 @@ class ServiceInfo(RecordUpdateListener):
 
         now = current_time_millis()
 
-        if self._load_from_cache(zc, now):
+        if self._load_from_cache(zc, now) is True:
             return True
 
         if TYPE_CHECKING:
@@ -795,7 +795,7 @@ class ServiceInfo(RecordUpdateListener):
                 if last <= now:
                     return False
                 if next_ <= now:
-                    out = self.generate_request_query(
+                    out = self._generate_request_query(
                         zc,
                         now,
                         question_type or DNS_QUESTION_TYPE_QU if first_request else DNS_QUESTION_TYPE_QM,
@@ -815,8 +815,8 @@ class ServiceInfo(RecordUpdateListener):
 
         return True
 
-    def generate_request_query(
-        self, zc: 'Zeroconf', now: float_, question_type: Optional[DNSQuestionType] = None
+    def _generate_request_query(
+        self, zc: 'Zeroconf', now: float_, question_type: DNSQuestionType
     ) -> DNSOutgoing:
         """Generate the request query."""
         out = DNSOutgoing(_FLAGS_QR_QUERY)

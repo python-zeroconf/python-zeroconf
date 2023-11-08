@@ -44,9 +44,9 @@ cdef class DNSCache:
     )
     cpdef async_all_by_details(self, str name, object type_, object class_)
 
-    cpdef async_entries_with_name(self, str name)
+    cpdef cython.dict async_entries_with_name(self, str name)
 
-    cpdef async_entries_with_server(self, str name)
+    cpdef cython.dict async_entries_with_server(self, str name)
 
     @cython.locals(
         cached_entry=DNSRecord,
@@ -57,7 +57,7 @@ cdef class DNSCache:
         records=cython.dict,
         entry=DNSRecord,
     )
-    cpdef get_all_by_details(self, str name, object type_, object class_)
+    cpdef cython.list get_all_by_details(self, str name, object type_, object class_)
 
     @cython.locals(
         store=cython.dict,
