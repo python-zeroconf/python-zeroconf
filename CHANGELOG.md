@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.122.0 (2023-11-08)
+
+### Feature
+
+* Build aarch64 wheels ([#1302](https://github.com/python-zeroconf/python-zeroconf/issues/1302)) ([`4fe58e2`](https://github.com/python-zeroconf/python-zeroconf/commit/4fe58e2edc6da64a8ece0e2b16ec9ebfc5b3cd83))
+
 ## v0.121.0 (2023-11-08)
 
 ### Feature
