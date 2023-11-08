@@ -3,6 +3,7 @@ import cython
 
 from .._cache cimport DNSCache
 from .._protocol.outgoing cimport DNSOutgoing, DNSPointer, DNSQuestion, DNSRecord
+from .._record_update cimport RecordUpdate
 from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis, millis_to_seconds
 from . cimport Signal, SignalRegistrationInterface
@@ -60,7 +61,7 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cpdef _enqueue_callback(self, object state_change, object type_, object name)
 
-    @cython.locals(record=DNSRecord, cache=DNSCache, service=DNSRecord, pointer=DNSPointer)
+    @cython.locals(record_update=RecordUpdate, record=DNSRecord, cache=DNSCache, service=DNSRecord, pointer=DNSPointer)
     cpdef async_update_records(self, object zc, cython.float now, cython.list records)
 
     cpdef _names_matching_types(self, object types)

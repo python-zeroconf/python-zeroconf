@@ -421,8 +421,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
         This method will be run in the event loop.
         """
         for record_update in records:
-            record = record_update[0]
-            old_record = record_update[1]
+            record = record_update.new
+            old_record = record_update.old
             record_type = record.type
 
             if record_type is _TYPE_PTR:
