@@ -14,6 +14,7 @@ cdef object cached_possible_types
 cdef cython.uint _EXPIRE_REFRESH_TIME_PERCENT
 cdef cython.uint _TYPE_PTR
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED
+cdef cython.set _ADDRESS_RECORD_TYPES
 
 cdef class _DNSPointerOutgoingBucket:
 
@@ -44,6 +45,7 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cdef public cython.set types
     cdef public object zc
+    cdef DNSCache _cache
     cdef object _loop
     cdef public object addr
     cdef public object port
@@ -64,7 +66,7 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     @cython.locals(record_update=RecordUpdate, record=DNSRecord, cache=DNSCache, service=DNSRecord, pointer=DNSPointer)
     cpdef async_update_records(self, object zc, cython.float now, cython.list records)
 
-    cpdef _names_matching_types(self, object types)
+    cpdef cython.list _names_matching_types(self, object types)
 
     cpdef reschedule_type(self, object type_, object now, object next_time)
 

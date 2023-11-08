@@ -297,6 +297,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
     __slots__ = (
         'types',
         'zc',
+        '_cache',
         '_loop',
         'addr',
         'port',
@@ -345,6 +346,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             # Will generate BadTypeInNameException on a bad name
             service_type_name(check_type_, strict=False)
         self.zc = zc
+        self._cache = zc.cache
         assert zc.loop is not None
         self._loop = zc.loop
         self.addr = addr
@@ -440,15 +442,14 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 continue
 
             # If its expired or already exists in the cache it cannot be updated.
-            if old_record or record.is_expired(now) is True:
+            if old_record is not None or record.is_expired(now) is True:
                 continue
 
             if record_type in _ADDRESS_RECORD_TYPES:
-                cache = self.zc.cache
+                cache = self._cache
+                names = {service.name for service in cache.async_entries_with_server(record.name)}
                 # Iterate through the DNSCache and callback any services that use this address
-                for type_, name in self._names_matching_types(
-                    {service.name for service in cache.async_entries_with_server(record.name)}
-                ):
+                for type_, name in self._names_matching_types(names):
                     self._enqueue_callback(SERVICE_STATE_CHANGE_UPDATED, type_, name)
                 continue
 

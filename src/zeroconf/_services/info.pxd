@@ -57,7 +57,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public cython.list _dns_address_cache
     cdef public cython.set _get_address_and_nsec_records_cache
 
-    @cython.locals(record_update=RecordUpdate, cache=DNSCache)
+    @cython.locals(record_update=RecordUpdate, update=bint, cache=DNSCache)
     cpdef async_update_records(self, object zc, cython.float now, cython.list records)
 
     @cython.locals(cache=DNSCache)
@@ -77,7 +77,7 @@ cdef class ServiceInfo(RecordUpdateListener):
         dns_text_record=DNSText,
         dns_address_record=DNSAddress
     )
-    cdef _process_record_threadsafe(self, object zc, DNSRecord record, cython.float now)
+    cdef bint _process_record_threadsafe(self, object zc, DNSRecord record, cython.float now)
 
     @cython.locals(cache=DNSCache)
     cdef cython.list _get_address_records_from_cache_by_type(self, object zc, object _type)
@@ -110,3 +110,6 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef cython.set _get_address_and_nsec_records(self, object override_ttl)
 
     cpdef async_clear_cache(self)
+
+    @cython.locals(cache=DNSCache)
+    cdef _generate_request_query(self, object zc, object now, object question_type)
