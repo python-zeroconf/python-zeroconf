@@ -92,8 +92,8 @@ def test_legacy_record_update_listener():
 
 def test_record_update_compat():
     """Test a RecordUpdate can fetch by index."""
-    new = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
-    old = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
+    new = r.DNSPointer('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 'new')
+    old = r.DNSPointer('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 'old')
     update = RecordUpdate(new, old)
     assert update[0] == new
     assert update[1] == old
