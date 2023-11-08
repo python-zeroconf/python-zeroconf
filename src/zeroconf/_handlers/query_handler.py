@@ -139,7 +139,7 @@ class _QueryResponse:
         if TYPE_CHECKING:
             record = cast(_UniqueRecordsType, record)
         maybe_entry = self._cache.async_get_unique(record)
-        return bool(maybe_entry and maybe_entry.is_recent(self._now))
+        return bool(maybe_entry is not None and maybe_entry.is_recent(self._now) is True)
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
         """Check if an answer was seen in the last second.
@@ -149,7 +149,7 @@ class _QueryResponse:
         if TYPE_CHECKING:
             record = cast(_UniqueRecordsType, record)
         maybe_entry = self._cache.async_get_unique(record)
-        return bool(maybe_entry and self._now - maybe_entry.created < _ONE_SECOND)
+        return bool(maybe_entry is not None and self._now - maybe_entry.created < _ONE_SECOND)
 
 
 class QueryHandler:
@@ -174,7 +174,7 @@ class QueryHandler:
             dns_pointer = DNSPointer(
                 _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0.0
             )
-            if not known_answers.suppresses(dns_pointer):
+            if known_answers.suppresses(dns_pointer) is False:
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
@@ -185,7 +185,7 @@ class QueryHandler:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
             dns_pointer = service._dns_pointer(None)
-            if known_answers.suppresses(dns_pointer):
+            if known_answers.suppresses(dns_pointer) is True:
                 continue
             answer_set[dns_pointer] = {
                 service._dns_service(None),
@@ -208,7 +208,7 @@ class QueryHandler:
                 seen_types.add(dns_address.type)
                 if dns_address.type != type_:
                     additionals.add(dns_address)
-                elif not known_answers.suppresses(dns_address):
+                elif known_answers.suppresses(dns_address) is False:
                     answers.append(dns_address)
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
             if answers:
@@ -248,11 +248,11 @@ class QueryHandler:
                     # Add recommended additional answers according to
                     # https://tools.ietf.org/html/rfc6763#section-12.2.
                     dns_service = service._dns_service(None)
-                    if not known_answers.suppresses(dns_service):
+                    if known_answers.suppresses(dns_service) is False:
                         answer_set[dns_service] = service._get_address_and_nsec_records(None)
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
                     dns_text = service._dns_text(None)
-                    if not known_answers.suppresses(dns_text):
+                    if known_answers.suppresses(dns_text) is False:
                         answer_set[dns_text] = set()
 
         return answer_set
