@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.122.3 (2023-11-09)
+
+### Fix
+
+* Do not build musllinux aarch64 wheels to reduce release time ([#1306](https://github.com/python-zeroconf/python-zeroconf/issues/1306)) ([`79aafb0`](https://github.com/python-zeroconf/python-zeroconf/commit/79aafb0acf7ca6b17976be7ede748008deada27b))
+
 ## v0.122.2 (2023-11-09)
 
 ### Fix
