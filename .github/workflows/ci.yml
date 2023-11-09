@@ -156,7 +156,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.16.2
         # to supply options, put them in 'env', like:
         env:
-          CIBW_SKIP: cp36-*
+          CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* *p38-*_aarch64 *p39-*_aarch64 *p310-*_aarch64
           CIBW_BEFORE_ALL_LINUX: apt-get install -y gcc || yum install -y gcc || apk add gcc
           CIBW_ARCHS_LINUX: auto aarch64
           CIBW_BUILD_VERBOSITY: 3
