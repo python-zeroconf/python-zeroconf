@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.122.1 (2023-11-09)
+
+### Fix
+
+* Skip wheel builds for eol python and older python with aarch64 ([#1304](https://github.com/python-zeroconf/python-zeroconf/issues/1304)) ([`6c8f5a5`](https://github.com/python-zeroconf/python-zeroconf/commit/6c8f5a5dec2072aa6a8f889c5d8a4623ab392234))
+
 ## v0.122.0 (2023-11-08)
 
 ### Feature
