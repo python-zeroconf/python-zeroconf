@@ -85,7 +85,7 @@ from ._utils.time import (  # noqa # import needed for backwards compat
 
 __author__ = 'Paul Scott-Murphy, William McBrine'
 __maintainer__ = 'Jakub Stasiak <jakub@stasiak.at>'
-__version__ = '0.122.1'
+__version__ = '0.122.2'
 __license__ = 'LGPL'
 
 

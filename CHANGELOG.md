@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.122.2 (2023-11-09)
+
+### Fix
+
+* Do not build aarch64 wheels for PyPy ([#1305](https://github.com/python-zeroconf/python-zeroconf/issues/1305)) ([`7e884db`](https://github.com/python-zeroconf/python-zeroconf/commit/7e884db4d958459e64257aba860dba2450db0687))
+
 ## v0.122.1 (2023-11-09)
 
 ### Fix
