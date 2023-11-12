@@ -3,6 +3,7 @@ import cython
 
 from ._handlers.record_manager cimport RecordManager
 from ._protocol.incoming cimport DNSIncoming
+from ._services.registry cimport ServiceRegistry
 from ._utils.time cimport current_time_millis, millis_to_seconds
 
 
@@ -18,6 +19,7 @@ cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 cdef class AsyncListener:
 
     cdef public object zc
+    cdef ServiceRegistry _registry
     cdef RecordManager _record_manager
     cdef public cython.bytes data
     cdef public cython.float last_time
@@ -34,3 +36,12 @@ cdef class AsyncListener:
     cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, cython.float now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)
+
+    cpdef handle_query_or_defer(
+        self,
+        DNSIncoming msg,
+        object addr,
+        object port,
+        object transport,
+        tuple v6_flow_scope
+    )

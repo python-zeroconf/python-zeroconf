@@ -57,6 +57,7 @@ class AsyncListener:
 
     __slots__ = (
         'zc',
+        '_registry',
         '_record_manager',
         'data',
         'last_time',
@@ -69,6 +70,7 @@ class AsyncListener:
 
     def __init__(self, zc: 'Zeroconf') -> None:
         self.zc = zc
+        self._registry = zc.registry
         self._record_manager = zc.record_manager
         self.data: Optional[bytes] = None
         self.last_time: float = 0
@@ -171,6 +173,10 @@ class AsyncListener:
             self._record_manager.async_updates_from_response(msg)
             return
 
+        if not self._registry.has_entries:
+            # If the registry is empty, we have no answers to give.
+            return
+
         if TYPE_CHECKING:
             assert self.transport is not None
         self.handle_query_or_defer(msg, addr, port, self.transport, v6_flow_scope)
@@ -178,10 +184,10 @@ class AsyncListener:
     def handle_query_or_defer(
         self,
         msg: DNSIncoming,
-        addr: str,
-        port: int,
+        addr: _str,
+        port: _int,
         transport: _WrappedTransport,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
     ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
