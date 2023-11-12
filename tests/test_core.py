@@ -13,11 +13,9 @@ import time
 import unittest
 import unittest.mock
 from typing import Tuple, Union, cast
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 if sys.version_info[:3][1] < 8:
-    from unittest.mock import Mock
-
     AsyncMock = Mock
 else:
     from unittest.mock import AsyncMock
