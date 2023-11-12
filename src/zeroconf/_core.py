@@ -573,7 +573,7 @@ class Zeroconf(QuietLogger):
         addr: str,
         port: int,
         transport: _WrappedTransport,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
     ) -> None:
         """Respond to a (re)assembled query.
 
