@@ -164,24 +164,22 @@ def _group_ptr_queries_with_known_answers(
 
 
 def generate_service_query(
-    zc: 'Zeroconf',
-    now: float,
-    types_: List[str],
-    multicast: bool = True,
-    question_type: Optional[DNSQuestionType] = None,
+    zc: 'Zeroconf', now: float_, types_: List[str], multicast: bool, question_type: Optional[DNSQuestionType]
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
     qu_question = not multicast if question_type is None else question_type == DNSQuestionType.QU
+    question_history = zc.question_history
+    cache = zc.cache
     for type_ in types_:
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
         question.unicast = qu_question
         known_answers = {
             record
-            for record in zc.cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
-            if not record.is_stale(now)
+            for record in cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
+            if record.is_stale(now) is False
         }
-        if not qu_question and zc.question_history.suppresses(question, now, known_answers):
+        if not qu_question and question_history.suppresses(question, now, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
         if TYPE_CHECKING:
@@ -189,8 +187,8 @@ def generate_service_query(
         else:
             pointer_known_answers = known_answers
         questions_with_known_answers[question] = pointer_known_answers
-        if not qu_question:
-            zc.question_history.add_question_at_time(question, now, known_answers)
+        if qu_question is False:
+            question_history.add_question_at_time(question, now, known_answers)
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
 

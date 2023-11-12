@@ -1010,32 +1010,34 @@ async def test_generate_service_query_suppress_duplicate_questions():
     assert zc.question_history.suppresses(question, now, other_known_answers)
 
     # The known answer list is different, do not suppress
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True, question_type=None)
     assert outs
 
     zc.cache.async_add_records([answer])
     # The known answer list contains all the asked questions in the history
     # we should suppress
 
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True, question_type=None)
     assert not outs
 
     # We do not suppress once the question history expires
-    outs = _services_browser.generate_service_query(zc, now + 1000, [name], multicast=True)
+    outs = _services_browser.generate_service_query(
+        zc, now + 1000, [name], multicast=True, question_type=None
+    )
     assert outs
 
     # We do not suppress QU queries ever
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=False)
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=False, question_type=None)
     assert outs
 
     zc.question_history.async_expire(now + 2000)
     # No suppression after clearing the history
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True, question_type=None)
     assert outs
 
     # The previous query we just sent is still remembered and
     # the next one is suppressed
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True, question_type=None)
     assert not outs
 
     await aiozc.async_close()
