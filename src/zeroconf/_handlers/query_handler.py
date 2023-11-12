@@ -362,6 +362,7 @@ class QueryHandler:
                         question, _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION, types, _EMPTY_SERVICES_LIST
                     )
                 )
+            return strategies
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
             services = self.registry.async_get_infos_type(question_lower_name)
