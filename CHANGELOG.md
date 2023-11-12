@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.123.0 (2023-11-12)
+
+### Feature
+
+* Speed up instances only used to lookup answers ([#1307](https://github.com/python-zeroconf/python-zeroconf/issues/1307)) ([`0701b8a`](https://github.com/python-zeroconf/python-zeroconf/commit/0701b8ab6009891cbaddaa1d17116d31fd1b2f78))
+
 ## v0.122.3 (2023-11-09)
 
 ### Fix
