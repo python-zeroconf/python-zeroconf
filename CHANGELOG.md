@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.125.0 (2023-11-12)
+
+### Feature
+
+* Speed up service browser queries when browsing many types ([#1311](https://github.com/python-zeroconf/python-zeroconf/issues/1311)) ([`d192d33`](https://github.com/python-zeroconf/python-zeroconf/commit/d192d33b1f05aa95a89965e86210aec086673a17))
+
 ## v0.124.0 (2023-11-12)
 
 ### Feature
