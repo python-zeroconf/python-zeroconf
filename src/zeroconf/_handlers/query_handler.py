@@ -20,13 +20,14 @@
     USA
 """
 
-
-from typing import TYPE_CHECKING, List, Optional, Set, cast
+import logging
+from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Union, cast
 
 from .._cache import DNSCache, _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
 from .._history import QuestionHistory
 from .._protocol.incoming import DNSIncoming
+from .._services.info import ServiceInfo
 from .._services.registry import ServiceRegistry
 from .._utils.net import IPVersion
 from ..const import (
@@ -46,6 +47,7 @@ from ..const import (
 from .answers import QuestionAnswers, _AnswerWithAdditionalsType
 
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
+_LOGGER = logging.getLogger(__name__)
 
 _IPVersion_ALL = IPVersion.All
 
@@ -152,6 +154,13 @@ class _QueryResponse:
         return bool(maybe_entry is not None and self._now - maybe_entry.created < _ONE_SECOND)
 
 
+_ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION = 0
+_ANSWER_STRATEGY_POINTER = 1
+_ANSWER_STRATEGY_ADDRESS = 2
+_ANSWER_STRATEGY_SERVICE = 3
+_ANSWER_STRATEGY_TEXT = 4
+
+
 class QueryHandler:
     """Query the ServiceRegistry."""
 
@@ -221,6 +230,40 @@ class QueryHandler:
                 assert service.server is not None, "Service server must be set for NSEC record."
                 answer_set[service._dns_nsec(list(missing_types), None)] = set()
 
+    def _get_answer_strategies(
+        self,
+        question: DNSQuestion,
+    ) -> List[Tuple[DNSQuestion, int, Union[List[str], ServiceInfo, List[ServiceInfo]]]]:
+        """Collect strategies to answer a question."""
+        question_lower_name = question.name.lower()
+        type_ = question.type
+        strategies: List[Tuple[DNSQuestion, int, Union[List[str], ServiceInfo, List[ServiceInfo]]]] = []
+
+        if type_ == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
+            types = self.registry.async_get_types()
+            if types:
+                strategies.append((question, _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION, types))
+
+        if type_ in (_TYPE_PTR, _TYPE_ANY):
+            services = self.registry.async_get_infos_type(question_lower_name)
+            if services:
+                strategies.append((question, _ANSWER_STRATEGY_POINTER, services))
+
+        if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
+            services = self.registry.async_get_infos_server(question_lower_name)
+            if services:
+                strategies.append((question, _ANSWER_STRATEGY_ADDRESS, services))
+
+        if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
+            service = self.registry.async_get_info_name(question_lower_name)
+            if service is not None:
+                if type_ in (_TYPE_SRV, _TYPE_ANY):
+                    strategies.append((question, _ANSWER_STRATEGY_SERVICE, service))
+                if type_ in (_TYPE_TXT, _TYPE_ANY):
+                    strategies.append((question, _ANSWER_STRATEGY_TEXT, service))
+
+        return strategies
+
     def _answer_question(
         self,
         question: DNSQuestion,
@@ -278,6 +321,13 @@ class QueryHandler:
         known_answers = DNSRRSet(answers)
         query_res = _QueryResponse(self.cache, questions, is_probe, now)
         known_answers_set: Optional[Set[DNSRecord]] = None
+
+        strategies: List[Tuple[DNSQuestion, int, Union[List[str], ServiceInfo, List[ServiceInfo]]]] = []
+        for msg in msgs:
+            for question in msg.questions:
+                strategies.extend(self._get_answer_strategies(question))
+
+        _LOGGER.warning("Answering %s with %s", questions, strategies)
 
         for msg in msgs:
             for question in msg.questions:
