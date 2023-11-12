@@ -18,6 +18,23 @@ cdef cython.set _ADDRESS_RECORD_TYPES
 cdef object IPVersion, _IPVersion_ALL
 cdef object _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL
 
+cdef unsigned int _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION
+cdef unsigned int _ANSWER_STRATEGY_POINTER
+cdef unsigned int _ANSWER_STRATEGY_ADDRESS
+cdef unsigned int _ANSWER_STRATEGY_SERVICE
+cdef unsigned int _ANSWER_STRATEGY_TEXT
+
+cdef list _EMPTY_SERVICES_LIST
+cdef list _EMPTY_TYPES_LIST
+
+cdef class _AnswerStrategy:
+
+    cdef public DNSQuestion question
+    cdef public unsigned int strategy_type
+    cdef public list types
+    cdef public list services
+
+
 cdef class _QueryResponse:
 
     cdef bint _is_probe
@@ -53,24 +70,30 @@ cdef class QueryHandler:
     cdef QuestionHistory question_history
 
     @cython.locals(service=ServiceInfo)
-    cdef _add_service_type_enumeration_query_answers(self, cython.dict answer_set, DNSRRSet known_answers)
+    cdef _add_service_type_enumeration_query_answers(self, list types, cython.dict answer_set, DNSRRSet known_answers)
 
     @cython.locals(service=ServiceInfo)
-    cdef _add_pointer_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers)
+    cdef _add_pointer_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers)
 
     @cython.locals(service=ServiceInfo, dns_address=DNSAddress)
-    cdef _add_address_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
+    cdef _add_address_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
-    cdef cython.dict _answer_question(self, DNSQuestion question, DNSRRSet known_answers)
+    cdef cython.dict _answer_question(self, DNSQuestion question, unsigned int strategy_type, list types, list services, DNSRRSet known_answers)
 
     @cython.locals(
         msg=DNSIncoming,
+        msgs=list,
+        strategy=_AnswerStrategy,
         question=DNSQuestion,
         answer_set=cython.dict,
         known_answers=DNSRRSet,
         known_answers_set=cython.set,
+        is_unicast=bint,
         is_probe=object,
-        now=object
+        now=float
     )
     cpdef async_response(self, cython.list msgs, cython.bint unicast_source)
+
+    @cython.locals(name=str, question_lower_name=str)
+    cdef _get_answer_strategies(self, DNSQuestion question)

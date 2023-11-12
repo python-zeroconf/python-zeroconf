@@ -26,7 +26,6 @@ from ._dns import DNSRecord
 
 
 class RecordUpdate:
-
     __slots__ = ("new", "old")
 
     def __init__(self, new: DNSRecord, old: Optional[DNSRecord] = None):
