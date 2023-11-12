@@ -1347,6 +1347,7 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     packets = generated.packets()
     question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
     assert question_answers
+    assert "qu._hap._tcp.local." in str(question_answers)
     assert not question_answers.ucast  # has not multicast recently
     assert question_answers.mcast_now
     assert not question_answers.mcast_aggregate
