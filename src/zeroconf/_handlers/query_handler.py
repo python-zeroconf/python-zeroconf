@@ -346,6 +346,8 @@ class QueryHandler:
             # TODO: return None
             return query_res.answers()
 
+        # Only decode known answers if we are not a probe and we have
+        # at least one answer strategy
         answers: List[DNSRecord] = []
         if not is_probe:
             for msg in msgs:
