@@ -10,7 +10,14 @@ from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
 
 import zeroconf as r
-from zeroconf import Zeroconf, _engine, _listener, const, current_time_millis
+from zeroconf import (
+    ServiceInfo,
+    Zeroconf,
+    _engine,
+    _listener,
+    const,
+    current_time_millis,
+)
 from zeroconf._protocol import outgoing
 from zeroconf._protocol.incoming import DNSIncoming
 
@@ -125,6 +132,9 @@ def test_guard_against_duplicate_packets():
     These packets can quickly overwhelm the system.
     """
     zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc.registry.async_add(
+        ServiceInfo("_http._tcp.local.", "Test._http._tcp.local.", server="Test._http._tcp.local.", port=4)
+    )
     zc.question_history = QuestionHistoryWithoutSuppression()
 
     class SubListener(_listener.AsyncListener):
