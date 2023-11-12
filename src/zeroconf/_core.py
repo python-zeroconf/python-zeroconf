@@ -577,7 +577,7 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Respond to a (re)assembled query.
 
-        If the protocol recieved packets with the TC bit set, it will
+        If the protocol received packets with the TC bit set, it will
         wait a bit for the rest of the packets and only call
         handle_assembled_query once it has a complete set of packets
         or the timer expires. If the TC bit is not set, a single
