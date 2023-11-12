@@ -333,7 +333,6 @@ class QueryHandler:
         msg = msgs[0]
         questions = msg.questions
         now = msg.now
-        query_res = _QueryResponse(self.cache, questions, is_probe, now)
 
         strategies: List[AnswerStrategyType] = []
         for msg in msgs:
@@ -341,6 +340,8 @@ class QueryHandler:
                 is_probe = True
             for question in msg.questions:
                 strategies.extend(self._get_answer_strategies(question))
+
+        query_res = _QueryResponse(self.cache, questions, is_probe, now)
 
         if not strategies:
             # TODO: return None
