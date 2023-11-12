@@ -76,6 +76,7 @@ cdef class QueryHandler:
     @cython.locals(
         msg=DNSIncoming,
         msgs=list,
+        strategy=tuple,
         question=DNSQuestion,
         answer_set=cython.dict,
         known_answers=DNSRRSet,

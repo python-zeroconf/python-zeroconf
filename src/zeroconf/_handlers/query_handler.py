@@ -204,7 +204,8 @@ class QueryHandler:
             answer_set[dns_pointer] = {
                 service._dns_service(None),
                 service._dns_text(None),
-            } | service._get_address_and_nsec_records(None)
+                *service._get_address_and_nsec_records(None),
+            }
 
     def _add_address_answers(
         self,
@@ -305,12 +306,16 @@ class QueryHandler:
         query_res = _QueryResponse(self.cache, questions, is_probe, now)
         known_answers = DNSRRSet(answers)
         known_answers_set: Optional[Set[DNSRecord]] = None
-        for question, strategy_type, types, services in strategies:
+        for strategy in strategies:
+            question = strategy[0]
             is_unicast = question.unique is True  # unique and unicast are the same flag
             if not is_unicast:
                 if known_answers_set is None:  # pragma: no branch
                     known_answers_set = known_answers.lookup_set()
                 self.question_history.add_question_at_time(question, now, known_answers_set)
+            strategy_type = strategy[1]
+            types = strategy[2]
+            services = strategy[3]
             answer_set = self._answer_question(question, strategy_type, types, services, known_answers)
             if not ucast_source and is_unicast:  # unique and unicast are the same flag
                 query_res.add_qu_question_response(answer_set)
