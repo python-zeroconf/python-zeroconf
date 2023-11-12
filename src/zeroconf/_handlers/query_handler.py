@@ -175,13 +175,13 @@ class QueryHandler:
         self.question_history = question_history
 
     def _add_service_type_enumeration_query_answers(
-        self, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+        self, types: List[str], answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
     ) -> None:
         """Provide an answer to a service type enumeration query.
 
         https://datatracker.ietf.org/doc/html/rfc6763#section-9
         """
-        for stype in self.registry.async_get_types():
+        for stype in types:
             dns_pointer = DNSPointer(
                 _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0.0
             )
@@ -189,10 +189,10 @@ class QueryHandler:
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
-        self, lower_name: str, answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+        self, services: List[ServiceInfo], answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
     ) -> None:
         """Answer PTR/ANY question."""
-        for service in self.registry.async_get_infos_type(lower_name):
+        for service in services:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
             dns_pointer = service._dns_pointer(None)
@@ -205,13 +205,13 @@ class QueryHandler:
 
     def _add_address_answers(
         self,
-        lower_name: str,
+        services: List[ServiceInfo],
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
         type_: _int,
     ) -> None:
         """Answer A/AAAA/ANY question."""
-        for service in self.registry.async_get_infos_server(lower_name):
+        for service in services:
             answers: List[DNSAddress] = []
             additionals: Set[DNSRecord] = set()
             seen_types: Set[int] = set()
@@ -269,36 +269,40 @@ class QueryHandler:
     def _answer_question(
         self,
         question: DNSQuestion,
+        strategy_type: int,
+        data: Union[List[str], ServiceInfo, List[ServiceInfo]],
         known_answers: DNSRRSet,
     ) -> _AnswerWithAdditionalsType:
         """Answer a question."""
         answer_set: _AnswerWithAdditionalsType = {}
-        question_lower_name = question.name.lower()
         type_ = question.type
 
-        if type_ == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
-            self._add_service_type_enumeration_query_answers(answer_set, known_answers)
+        if strategy_type == _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION:
+            types = cast(List[str], data)
+            self._add_service_type_enumeration_query_answers(types, answer_set, known_answers)
             return answer_set
 
-        if type_ in (_TYPE_PTR, _TYPE_ANY):
-            self._add_pointer_answers(question_lower_name, answer_set, known_answers)
+        if strategy_type == _ANSWER_STRATEGY_POINTER:
+            services = cast(List[ServiceInfo], data)
+            self._add_pointer_answers(services, answer_set, known_answers)
 
-        if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
-            self._add_address_answers(question_lower_name, answer_set, known_answers, type_)
+        if strategy_type == _ANSWER_STRATEGY_ADDRESS:
+            services = cast(List[ServiceInfo], data)
+            self._add_address_answers(services, answer_set, known_answers, type_)
 
-        if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
-            service = self.registry.async_get_info_name(question_lower_name)
-            if service is not None:
-                if type_ in (_TYPE_SRV, _TYPE_ANY):
-                    # Add recommended additional answers according to
-                    # https://tools.ietf.org/html/rfc6763#section-12.2.
-                    dns_service = service._dns_service(None)
-                    if known_answers.suppresses(dns_service) is False:
-                        answer_set[dns_service] = service._get_address_and_nsec_records(None)
-                if type_ in (_TYPE_TXT, _TYPE_ANY):
-                    dns_text = service._dns_text(None)
-                    if known_answers.suppresses(dns_text) is False:
-                        answer_set[dns_text] = set()
+        if strategy_type == _ANSWER_STRATEGY_SERVICE:
+            # Add recommended additional answers according to
+            # https://tools.ietf.org/html/rfc6763#section-12.2.
+            service = cast(ServiceInfo, data)
+            dns_service = service._dns_service(None)
+            if known_answers.suppresses(dns_service) is False:
+                answer_set[dns_service] = service._get_address_and_nsec_records(None)
+
+        if strategy_type == _ANSWER_STRATEGY_TEXT:
+            service = cast(ServiceInfo, data)
+            dns_text = service._dns_text(None)
+            if known_answers.suppresses(dns_text) is False:
+                answer_set[dns_text] = set()
 
         return answer_set
 
@@ -315,36 +319,34 @@ class QueryHandler:
         msg = msgs[0]
         questions = msg.questions
         now = msg.now
-        for msg in msgs:
-            if msg.is_probe() is False:
-                answers.extend(msg.answers())
-            else:
-                is_probe = True
-        known_answers = DNSRRSet(answers)
         query_res = _QueryResponse(self.cache, questions, is_probe, now)
-        known_answers_set: Optional[Set[DNSRecord]] = None
 
         strategies: List[AnswerStrategyType] = []
         for msg in msgs:
+            if msg.is_probe() is True:
+                is_probe = True
             for question in msg.questions:
                 strategies.extend(self._get_answer_strategies(question))
 
-        _LOGGER.warning("Answering %s with %s", questions, strategies)
+        if not strategies:
+            # TODO: return None
+            return query_res.answers()
 
-        for msg in msgs:
-            for question in msg.questions:
-                if not question.unique:  # unique and unicast are the same flag
-                    if not known_answers_set:  # pragma: no branch
-                        known_answers_set = known_answers.lookup_set()
-                    self.question_history.add_question_at_time(question, now, known_answers_set)
-                answer_set = self._answer_question(question, known_answers)
-                if not ucast_source and question.unique:  # unique and unicast are the same flag
-                    query_res.add_qu_question_response(answer_set)
-                    continue
-                if ucast_source:
-                    query_res.add_ucast_question_response(answer_set)
-                # We always multicast as well even if its a unicast
-                # source as long as we haven't done it recently (75% of ttl)
-                query_res.add_mcast_question_response(answer_set)
+        known_answers = DNSRRSet(answers)
+        known_answers_set: Optional[Set[DNSRecord]] = None
+        for question, strategy_type, data in strategies:
+            if not question.unique:  # unique and unicast are the same flag
+                if not known_answers_set:  # pragma: no branch
+                    known_answers_set = known_answers.lookup_set()
+                self.question_history.add_question_at_time(question, now, known_answers_set)
+            answer_set = self._answer_question(question, strategy_type, data, known_answers)
+            if not ucast_source and question.unique:  # unique and unicast are the same flag
+                query_res.add_qu_question_response(answer_set)
+                continue
+            if ucast_source:
+                query_res.add_ucast_question_response(answer_set)
+            # We always multicast as well even if its a unicast
+            # source as long as we haven't done it recently (75% of ttl)
+            query_res.add_mcast_question_response(answer_set)
 
         return query_res.answers()
