@@ -20,7 +20,6 @@
     USA
 """
 
-import logging
 from typing import TYPE_CHECKING, List, Optional, Set, cast
 
 from .._cache import DNSCache, _UniqueRecordsType
@@ -47,7 +46,6 @@ from ..const import (
 from .answers import QuestionAnswers, _AnswerWithAdditionalsType
 
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
-_LOGGER = logging.getLogger(__name__)
 
 _EMPTY_SERVICES_LIST: List[ServiceInfo] = []
 _EMPTY_TYPES_LIST: List[str] = []
