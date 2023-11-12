@@ -274,7 +274,7 @@ class QueryHandler:
             dns_service = service._dns_service(None)
             if known_answers.suppresses(dns_service) is False:
                 answer_set[dns_service] = service._get_address_and_nsec_records(None)
-        elif strategy_type == _ANSWER_STRATEGY_TEXT:
+        elif strategy_type == _ANSWER_STRATEGY_TEXT:  # pragma: no branch
             service = services[0]
             dns_text = service._dns_text(None)
             if known_answers.suppresses(dns_text) is False:
