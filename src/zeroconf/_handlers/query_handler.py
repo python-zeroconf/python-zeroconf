@@ -302,6 +302,9 @@ class QueryHandler:
                 strategies.extend(self._get_answer_strategies(question))
 
         if not strategies:
+            # We have no way to answer the question because we have
+            # nothing in the ServiceRegistry that matches or we do not
+            # understand the question.
             return None
 
         is_probe = False
