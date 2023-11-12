@@ -307,9 +307,7 @@ class QueryHandler:
             return None
 
         is_probe = False
-        msg = msgs[0]
         questions = msg.questions
-        now = msg.now
         # Only decode known answers if we are not a probe and we have
         # at least one answer strategy
         answers: List[DNSRecord] = []
@@ -319,9 +317,11 @@ class QueryHandler:
             else:
                 answers.extend(msg.answers())
 
-        query_res = _QueryResponse(self.cache, questions, is_probe, now)
+        msg = msgs[0]
+        query_res = _QueryResponse(self.cache, questions, is_probe, msg.now)
         known_answers = DNSRRSet(answers)
         known_answers_set: Optional[Set[DNSRecord]] = None
+        now = msg.now
         for strategy in strategies:
             question = strategy.question
             is_unicast = question.unique is True  # unique and unicast are the same flag
