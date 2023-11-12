@@ -333,7 +333,7 @@ class QueryHandler:
             answer_set = self._answer_question(
                 question, strategy.strategy_type, strategy.types, strategy.services, known_answers
             )
-            if not ucast_source and is_unicast:  # unique and unicast are the same flag
+            if not ucast_source and is_unicast:
                 query_res.add_qu_question_response(answer_set)
                 continue
             if ucast_source:
