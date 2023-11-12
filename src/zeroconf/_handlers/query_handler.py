@@ -266,13 +266,13 @@ class QueryHandler:
             self._add_service_type_enumeration_query_answers(types, answer_set, known_answers)
             return answer_set
 
-        if strategy_type == _ANSWER_STRATEGY_POINTER:
+        elif strategy_type == _ANSWER_STRATEGY_POINTER:
             self._add_pointer_answers(services, answer_set, known_answers)
 
-        if strategy_type == _ANSWER_STRATEGY_ADDRESS:
+        elif strategy_type == _ANSWER_STRATEGY_ADDRESS:
             self._add_address_answers(services, answer_set, known_answers, type_)
 
-        if strategy_type == _ANSWER_STRATEGY_SERVICE:
+        elif strategy_type == _ANSWER_STRATEGY_SERVICE:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.2.
             service = services[0]
@@ -280,7 +280,7 @@ class QueryHandler:
             if known_answers.suppresses(dns_service) is False:
                 answer_set[dns_service] = service._get_address_and_nsec_records(None)
 
-        if strategy_type == _ANSWER_STRATEGY_TEXT:
+        elif strategy_type == _ANSWER_STRATEGY_TEXT:
             service = services[0]
             dns_text = service._dns_text(None)
             if known_answers.suppresses(dns_text) is False:
