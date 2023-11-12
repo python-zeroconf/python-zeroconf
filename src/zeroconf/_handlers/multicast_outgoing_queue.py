@@ -77,7 +77,7 @@ class MulticastOutgoingQueue:
             # If we calculate a random delay for the send after time
             # that is less than the last group scheduled to go out,
             # we instead add the answers to the last group as this
-            # allows aggregating additonal responses
+            # allows aggregating additional responses
             last_group = self.queue[-1]
             if send_after <= last_group.send_after:
                 last_group.answers.update(answers)
