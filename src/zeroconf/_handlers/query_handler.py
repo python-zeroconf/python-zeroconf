@@ -278,28 +278,43 @@ class QueryHandler:
         type_ = question.type
 
         if strategy_type == _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION:
-            types = cast(List[str], data)
+            if TYPE_CHECKING:
+                types = cast("List[str]", data)
+            else:
+                types = data
             self._add_service_type_enumeration_query_answers(types, answer_set, known_answers)
             return answer_set
 
         if strategy_type == _ANSWER_STRATEGY_POINTER:
-            services = cast(List[ServiceInfo], data)
+            if TYPE_CHECKING:
+                services = cast("List[ServiceInfo]", data)
+            else:
+                services = data
             self._add_pointer_answers(services, answer_set, known_answers)
 
         if strategy_type == _ANSWER_STRATEGY_ADDRESS:
-            services = cast(List[ServiceInfo], data)
+            if TYPE_CHECKING:
+                services = cast("List[ServiceInfo]", data)
+            else:
+                services = data
             self._add_address_answers(services, answer_set, known_answers, type_)
 
         if strategy_type == _ANSWER_STRATEGY_SERVICE:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.2.
-            service = cast(ServiceInfo, data)
+            if TYPE_CHECKING:
+                service = cast(ServiceInfo, data)
+            else:
+                service = data
             dns_service = service._dns_service(None)
             if known_answers.suppresses(dns_service) is False:
                 answer_set[dns_service] = service._get_address_and_nsec_records(None)
 
         if strategy_type == _ANSWER_STRATEGY_TEXT:
-            service = cast(ServiceInfo, data)
+            if TYPE_CHECKING:
+                service = cast(ServiceInfo, data)
+            else:
+                service = data
             dns_text = service._dns_text(None)
             if known_answers.suppresses(dns_text) is False:
                 answer_set[dns_text] = set()
@@ -335,12 +350,13 @@ class QueryHandler:
         known_answers = DNSRRSet(answers)
         known_answers_set: Optional[Set[DNSRecord]] = None
         for question, strategy_type, data in strategies:
-            if not question.unique:  # unique and unicast are the same flag
-                if not known_answers_set:  # pragma: no branch
+            is_unicast = question.unique  # unique and unicast are the same flag
+            if not is_unicast:
+                if known_answers_set is None:  # pragma: no branch
                     known_answers_set = known_answers.lookup_set()
                 self.question_history.add_question_at_time(question, now, known_answers_set)
             answer_set = self._answer_question(question, strategy_type, data, known_answers)
-            if not ucast_source and question.unique:  # unique and unicast are the same flag
+            if not ucast_source and is_unicast:  # unique and unicast are the same flag
                 query_res.add_qu_question_response(answer_set)
                 continue
             if ucast_source:
