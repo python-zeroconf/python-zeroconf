@@ -260,14 +260,13 @@ class QueryHandler:
     ) -> _AnswerWithAdditionalsType:
         """Answer a question."""
         answer_set: _AnswerWithAdditionalsType = {}
-        type_ = question.type
 
         if strategy_type == _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION:
             self._add_service_type_enumeration_query_answers(types, answer_set, known_answers)
         elif strategy_type == _ANSWER_STRATEGY_POINTER:
             self._add_pointer_answers(services, answer_set, known_answers)
         elif strategy_type == _ANSWER_STRATEGY_ADDRESS:
-            self._add_address_answers(services, answer_set, known_answers, type_)
+            self._add_address_answers(services, answer_set, known_answers, question.type)
         elif strategy_type == _ANSWER_STRATEGY_SERVICE:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.2.
