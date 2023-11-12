@@ -979,6 +979,19 @@ def test_upper_case_enumeration_query():
     zc.close()
 
 
+def test_enumeration_query_with_no_registered_services():
+    zc = Zeroconf(interfaces=['127.0.0.1'])
+    _clear_cache(zc)
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME.upper(), const._TYPE_PTR, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert not question_answers
+    # unregister
+    zc.close()
+
+
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
 @pytest.mark.asyncio
@@ -1311,12 +1324,22 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     zc = aiozc.zeroconf
     now = current_time_millis()
     _clear_cache(zc)
-
+    info = ServiceInfo(
+        "_hap._tcp.local.",
+        "qu._hap._tcp.local.",
+        80,
+        0,
+        0,
+        {"md": "known"},
+        "ash-2.local.",
+        addresses=[socket.inet_aton("1.2.3.4")],
+    )
+    aiozc.zeroconf.registry.async_add(info)
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-    question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
+    question = r.DNSQuestion("_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
     question.unicast = True
     known_answer = r.DNSPointer(
-        "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
+        "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'notqu._hap._tcp.local.'
     )
     generated.add_question(question)
     generated.add_answer_at_time(known_answer, 0)
@@ -1324,7 +1347,10 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     packets = generated.packets()
     question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
     assert question_answers
-    assert not question_answers
+    assert not question_answers.ucast  # has not multicast recently
+    assert question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
     assert not zc.question_history.suppresses(question, now, {known_answer})
 
     await aiozc.async_close()
