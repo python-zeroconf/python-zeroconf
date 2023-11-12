@@ -342,7 +342,8 @@ class QueryHandler:
         question: DNSQuestion,
     ) -> List[AnswerStrategyType]:
         """Collect strategies to answer a question."""
-        question_lower_name = question.name.lower()
+        name = question.name
+        question_lower_name = name.lower()
         type_ = question.type
         strategies: List[AnswerStrategyType] = []
 
