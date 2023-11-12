@@ -18,12 +18,14 @@ cdef cython.set _ADDRESS_RECORD_TYPES
 cdef object IPVersion, _IPVersion_ALL
 cdef object _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL
 
-cdef object _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION
-cdef object _ANSWER_STRATEGY_POINTER
-cdef object _ANSWER_STRATEGY_ADDRESS
-cdef object _ANSWER_STRATEGY_SERVICE
-cdef object _ANSWER_STRATEGY_TEXT
+cdef unsigned int _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION
+cdef unsigned int _ANSWER_STRATEGY_POINTER
+cdef unsigned int _ANSWER_STRATEGY_ADDRESS
+cdef unsigned int _ANSWER_STRATEGY_SERVICE
+cdef unsigned int _ANSWER_STRATEGY_TEXT
 
+cdef list _EMPTY_SERVICES_LIST
+cdef list _EMPTY_TYPES_LIST
 
 cdef class _QueryResponse:
 
@@ -69,7 +71,7 @@ cdef class QueryHandler:
     cdef _add_address_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
-    cdef cython.dict _answer_question(self, DNSQuestion question, unsigned int strategy_type, object data, DNSRRSet known_answers)
+    cdef cython.dict _answer_question(self, DNSQuestion question, unsigned int strategy_type, list types, list services, DNSRRSet known_answers)
 
     @cython.locals(
         msg=DNSIncoming,
