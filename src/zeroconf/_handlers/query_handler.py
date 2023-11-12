@@ -289,37 +289,34 @@ class QueryHandler:
 
     def async_response(  # pylint: disable=unused-argument
         self, msgs: List[DNSIncoming], ucast_source: bool
-    ) -> QuestionAnswers:
+    ) -> Optional[QuestionAnswers]:
         """Deal with incoming query packets. Provides a response if possible.
 
         This function must be run in the event loop as it is not
         threadsafe.
         """
+        strategies: List[AnswerStrategyType] = []
+        for msg in msgs:
+            for question in msg.questions:
+                strategies.extend(self._get_answer_strategies(question))
+
+        if not strategies:
+            return None
+
         is_probe = False
         msg = msgs[0]
         questions = msg.questions
         now = msg.now
-
-        strategies: List[AnswerStrategyType] = []
-        for msg in msgs:
-            if msg.is_probe() is True:
-                is_probe = True
-            for question in msg.questions:
-                strategies.extend(self._get_answer_strategies(question))
-
-        query_res = _QueryResponse(self.cache, questions, is_probe, now)
-
-        if not strategies:
-            # TODO: return None
-            return query_res.answers()
-
         # Only decode known answers if we are not a probe and we have
         # at least one answer strategy
         answers: List[DNSRecord] = []
-        if not is_probe:
-            for msg in msgs:
+        for msg in msgs:
+            if msg.is_probe() is True:
+                is_probe = True
+            else:
                 answers.extend(msg.answers())
 
+        query_res = _QueryResponse(self.cache, questions, is_probe, now)
         known_answers = DNSRRSet(answers)
         known_answers_set: Optional[Set[DNSRecord]] = None
         for question, strategy_type, data in strategies:

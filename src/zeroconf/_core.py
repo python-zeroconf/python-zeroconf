@@ -586,6 +586,8 @@ class Zeroconf(QuietLogger):
         now = packets[0].now
         ucast_source = port != _MDNS_PORT
         question_answers = self.query_handler.async_response(packets, ucast_source)
+        if not question_answers:
+            return
         if question_answers.ucast:
             questions = packets[0].questions
             id_ = packets[0].id
