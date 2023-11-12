@@ -583,11 +583,11 @@ class Zeroconf(QuietLogger):
         or the timer expires. If the TC bit is not set, a single
         packet will be in packets.
         """
-        now = packets[0].now
         ucast_source = port != _MDNS_PORT
         question_answers = self.query_handler.async_response(packets, ucast_source)
         if not question_answers:
             return
+        now = packets[0].now
         if question_answers.ucast:
             questions = packets[0].questions
             id_ = packets[0].id
