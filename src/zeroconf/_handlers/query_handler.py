@@ -57,6 +57,13 @@ _IPVersion_ALL = IPVersion.All
 _int = int
 
 
+_ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION = 0
+_ANSWER_STRATEGY_POINTER = 1
+_ANSWER_STRATEGY_ADDRESS = 2
+_ANSWER_STRATEGY_SERVICE = 3
+_ANSWER_STRATEGY_TEXT = 4
+
+
 class _AnswerStrategy:
 
     __slots__ = ("question", "strategy_type", "types", "services")
@@ -173,13 +180,6 @@ class _QueryResponse:
             record = cast(_UniqueRecordsType, record)
         maybe_entry = self._cache.async_get_unique(record)
         return bool(maybe_entry is not None and self._now - maybe_entry.created < _ONE_SECOND)
-
-
-_ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION = 0
-_ANSWER_STRATEGY_POINTER = 1
-_ANSWER_STRATEGY_ADDRESS = 2
-_ANSWER_STRATEGY_SERVICE = 3
-_ANSWER_STRATEGY_TEXT = 4
 
 
 class QueryHandler:
