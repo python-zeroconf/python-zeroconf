@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.124.0 (2023-11-12)
+
+### Feature
+
+* Avoid decoding known answers if we have no answers to give ([#1308](https://github.com/python-zeroconf/python-zeroconf/issues/1308)) ([`605dc9c`](https://github.com/python-zeroconf/python-zeroconf/commit/605dc9ccd843a535802031f051b3d93310186ad1))
+* Small speed up to process incoming packets ([#1309](https://github.com/python-zeroconf/python-zeroconf/issues/1309)) ([`56ef908`](https://github.com/python-zeroconf/python-zeroconf/commit/56ef90865189c01d2207abcc5e2efe3a7a022fa1))
+
 ## v0.123.0 (2023-11-12)
 
 ### Feature
