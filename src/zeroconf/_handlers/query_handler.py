@@ -329,7 +329,6 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        answers: List[DNSRecord] = []
         is_probe = False
         msg = msgs[0]
         questions = msg.questions
@@ -346,6 +345,11 @@ class QueryHandler:
         if not strategies:
             # TODO: return None
             return query_res.answers()
+
+        answers: List[DNSRecord] = []
+        if not is_probe:
+            for msg in msgs:
+                answers.extend(msg.answers())
 
         known_answers = DNSRRSet(answers)
         known_answers_set: Optional[Set[DNSRecord]] = None
