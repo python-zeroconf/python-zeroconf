@@ -232,40 +232,6 @@ class QueryHandler:
                 assert service.server is not None, "Service server must be set for NSEC record."
                 answer_set[service._dns_nsec(list(missing_types), None)] = set()
 
-    def _get_answer_strategies(
-        self,
-        question: DNSQuestion,
-    ) -> List[AnswerStrategyType]:
-        """Collect strategies to answer a question."""
-        question_lower_name = question.name.lower()
-        type_ = question.type
-        strategies: List[AnswerStrategyType] = []
-
-        if type_ == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
-            types = self.registry.async_get_types()
-            if types:
-                strategies.append((question, _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION, types))
-
-        if type_ in (_TYPE_PTR, _TYPE_ANY):
-            services = self.registry.async_get_infos_type(question_lower_name)
-            if services:
-                strategies.append((question, _ANSWER_STRATEGY_POINTER, services))
-
-        if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
-            services = self.registry.async_get_infos_server(question_lower_name)
-            if services:
-                strategies.append((question, _ANSWER_STRATEGY_ADDRESS, services))
-
-        if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
-            service = self.registry.async_get_info_name(question_lower_name)
-            if service is not None:
-                if type_ in (_TYPE_SRV, _TYPE_ANY):
-                    strategies.append((question, _ANSWER_STRATEGY_SERVICE, service))
-                if type_ in (_TYPE_TXT, _TYPE_ANY):
-                    strategies.append((question, _ANSWER_STRATEGY_TEXT, service))
-
-        return strategies
-
     def _answer_question(
         self,
         question: DNSQuestion,
@@ -373,3 +339,37 @@ class QueryHandler:
             query_res.add_mcast_question_response(answer_set)
 
         return query_res.answers()
+
+    def _get_answer_strategies(
+        self,
+        question: DNSQuestion,
+    ) -> List[AnswerStrategyType]:
+        """Collect strategies to answer a question."""
+        question_lower_name = question.name.lower()
+        type_ = question.type
+        strategies: List[AnswerStrategyType] = []
+
+        if type_ == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
+            types = self.registry.async_get_types()
+            if types:
+                strategies.append((question, _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION, types))
+
+        if type_ in (_TYPE_PTR, _TYPE_ANY):
+            services = self.registry.async_get_infos_type(question_lower_name)
+            if services:
+                strategies.append((question, _ANSWER_STRATEGY_POINTER, services))
+
+        if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
+            services = self.registry.async_get_infos_server(question_lower_name)
+            if services:
+                strategies.append((question, _ANSWER_STRATEGY_ADDRESS, services))
+
+        if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
+            service = self.registry.async_get_info_name(question_lower_name)
+            if service is not None:
+                if type_ in (_TYPE_SRV, _TYPE_ANY):
+                    strategies.append((question, _ANSWER_STRATEGY_SERVICE, service))
+                if type_ in (_TYPE_TXT, _TYPE_ANY):
+                    strategies.append((question, _ANSWER_STRATEGY_TEXT, service))
+
+        return strategies
