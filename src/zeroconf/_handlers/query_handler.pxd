@@ -18,6 +18,13 @@ cdef cython.set _ADDRESS_RECORD_TYPES
 cdef object IPVersion, _IPVersion_ALL
 cdef object _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL
 
+cdef unsigned int _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION
+cdef unsigned int _ANSWER_STRATEGY_POINTER
+cdef unsigned int _ANSWER_STRATEGY_ADDRESS
+cdef unsigned int _ANSWER_STRATEGY_SERVICE
+cdef unsigned int _ANSWER_STRATEGY_TEXT
+
+
 cdef class _QueryResponse:
 
     cdef bint _is_probe
@@ -53,16 +60,16 @@ cdef class QueryHandler:
     cdef QuestionHistory question_history
 
     @cython.locals(service=ServiceInfo)
-    cdef _add_service_type_enumeration_query_answers(self, cython.dict answer_set, DNSRRSet known_answers)
+    cdef _add_service_type_enumeration_query_answers(self, list types, cython.dict answer_set, DNSRRSet known_answers)
 
     @cython.locals(service=ServiceInfo)
-    cdef _add_pointer_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers)
+    cdef _add_pointer_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers)
 
     @cython.locals(service=ServiceInfo, dns_address=DNSAddress)
-    cdef _add_address_answers(self, str lower_name, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
+    cdef _add_address_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
-    cdef cython.dict _answer_question(self, DNSQuestion question, DNSRRSet known_answers)
+    cdef cython.dict _answer_question(self, DNSQuestion question, unsigned int strategy_type, object data, DNSRRSet known_answers)
 
     @cython.locals(
         msg=DNSIncoming,

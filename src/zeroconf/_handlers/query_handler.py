@@ -269,7 +269,7 @@ class QueryHandler:
     def _answer_question(
         self,
         question: DNSQuestion,
-        strategy_type: int,
+        strategy_type: _int,
         data: Union[List[str], ServiceInfo, List[ServiceInfo]],
         known_answers: DNSRRSet,
     ) -> _AnswerWithAdditionalsType:
