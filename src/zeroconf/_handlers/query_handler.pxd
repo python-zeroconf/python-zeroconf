@@ -27,6 +27,14 @@ cdef unsigned int _ANSWER_STRATEGY_TEXT
 cdef list _EMPTY_SERVICES_LIST
 cdef list _EMPTY_TYPES_LIST
 
+cdef class _AnswerStrategy:
+
+    cdef public DNSQuestion question
+    cdef public unsigned int strategy_type
+    cdef public list types
+    cdef public list services
+
+
 cdef class _QueryResponse:
 
     cdef bint _is_probe
@@ -76,7 +84,7 @@ cdef class QueryHandler:
     @cython.locals(
         msg=DNSIncoming,
         msgs=list,
-        strategy=tuple,
+        strategy=_AnswerStrategy,
         question=DNSQuestion,
         answer_set=cython.dict,
         known_answers=DNSRRSet,

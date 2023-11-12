@@ -21,7 +21,7 @@
 """
 
 import logging
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, List, Optional, Set, cast
 
 from .._cache import DNSCache, _UniqueRecordsType
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
@@ -46,8 +46,6 @@ from ..const import (
 )
 from .answers import QuestionAnswers, _AnswerWithAdditionalsType
 
-AnswerStrategyType = Tuple[DNSQuestion, int, List[str], List[ServiceInfo]]
-
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,6 +55,24 @@ _EMPTY_TYPES_LIST: List[str] = []
 _IPVersion_ALL = IPVersion.All
 
 _int = int
+
+
+class _AnswerStrategy:
+
+    __slots__ = ("question", "strategy_type", "types", "services")
+
+    def __init__(
+        self,
+        question: DNSQuestion,
+        strategy_type: _int,
+        types: List[str],
+        services: List[ServiceInfo],
+    ) -> None:
+        """Create an answer strategy."""
+        self.question = question
+        self.strategy_type = strategy_type
+        self.types = types
+        self.services = services
 
 
 class _QueryResponse:
@@ -282,7 +298,7 @@ class QueryHandler:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        strategies: List[AnswerStrategyType] = []
+        strategies: List[_AnswerStrategy] = []
         for msg in msgs:
             for question in msg.questions:
                 strategies.extend(self._get_answer_strategies(question))
@@ -307,16 +323,15 @@ class QueryHandler:
         known_answers = DNSRRSet(answers)
         known_answers_set: Optional[Set[DNSRecord]] = None
         for strategy in strategies:
-            question = strategy[0]
+            question = strategy.question
             is_unicast = question.unique is True  # unique and unicast are the same flag
             if not is_unicast:
                 if known_answers_set is None:  # pragma: no branch
                     known_answers_set = known_answers.lookup_set()
                 self.question_history.add_question_at_time(question, now, known_answers_set)
-            strategy_type = strategy[1]
-            types = strategy[2]
-            services = strategy[3]
-            answer_set = self._answer_question(question, strategy_type, types, services, known_answers)
+            answer_set = self._answer_question(
+                question, strategy.strategy_type, strategy.types, strategy.services, known_answers
+            )
             if not ucast_source and is_unicast:  # unique and unicast are the same flag
                 query_res.add_qu_question_response(answer_set)
                 continue
@@ -331,36 +346,46 @@ class QueryHandler:
     def _get_answer_strategies(
         self,
         question: DNSQuestion,
-    ) -> List[AnswerStrategyType]:
+    ) -> List[_AnswerStrategy]:
         """Collect strategies to answer a question."""
         name = question.name
         question_lower_name = name.lower()
         type_ = question.type
-        strategies: List[AnswerStrategyType] = []
+        strategies: List[_AnswerStrategy] = []
 
         if type_ == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
             types = self.registry.async_get_types()
             if types:
                 strategies.append(
-                    (question, _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION, types, _EMPTY_SERVICES_LIST)
+                    _AnswerStrategy(
+                        question, _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION, types, _EMPTY_SERVICES_LIST
+                    )
                 )
 
         if type_ in (_TYPE_PTR, _TYPE_ANY):
             services = self.registry.async_get_infos_type(question_lower_name)
             if services:
-                strategies.append((question, _ANSWER_STRATEGY_POINTER, _EMPTY_TYPES_LIST, services))
+                strategies.append(
+                    _AnswerStrategy(question, _ANSWER_STRATEGY_POINTER, _EMPTY_TYPES_LIST, services)
+                )
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
             services = self.registry.async_get_infos_server(question_lower_name)
             if services:
-                strategies.append((question, _ANSWER_STRATEGY_ADDRESS, _EMPTY_TYPES_LIST, services))
+                strategies.append(
+                    _AnswerStrategy(question, _ANSWER_STRATEGY_ADDRESS, _EMPTY_TYPES_LIST, services)
+                )
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
             service = self.registry.async_get_info_name(question_lower_name)
             if service is not None:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
-                    strategies.append((question, _ANSWER_STRATEGY_SERVICE, _EMPTY_TYPES_LIST, [service]))
+                    strategies.append(
+                        _AnswerStrategy(question, _ANSWER_STRATEGY_SERVICE, _EMPTY_TYPES_LIST, [service])
+                    )
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
-                    strategies.append((question, _ANSWER_STRATEGY_TEXT, _EMPTY_TYPES_LIST, [service]))
+                    strategies.append(
+                        _AnswerStrategy(question, _ANSWER_STRATEGY_TEXT, _EMPTY_TYPES_LIST, [service])
+                    )
 
         return strategies
