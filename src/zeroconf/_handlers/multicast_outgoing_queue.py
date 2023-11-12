@@ -116,7 +116,7 @@ class MulticastOutgoingQueue:
             # be sure we schedule them to go out later
             loop.call_at(loop.time() + millis_to_seconds(self.queue[0].send_after - now), self.async_ready)
 
-        if answers:
+        if answers:  # pragma: no branch
             # If we have the same answer scheduled to go out, remove them
             self._remove_answers_from_queue(answers)
             zc.async_send(construct_outgoing_multicast_answers(answers))
