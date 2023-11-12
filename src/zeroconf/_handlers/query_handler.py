@@ -46,6 +46,8 @@ from ..const import (
 )
 from .answers import QuestionAnswers, _AnswerWithAdditionalsType
 
+AnswerStrategyType = Tuple[DNSQuestion, int, Union[List[str], ServiceInfo, List[ServiceInfo]]]
+
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 _LOGGER = logging.getLogger(__name__)
 
@@ -233,11 +235,11 @@ class QueryHandler:
     def _get_answer_strategies(
         self,
         question: DNSQuestion,
-    ) -> List[Tuple[DNSQuestion, int, Union[List[str], ServiceInfo, List[ServiceInfo]]]]:
+    ) -> List[AnswerStrategyType]:
         """Collect strategies to answer a question."""
         question_lower_name = question.name.lower()
         type_ = question.type
-        strategies: List[Tuple[DNSQuestion, int, Union[List[str], ServiceInfo, List[ServiceInfo]]]] = []
+        strategies: List[AnswerStrategyType] = []
 
         if type_ == _TYPE_PTR and question_lower_name == _SERVICE_TYPE_ENUMERATION_NAME:
             types = self.registry.async_get_types()
@@ -322,7 +324,7 @@ class QueryHandler:
         query_res = _QueryResponse(self.cache, questions, is_probe, now)
         known_answers_set: Optional[Set[DNSRecord]] = None
 
-        strategies: List[Tuple[DNSQuestion, int, Union[List[str], ServiceInfo, List[ServiceInfo]]]] = []
+        strategies: List[AnswerStrategyType] = []
         for msg in msgs:
             for question in msg.questions:
                 strategies.extend(self._get_answer_strategies(question))
