@@ -203,15 +203,20 @@ class DNSIncoming:
             ]
         )
 
-    def _read_short(self) -> _int:
+    def _read_network_order_unsigned_short(self) -> _int:
         """Reads an unsigned short in network order from the packet."""
         offset = self.offset
         view = self.view
         self.offset += 2
         return view[offset] << 8 | view[offset + 1]
 
-    def _read_long(self) -> _int:
-        """Reads an unsigned long in network order from the packet."""
+    def _read_network_order_unsigned_long(self) -> _int:
+        """Reads an unsigned long in network order from the packet.
+
+        This is used to read the TTL, which is a 32-bit unsigned integer.
+
+        TTL is supposed to be unsigned https://www.rfc-editor.org/errata/eid2130
+        """
         offset = self.offset
         view = self.view
         self.offset += 4
@@ -219,19 +224,19 @@ class DNSIncoming:
 
     def _read_header(self) -> None:
         """Reads header portion of packet"""
-        self.id = self._read_short()
-        self.flags = self._read_short()
-        self.num_questions = self._read_short()
-        self.num_answers = self._read_short()
-        self.num_authorities = self._read_short()
-        self.num_additionals = self._read_short()
+        self.id = self._read_network_order_unsigned_short()
+        self.flags = self._read_network_order_unsigned_short()
+        self.num_questions = self._read_network_order_unsigned_short()
+        self.num_answers = self._read_network_order_unsigned_short()
+        self.num_authorities = self._read_network_order_unsigned_short()
+        self.num_additionals = self._read_network_order_unsigned_short()
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
         for _ in range(self.num_questions):
             name = self._read_name()
-            type_ = self._read_short()
-            class_ = self._read_short()
+            type_ = self._read_network_order_unsigned_short()
+            class_ = self._read_network_order_unsigned_short()
             question = DNSQuestion(name, type_, class_)
             self.questions.append(question)
 
@@ -256,10 +261,10 @@ class DNSIncoming:
         n = self.num_answers + self.num_authorities + self.num_additionals
         for _ in range(n):
             domain = self._read_name()
-            type_ = self._read_short()
-            class_ = self._read_short()
-            ttl = self._read_long()
-            length = self._read_short()
+            type_ = self._read_network_order_unsigned_short()
+            class_ = self._read_network_order_unsigned_short()
+            ttl = self._read_network_order_unsigned_long()
+            length = self._read_network_order_unsigned_short()
             end = self.offset + length
             rec = None
             try:
@@ -293,9 +298,9 @@ class DNSIncoming:
         if type_ == _TYPE_TXT:
             return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
         if type_ == _TYPE_SRV:
-            priority = self._read_short()
-            weight = self._read_short()
-            port = self._read_short()
+            priority = self._read_network_order_unsigned_short()
+            weight = self._read_network_order_unsigned_short()
+            port = self._read_network_order_unsigned_short()
             return DNSService(
                 domain,
                 type_,
