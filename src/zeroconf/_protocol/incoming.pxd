@@ -113,7 +113,7 @@ cdef class DNSIncoming:
     @cython.locals(
         name_start=cython.uint
     )
-    cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, unsigned int length)
+    cdef _read_record(self, object domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
 
     @cython.locals(
         offset="unsigned int",
