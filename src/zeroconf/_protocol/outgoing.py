@@ -453,6 +453,8 @@ class DNSOutgoing:
             authorities_written = self._write_records_from_offset(self.authorities, authority_offset)
             additionals_written = self._write_records_from_offset(self.additionals, additional_offset)
 
+            made_progress = len(self.data)
+
             self._insert_short_at_start(additionals_written)
             self._insert_short_at_start(authorities_written)
             self._insert_short_at_start(answers_written)
@@ -487,16 +489,16 @@ class DNSOutgoing:
                 self._insert_short_at_start(self.id)
 
             self.packets_data.append(b''.join(self.data))
-            self._reset_for_next_packet()
 
-            if (
-                not questions_written
-                and not answers_written
-                and not authorities_written
-                and not additionals_written
-                and (self.questions or self.answers or self.authorities or self.additionals)
-            ):
+            if not made_progress:
+                # Generating an empty packet is not a desirable outcome, but currently
+                # too many internals rely on this behavior.  So, we'll just return an
+                # empty packet and log a warning until this can be refactored at a later
+                # date.
                 log.warning("packets() made no progress adding records; returning")
                 break
+
+            self._reset_for_next_packet()
+
         self.state = STATE_FINISHED
         return self.packets_data

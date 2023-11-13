@@ -100,6 +100,8 @@ cdef class DNSOutgoing:
     cpdef _write_utf(self, cython.str value)
 
     @cython.locals(
+        debug_enable=bint,
+        made_progress=bint,
         questions_offset=object,
         answer_offset=object,
         authority_offset=object,
@@ -126,6 +128,6 @@ cdef class DNSOutgoing:
 
     cpdef add_additional_answer(self, DNSRecord record)
 
-    cpdef is_query(self)
+    cpdef bint is_query(self)
 
-    cpdef is_response(self)
+    cpdef bint is_response(self)
