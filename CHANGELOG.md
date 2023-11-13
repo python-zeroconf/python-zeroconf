@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.126.0 (2023-11-13)
+
+### Feature
+
+* Speed up outgoing packet writer ([#1313](https://github.com/python-zeroconf/python-zeroconf/issues/1313)) ([`55cf4cc`](https://github.com/python-zeroconf/python-zeroconf/commit/55cf4ccdff886a136db4e2133d3e6cdd001a8bd6))
+* Speed up writing name compression for outgoing packets ([#1312](https://github.com/python-zeroconf/python-zeroconf/issues/1312)) ([`9caeabb`](https://github.com/python-zeroconf/python-zeroconf/commit/9caeabb6d4659a25ea1251c1ee7bb824e05f3d8b))
+
 ## v0.125.0 (2023-11-12)
 
 ### Feature
