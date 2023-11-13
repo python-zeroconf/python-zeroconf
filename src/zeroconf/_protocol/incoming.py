@@ -102,7 +102,7 @@ class DNSIncoming:
         self.flags = 0
         self.offset = 0
         self.data = data
-        self.view = data
+        self.view = memoryview(data)
         self._data_len = len(data)
         self.name_cache: Dict[int, List[str]] = {}
         self.questions: List[DNSQuestion] = []
@@ -142,7 +142,7 @@ class DNSIncoming:
             return False
         for question in self.questions:
             # QU questions use the same bit as unique
-            if question.unique:
+            if question.unique is True:
                 return True
         return False
 
