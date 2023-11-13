@@ -91,6 +91,8 @@ cdef class DNSOutgoing:
     )
     cpdef write_name(self, cython.str name)
 
+    cdef _write_link_to_name(self, unsigned int index)
+
     cpdef write_short(self, object value)
 
     cpdef write_string(self, cython.bytes value)

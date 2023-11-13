@@ -277,29 +277,40 @@ class DNSOutgoing:
         """
 
         # split name into each label
-        name_length = 0
         if name.endswith('.'):
-            name = name[: len(name) - 1]
+            name = name[:-1]
+
+        index = self.names.get(name, 0)
+        if index:
+            self._write_link_to_name(index)
+            return
+
         labels = name.split('.')
-        # Write each new label or a pointer to the existing
-        # on in the packet
+        # Write each new label or a pointer to the existing one in the packet
+        self.names[name] = self.size
+        self._write_utf(labels[0])
+
+        name_length = 0
         start_size = self.size
-        for count in range(len(labels)):
-            label = name if count == 0 else '.'.join(labels[count:])
-            index = self.names.get(label, 0)
+        for count in range(1, len(labels)):
+            partial_name = '.'.join(labels[count:])
+            index = self.names.get(partial_name, 0)
             if index:
-                # If part of the name already exists in the packet,
-                # create a pointer to it
-                self._write_byte((index >> 8) | 0xC0)
-                self._write_byte(index & 0xFF)
+                self._write_link_to_name(index)
                 return
             if name_length == 0:
                 name_length = len(name.encode('utf-8'))
-            self.names[label] = start_size + name_length - len(label.encode('utf-8'))
+            self.names[partial_name] = start_size + name_length - len(partial_name.encode('utf-8'))
             self._write_utf(labels[count])
 
         # this is the end of a name
         self._write_byte(0)
+
+    def _write_link_to_name(self, index: int_) -> None:
+        # If part of the name already exists in the packet,
+        # create a pointer to it
+        self._write_byte((index >> 8) | 0xC0)
+        self._write_byte(index & 0xFF)
 
     def _write_question(self, question: DNSQuestion_) -> bool:
         """Writes a question to the packet"""
