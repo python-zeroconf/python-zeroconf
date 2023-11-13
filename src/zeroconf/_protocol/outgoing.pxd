@@ -100,7 +100,6 @@ cdef class DNSOutgoing:
     cpdef _write_utf(self, cython.str value)
 
     @cython.locals(
-        debug_enable=bint,
         questions_offset=object,
         answer_offset=object,
         authority_offset=object,
