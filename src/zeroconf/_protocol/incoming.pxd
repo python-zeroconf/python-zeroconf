@@ -21,11 +21,6 @@ cdef cython.uint _FLAGS_TC
 cdef cython.uint _FLAGS_QR_QUERY
 cdef cython.uint _FLAGS_QR_RESPONSE
 
-cdef object UNPACK_3H
-cdef object UNPACK_6H
-cdef object UNPACK_HH
-cdef object UNPACK_HHiH
-
 cdef object DECODE_EXCEPTIONS
 
 cdef object IncomingDecodeError
@@ -78,6 +73,12 @@ cdef class DNSIncoming:
     cpdef answers(self)
 
     cpdef is_response(self)
+
+    @cython.locals(offset="unsigned char")
+    cdef unsigned int _read_short(self)
+
+    @cython.locals(offset="unsigned char")
+    cdef unsigned int _read_long(self)
 
     @cython.locals(
         off=cython.uint,

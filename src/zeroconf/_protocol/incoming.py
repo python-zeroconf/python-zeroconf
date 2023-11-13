@@ -60,10 +60,6 @@ MAX_NAME_LENGTH = 253
 
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
-UNPACK_3H = struct.Struct(b'!3H').unpack_from
-UNPACK_6H = struct.Struct(b'!6H').unpack_from
-UNPACK_HH = struct.Struct(b'!HH').unpack_from
-UNPACK_HHiH = struct.Struct(b'!HHiH').unpack_from
 
 _seen_logs: Dict[str, Union[int, tuple]] = {}
 _str = str
@@ -207,24 +203,35 @@ class DNSIncoming:
             ]
         )
 
+    def _read_short(self) -> _int:
+        """Reads an unsigned short in network order from the packet."""
+        offset = self.offset
+        view = self.view
+        self.offset += 2
+        return view[offset] << 8 | view[offset + 1]
+
+    def _read_long(self) -> _int:
+        """Reads an unsigned long in network order from the packet."""
+        offset = self.offset
+        view = self.view
+        self.offset += 4
+        return view[offset] << 24 | view[offset + 1] << 16 | view[offset + 2] << 8 | view[offset + 3]
+
     def _read_header(self) -> None:
         """Reads header portion of packet"""
-        (
-            self.id,
-            self.flags,
-            self.num_questions,
-            self.num_answers,
-            self.num_authorities,
-            self.num_additionals,
-        ) = UNPACK_6H(self.data)
-        self.offset += 12
+        self.id = self._read_short()
+        self.flags = self._read_short()
+        self.num_questions = self._read_short()
+        self.num_answers = self._read_short()
+        self.num_authorities = self._read_short()
+        self.num_additionals = self._read_short()
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
         for _ in range(self.num_questions):
             name = self._read_name()
-            type_, class_ = UNPACK_HH(self.data, self.offset)
-            self.offset += 4
+            type_ = self._read_short()
+            class_ = self._read_short()
             question = DNSQuestion(name, type_, class_)
             self.questions.append(question)
 
@@ -249,8 +256,10 @@ class DNSIncoming:
         n = self.num_answers + self.num_authorities + self.num_additionals
         for _ in range(n):
             domain = self._read_name()
-            type_, class_, ttl, length = UNPACK_HHiH(self.data, self.offset)
-            self.offset += 10
+            type_ = self._read_short()
+            class_ = self._read_short()
+            ttl = self._read_long()
+            length = self._read_short()
             end = self.offset + length
             rec = None
             try:
@@ -284,8 +293,9 @@ class DNSIncoming:
         if type_ == _TYPE_TXT:
             return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
         if type_ == _TYPE_SRV:
-            priority, weight, port = UNPACK_3H(self.data, self.offset)
-            self.offset += 6
+            priority = self._read_short()
+            weight = self._read_short()
+            port = self._read_short()
             return DNSService(
                 domain,
                 type_,
