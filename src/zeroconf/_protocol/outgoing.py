@@ -425,7 +425,7 @@ class DNSOutgoing:
         authority_offset = 0
         additional_offset = 0
         # we have to at least write out the question
-        debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG)
+        debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG) is True
         has_more_to_add = True
 
         while has_more_to_add:
