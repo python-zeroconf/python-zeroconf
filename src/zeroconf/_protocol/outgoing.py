@@ -53,7 +53,10 @@ PACK_BYTE = Struct('>B').pack
 PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
+SHORT_CACHE_MAX = 128
+
 BYTE_TABLE = tuple(PACK_BYTE(i) for i in range(256))
+SHORT_LOOKUP = tuple(PACK_SHORT(i) for i in range(SHORT_CACHE_MAX))
 
 
 class State(enum.Enum):
@@ -220,17 +223,21 @@ class DNSOutgoing:
         self.data.append(BYTE_TABLE[value])
         self.size += 1
 
+    def _get_short(self, value: int_) -> bytes:
+        """Convert an unsigned short to 2 bytes."""
+        return SHORT_LOOKUP[value] if value < SHORT_CACHE_MAX else PACK_SHORT(value)
+
     def _insert_short_at_start(self, value: int_) -> None:
         """Inserts an unsigned short at the start of the packet"""
-        self.data.insert(0, PACK_SHORT(value))
+        self.data.insert(0, self._get_short(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
-        self.data[index] = PACK_SHORT(value)
+        self.data[index] = self._get_short(value)
 
     def write_short(self, value: int_) -> None:
         """Writes an unsigned short to the packet"""
-        self.data.append(PACK_SHORT(value))
+        self.data.append(self._get_short(value))
         self.size += 2
 
     def _write_int(self, value: Union[float, int]) -> None:
@@ -323,10 +330,11 @@ class DNSOutgoing:
 
     def _write_record_class(self, record: Union[DNSQuestion_, DNSRecord_]) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
-        if record.unique and self.multicast:
-            self.write_short(record.class_ | _CLASS_UNIQUE)
+        class_ = record.class_
+        if record.unique is True and self.multicast is True:
+            self.write_short(class_ | _CLASS_UNIQUE)
         else:
-            self.write_short(record.class_)
+            self.write_short(class_)
 
     def _write_ttl(self, record: DNSRecord_, now: float_) -> None:
         """Write out the record ttl."""
@@ -417,21 +425,20 @@ class DNSOutgoing:
         will be written out to a single oversized packet no more than
         _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
         fragmentation potentially)."""
+        packets_data = self.packets_data
+
         if self.state == STATE_FINISHED:
-            return self.packets_data
+            return packets_data
 
         questions_offset = 0
         answer_offset = 0
         authority_offset = 0
         additional_offset = 0
         # we have to at least write out the question
-        first_time = True
-        debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG)
+        debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG) is True
+        has_more_to_add = True
 
-        while first_time or self._has_more_to_add(
-            questions_offset, answer_offset, authority_offset, additional_offset
-        ):
-            first_time = False
+        while has_more_to_add:
             if debug_enable:
                 log.debug(
                     "offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
@@ -473,9 +480,11 @@ class DNSOutgoing:
                     additional_offset,
                 )
 
-            if self.is_query() and self._has_more_to_add(
+            has_more_to_add = self._has_more_to_add(
                 questions_offset, answer_offset, authority_offset, additional_offset
-            ):
+            )
+
+            if has_more_to_add and self.is_query():
                 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
                 if debug_enable:  # pragma: no branch
                     log.debug("Setting TC flag")
@@ -488,7 +497,7 @@ class DNSOutgoing:
             else:
                 self._insert_short_at_start(self.id)
 
-            self.packets_data.append(b''.join(self.data))
+            packets_data.append(b''.join(self.data))
 
             if not made_progress:
                 # Generating an empty packet is not a desirable outcome, but currently
@@ -498,7 +507,8 @@ class DNSOutgoing:
                 log.warning("packets() made no progress adding records; returning")
                 break
 
-            self._reset_for_next_packet()
+            if has_more_to_add:
+                self._reset_for_next_packet()
 
         self.state = STATE_FINISHED
-        return self.packets_data
+        return packets_data
