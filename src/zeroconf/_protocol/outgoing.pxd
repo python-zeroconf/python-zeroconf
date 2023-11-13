@@ -28,6 +28,7 @@ cdef object LOGGING_IS_ENABLED_FOR
 cdef object LOGGING_DEBUG
 
 cdef cython.tuple BYTE_TABLE
+cdef cython.tuple SHORT_LOOKUP
 
 cdef class DNSOutgoing:
 
@@ -48,11 +49,13 @@ cdef class DNSOutgoing:
 
     cpdef _reset_for_next_packet(self)
 
-    cdef _write_byte(self, object value)
+    cdef _write_byte(self, cython.uint value)
 
-    cdef _insert_short_at_start(self, object value)
+    cdef void _insert_short_at_start(self, unsigned int value)
 
-    cdef _replace_short(self, object index, object value)
+    cdef _replace_short(self, cython.uint index, cython.uint value)
+
+    cdef _get_short(self, cython.uint value)
 
     cdef _write_int(self, object value)
 
@@ -61,10 +64,12 @@ cdef class DNSOutgoing:
     @cython.locals(
         d=cython.bytes,
         data_view=cython.list,
+        index=cython.uint,
         length=cython.uint
     )
     cdef cython.bint _write_record(self, DNSRecord record, object now)
 
+    @cython.locals(class_=cython.uint)
     cdef _write_record_class(self, DNSEntry record)
 
     @cython.locals(
@@ -72,13 +77,16 @@ cdef class DNSOutgoing:
     )
     cdef cython.bint _check_data_limit_or_rollback(self, cython.uint start_data_length, cython.uint start_size)
 
-    cdef _write_questions_from_offset(self, object questions_offset)
+    @cython.locals(questions_written=cython.uint)
+    cdef cython.uint _write_questions_from_offset(self, unsigned int questions_offset)
 
-    cdef _write_answers_from_offset(self, object answer_offset)
+    @cython.locals(answers_written=cython.uint)
+    cdef cython.uint _write_answers_from_offset(self, unsigned int answer_offset)
 
-    cdef _write_records_from_offset(self, cython.list records, object offset)
+    @cython.locals(records_written=cython.uint)
+    cdef cython.uint _write_records_from_offset(self, cython.list records, unsigned int offset)
 
-    cdef bint _has_more_to_add(self, object questions_offset, object answer_offset, object authority_offset, object additional_offset)
+    cdef bint _has_more_to_add(self, unsigned int questions_offset, unsigned int answer_offset, unsigned int authority_offset, unsigned int additional_offset)
 
     cdef _write_ttl(self, DNSRecord record, object now)
 
@@ -93,7 +101,7 @@ cdef class DNSOutgoing:
 
     cdef _write_link_to_name(self, unsigned int index)
 
-    cpdef write_short(self, object value)
+    cpdef write_short(self, cython.uint value)
 
     cpdef write_string(self, cython.bytes value)
 
@@ -103,14 +111,14 @@ cdef class DNSOutgoing:
         debug_enable=bint,
         made_progress=bint,
         has_more_to_add=bint,
-        questions_offset=object,
-        answer_offset=object,
-        authority_offset=object,
-        additional_offset=object,
-        questions_written=object,
-        answers_written=object,
-        authorities_written=object,
-        additionals_written=object,
+        questions_offset="unsigned int",
+        answer_offset="unsigned int",
+        authority_offset="unsigned int",
+        additional_offset="unsigned int",
+        questions_written="unsigned int",
+        answers_written="unsigned int",
+        authorities_written="unsigned int",
+        additionals_written="unsigned int",
     )
     cpdef packets(self)
 

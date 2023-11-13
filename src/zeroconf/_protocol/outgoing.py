@@ -22,8 +22,9 @@
 
 import enum
 import logging
+from collections.abc import Sequence
 from struct import Struct
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 from .._cache import DNSCache
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
@@ -54,6 +55,7 @@ PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
 BYTE_TABLE = tuple(PACK_BYTE(i) for i in range(256))
+SHORT_LOOKUP = tuple(PACK_SHORT(i) for i in range(32))
 
 
 class State(enum.Enum):
@@ -220,17 +222,23 @@ class DNSOutgoing:
         self.data.append(BYTE_TABLE[value])
         self.size += 1
 
+    def _get_short(self, value: int_) -> bytes:
+        """Gets an unsigned short from a certain position in the packet"""
+        if value < 32:
+            return SHORT_LOOKUP[value]
+        return PACK_SHORT(value)
+
     def _insert_short_at_start(self, value: int_) -> None:
         """Inserts an unsigned short at the start of the packet"""
-        self.data.insert(0, PACK_SHORT(value))
+        self.data.insert(0, self._get_short(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
-        self.data[index] = PACK_SHORT(value)
+        self.data[index] = self._get_short(value)
 
     def write_short(self, value: int_) -> None:
         """Writes an unsigned short to the packet"""
-        self.data.append(PACK_SHORT(value))
+        self.data.append(self._get_short(value))
         self.size += 2
 
     def _write_int(self, value: Union[float, int]) -> None:
@@ -323,10 +331,11 @@ class DNSOutgoing:
 
     def _write_record_class(self, record: Union[DNSQuestion_, DNSRecord_]) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
-        if record.unique and self.multicast:
-            self.write_short(record.class_ | _CLASS_UNIQUE)
+        class_ = record.class_
+        if record.unique is True and self.multicast is True:
+            self.write_short(class_ | _CLASS_UNIQUE)
         else:
-            self.write_short(record.class_)
+            self.write_short(class_)
 
     def _write_ttl(self, record: DNSRecord_, now: float_) -> None:
         """Write out the record ttl."""
@@ -417,8 +426,10 @@ class DNSOutgoing:
         will be written out to a single oversized packet no more than
         _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
         fragmentation potentially)."""
+        packets_data = self.packets_data
+
         if self.state == STATE_FINISHED:
-            return self.packets_data
+            return packets_data
 
         questions_offset = 0
         answer_offset = 0
@@ -487,7 +498,7 @@ class DNSOutgoing:
             else:
                 self._insert_short_at_start(self.id)
 
-            self.packets_data.append(b''.join(self.data))
+            packets_data.append(b''.join(self.data))
 
             if not made_progress:
                 # Generating an empty packet is not a desirable outcome, but currently
@@ -501,4 +512,4 @@ class DNSOutgoing:
                 self._reset_for_next_packet()
 
         self.state = STATE_FINISHED
-        return self.packets_data
+        return packets_data
