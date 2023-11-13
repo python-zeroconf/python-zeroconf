@@ -61,8 +61,8 @@ class State(enum.Enum):
     finished = 1
 
 
-STATE_INIT = State.init
-STATE_FINISHED = State.finished
+STATE_INIT = State.init.value
+STATE_FINISHED = State.finished.value
 
 LOGGING_IS_ENABLED_FOR = log.isEnabledFor
 LOGGING_DEBUG = logging.DEBUG
@@ -417,9 +417,6 @@ class DNSOutgoing:
         will be written out to a single oversized packet no more than
         _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
         fragmentation potentially)."""
-        return self._packets()
-
-    def _packets(self) -> List[bytes]:
         if self.state == STATE_FINISHED:
             return self.packets_data
 
