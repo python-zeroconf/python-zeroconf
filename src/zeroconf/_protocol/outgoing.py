@@ -22,9 +22,8 @@
 
 import enum
 import logging
-from collections.abc import Sequence
 from struct import Struct
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 
 from .._cache import DNSCache
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
