@@ -74,56 +74,56 @@ cdef class DNSIncoming:
 
     cpdef bint is_response(self)
 
-    @cython.locals(offset="unsigned char")
+    @cython.locals(offset="unsigned int")
     cdef unsigned int _read_network_order_unsigned_short(self)
 
-    @cython.locals(offset="unsigned char")
+    @cython.locals(offset="unsigned int")
     cdef unsigned int _read_network_order_unsigned_long(self)
 
     @cython.locals(
-        off=cython.uint,
-        label_idx=cython.uint,
-        length=cython.uint,
-        link=cython.uint,
-        link_data=cython.uint,
+        off="unsigned int",
+        label_idx="unsigned int",
+        length="unsigned int",
+        link="unsigned int",
+        link_data="unsigned int",
         link_py_int=object,
         linked_labels=cython.list
     )
-    cdef cython.uint _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
+    cdef unsigned int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
     cdef _read_header(self)
 
     cdef _initial_parse(self)
 
     @cython.locals(
-        end=cython.uint,
-        length=cython.uint
+        end="unsigned int",
+        length="unsigned int"
     )
     cdef _read_others(self)
 
     cdef _read_questions(self)
 
     @cython.locals(
-        length=cython.uint,
+        length="unsigned int",
     )
     cdef str _read_character_string(self)
 
     cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(
-        name_start=cython.uint
+        name_start="unsigned int"
     )
     cdef _read_record(self, object domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
 
     @cython.locals(
-        offset="unsigned char",
-        offset_plus_one="unsigned char",
-        offset_plus_two="unsigned char",
-        window=cython.uint,
-        bit=cython.uint,
-        byte=cython.uint,
-        i=cython.uint,
-        bitmap_length=cython.uint,
+        offset="unsigned int",
+        offset_plus_one="unsigned int",
+        offset_plus_two="unsigned int",
+        window="unsigned int",
+        bit="unsigned int",
+        byte="unsigned int",
+        i="unsigned int",
+        bitmap_length="unsigned int",
     )
     cdef _read_bitmap(self, unsigned int end)
 
