@@ -53,8 +53,10 @@ PACK_BYTE = Struct('>B').pack
 PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
+SHORT_CACHE_MAX = 128
+
 BYTE_TABLE = tuple(PACK_BYTE(i) for i in range(256))
-SHORT_LOOKUP = tuple(PACK_SHORT(i) for i in range(32))
+SHORT_LOOKUP = tuple(PACK_SHORT(i) for i in range(SHORT_CACHE_MAX))
 
 
 class State(enum.Enum):
@@ -223,7 +225,7 @@ class DNSOutgoing:
 
     def _get_short(self, value: int_) -> bytes:
         """Gets an unsigned short from a certain position in the packet"""
-        if value < 32:
+        if value < SHORT_CACHE_MAX:
             return SHORT_LOOKUP[value]
         return PACK_SHORT(value)
 
