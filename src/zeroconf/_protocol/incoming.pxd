@@ -74,10 +74,10 @@ cdef class DNSIncoming:
 
     cpdef is_response(self)
 
-    @cython.locals(offset="unsigned char")
+    @cython.locals(offset="unsigned int")
     cdef unsigned int _read_network_order_unsigned_short(self)
 
-    @cython.locals(offset="unsigned char")
+    @cython.locals(offset="unsigned int")
     cdef unsigned int _read_network_order_unsigned_long(self)
 
     @cython.locals(
@@ -116,9 +116,9 @@ cdef class DNSIncoming:
     cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, unsigned int length)
 
     @cython.locals(
-        offset="unsigned char",
-        offset_plus_one="unsigned char",
-        offset_plus_two="unsigned char",
+        offset="unsigned int",
+        offset_plus_one="unsigned int",
+        offset_plus_two="unsigned int",
         window=cython.uint,
         bit=cython.uint,
         byte=cython.uint,
