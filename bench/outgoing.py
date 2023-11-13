@@ -158,7 +158,7 @@ out = generate_packets()
 
 
 def make_outgoing_message() -> None:
-    out.state = State.init
+    out.state = State.init.value
     out.finished = False
     out.packets()
 

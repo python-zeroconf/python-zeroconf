@@ -21,8 +21,8 @@ cdef object PACK_BYTE
 cdef object PACK_SHORT
 cdef object PACK_LONG
 
-cdef object STATE_INIT
-cdef object STATE_FINISHED
+cdef unsigned int STATE_INIT
+cdef unsigned int STATE_FINISHED
 
 cdef object LOGGING_IS_ENABLED_FOR
 cdef object LOGGING_DEBUG
@@ -40,7 +40,7 @@ cdef class DNSOutgoing:
     cdef public cython.list data
     cdef public unsigned int size
     cdef public bint allow_long
-    cdef public object state
+    cdef public unsigned int state
     cdef public cython.list questions
     cdef public cython.list answers
     cdef public cython.list authorities
@@ -91,6 +91,8 @@ cdef class DNSOutgoing:
     )
     cpdef write_name(self, cython.str name)
 
+    cdef _write_link_to_name(self, unsigned int index)
+
     cpdef write_short(self, object value)
 
     cpdef write_string(self, cython.bytes value)
@@ -98,6 +100,8 @@ cdef class DNSOutgoing:
     cpdef _write_utf(self, cython.str value)
 
     @cython.locals(
+        debug_enable=bint,
+        made_progress=bint,
         questions_offset=object,
         answer_offset=object,
         authority_offset=object,
@@ -107,7 +111,7 @@ cdef class DNSOutgoing:
         authorities_written=object,
         additionals_written=object,
     )
-    cdef _packets(self)
+    cpdef packets(self)
 
     cpdef add_question_or_all_cache(self, DNSCache cache, object now, str name, object type_, object class_)
 
@@ -124,6 +128,6 @@ cdef class DNSOutgoing:
 
     cpdef add_additional_answer(self, DNSRecord record)
 
-    cpdef is_query(self)
+    cpdef bint is_query(self)
 
-    cpdef is_response(self)
+    cpdef bint is_response(self)
