@@ -224,10 +224,8 @@ class DNSOutgoing:
         self.size += 1
 
     def _get_short(self, value: int_) -> bytes:
-        """Gets an unsigned short from a certain position in the packet"""
-        if value < SHORT_CACHE_MAX:
-            return SHORT_LOOKUP[value]
-        return PACK_SHORT(value)
+        """Convert an unsigned short to 2 bytes."""
+        return SHORT_LOOKUP[value] if value < SHORT_CACHE_MAX else PACK_SHORT(value)
 
     def _insert_short_at_start(self, value: int_) -> None:
         """Inserts an unsigned short at the start of the packet"""
