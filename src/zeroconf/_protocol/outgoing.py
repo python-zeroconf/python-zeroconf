@@ -453,7 +453,7 @@ class DNSOutgoing:
             authorities_written = self._write_records_from_offset(self.authorities, authority_offset)
             additionals_written = self._write_records_from_offset(self.additionals, additional_offset)
 
-            made_progress = len(self.data)
+            made_progress = bool(self.data)
 
             self._insert_short_at_start(additionals_written)
             self._insert_short_at_start(authorities_written)
