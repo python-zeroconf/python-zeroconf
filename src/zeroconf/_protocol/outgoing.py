@@ -285,13 +285,13 @@ class DNSOutgoing:
             self._write_link_to_name(index)
             return
 
+        start_size = self.size
         labels = name.split('.')
         # Write each new label or a pointer to the existing one in the packet
-        self.names[name] = self.size
+        self.names[name] = start_size
         self._write_utf(labels[0])
 
         name_length = 0
-        start_size = self.size
         for count in range(1, len(labels)):
             partial_name = '.'.join(labels[count:])
             index = self.names.get(partial_name, 0)
