@@ -428,10 +428,16 @@ class DNSOutgoing:
         first_time = True
         debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG)
 
-        while first_time or self._has_more_to_add(
-            questions_offset, answer_offset, authority_offset, additional_offset
+        while (
+            first_time is True
+            or self._has_more_to_add(questions_offset, answer_offset, authority_offset, additional_offset)
+            is True
         ):
-            first_time = False
+            if first_time:
+                first_time = False
+            else:
+                self._reset_for_next_packet()
+
             if debug_enable:
                 log.debug(
                     "offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
@@ -471,8 +477,12 @@ class DNSOutgoing:
                     additional_offset,
                 )
 
-            if self.is_query() and self._has_more_to_add(
-                questions_offset, answer_offset, authority_offset, additional_offset
+            if (
+                self.is_query() is True
+                and self._has_more_to_add(
+                    questions_offset, answer_offset, authority_offset, additional_offset
+                )
+                is True
             ):
                 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
                 if debug_enable:  # pragma: no branch
@@ -487,7 +497,6 @@ class DNSOutgoing:
                 self._insert_short_at_start(self.id)
 
             self.packets_data.append(b''.join(self.data))
-            self._reset_for_next_packet()
 
             if (
                 not questions_written
