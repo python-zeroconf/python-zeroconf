@@ -46,7 +46,7 @@ cdef class DNSOutgoing:
     cdef public cython.list authorities
     cdef public cython.list additionals
 
-    cdef _reset_for_next_packet(self)
+    cpdef _reset_for_next_packet(self)
 
     cdef _write_byte(self, object value)
 
@@ -78,7 +78,7 @@ cdef class DNSOutgoing:
 
     cdef _write_records_from_offset(self, cython.list records, object offset)
 
-    cdef _has_more_to_add(self, object questions_offset, object answer_offset, object authority_offset, object additional_offset)
+    cdef bint _has_more_to_add(self, object questions_offset, object answer_offset, object authority_offset, object additional_offset)
 
     cdef _write_ttl(self, DNSRecord record, object now)
 
@@ -102,6 +102,7 @@ cdef class DNSOutgoing:
     @cython.locals(
         debug_enable=bint,
         made_progress=bint,
+        has_more_to_add=bint,
         questions_offset=object,
         answer_offset=object,
         authority_offset=object,

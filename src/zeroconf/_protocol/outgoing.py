@@ -425,13 +425,10 @@ class DNSOutgoing:
         authority_offset = 0
         additional_offset = 0
         # we have to at least write out the question
-        first_time = True
         debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG)
+        has_more_to_add = True
 
-        while first_time or self._has_more_to_add(
-            questions_offset, answer_offset, authority_offset, additional_offset
-        ):
-            first_time = False
+        while has_more_to_add:
             if debug_enable:
                 log.debug(
                     "offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
@@ -473,9 +470,11 @@ class DNSOutgoing:
                     additional_offset,
                 )
 
-            if self.is_query() and self._has_more_to_add(
+            has_more_to_add = self._has_more_to_add(
                 questions_offset, answer_offset, authority_offset, additional_offset
-            ):
+            )
+
+            if has_more_to_add and self.is_query():
                 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
                 if debug_enable:  # pragma: no branch
                     log.debug("Setting TC flag")
@@ -498,7 +497,8 @@ class DNSOutgoing:
                 log.warning("packets() made no progress adding records; returning")
                 break
 
-            self._reset_for_next_packet()
+            if has_more_to_add:
+                self._reset_for_next_packet()
 
         self.state = STATE_FINISHED
         return self.packets_data

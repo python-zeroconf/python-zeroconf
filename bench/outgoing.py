@@ -158,9 +158,10 @@ out = generate_packets()
 
 
 def make_outgoing_message() -> None:
+    out.packets()
     out.state = State.init.value
     out.finished = False
-    out.packets()
+    out._reset_for_next_packet()
 
 
 count = 100000
