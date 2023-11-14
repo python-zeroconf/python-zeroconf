@@ -185,7 +185,7 @@ def generate_service_query(
         else:
             pointer_known_answers = known_answers
         questions_with_known_answers[question] = pointer_known_answers
-        if qu_question is False:
+        if not qu_question:
             question_history.add_question_at_time(question, now, known_answers)
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
