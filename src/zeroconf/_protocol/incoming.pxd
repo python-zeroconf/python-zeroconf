@@ -74,12 +74,6 @@ cdef class DNSIncoming:
 
     cpdef bint is_response(self)
 
-    @cython.locals(offset="unsigned int")
-    cdef unsigned int _read_network_order_unsigned_short(self)
-
-    @cython.locals(offset="unsigned int")
-    cdef unsigned int _read_network_order_unsigned_long(self)
-
     @cython.locals(
         off="unsigned int",
         label_idx="unsigned int",
@@ -91,16 +85,19 @@ cdef class DNSIncoming:
     )
     cdef unsigned int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
+    @cython.locals(offset="unsigned int")
     cdef _read_header(self)
 
     cdef _initial_parse(self)
 
     @cython.locals(
         end="unsigned int",
-        length="unsigned int"
+        length="unsigned int",
+        offset="unsigned int"
     )
     cdef _read_others(self)
 
+    @cython.locals(offset="unsigned int")
     cdef _read_questions(self)
 
     @cython.locals(
@@ -111,7 +108,8 @@ cdef class DNSIncoming:
     cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(
-        name_start="unsigned int"
+        name_start="unsigned int",
+        offset="unsigned int"
     )
     cdef _read_record(self, object domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
 

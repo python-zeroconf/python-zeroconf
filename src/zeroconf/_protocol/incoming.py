@@ -203,40 +203,29 @@ class DNSIncoming:
             ]
         )
 
-    def _read_network_order_unsigned_short(self) -> _int:
-        """Reads an unsigned short in network order from the packet."""
-        offset = self.offset
-        view = self.view
-        self.offset += 2
-        return view[offset] << 8 | view[offset + 1]
-
-    def _read_network_order_unsigned_long(self) -> _int:
-        """Reads an unsigned long in network order from the packet.
-
-        This is used to read the TTL, which is a 32-bit unsigned integer.
-
-        TTL is supposed to be unsigned https://www.rfc-editor.org/errata/eid2130
-        """
-        offset = self.offset
-        view = self.view
-        self.offset += 4
-        return view[offset] << 24 | view[offset + 1] << 16 | view[offset + 2] << 8 | view[offset + 3]
-
     def _read_header(self) -> None:
         """Reads header portion of packet"""
-        self.id = self._read_network_order_unsigned_short()
-        self.flags = self._read_network_order_unsigned_short()
-        self.num_questions = self._read_network_order_unsigned_short()
-        self.num_answers = self._read_network_order_unsigned_short()
-        self.num_authorities = self._read_network_order_unsigned_short()
-        self.num_additionals = self._read_network_order_unsigned_short()
+        view = self.view
+        offset = self.offset
+        self.offset += 12
+        # The header has 6 unsigned shorts in network order
+        self.id = view[offset] << 8 | view[offset + 1]
+        self.flags = view[offset + 2] << 8 | view[offset + 3]
+        self.num_questions = view[offset + 4] << 8 | view[offset + 5]
+        self.num_answers = view[offset + 6] << 8 | view[offset + 7]
+        self.num_authorities = view[offset + 8] << 8 | view[offset + 9]
+        self.num_additionals = view[offset + 10] << 8 | view[offset + 11]
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
+        view = self.view
         for _ in range(self.num_questions):
             name = self._read_name()
-            type_ = self._read_network_order_unsigned_short()
-            class_ = self._read_network_order_unsigned_short()
+            offset = self.offset
+            self.offset += 4
+            # The question has 2 unsigned shorts in network order
+            type_ = view[offset] << 8 | view[offset + 1]
+            class_ = view[offset + 2] << 8 | view[offset + 3]
             question = DNSQuestion(name, type_, class_)
             self.questions.append(question)
 
@@ -259,12 +248,17 @@ class DNSIncoming:
         packet"""
         self._did_read_others = True
         n = self.num_answers + self.num_authorities + self.num_additionals
+        view = self.view
         for _ in range(n):
             domain = self._read_name()
-            type_ = self._read_network_order_unsigned_short()
-            class_ = self._read_network_order_unsigned_short()
-            ttl = self._read_network_order_unsigned_long()
-            length = self._read_network_order_unsigned_short()
+            offset = self.offset
+            self.offset += 10
+            # type_, class_ and length are unsigned shorts in network order
+            # ttl is an unsigned long in network order https://www.rfc-editor.org/errata/eid2130
+            type_ = view[offset] << 8 | view[offset + 1]
+            class_ = view[offset + 2] << 8 | view[offset + 3]
+            ttl = view[offset + 4] << 24 | view[offset + 5] << 16 | view[offset + 6] << 8 | view[offset + 7]
+            length = view[offset + 8] << 8 | view[offset + 9]
             end = self.offset + length
             rec = None
             try:
@@ -298,9 +292,13 @@ class DNSIncoming:
         if type_ == _TYPE_TXT:
             return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
         if type_ == _TYPE_SRV:
-            priority = self._read_network_order_unsigned_short()
-            weight = self._read_network_order_unsigned_short()
-            port = self._read_network_order_unsigned_short()
+            view = self.view
+            offset = self.offset
+            self.offset += 6
+            # The SRV record has 3 unsigned shorts in network order
+            priority = view[offset] << 8 | view[offset + 1]
+            weight = view[offset + 2] << 8 | view[offset + 3]
+            port = view[offset + 4] << 8 | view[offset + 5]
             return DNSService(
                 domain,
                 type_,
