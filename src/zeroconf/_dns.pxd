@@ -4,19 +4,21 @@ import cython
 from ._protocol.outgoing cimport DNSOutgoing
 
 
-cdef object _LEN_BYTE
-cdef object _LEN_SHORT
-cdef object _LEN_INT
+cdef cython.uint _LEN_BYTE
+cdef cython.uint _LEN_SHORT
+cdef cython.uint _LEN_INT
 
-cdef object _NAME_COMPRESSION_MIN_SIZE
-cdef object _BASE_MAX_SIZE
+cdef cython.uint _NAME_COMPRESSION_MIN_SIZE
+cdef cython.uint _BASE_MAX_SIZE
 
 cdef cython.uint _EXPIRE_FULL_TIME_MS
 cdef cython.uint _EXPIRE_STALE_TIME_MS
 cdef cython.uint _RECENT_TIME_MS
 
-cdef object _CLASS_UNIQUE
-cdef object _CLASS_MASK
+cdef cython.uint _TYPE_ANY
+
+cdef cython.uint _CLASS_UNIQUE
+cdef cython.uint _CLASS_MASK
 
 cdef object current_time_millis
 
@@ -25,10 +27,12 @@ cdef class DNSEntry:
     cdef public str key
     cdef public str name
     cdef public cython.uint type
-    cdef public object class_
-    cdef public object unique
+    cdef public cython.uint class_
+    cdef public cython.uint unique
 
-    cdef _dns_entry_matches(self, DNSEntry other)
+    cdef _set_class(self, cython.uint class_)
+
+    cdef bint _dns_entry_matches(self, DNSEntry other)
 
 cdef class DNSQuestion(DNSEntry):
 
@@ -68,7 +72,7 @@ cdef class DNSAddress(DNSRecord):
     cdef public object address
     cdef public object scope_id
 
-    cdef _eq(self, DNSAddress other)
+    cdef bint _eq(self, DNSAddress other)
 
     cpdef write(self, DNSOutgoing out)
 
@@ -79,7 +83,7 @@ cdef class DNSHinfo(DNSRecord):
     cdef public object cpu
     cdef public object os
 
-    cdef _eq(self, DNSHinfo other)
+    cdef bint _eq(self, DNSHinfo other)
 
     cpdef write(self, DNSOutgoing out)
 
@@ -89,7 +93,7 @@ cdef class DNSPointer(DNSRecord):
     cdef public str alias
     cdef public str alias_key
 
-    cdef _eq(self, DNSPointer other)
+    cdef bint _eq(self, DNSPointer other)
 
     cpdef write(self, DNSOutgoing out)
 
@@ -98,7 +102,7 @@ cdef class DNSText(DNSRecord):
     cdef public cython.int _hash
     cdef public object text
 
-    cdef _eq(self, DNSText other)
+    cdef bint _eq(self, DNSText other)
 
     cpdef write(self, DNSOutgoing out)
 
@@ -111,7 +115,7 @@ cdef class DNSService(DNSRecord):
     cdef public str server
     cdef public str server_key
 
-    cdef _eq(self, DNSService other)
+    cdef bint _eq(self, DNSService other)
 
     cpdef write(self, DNSOutgoing out)
 
@@ -121,7 +125,7 @@ cdef class DNSNsec(DNSRecord):
     cdef public object next_name
     cdef public cython.list rdtypes
 
-    cdef _eq(self, DNSNsec other)
+    cdef bint _eq(self, DNSNsec other)
 
     cpdef write(self, DNSOutgoing out)
 

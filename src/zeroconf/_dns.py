@@ -67,10 +67,13 @@ class DNSEntry:
 
     __slots__ = ('key', 'name', 'type', 'class_', 'unique')
 
-    def __init__(self, name: str, type_: _int, class_: _int) -> None:
+    def __init__(self, name: str, type_: int, class_: int) -> None:
         self.name = name
         self.key = name.lower()
         self.type = type_
+        self._set_class(class_)
+
+    def _set_class(self, class_: _int) -> None:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
