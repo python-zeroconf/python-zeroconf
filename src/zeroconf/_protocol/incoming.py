@@ -230,10 +230,10 @@ class DNSIncoming:
         # The header has 6 unsigned shorts in network order
         self.id = view[offset] << 8 | view[offset + 1]
         self.flags = view[offset + 2] << 8 | view[offset + 3]
-        self.num_questions = view[offset + 4] << 8 | view[offset + 5]
-        self.num_answers = view[offset + 6] << 8 | view[offset + 7]
-        self.num_authorities = view[offset + 8] << 8 | view[offset + 9]
-        self.num_additionals = view[offset + 10] << 8 | view[offset + 11]
+        self._num_questions = view[offset + 4] << 8 | view[offset + 5]
+        self._num_answers = view[offset + 6] << 8 | view[offset + 7]
+        self._num_authorities = view[offset + 8] << 8 | view[offset + 9]
+        self._num_additionals = view[offset + 10] << 8 | view[offset + 11]
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
