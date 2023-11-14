@@ -331,7 +331,7 @@ class DNSOutgoing:
     def _write_record_class(self, record: Union[DNSQuestion_, DNSRecord_]) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
         class_ = record.class_
-        if record.unique is True and self.multicast is True:
+        if record.unique is True and self.multicast:
             self.write_short(class_ | _CLASS_UNIQUE)
         else:
             self.write_short(class_)
