@@ -113,7 +113,7 @@ class RecordManager:
                 record = cast(_UniqueRecordsType, record)
 
             maybe_entry = cache.async_get_unique(record)
-            if record.is_expired(now_float) is False:
+            if record.is_expired(now_float):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
