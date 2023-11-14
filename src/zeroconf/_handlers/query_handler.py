@@ -277,7 +277,7 @@ class QueryHandler:
         elif strategy_type == _ANSWER_STRATEGY_TEXT:  # pragma: no branch
             service = services[0]
             dns_text = service._dns_text(None)
-            if known_answers.suppresses(dns_text):
+            if not known_answers.suppresses(dns_text):
                 answer_set[dns_text] = set()
 
         return answer_set
