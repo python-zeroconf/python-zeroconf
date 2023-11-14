@@ -53,7 +53,7 @@ cdef class DNSIncoming:
     cdef const unsigned char [:] view
     cdef unsigned int _data_len
     cdef cython.dict _name_cache
-    cdef public cython.list questions
+    cdef cython.list _questions
     cdef cython.list _answers
     cdef public cython.uint id
     cdef cython.uint _num_questions

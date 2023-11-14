@@ -81,7 +81,7 @@ class DNSIncoming:
         'view',
         '_data_len',
         '_name_cache',
-        'questions',
+        '_questions',
         '_answers',
         'id',
         '_num_questions',
@@ -110,7 +110,7 @@ class DNSIncoming:
         self.view = data
         self._data_len = len(data)
         self._name_cache: Dict[int, List[str]] = {}
-        self.questions: List[DNSQuestion] = []
+        self._questions: List[DNSQuestion] = []
         self._answers: List[DNSRecord] = []
         self.id = 0
         self._num_questions = 0
@@ -150,6 +150,11 @@ class DNSIncoming:
     def truncated(self) -> bool:
         """Returns true if this is a truncated."""
         return (self.flags & _FLAGS_TC) == _FLAGS_TC
+
+    @property
+    def questions(self) -> List[DNSQuestion]:
+        """Questions in the packet."""
+        return self._questions
 
     def _initial_parse(self) -> None:
         """Parse the data needed to initalize the packet object."""
