@@ -34,6 +34,8 @@ cdef class DNSQuestion(DNSEntry):
 
     cdef public cython.int _hash
 
+    cpdef bint answered_by(self, DNSRecord rec)
+
 cdef class DNSRecord(DNSEntry):
 
     cdef public cython.float ttl
