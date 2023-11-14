@@ -202,7 +202,7 @@ class QueryHandler:
             dns_pointer = DNSPointer(
                 _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0.0
             )
-            if known_answers.suppresses(dns_pointer):
+            if not known_answers.suppresses(dns_pointer):
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
@@ -237,7 +237,7 @@ class QueryHandler:
                 seen_types.add(dns_address.type)
                 if dns_address.type != type_:
                     additionals.add(dns_address)
-                elif known_answers.suppresses(dns_address):
+                elif not known_answers.suppresses(dns_address):
                     answers.append(dns_address)
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
             if answers:
@@ -272,7 +272,7 @@ class QueryHandler:
             # https://tools.ietf.org/html/rfc6763#section-12.2.
             service = services[0]
             dns_service = service._dns_service(None)
-            if known_answers.suppresses(dns_service):
+            if not known_answers.suppresses(dns_service):
                 answer_set[dns_service] = service._get_address_and_nsec_records(None)
         elif strategy_type == _ANSWER_STRATEGY_TEXT:  # pragma: no branch
             service = services[0]
