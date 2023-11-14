@@ -175,9 +175,7 @@ def generate_service_query(
         question = DNSQuestion(type_, _TYPE_PTR, _CLASS_IN)
         question.unicast = qu_question
         known_answers = {
-            record
-            for record in cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
-            if record.is_stale(now) is False
+            record for record in cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN) if record.is_stale(now)
         }
         if not qu_question and question_history.suppresses(question, now, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
@@ -440,7 +438,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 continue
 
             # If its expired or already exists in the cache it cannot be updated.
-            if old_record is not None or record.is_expired(now) is True:
+            if old_record is not None or record.is_expired(now):
                 continue
 
             if record_type in _ADDRESS_RECORD_TYPES:

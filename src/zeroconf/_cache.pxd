@@ -24,7 +24,7 @@ cdef class DNSCache:
     cdef public cython.dict cache
     cdef public cython.dict service_cache
 
-    cpdef async_add_records(self, object entries)
+    cpdef bint async_add_records(self, object entries)
 
     cpdef async_remove_records(self, object entries)
 

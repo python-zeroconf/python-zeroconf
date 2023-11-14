@@ -69,15 +69,15 @@ cdef class DNSIncoming:
     @cython.locals(
         question=DNSQuestion
     )
-    cpdef has_qu_question(self)
+    cpdef bint has_qu_question(self)
 
-    cpdef is_query(self)
+    cpdef bint is_query(self)
 
-    cpdef is_probe(self)
+    cpdef bint is_probe(self)
 
     cpdef answers(self)
 
-    cpdef is_response(self)
+    cpdef bint is_response(self)
 
     @cython.locals(
         off=cython.uint,

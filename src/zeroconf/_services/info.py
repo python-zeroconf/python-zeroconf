@@ -779,7 +779,7 @@ class ServiceInfo(RecordUpdateListener):
 
         now = current_time_millis()
 
-        if self._load_from_cache(zc, now) is True:
+        if self._load_from_cache(zc, now):
             return True
 
         if TYPE_CHECKING:
