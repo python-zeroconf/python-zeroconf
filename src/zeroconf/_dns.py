@@ -139,7 +139,7 @@ class DNSQuestion(DNSEntry):
         unique shares the same mask as the one
         used for unicast.
         """
-        return self.unique
+        return bool(self.unique)
 
     @unicast.setter
     def unicast(self, value: bool) -> None:
