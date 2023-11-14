@@ -345,12 +345,13 @@ class DNSIncoming:
     def _read_bitmap(self, end: _int) -> List[int]:
         """Reads an NSEC bitmap from the packet."""
         rdtypes = []
+        view = self.view
         while self.offset < end:
             offset = self.offset
             offset_plus_one = offset + 1
             offset_plus_two = offset + 2
-            window = self.view[offset]
-            bitmap_length = self.view[offset_plus_one]
+            window = view[offset]
+            bitmap_length = view[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
             for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
                 for bit in range(0, 8):
