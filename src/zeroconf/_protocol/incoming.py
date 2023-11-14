@@ -86,7 +86,6 @@ class DNSIncoming:
         'num_additionals',
         'valid',
         'now',
-        '_now_float',
         'scope_id',
         'source',
     )
@@ -115,7 +114,6 @@ class DNSIncoming:
         self.valid = False
         self._did_read_others = False
         self.now = now or current_time_millis()
-        self._now_float = self.now
         self.source = source
         self.scope_id = scope_id
         try:
@@ -284,9 +282,7 @@ class DNSIncoming:
     ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
-            dns_address = DNSAddress(domain, type_, class_, ttl, self._read_string(4))
-            dns_address.created = self._now_float
-            return dns_address
+            return DNSAddress(domain, type_, class_, ttl, self._read_string(4), None, self.now)
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
             return DNSPointer(domain, type_, class_, ttl, self._read_name(), self.now)
         if type_ == _TYPE_TXT:
@@ -321,10 +317,7 @@ class DNSIncoming:
                 self.now,
             )
         if type_ == _TYPE_AAAA:
-            dns_address = DNSAddress(domain, type_, class_, ttl, self._read_string(16))
-            dns_address.created = self._now_float
-            dns_address.scope_id = self.scope_id
-            return dns_address
+            return DNSAddress(domain, type_, class_, ttl, self._read_string(16), self.scope_id, self.now)
         if type_ == _TYPE_NSEC:
             name_start = self.offset
             return DNSNsec(

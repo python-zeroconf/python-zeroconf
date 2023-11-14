@@ -241,7 +241,6 @@ class DNSAddress(DNSRecord):
         class_: int,
         ttl: int,
         address: bytes,
-        *,
         scope_id: Optional[int] = None,
         created: Optional[float] = None,
     ) -> None:

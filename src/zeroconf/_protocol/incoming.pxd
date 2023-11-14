@@ -57,7 +57,6 @@ cdef class DNSIncoming:
     cdef public cython.uint num_additionals
     cdef public object valid
     cdef public object now
-    cdef cython.float _now_float
     cdef public object scope_id
     cdef public object source
 
