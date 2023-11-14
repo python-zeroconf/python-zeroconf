@@ -222,7 +222,7 @@ class DNSIncoming:
             type_, class_ = UNPACK_HH(self.data, self.offset)
             self.offset += 4
             question = DNSQuestion(name, type_, class_)
-            if question.unique:
+            if question.unique:  # QU questions use the same bit as unique
                 self._has_qu_question = True
             self.questions.append(question)
 
