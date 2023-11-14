@@ -374,7 +374,6 @@ class DNSText(DNSRecord):
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, text: bytes, created: Optional[float] = None
     ) -> None:
-        assert isinstance(text, (bytes, type(None)))
         super().__init__(name, type_, class_, ttl, created)
         self.text = text
         self._hash = hash((self.key, type_, self.class_, text))
