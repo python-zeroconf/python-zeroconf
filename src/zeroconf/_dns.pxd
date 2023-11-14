@@ -39,22 +39,22 @@ cdef class DNSRecord(DNSEntry):
     cdef public cython.float ttl
     cdef public cython.float created
 
-    cdef _suppressed_by_answer(self, DNSRecord answer)
+    cdef bint _suppressed_by_answer(self, DNSRecord answer)
 
     @cython.locals(
         answers=cython.list,
     )
-    cpdef suppressed_by(self, object msg)
+    cpdef bint suppressed_by(self, object msg)
 
     cpdef get_remaining_ttl(self, cython.float now)
 
     cpdef get_expiration_time(self, cython.uint percent)
 
-    cpdef is_expired(self, cython.float now)
+    cpdef bint is_expired(self, cython.float now)
 
-    cpdef is_stale(self, cython.float now)
+    cpdef bint is_stale(self, cython.float now)
 
-    cpdef is_recent(self, cython.float now)
+    cpdef bint is_recent(self, cython.float now)
 
     cpdef reset_ttl(self, DNSRecord other)
 
