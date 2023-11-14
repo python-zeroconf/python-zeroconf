@@ -52,14 +52,14 @@ cdef class DNSIncoming:
     cdef public bytes data
     cdef const unsigned char [:] view
     cdef unsigned int _data_len
-    cdef public cython.dict name_cache
+    cdef cython.dict _name_cache
     cdef public cython.list questions
     cdef cython.list _answers
     cdef public cython.uint id
-    cdef public cython.uint num_questions
-    cdef public cython.uint num_answers
-    cdef public cython.uint num_authorities
-    cdef public cython.uint num_additionals
+    cdef cython.uint _num_questions
+    cdef cython.uint _num_answers
+    cdef cython.uint _num_authorities
+    cdef cython.uint _num_additionals
     cdef public bint valid
     cdef public object now
     cdef cython.float _now_float
