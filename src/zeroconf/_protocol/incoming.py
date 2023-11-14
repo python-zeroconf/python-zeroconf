@@ -93,6 +93,7 @@ class DNSIncoming:
         '_now_float',
         'scope_id',
         'source',
+        '_has_qu_question',
     )
 
     def __init__(
@@ -122,6 +123,7 @@ class DNSIncoming:
         self._now_float = self.now
         self.source = source
         self.scope_id = scope_id
+        self._has_qu_question = False
         try:
             self._initial_parse()
         except DECODE_EXCEPTIONS:
@@ -142,13 +144,7 @@ class DNSIncoming:
 
     def has_qu_question(self) -> bool:
         """Returns true if any question is a QU question."""
-        if not self.num_questions:
-            return False
-        for question in self.questions:
-            # QU questions use the same bit as unique
-            if question.unique:
-                return True
-        return False
+        return self._has_qu_question
 
     @property
     def truncated(self) -> bool:
@@ -226,6 +222,8 @@ class DNSIncoming:
             type_, class_ = UNPACK_HH(self.data, self.offset)
             self.offset += 4
             question = DNSQuestion(name, type_, class_)
+            if question.unique:
+                self._has_qu_question = True
             self.questions.append(question)
 
     def _read_character_string(self) -> str:
