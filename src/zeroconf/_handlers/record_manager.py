@@ -106,14 +106,14 @@ class RecordManager:
                 )
                 record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
 
-            if record.unique is True:  # https://tools.ietf.org/html/rfc6762#section-10.2
+            if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record_type, record.class_))
 
             if TYPE_CHECKING:
                 record = cast(_UniqueRecordsType, record)
 
             maybe_entry = cache.async_get_unique(record)
-            if record.is_expired(now_float) is False:
+            if not record.is_expired(now_float):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
@@ -151,7 +151,7 @@ class RecordManager:
         new = False
         if other_adds or address_adds:
             new = cache.async_add_records(address_adds)
-            if cache.async_add_records(other_adds) is True:
+            if cache.async_add_records(other_adds):
                 new = True
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query

@@ -52,32 +52,33 @@ cdef class DNSIncoming:
     cdef public bytes data
     cdef const unsigned char [:] view
     cdef unsigned int _data_len
-    cdef public cython.dict name_cache
-    cdef public cython.list questions
+    cdef cython.dict _name_cache
+    cdef cython.list _questions
     cdef cython.list _answers
-    cdef public object id
-    cdef public cython.uint num_questions
-    cdef public cython.uint num_answers
-    cdef public cython.uint num_authorities
-    cdef public cython.uint num_additionals
-    cdef public object valid
+    cdef public cython.uint id
+    cdef cython.uint _num_questions
+    cdef cython.uint _num_answers
+    cdef cython.uint _num_authorities
+    cdef cython.uint _num_additionals
+    cdef public bint valid
     cdef public object now
     cdef cython.float _now_float
     cdef public object scope_id
     cdef public object source
+    cdef bint _has_qu_question
 
     @cython.locals(
         question=DNSQuestion
     )
-    cpdef has_qu_question(self)
+    cpdef bint has_qu_question(self)
 
-    cpdef is_query(self)
+    cpdef bint is_query(self)
 
-    cpdef is_probe(self)
+    cpdef bint is_probe(self)
 
     cpdef answers(self)
 
-    cpdef is_response(self)
+    cpdef bint is_response(self)
 
     @cython.locals(
         off=cython.uint,

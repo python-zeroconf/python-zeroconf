@@ -177,7 +177,7 @@ def generate_service_query(
         known_answers = {
             record
             for record in cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
-            if record.is_stale(now) is False
+            if not record.is_stale(now)
         }
         if not qu_question and question_history.suppresses(question, now, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
@@ -187,7 +187,7 @@ def generate_service_query(
         else:
             pointer_known_answers = known_answers
         questions_with_known_answers[question] = pointer_known_answers
-        if qu_question is False:
+        if not qu_question:
             question_history.add_question_at_time(question, now, known_answers)
 
     return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
@@ -440,7 +440,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 continue
 
             # If its expired or already exists in the cache it cannot be updated.
-            if old_record is not None or record.is_expired(now) is True:
+            if old_record is not None or record.is_expired(now):
                 continue
 
             if record_type in _ADDRESS_RECORD_TYPES:

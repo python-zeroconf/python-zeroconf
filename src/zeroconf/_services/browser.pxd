@@ -25,7 +25,7 @@ cdef class _DNSPointerOutgoingBucket:
 
     cpdef add(self, cython.uint max_compressed_size, DNSQuestion question, cython.set answers)
 
-@cython.locals(cache=DNSCache, question_history=QuestionHistory, record=DNSRecord)
+@cython.locals(cache=DNSCache, question_history=QuestionHistory, record=DNSRecord, qu_question=bint)
 cpdef generate_service_query(
     object zc,
     float now,
