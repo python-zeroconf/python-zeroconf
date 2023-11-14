@@ -156,6 +156,26 @@ class DNSIncoming:
         """Questions in the packet."""
         return self._questions
 
+    @property
+    def num_questions(self) -> int:
+        """Number of questions in the packet."""
+        return self._num_questions
+
+    @property
+    def num_answers(self) -> int:
+        """Number of answers in the packet."""
+        return self._num_answers
+
+    @property
+    def num_authorities(self) -> int:
+        """Number of authorities in the packet."""
+        return self._num_authorities
+
+    @property
+    def num_additionals(self) -> int:
+        """Number of additionals in the packet."""
+        return self._num_additionals
+
     def _initial_parse(self) -> None:
         """Parse the data needed to initalize the packet object."""
         self._read_header()
