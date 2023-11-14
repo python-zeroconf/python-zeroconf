@@ -100,7 +100,7 @@ cdef class DNSPointer(DNSRecord):
 cdef class DNSText(DNSRecord):
 
     cdef public cython.int _hash
-    cdef public object text
+    cdef public bytes text
 
     cdef bint _eq(self, DNSText other)
 
@@ -109,9 +109,9 @@ cdef class DNSText(DNSRecord):
 cdef class DNSService(DNSRecord):
 
     cdef public cython.int _hash
-    cdef public object priority
-    cdef public object weight
-    cdef public object port
+    cdef public cython.uint priority
+    cdef public cython.uint weight
+    cdef public cython.uint port
     cdef public str server
     cdef public str server_key
 
