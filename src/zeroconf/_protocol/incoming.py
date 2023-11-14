@@ -369,8 +369,9 @@ class DNSIncoming:
 
     def _decode_labels_at_offset(self, off: _int, labels: List[str], seen_pointers: Set[int]) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
+        view = self.view
         while off < self._data_len:
-            length = self.view[off]
+            length = view[off]
             if length == 0:
                 return off + DNS_COMPRESSION_HEADER_LEN
 
@@ -386,7 +387,7 @@ class DNSIncoming:
                 )
 
             # We have a DNS compression pointer
-            link_data = self.view[off + 1]
+            link_data = view[off + 1]
             link = (length & 0x3F) * 256 + link_data
             link_py_int = link
             if link > self._data_len:
