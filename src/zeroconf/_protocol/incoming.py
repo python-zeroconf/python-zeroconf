@@ -101,7 +101,7 @@ class DNSIncoming:
         self.flags = 0
         self.offset = 0
         self.data = data
-        self.view = memoryview(data)
+        self.view = data
         self._data_len = len(data)
         self.name_cache: Dict[int, List[str]] = {}
         self.questions: List[DNSQuestion] = []
