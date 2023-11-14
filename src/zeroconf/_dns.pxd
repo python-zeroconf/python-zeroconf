@@ -80,8 +80,8 @@ cdef class DNSAddress(DNSRecord):
 cdef class DNSHinfo(DNSRecord):
 
     cdef public cython.int _hash
-    cdef public object cpu
-    cdef public object os
+    cdef public str cpu
+    cdef public str os
 
     cdef bint _eq(self, DNSHinfo other)
 
