@@ -65,7 +65,7 @@ cdef class DNSIncoming:
     cdef cython.float _now_float
     cdef public object scope_id
     cdef public object source
-    cdef public bint _has_qu_question
+    cdef bint _has_qu_question
 
     @cython.locals(
         question=DNSQuestion
