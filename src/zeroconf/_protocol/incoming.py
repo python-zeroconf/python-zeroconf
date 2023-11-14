@@ -203,7 +203,7 @@ class DNSIncoming:
                 'n_ans=%s' % self._num_answers,
                 'n_auth=%s' % self._num_authorities,
                 'n_add=%s' % self._num_additionals,
-                'questions=%s' % self.questions,
+                'questions=%s' % self._questions,
                 'answers=%s' % self.answers(),
             ]
         )
@@ -222,6 +222,7 @@ class DNSIncoming:
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
+        questions = self._questions
         for _ in range(self._num_questions):
             name = self._read_name()
             type_, class_ = UNPACK_HH(self.data, self.offset)
@@ -229,7 +230,7 @@ class DNSIncoming:
             question = DNSQuestion(name, type_, class_)
             if question.unique:  # QU questions use the same bit as unique
                 self._has_qu_question = True
-            self.questions.append(question)
+            questions.append(question)
 
     def _read_character_string(self) -> str:
         """Reads a character string from the packet"""
