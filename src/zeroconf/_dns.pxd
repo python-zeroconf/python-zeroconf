@@ -28,7 +28,7 @@ cdef class DNSEntry:
     cdef public str name
     cdef public cython.uint type
     cdef public cython.uint class_
-    cdef public cython.uint unique
+    cdef public bint unique
 
     cdef _set_class(self, cython.uint class_)
 
