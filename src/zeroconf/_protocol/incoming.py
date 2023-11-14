@@ -76,18 +76,19 @@ class DNSIncoming:
         'data',
         'view',
         '_data_len',
-        'name_cache',
-        'questions',
+        '_name_cache',
+        '_questions',
         '_answers',
         'id',
-        'num_questions',
-        'num_answers',
-        'num_authorities',
-        'num_additionals',
+        '_num_questions',
+        '_num_answers',
+        '_num_authorities',
+        '_num_additionals',
         'valid',
         'now',
         'scope_id',
         'source',
+        '_has_qu_question',
     )
 
     def __init__(
@@ -103,19 +104,20 @@ class DNSIncoming:
         self.data = data
         self.view = data
         self._data_len = len(data)
-        self.name_cache: Dict[int, List[str]] = {}
-        self.questions: List[DNSQuestion] = []
+        self._name_cache: Dict[int, List[str]] = {}
+        self._questions: List[DNSQuestion] = []
         self._answers: List[DNSRecord] = []
         self.id = 0
-        self.num_questions = 0
-        self.num_answers = 0
-        self.num_authorities = 0
-        self.num_additionals = 0
+        self._num_questions = 0
+        self._num_answers = 0
+        self._num_authorities = 0
+        self._num_additionals = 0
         self.valid = False
         self._did_read_others = False
         self.now = now or current_time_millis()
         self.source = source
         self.scope_id = scope_id
+        self._has_qu_question = False
         try:
             self._initial_parse()
         except DECODE_EXCEPTIONS:
@@ -136,24 +138,43 @@ class DNSIncoming:
 
     def has_qu_question(self) -> bool:
         """Returns true if any question is a QU question."""
-        if not self.num_questions:
-            return False
-        for question in self.questions:
-            # QU questions use the same bit as unique
-            if question.unique is True:
-                return True
-        return False
+        return self._has_qu_question
 
     @property
     def truncated(self) -> bool:
         """Returns true if this is a truncated."""
         return (self.flags & _FLAGS_TC) == _FLAGS_TC
 
+    @property
+    def questions(self) -> List[DNSQuestion]:
+        """Questions in the packet."""
+        return self._questions
+
+    @property
+    def num_questions(self) -> int:
+        """Number of questions in the packet."""
+        return self._num_questions
+
+    @property
+    def num_answers(self) -> int:
+        """Number of answers in the packet."""
+        return self._num_answers
+
+    @property
+    def num_authorities(self) -> int:
+        """Number of authorities in the packet."""
+        return self._num_authorities
+
+    @property
+    def num_additionals(self) -> int:
+        """Number of additionals in the packet."""
+        return self._num_additionals
+
     def _initial_parse(self) -> None:
         """Parse the data needed to initalize the packet object."""
         self._read_header()
         self._read_questions()
-        if not self.num_questions:
+        if not self._num_questions:
             self._read_others()
         self.valid = True
 
@@ -184,7 +205,7 @@ class DNSIncoming:
 
     def is_probe(self) -> bool:
         """Returns true if this is a probe."""
-        return self.num_authorities > 0
+        return self._num_authorities > 0
 
     def __repr__(self) -> str:
         return '<DNSIncoming:{%s}>' % ', '.join(
@@ -192,11 +213,11 @@ class DNSIncoming:
                 'id=%s' % self.id,
                 'flags=%s' % self.flags,
                 'truncated=%s' % self.truncated,
-                'n_q=%s' % self.num_questions,
-                'n_ans=%s' % self.num_answers,
-                'n_auth=%s' % self.num_authorities,
-                'n_add=%s' % self.num_additionals,
-                'questions=%s' % self.questions,
+                'n_q=%s' % self._num_questions,
+                'n_ans=%s' % self._num_answers,
+                'n_auth=%s' % self._num_authorities,
+                'n_add=%s' % self._num_additionals,
+                'questions=%s' % self._questions,
                 'answers=%s' % self.answers(),
             ]
         )
@@ -217,7 +238,8 @@ class DNSIncoming:
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
         view = self.view
-        for _ in range(self.num_questions):
+        questions = self._questions
+        for _ in range(self._num_questions):
             name = self._read_name()
             offset = self.offset
             self.offset += 4
@@ -225,7 +247,9 @@ class DNSIncoming:
             type_ = view[offset] << 8 | view[offset + 1]
             class_ = view[offset + 2] << 8 | view[offset + 3]
             question = DNSQuestion(name, type_, class_)
-            self.questions.append(question)
+            if question.unique:  # QU questions use the same bit as unique
+                self._has_qu_question = True
+            questions.append(question)
 
     def _read_character_string(self) -> str:
         """Reads a character string from the packet"""
@@ -245,8 +269,8 @@ class DNSIncoming:
         """Reads the answers, authorities and additionals section of the
         packet"""
         self._did_read_others = True
-        n = self.num_answers + self.num_authorities + self.num_additionals
         view = self.view
+        n = self._num_answers + self._num_authorities + self._num_additionals
         for _ in range(n):
             domain = self._read_name()
             offset = self.offset
@@ -359,7 +383,7 @@ class DNSIncoming:
         seen_pointers: Set[int] = set()
         original_offset = self.offset
         self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers)
-        self.name_cache[original_offset] = labels
+        self._name_cache[original_offset] = labels
         name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
             raise IncomingDecodeError(
@@ -402,12 +426,12 @@ class DNSIncoming:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} was seen again from {self.source}"
                 )
-            linked_labels = self.name_cache.get(link_py_int)
+            linked_labels = self._name_cache.get(link_py_int)
             if not linked_labels:
                 linked_labels = []
                 seen_pointers.add(link_py_int)
                 self._decode_labels_at_offset(link, linked_labels, seen_pointers)
-                self.name_cache[link_py_int] = linked_labels
+                self._name_cache[link_py_int] = linked_labels
             labels.extend(linked_labels)
             if len(labels) > MAX_DNS_LABELS:
                 raise IncomingDecodeError(

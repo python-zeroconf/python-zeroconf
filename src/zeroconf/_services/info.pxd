@@ -61,7 +61,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     cpdef async_update_records(self, object zc, cython.float now, cython.list records)
 
     @cython.locals(cache=DNSCache)
-    cpdef _load_from_cache(self, object zc, cython.float now)
+    cpdef bint _load_from_cache(self, object zc, cython.float now)
 
     cdef _unpack_text_into_properties(self)
 

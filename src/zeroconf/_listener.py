@@ -113,7 +113,7 @@ class AsyncListener:
             self.data == data
             and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
             and self.last_message is not None
-            and self.last_message.has_qu_question() is False
+            and not self.last_message.has_qu_question()
         ):
             # Guard against duplicate packets
             if debug:
@@ -169,7 +169,7 @@ class AsyncListener:
                 )
             return
 
-        if msg.is_query() is False:
+        if not msg.is_query():
             self._record_manager.async_updates_from_response(msg)
             return
 

@@ -167,7 +167,7 @@ class _QueryResponse:
         if TYPE_CHECKING:
             record = cast(_UniqueRecordsType, record)
         maybe_entry = self._cache.async_get_unique(record)
-        return bool(maybe_entry is not None and maybe_entry.is_recent(self._now) is True)
+        return bool(maybe_entry is not None and maybe_entry.is_recent(self._now))
 
     def _has_mcast_record_in_last_second(self, record: DNSRecord) -> bool:
         """Check if an answer was seen in the last second.
@@ -202,7 +202,7 @@ class QueryHandler:
             dns_pointer = DNSPointer(
                 _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0.0
             )
-            if known_answers.suppresses(dns_pointer) is False:
+            if not known_answers.suppresses(dns_pointer):
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
@@ -213,7 +213,7 @@ class QueryHandler:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
             dns_pointer = service._dns_pointer(None)
-            if known_answers.suppresses(dns_pointer) is True:
+            if known_answers.suppresses(dns_pointer):
                 continue
             answer_set[dns_pointer] = {
                 service._dns_service(None),
@@ -237,7 +237,7 @@ class QueryHandler:
                 seen_types.add(dns_address.type)
                 if dns_address.type != type_:
                     additionals.add(dns_address)
-                elif known_answers.suppresses(dns_address) is False:
+                elif not known_answers.suppresses(dns_address):
                     answers.append(dns_address)
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
             if answers:
@@ -272,12 +272,12 @@ class QueryHandler:
             # https://tools.ietf.org/html/rfc6763#section-12.2.
             service = services[0]
             dns_service = service._dns_service(None)
-            if known_answers.suppresses(dns_service) is False:
+            if not known_answers.suppresses(dns_service):
                 answer_set[dns_service] = service._get_address_and_nsec_records(None)
         elif strategy_type == _ANSWER_STRATEGY_TEXT:  # pragma: no branch
             service = services[0]
             dns_text = service._dns_text(None)
-            if known_answers.suppresses(dns_text) is False:
+            if not known_answers.suppresses(dns_text):
                 answer_set[dns_text] = set()
 
         return answer_set
@@ -307,7 +307,7 @@ class QueryHandler:
         # at least one answer strategy
         answers: List[DNSRecord] = []
         for msg in msgs:
-            if msg.is_probe() is True:
+            if msg.is_probe():
                 is_probe = True
             else:
                 answers.extend(msg.answers())
@@ -319,7 +319,7 @@ class QueryHandler:
         now = msg.now
         for strategy in strategies:
             question = strategy.question
-            is_unicast = question.unique is True  # unique and unicast are the same flag
+            is_unicast = question.unique  # unique and unicast are the same flag
             if not is_unicast:
                 if known_answers_set is None:  # pragma: no branch
                     known_answers_set = known_answers.lookup_set()

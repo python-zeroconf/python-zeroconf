@@ -316,6 +316,7 @@ class PacketGeneration(unittest.TestCase):
         parsed1 = r.DNSIncoming(packets[0])
         assert parsed1.questions[0].unicast is True
         assert len(parsed1.questions) == 30
+        assert parsed1.num_questions == 30
         assert parsed1.num_authorities == 88
         assert parsed1.truncated
         parsed2 = r.DNSIncoming(packets[1])

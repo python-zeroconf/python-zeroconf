@@ -420,7 +420,7 @@ class ServiceInfo(RecordUpdateListener):
         """Set IPv6 addresses from the cache."""
         address_list: List[Union[IPv4Address, IPv6Address]] = []
         for record in self._get_address_records_from_cache_by_type(zc, type):
-            if record.is_expired(now) is True:
+            if record.is_expired(now):
                 continue
             ip_addr = _cached_ip_addresses_wrapper(record.address)
             if ip_addr is not None:
@@ -463,7 +463,7 @@ class ServiceInfo(RecordUpdateListener):
 
         Returns True if a new record was added.
         """
-        if record.is_expired(now) is True:
+        if record.is_expired(now):
             return False
 
         record_key = record.key
@@ -779,7 +779,7 @@ class ServiceInfo(RecordUpdateListener):
 
         now = current_time_millis()
 
-        if self._load_from_cache(zc, now) is True:
+        if self._load_from_cache(zc, now):
             return True
 
         if TYPE_CHECKING:
