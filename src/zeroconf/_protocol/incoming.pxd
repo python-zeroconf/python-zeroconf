@@ -55,12 +55,12 @@ cdef class DNSIncoming:
     cdef public cython.dict name_cache
     cdef public cython.list questions
     cdef cython.list _answers
-    cdef public object id
+    cdef public cython.uint id
     cdef public cython.uint num_questions
     cdef public cython.uint num_answers
     cdef public cython.uint num_authorities
     cdef public cython.uint num_additionals
-    cdef public object valid
+    cdef public bint valid
     cdef public object now
     cdef cython.float _now_float
     cdef public object scope_id
