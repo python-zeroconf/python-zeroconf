@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.127.0 (2023-11-15)
+
+### Feature
+
+* Small speed up to writing outgoing packets ([#1316](https://github.com/python-zeroconf/python-zeroconf/issues/1316)) ([`cd28476`](https://github.com/python-zeroconf/python-zeroconf/commit/cd28476f6b0a6c2c733273fb24ddaac6c7bbdf65))
+* Speed up incoming packet reader ([#1314](https://github.com/python-zeroconf/python-zeroconf/issues/1314)) ([`0d60b61`](https://github.com/python-zeroconf/python-zeroconf/commit/0d60b61538a5d4b6f44b2369333b6e916a0a55b4))
+* Small speed up to processing incoming dns records ([#1315](https://github.com/python-zeroconf/python-zeroconf/issues/1315)) ([`bfe4c24`](https://github.com/python-zeroconf/python-zeroconf/commit/bfe4c24881a7259713425df5ab00ffe487518841))
+
 ## v0.126.0 (2023-11-13)
 
 ### Feature
