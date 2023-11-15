@@ -32,6 +32,7 @@ cdef object LOGGING_DEBUG
 
 cdef cython.tuple BYTE_TABLE
 cdef cython.tuple SHORT_LOOKUP
+cdef cython.dict LONG_LOOKUP
 
 cdef class DNSOutgoing:
 
@@ -70,7 +71,7 @@ cdef class DNSOutgoing:
         index=cython.uint,
         length=cython.uint
     )
-    cdef cython.bint _write_record(self, DNSRecord record, object now)
+    cdef cython.bint _write_record(self, DNSRecord record, float now)
 
     @cython.locals(class_=cython.uint)
     cdef _write_record_class(self, DNSEntry record)
@@ -91,7 +92,7 @@ cdef class DNSOutgoing:
 
     cdef bint _has_more_to_add(self, unsigned int questions_offset, unsigned int answer_offset, unsigned int authority_offset, unsigned int additional_offset)
 
-    cdef _write_ttl(self, DNSRecord record, object now)
+    cdef _write_ttl(self, DNSRecord record, float now)
 
     @cython.locals(
         labels=cython.list,
