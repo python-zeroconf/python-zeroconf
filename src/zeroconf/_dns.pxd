@@ -69,7 +69,7 @@ cdef class DNSRecord(DNSEntry):
 cdef class DNSAddress(DNSRecord):
 
     cdef public cython.int _hash
-    cdef public object address
+    cdef public bytes address
     cdef public object scope_id
 
     cdef bint _eq(self, DNSAddress other)
