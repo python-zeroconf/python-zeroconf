@@ -60,10 +60,6 @@ MAX_NAME_LENGTH = 253
 
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
-UNPACK_3H = struct.Struct(b'!3H').unpack_from
-UNPACK_6H = struct.Struct(b'!6H').unpack_from
-UNPACK_HH = struct.Struct(b'!HH').unpack_from
-UNPACK_HHiH = struct.Struct(b'!HHiH').unpack_from
 
 _seen_logs: Dict[str, Union[int, tuple]] = {}
 _str = str
@@ -90,7 +86,6 @@ class DNSIncoming:
         '_num_additionals',
         'valid',
         'now',
-        '_now_float',
         'scope_id',
         'source',
         '_has_qu_question',
@@ -120,7 +115,6 @@ class DNSIncoming:
         self.valid = False
         self._did_read_others = False
         self.now = now or current_time_millis()
-        self._now_float = self.now
         self.source = source
         self.scope_id = scope_id
         self._has_qu_question = False
@@ -230,23 +224,28 @@ class DNSIncoming:
 
     def _read_header(self) -> None:
         """Reads header portion of packet"""
-        (
-            self.id,
-            self.flags,
-            self._num_questions,
-            self._num_answers,
-            self._num_authorities,
-            self._num_additionals,
-        ) = UNPACK_6H(self.data)
+        view = self.view
+        offset = self.offset
         self.offset += 12
+        # The header has 6 unsigned shorts in network order
+        self.id = view[offset] << 8 | view[offset + 1]
+        self.flags = view[offset + 2] << 8 | view[offset + 3]
+        self._num_questions = view[offset + 4] << 8 | view[offset + 5]
+        self._num_answers = view[offset + 6] << 8 | view[offset + 7]
+        self._num_authorities = view[offset + 8] << 8 | view[offset + 9]
+        self._num_additionals = view[offset + 10] << 8 | view[offset + 11]
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
+        view = self.view
         questions = self._questions
         for _ in range(self._num_questions):
             name = self._read_name()
-            type_, class_ = UNPACK_HH(self.data, self.offset)
+            offset = self.offset
             self.offset += 4
+            # The question has 2 unsigned shorts in network order
+            type_ = view[offset] << 8 | view[offset + 1]
+            class_ = view[offset + 2] << 8 | view[offset + 3]
             question = DNSQuestion(name, type_, class_)
             if question.unique:  # QU questions use the same bit as unique
                 self._has_qu_question = True
@@ -270,11 +269,18 @@ class DNSIncoming:
         """Reads the answers, authorities and additionals section of the
         packet"""
         self._did_read_others = True
+        view = self.view
         n = self._num_answers + self._num_authorities + self._num_additionals
         for _ in range(n):
             domain = self._read_name()
-            type_, class_, ttl, length = UNPACK_HHiH(self.data, self.offset)
+            offset = self.offset
             self.offset += 10
+            # type_, class_ and length are unsigned shorts in network order
+            # ttl is an unsigned long in network order https://www.rfc-editor.org/errata/eid2130
+            type_ = view[offset] << 8 | view[offset + 1]
+            class_ = view[offset + 2] << 8 | view[offset + 3]
+            ttl = view[offset + 4] << 24 | view[offset + 5] << 16 | view[offset + 6] << 8 | view[offset + 7]
+            length = view[offset + 8] << 8 | view[offset + 9]
             end = self.offset + length
             rec = None
             try:
@@ -300,16 +306,19 @@ class DNSIncoming:
     ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
-            dns_address = DNSAddress(domain, type_, class_, ttl, self._read_string(4))
-            dns_address.created = self._now_float
-            return dns_address
+            return DNSAddress(domain, type_, class_, ttl, self._read_string(4), None, self.now)
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
             return DNSPointer(domain, type_, class_, ttl, self._read_name(), self.now)
         if type_ == _TYPE_TXT:
             return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
         if type_ == _TYPE_SRV:
-            priority, weight, port = UNPACK_3H(self.data, self.offset)
+            view = self.view
+            offset = self.offset
             self.offset += 6
+            # The SRV record has 3 unsigned shorts in network order
+            priority = view[offset] << 8 | view[offset + 1]
+            weight = view[offset + 2] << 8 | view[offset + 3]
+            port = view[offset + 4] << 8 | view[offset + 5]
             return DNSService(
                 domain,
                 type_,
@@ -332,10 +341,7 @@ class DNSIncoming:
                 self.now,
             )
         if type_ == _TYPE_AAAA:
-            dns_address = DNSAddress(domain, type_, class_, ttl, self._read_string(16))
-            dns_address.created = self._now_float
-            dns_address.scope_id = self.scope_id
-            return dns_address
+            return DNSAddress(domain, type_, class_, ttl, self._read_string(16), self.scope_id, self.now)
         if type_ == _TYPE_NSEC:
             name_start = self.offset
             return DNSNsec(
@@ -356,12 +362,13 @@ class DNSIncoming:
     def _read_bitmap(self, end: _int) -> List[int]:
         """Reads an NSEC bitmap from the packet."""
         rdtypes = []
+        view = self.view
         while self.offset < end:
             offset = self.offset
             offset_plus_one = offset + 1
             offset_plus_two = offset + 2
-            window = self.view[offset]
-            bitmap_length = self.view[offset_plus_one]
+            window = view[offset]
+            bitmap_length = view[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
             for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
                 for bit in range(0, 8):
@@ -386,8 +393,9 @@ class DNSIncoming:
 
     def _decode_labels_at_offset(self, off: _int, labels: List[str], seen_pointers: Set[int]) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
+        view = self.view
         while off < self._data_len:
-            length = self.view[off]
+            length = view[off]
             if length == 0:
                 return off + DNS_COMPRESSION_HEADER_LEN
 
@@ -403,7 +411,7 @@ class DNSIncoming:
                 )
 
             # We have a DNS compression pointer
-            link_data = self.view[off + 1]
+            link_data = view[off + 1]
             link = (length & 0x3F) * 256 + link_data
             link_py_int = link
             if link > self._data_len:

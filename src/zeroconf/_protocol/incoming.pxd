@@ -21,11 +21,6 @@ cdef cython.uint _FLAGS_TC
 cdef cython.uint _FLAGS_QR_QUERY
 cdef cython.uint _FLAGS_QR_RESPONSE
 
-cdef object UNPACK_3H
-cdef object UNPACK_6H
-cdef object UNPACK_HH
-cdef object UNPACK_HHiH
-
 cdef object DECODE_EXCEPTIONS
 
 cdef object IncomingDecodeError
@@ -62,7 +57,6 @@ cdef class DNSIncoming:
     cdef cython.uint _num_additionals
     cdef public bint valid
     cdef public object now
-    cdef cython.float _now_float
     cdef public object scope_id
     cdef public object source
     cdef bint _has_qu_question
@@ -81,49 +75,53 @@ cdef class DNSIncoming:
     cpdef bint is_response(self)
 
     @cython.locals(
-        off=cython.uint,
-        label_idx=cython.uint,
-        length=cython.uint,
-        link=cython.uint,
-        link_data=cython.uint,
+        off="unsigned int",
+        label_idx="unsigned int",
+        length="unsigned int",
+        link="unsigned int",
+        link_data="unsigned int",
         link_py_int=object,
         linked_labels=cython.list
     )
-    cdef cython.uint _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
+    cdef unsigned int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
+    @cython.locals(offset="unsigned int")
     cdef _read_header(self)
 
     cdef _initial_parse(self)
 
     @cython.locals(
-        end=cython.uint,
-        length=cython.uint
+        end="unsigned int",
+        length="unsigned int",
+        offset="unsigned int"
     )
     cdef _read_others(self)
 
+    @cython.locals(offset="unsigned int")
     cdef _read_questions(self)
 
     @cython.locals(
-        length=cython.uint,
+        length="unsigned int",
     )
     cdef str _read_character_string(self)
 
     cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(
-        name_start=cython.uint
+        name_start="unsigned int",
+        offset="unsigned int"
     )
-    cdef _read_record(self, object domain, unsigned int type_, object class_, object ttl, unsigned int length)
+    cdef _read_record(self, object domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
 
     @cython.locals(
-        offset=cython.uint,
-        offset_plus_one=cython.uint,
-        offset_plus_two=cython.uint,
-        window=cython.uint,
-        bit=cython.uint,
-        byte=cython.uint,
-        i=cython.uint,
-        bitmap_length=cython.uint,
+        offset="unsigned int",
+        offset_plus_one="unsigned int",
+        offset_plus_two="unsigned int",
+        window="unsigned int",
+        bit="unsigned int",
+        byte="unsigned int",
+        i="unsigned int",
+        bitmap_length="unsigned int",
     )
     cdef _read_bitmap(self, unsigned int end)
 
