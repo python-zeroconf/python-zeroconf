@@ -31,6 +31,8 @@ from .._exceptions import NamePartTooLongException
 from .._logger import log
 from ..const import (
     _CLASS_UNIQUE,
+    _DNS_HOST_TTL,
+    _DNS_OTHER_TTL,
     _DNS_PACKET_HEADER_LEN,
     _FLAGS_QR_MASK,
     _FLAGS_QR_QUERY,
@@ -57,6 +59,7 @@ SHORT_CACHE_MAX = 128
 
 BYTE_TABLE = tuple(PACK_BYTE(i) for i in range(256))
 SHORT_LOOKUP = tuple(PACK_SHORT(i) for i in range(SHORT_CACHE_MAX))
+LONG_LOOKUP = {i: PACK_LONG(i) for i in (_DNS_OTHER_TTL, _DNS_HOST_TTL, 0)}
 
 
 class State(enum.Enum):
@@ -242,7 +245,12 @@ class DNSOutgoing:
 
     def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self.data.append(PACK_LONG(int(value)))
+        value_as_int = int(value)
+        long_bytes = LONG_LOOKUP.get(value_as_int)
+        if long_bytes is not None:
+            self.data.append(long_bytes)
+        else:
+            self.data.append(PACK_LONG(value_as_int))
         self.size += 4
 
     def write_string(self, value: bytes_) -> None:

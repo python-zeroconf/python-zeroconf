@@ -32,6 +32,7 @@ cdef object LOGGING_DEBUG
 
 cdef cython.tuple BYTE_TABLE
 cdef cython.tuple SHORT_LOOKUP
+cdef cython.dict LONG_LOOKUP
 
 cdef class DNSOutgoing:
 
