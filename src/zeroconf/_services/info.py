@@ -24,7 +24,7 @@ import asyncio
 import random
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, _BaseAddress, ip_address
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
 from .._dns import (
     DNSAddress,
@@ -396,17 +396,18 @@ class ServiceInfo(RecordUpdateListener):
 
         index = 0
         end = len(text)
-        pairs: List[Tuple[bytes, Optional[bytes]]] = []
+        properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
         while index < end:
             length = text[index]
             index += 1
             key_value = text[index : index + length]
             key_sep_value = key_value.partition(b'=')
-            pairs.append((key_sep_value[0], key_sep_value[2] or None))
+            key = key_sep_value[0]
+            if key not in properties:
+                properties[key] = None if length == 0 else key_sep_value[2]
             index += length
 
-        pairs.reverse()
-        self._properties = dict(pairs)
+        self._properties = properties
 
     def get_name(self) -> str:
         """Name accessor"""
