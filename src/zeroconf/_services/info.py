@@ -404,8 +404,7 @@ class ServiceInfo(RecordUpdateListener):
             key_sep_value = key_value.partition(b'=')
             key = key_sep_value[0]
             if key not in properties:
-                value = key_sep_value[2]
-                properties[key] = None if len(value) == 0 else value
+                properties[key] = key_sep_value[2] or None
             index += length
 
         self._properties = properties
