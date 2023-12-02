@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.128.0 (2023-12-02)
+
+### Feature
+
+* Speed up unpacking TXT record data in ServiceInfo ([#1318](https://github.com/python-zeroconf/python-zeroconf/issues/1318)) ([`a200842`](https://github.com/python-zeroconf/python-zeroconf/commit/a20084281e66bdb9c37183a5eb992435f5b866ac))
+
 ## v0.127.0 (2023-11-15)
 
 ### Feature
