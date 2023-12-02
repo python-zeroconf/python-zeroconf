@@ -388,14 +388,14 @@ class ServiceInfo(RecordUpdateListener):
     def _unpack_text_into_properties(self) -> None:
         """Unpacks the text field into properties"""
         text = self.text
-        if not text:
+        end = len(text)
+        if end == 0:
             # Properties should be set atomically
             # in case another thread is reading them
             self._properties = {}
             return
 
         index = 0
-        end = len(text)
         properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
         while index < end:
             length = text[index]
