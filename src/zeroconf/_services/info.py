@@ -24,7 +24,7 @@ import asyncio
 import random
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, _BaseAddress, ip_address
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union, cast
 
 from .._dns import (
     DNSAddress,
@@ -395,20 +395,18 @@ class ServiceInfo(RecordUpdateListener):
             return
 
         index = 0
-        pairs: List[bytes] = []
         end = len(text)
+        pairs: List[Tuple[bytes, Optional[bytes]]] = []
         while index < end:
             length = text[index]
             index += 1
-            pairs.append(text[index : index + length])
+            key_value = text[index : index + length]
+            key_sep_value = key_value.partition(b'=')
+            pairs.append((key_sep_value[0], key_sep_value[2] or None))
             index += length
 
-        # Reverse the list so that the first item in the list
-        # is the last item in the text field. This is important
-        # to preserve backwards compatibility where the first
-        # key always wins if the key is seen multiple times.
         pairs.reverse()
-        self._properties = {key: value or None for key, _, value in (pair.partition(b'=') for pair in pairs)}
+        self._properties = dict(pairs)
 
     def get_name(self) -> str:
         """Name accessor"""

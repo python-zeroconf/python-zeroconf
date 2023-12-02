@@ -63,7 +63,8 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(cache=DNSCache)
     cpdef bint _load_from_cache(self, object zc, cython.float now)
 
-    cdef _unpack_text_into_properties(self)
+    @cython.locals(length="unsigned char", index="unsigned int", key_value=bytes, key_sep_value=tuple)
+    cdef void _unpack_text_into_properties(self)
 
     cdef _set_properties(self, cython.dict properties)
 
