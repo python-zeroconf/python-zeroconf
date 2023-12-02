@@ -86,19 +86,19 @@ cdef class DNSIncoming:
     cdef unsigned int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
     @cython.locals(offset="unsigned int")
-    cdef void _read_header(self)
+    cdef _read_header(self)
 
-    cdef void _initial_parse(self)
+    cdef _initial_parse(self)
 
     @cython.locals(
         end="unsigned int",
         length="unsigned int",
         offset="unsigned int"
     )
-    cdef void _read_others(self)
+    cdef _read_others(self)
 
     @cython.locals(offset="unsigned int")
-    cdef void _read_questions(self)
+    cdef _read_questions(self)
 
     @cython.locals(
         length="unsigned int",
