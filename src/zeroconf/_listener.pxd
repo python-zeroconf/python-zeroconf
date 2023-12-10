@@ -22,18 +22,18 @@ cdef class AsyncListener:
     cdef ServiceRegistry _registry
     cdef RecordManager _record_manager
     cdef public cython.bytes data
-    cdef public cython.float last_time
+    cdef public double last_time
     cdef public DNSIncoming last_message
     cdef public object transport
     cdef public object sock_description
     cdef public cython.dict _deferred
     cdef public cython.dict _timers
 
-    @cython.locals(now=cython.float, debug=cython.bint)
+    @cython.locals(now=double, debug=cython.bint)
     cpdef datagram_received(self, cython.bytes bytes, cython.tuple addrs)
 
     @cython.locals(msg=DNSIncoming)
-    cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, cython.float now, bytes data, cython.tuple addrs)
+    cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, double now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)
 

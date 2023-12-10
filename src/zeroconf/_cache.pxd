@@ -36,7 +36,7 @@ cdef class DNSCache:
     @cython.locals(
         record=DNSRecord,
     )
-    cpdef async_expire(self, float now)
+    cpdef async_expire(self, double now)
 
     @cython.locals(
         records=cython.dict,
@@ -68,6 +68,6 @@ cdef class DNSCache:
 
     @cython.locals(
         record=DNSRecord,
-        created_float=cython.float,
+        created_double=double,
     )
-    cpdef async_mark_unique_records_older_than_1s_to_expire(self, cython.set unique_types, object answers, float now)
+    cpdef async_mark_unique_records_older_than_1s_to_expire(self, cython.set unique_types, object answers, double now)

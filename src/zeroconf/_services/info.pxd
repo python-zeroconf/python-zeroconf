@@ -66,10 +66,10 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public cython.set _get_address_and_nsec_records_cache
 
     @cython.locals(record_update=RecordUpdate, update=bint, cache=DNSCache)
-    cpdef async_update_records(self, object zc, cython.float now, cython.list records)
+    cpdef async_update_records(self, object zc, double now, cython.list records)
 
     @cython.locals(cache=DNSCache)
-    cpdef bint _load_from_cache(self, object zc, cython.float now)
+    cpdef bint _load_from_cache(self, object zc, double now)
 
     @cython.locals(length="unsigned char", index="unsigned int", key_value=bytes, key_sep_value=tuple)
     cdef void _unpack_text_into_properties(self)
@@ -79,21 +79,21 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef _set_text(self, cython.bytes text)
 
     @cython.locals(record=DNSAddress)
-    cdef _get_ip_addresses_from_cache_lifo(self, object zc, cython.float now, object type)
+    cdef _get_ip_addresses_from_cache_lifo(self, object zc, double now, object type)
 
     @cython.locals(
         dns_service_record=DNSService,
         dns_text_record=DNSText,
         dns_address_record=DNSAddress
     )
-    cdef bint _process_record_threadsafe(self, object zc, DNSRecord record, cython.float now)
+    cdef bint _process_record_threadsafe(self, object zc, DNSRecord record, double now)
 
     @cython.locals(cache=DNSCache)
     cdef cython.list _get_address_records_from_cache_by_type(self, object zc, object _type)
 
-    cdef _set_ipv4_addresses_from_cache(self, object zc, object now)
+    cdef _set_ipv4_addresses_from_cache(self, object zc, double now)
 
-    cdef _set_ipv6_addresses_from_cache(self, object zc, object now)
+    cdef _set_ipv6_addresses_from_cache(self, object zc, double now)
 
     cdef cython.list _ip_addresses_by_version_value(self, object version_value)
 

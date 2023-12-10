@@ -28,7 +28,7 @@ cdef class _DNSPointerOutgoingBucket:
 @cython.locals(cache=DNSCache, question_history=QuestionHistory, record=DNSRecord, qu_question=bint)
 cpdef generate_service_query(
     object zc,
-    float now,
+    double now,
     list type_,
     bint multicast,
     object question_type
@@ -73,7 +73,7 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cpdef _enqueue_callback(self, object state_change, object type_, object name)
 
     @cython.locals(record_update=RecordUpdate, record=DNSRecord, cache=DNSCache, service=DNSRecord, pointer=DNSPointer)
-    cpdef async_update_records(self, object zc, cython.float now, cython.list records)
+    cpdef async_update_records(self, object zc, double now, cython.list records)
 
     cpdef cython.list _names_matching_types(self, object types)
 

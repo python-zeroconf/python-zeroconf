@@ -152,8 +152,8 @@ class DNSOutgoing:
 
     def add_answer_at_time(self, record: Optional[DNSRecord], now: Union[float, int]) -> None:
         """Adds an answer if it does not expire by a certain time"""
-        now_float = now
-        if record is not None and (now_float == 0 or not record.is_expired(now_float)):
+        now_double = now
+        if record is not None and (now_double == 0 or not record.is_expired(now_double)):
             self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
