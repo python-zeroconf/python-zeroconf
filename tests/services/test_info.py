@@ -606,6 +606,51 @@ def test_multiple_addresses():
             ]
 
 
+@unittest.skipIf(sys.version_info < (3, 9, 0), 'Requires newer python')
+def test_scoped_addresses_from_cache():
+    type_ = "_http._tcp.local."
+    registration_name = f"scoped.{type_}"
+    zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+    host = "scoped.local."
+
+    zeroconf.cache.async_add_records(
+        [
+            r.DNSPointer(
+                type_,
+                const._TYPE_PTR,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                registration_name,
+            ),
+            r.DNSService(
+                registration_name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                80,
+                host,
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_AAAA,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_pton(socket.AF_INET6, "fe80::52e:c2f2:bc5f:e9c6"),
+                scope_id=12,
+            ),
+        ]
+    )
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name)
+    info.load_from_cache(zeroconf)
+    assert info.parsed_scoped_addresses() == ["fe80::52e:c2f2:bc5f:e9c6%12"]
+    assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [ip_address("fe80::52e:c2f2:bc5f:e9c6%12")]
+    zeroconf.close()
+
+
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
 @pytest.mark.asyncio
