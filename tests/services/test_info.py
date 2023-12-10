@@ -7,6 +7,7 @@ import asyncio
 import logging
 import os
 import socket
+import sys
 import threading
 import unittest
 from ipaddress import ip_address
@@ -538,6 +539,7 @@ def test_multiple_addresses():
     assert info.addresses == [address, address]
     assert info.parsed_addresses() == [address_parsed, address_parsed]
     assert info.parsed_scoped_addresses() == [address_parsed, address_parsed]
+    ipaddress_supports_scope_id = sys.version_info >= (3, 9, 0)
 
     if has_working_ipv6() and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
@@ -576,14 +578,18 @@ def test_multiple_addresses():
             assert info.ip_addresses_by_version(r.IPVersion.All) == [
                 ip_address(address),
                 ip_address(address_v6),
-                ip_address(address_v6_ll),
+                ip_address(address_v6_ll_scoped_parsed)
+                if ipaddress_supports_scope_id
+                else ip_address(address_v6_ll),
             ]
             assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
             assert info.ip_addresses_by_version(r.IPVersion.V4Only) == [ip_address(address)]
             assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6, address_v6_ll]
             assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [
                 ip_address(address_v6),
-                ip_address(address_v6_ll),
+                ip_address(address_v6_ll_scoped_parsed)
+                if ipaddress_supports_scope_id
+                else ip_address(address_v6_ll),
             ]
             assert info.parsed_addresses() == [address_parsed, address_v6_parsed, address_v6_ll_parsed]
             assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
@@ -591,13 +597,58 @@ def test_multiple_addresses():
             assert info.parsed_scoped_addresses() == [
                 address_parsed,
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed,
+                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
             ]
             assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed,
+                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
             ]
+
+
+@unittest.skipIf(sys.version_info < (3, 9, 0), 'Requires newer python')
+def test_scoped_addresses_from_cache():
+    type_ = "_http._tcp.local."
+    registration_name = f"scoped.{type_}"
+    zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+    host = "scoped.local."
+
+    zeroconf.cache.async_add_records(
+        [
+            r.DNSPointer(
+                type_,
+                const._TYPE_PTR,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                registration_name,
+            ),
+            r.DNSService(
+                registration_name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                80,
+                host,
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_AAAA,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_pton(socket.AF_INET6, "fe80::52e:c2f2:bc5f:e9c6"),
+                scope_id=12,
+            ),
+        ]
+    )
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name)
+    info.load_from_cache(zeroconf)
+    assert info.parsed_scoped_addresses() == ["fe80::52e:c2f2:bc5f:e9c6%12"]
+    assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [ip_address("fe80::52e:c2f2:bc5f:e9c6%12")]
+    zeroconf.close()
 
 
 # This test uses asyncio because it needs to access the cache directly
