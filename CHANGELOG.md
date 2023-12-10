@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.128.2 (2023-12-10)
+
+### Fix
+
+* Timestamps missing double precision ([#1324](https://github.com/python-zeroconf/python-zeroconf/issues/1324)) ([`ecea4e4`](https://github.com/python-zeroconf/python-zeroconf/commit/ecea4e4217892ca8cf763074ac3e5d1b898acd21))
+* Match cython version for dev deps to build deps ([#1325](https://github.com/python-zeroconf/python-zeroconf/issues/1325)) ([`a0dac46`](https://github.com/python-zeroconf/python-zeroconf/commit/a0dac46c01202b3d5a0823ac1928fc1d75332522))
+
 ## v0.128.1 (2023-12-10)
 
 ### Fix
