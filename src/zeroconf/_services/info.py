@@ -86,7 +86,7 @@ int_ = int
 DNS_QUESTION_TYPE_QU = DNSQuestionType.QU
 DNS_QUESTION_TYPE_QM = DNSQuestionType.QM
 
-IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 8, 0)
+IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
