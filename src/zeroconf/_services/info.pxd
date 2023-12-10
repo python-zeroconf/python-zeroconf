@@ -74,7 +74,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(length="unsigned char", index="unsigned int", key_value=bytes, key_sep_value=tuple)
     cdef void _unpack_text_into_properties(self)
 
-    cdef _set_properties(self, cython.dict properties)
+    cpdef _set_properties(self, cython.dict properties)
 
     cdef _set_text(self, cython.bytes text)
 
