@@ -71,7 +71,7 @@ cdef class DNSOutgoing:
         index=cython.uint,
         length=cython.uint
     )
-    cdef cython.bint _write_record(self, DNSRecord record, float now)
+    cdef cython.bint _write_record(self, DNSRecord record, double now)
 
     @cython.locals(class_=cython.uint)
     cdef _write_record_class(self, DNSEntry record)
@@ -92,7 +92,7 @@ cdef class DNSOutgoing:
 
     cdef bint _has_more_to_add(self, unsigned int questions_offset, unsigned int answer_offset, unsigned int authority_offset, unsigned int additional_offset)
 
-    cdef _write_ttl(self, DNSRecord record, float now)
+    cdef _write_ttl(self, DNSRecord record, double now)
 
     @cython.locals(
         labels=cython.list,
@@ -135,7 +135,7 @@ cdef class DNSOutgoing:
 
     cpdef add_answer(self, DNSIncoming inp, DNSRecord record)
 
-    @cython.locals(now_float=cython.float)
+    @cython.locals(now_double=double)
     cpdef add_answer_at_time(self, DNSRecord record, object now)
 
     cpdef add_authorative_answer(self, DNSPointer record)

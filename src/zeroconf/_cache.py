@@ -243,7 +243,7 @@ class DNSCache:
         answers_rrset = set(answers)
         for name, type_, class_ in unique_types:
             for record in self.async_all_by_details(name, type_, class_):
-                created_float = record.created
-                if (now - created_float > _ONE_SECOND) and record not in answers_rrset:
+                created_double = record.created
+                if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
                     # Expire in 1s
                     record.set_created_ttl(now, 1)

@@ -19,7 +19,7 @@ cdef class MulticastOutgoingQueue:
     cdef object _aggregation_delay
 
     @cython.locals(last_group=AnswerGroup, random_int=cython.uint)
-    cpdef async_add(self, float now, cython.dict answers)
+    cpdef async_add(self, double now, cython.dict answers)
 
     @cython.locals(pending=AnswerGroup)
     cdef _remove_answers_from_queue(self, cython.dict answers)
