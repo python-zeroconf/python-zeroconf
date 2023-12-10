@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.128.4 (2023-12-10)
+
+### Fix
+
+* Re-expose ServiceInfo._set_properties for backwards compat ([#1327](https://github.com/python-zeroconf/python-zeroconf/issues/1327)) ([`39c4005`](https://github.com/python-zeroconf/python-zeroconf/commit/39c40051d7a63bdc63a3e2dfa20bd944fee4e761))
+
 ## v0.128.3 (2023-12-10)
 
 ### Fix
