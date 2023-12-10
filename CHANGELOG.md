@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.128.1 (2023-12-10)
+
+### Fix
+
+* Correct handling of IPv6 addresses with scope_id in ServiceInfo ([#1322](https://github.com/python-zeroconf/python-zeroconf/issues/1322)) ([`1682991`](https://github.com/python-zeroconf/python-zeroconf/commit/1682991b985b1f7b2bf0cff1a7eb7793070e7cb1))
+
 ## v0.128.0 (2023-12-02)
 
 ### Feature
