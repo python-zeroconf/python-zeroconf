@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.128.3 (2023-12-10)
+
+### Fix
+
+* Correct nsec record writing ([#1326](https://github.com/python-zeroconf/python-zeroconf/issues/1326)) ([`cd7a16a`](https://github.com/python-zeroconf/python-zeroconf/commit/cd7a16a32c37b2f7a2e90d3c749525a5393bad57))
+
 ## v0.128.2 (2023-12-10)
 
 ### Fix
