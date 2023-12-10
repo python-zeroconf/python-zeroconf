@@ -495,7 +495,7 @@ class DNSNsec(DNSRecord):
             raise ValueError("NSEC must have at least one rdtype")
         out_bytes = bytes(bitmap[0:total_octets])
         out.write_name(self.next_name)
-        out.write_short(0)
+        out.write_short(0)  # Always window 0
         out.write_short(len(out_bytes))
         out.write_string(out_bytes)
 
