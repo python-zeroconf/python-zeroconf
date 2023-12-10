@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zeroconf"
-version = "0.128.0"
+version = "0.128.1"
 description = "A pure python implementation of multicast DNS service discovery"
 authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Koston"]
 license = "LGPL"
@@ -58,7 +58,7 @@ ifaddr = ">=0.1.7"
 pytest = "^7.2.0"
 pytest-cov = "^4.0.0"
 pytest-asyncio = "^0.20.3"
-cython = "^0.29.32"
+cython = "^3.0.5"
 setuptools = "^65.6.3"
 pytest-timeout = "^2.1.0"
 
