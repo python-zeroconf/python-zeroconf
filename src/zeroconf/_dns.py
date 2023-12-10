@@ -485,9 +485,7 @@ class DNSNsec(DNSRecord):
             if rdtype > 255:  # mDNS only supports window 0
                 raise ValueError(f"rdtype {rdtype} is too large for NSEC")
             byte = rdtype // 8
-            octet_pos = byte + 1
-            if octet_pos > total_octets:
-                total_octets = octet_pos
+            total_octets = byte + 1
             bitmap[byte] |= 0x80 >> (rdtype % 8)
         if total_octets == 0:
             # NSEC must have at least one rdtype
