@@ -480,13 +480,19 @@ class DNSNsec(DNSRecord):
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet."""
         bitmap = bytearray(b'\0' * 32)
+        total_octets = 0
         for rdtype in self.rdtypes:
             if rdtype > 255:  # mDNS only supports window 0
-                continue
-            offset = rdtype % 256
-            byte = offset // 8
-            total_octets = byte + 1
-            bitmap[byte] |= 0x80 >> (offset % 8)
+                raise ValueError(f"rdtype {rdtype} is too large for NSEC")
+            byte = rdtype // 8
+            octet_pos = byte + 1
+            if octet_pos > total_octets:
+                total_octets = octet_pos
+            bitmap[byte] |= 0x80 >> (rdtype % 8)
+        if total_octets == 0:
+            # NSEC must have at least one rdtype
+            # Writing an empty bitmap is not allowed
+            raise ValueError("NSEC must have at least one rdtype")
         out_bytes = bytes(bitmap[0:total_octets])
         out.write_name(self.next_name)
         out.write_short(0)
