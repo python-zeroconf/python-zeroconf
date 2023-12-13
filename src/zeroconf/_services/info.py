@@ -22,6 +22,7 @@
 
 import asyncio
 import random
+import sys
 from ipaddress import IPv4Address, IPv6Address, _BaseAddress
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
@@ -46,7 +47,6 @@ from .._utils.asyncio import (
     wait_for_future_set_or_timeout,
 )
 from .._utils.ipaddress import (
-    IPADDRESS_SUPPORTS_SCOPE_ID,
     cached_ip_addresses_wrapper,
     get_ip_address_object_from_record,
     ip_bytes_and_scope_to_address,
@@ -71,6 +71,8 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
+
+IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 _IPVersion_All_value = IPVersion.All.value
 _IPVersion_V4Only_value = IPVersion.V4Only.value
