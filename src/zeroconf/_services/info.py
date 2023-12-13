@@ -395,6 +395,7 @@ class ServiceInfo(RecordUpdateListener):
         self.text = text
         # Clear the properties cache
         self._properties = None
+        self._decoded_properties = None
 
     def _generate_decoded_properties(self) -> None:
         """Generates decoded properties from the properties"""

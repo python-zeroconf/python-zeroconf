@@ -201,11 +201,13 @@ class ListenerTest(unittest.TestCase):
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
             assert info.properties[b'prop_blank'] == properties['prop_blank']
+            assert info.decoded_properties['prop_blank'] == b'a blanked string'.decode('utf-8')
 
             cached_info = ServiceInfo(subtype, registration_name)
             cached_info.load_from_cache(zeroconf_browser)
             assert cached_info.properties is not None
             assert cached_info.properties[b'prop_blank'] == properties['prop_blank']
+            assert cached_info.decoded_properties['prop_blank'] == b'a blanked string'.decode('utf-8')
 
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
