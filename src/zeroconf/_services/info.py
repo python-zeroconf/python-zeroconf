@@ -143,6 +143,7 @@ class ServiceInfo(RecordUpdateListener):
         "server",
         "server_key",
         "_properties",
+        "_decoded_properties",
         "host_ttl",
         "other_ttl",
         "interface_index",
@@ -192,6 +193,7 @@ class ServiceInfo(RecordUpdateListener):
         self.server = server if server else None
         self.server_key = server.lower() if server else None
         self._properties: Optional[Dict[bytes, Optional[bytes]]] = None
+        self._decoded_properties: Optional[Dict[str, Optional[str]]] = None
         if isinstance(properties, bytes):
             self._set_text(properties)
         else:
@@ -267,6 +269,15 @@ class ServiceInfo(RecordUpdateListener):
         if TYPE_CHECKING:
             assert self._properties is not None
         return self._properties
+
+    @property
+    def decoded_properties(self) -> Dict[str, Optional[str]]:
+        """Return properties as strings."""
+        if self._decoded_properties is None:
+            self._generate_decoded_properties()
+        if TYPE_CHECKING:
+            assert self._decoded_properties is not None
+        return self._decoded_properties
 
     def async_clear_cache(self) -> None:
         """Clear the cache for this service info."""
@@ -384,6 +395,14 @@ class ServiceInfo(RecordUpdateListener):
         self.text = text
         # Clear the properties cache
         self._properties = None
+        self._decoded_properties = None
+
+    def _generate_decoded_properties(self) -> None:
+        """Generates decoded properties from the properties"""
+        self._decoded_properties = {
+            k.decode("ascii", "replace"): None if v is None else v.decode("utf-8", "replace")
+            for k, v in self.properties.items()
+        }
 
     def _unpack_text_into_properties(self) -> None:
         """Unpacks the text field into properties"""
