@@ -38,14 +38,7 @@ cdef object _IPVersion_V4Only_value
 cdef cython.set _ADDRESS_RECORD_TYPES
 
 cdef bint TYPE_CHECKING
-cdef bint IPADDRESS_SUPPORTS_SCOPE_ID
 
-cdef _get_ip_address_object_from_record(DNSAddress record)
-
-@cython.locals(address_str=str)
-cdef _str_without_scope_id(object addr)
-
-cdef _ip_bytes_and_scope_to_address(object addr, object scope_id)
 
 cdef class ServiceInfo(RecordUpdateListener):
 
