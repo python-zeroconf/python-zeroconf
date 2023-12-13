@@ -133,6 +133,14 @@ class ListenerTest(unittest.TestCase):
             assert info.properties[b'prop_blank'] == properties['prop_blank']
             assert info.properties[b'prop_true'] == b'1'
             assert info.properties[b'prop_false'] == b'0'
+
+            assert info.decoded_properties['prop_none'] is None
+            assert info.decoded_properties['prop_string'] == b'a_prop'.decode('utf-8')
+            assert info.decoded_properties['prop_float'] == '1.0'
+            assert info.decoded_properties['prop_blank'] == b'a blanked string'.decode('utf-8')
+            assert info.decoded_properties['prop_true'] == '1'
+            assert info.decoded_properties['prop_false'] == '0'
+
             assert info.addresses == addresses[:1]  # no V6 by default
             assert set(info.addresses_by_version(r.IPVersion.All)) == set(addresses)
 

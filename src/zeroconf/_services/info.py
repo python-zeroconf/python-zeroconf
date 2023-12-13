@@ -143,6 +143,7 @@ class ServiceInfo(RecordUpdateListener):
         "server",
         "server_key",
         "_properties",
+        "_decoded_properties",
         "host_ttl",
         "other_ttl",
         "interface_index",
@@ -191,7 +192,8 @@ class ServiceInfo(RecordUpdateListener):
         self.priority = priority
         self.server = server if server else None
         self.server_key = server.lower() if server else None
-        self._properties: Optional[Dict[Union[str, bytes], Optional[Union[str, bytes]]]] = None
+        self._properties: Optional[Dict[bytes, Optional[bytes]]] = None
+        self._decoded_properties: Optional[Dict[str, Optional[str]]] = None
         if isinstance(properties, bytes):
             self._set_text(properties)
         else:
@@ -260,19 +262,22 @@ class ServiceInfo(RecordUpdateListener):
                 self._ipv6_addresses.append(addr)
 
     @property
-    def properties(self) -> Dict[Union[str, bytes], Optional[Union[str, bytes]]]:
-        """If properties were set in the constructor this property returns the original dictionary
-        of type `Dict[Union[bytes, str], Any]`.
-
-        If properties are coming from the network, after decoding a TXT record, the keys are always
-        bytes and the values are either bytes, if there was a value, even empty, or `None`, if there
-        was none. No further decoding is attempted. The type returned is `Dict[bytes, Optional[bytes]]`.
-        """
+    def properties(self) -> Dict[bytes, Optional[bytes]]:
+        """Return properties as bytes."""
         if self._properties is None:
             self._unpack_text_into_properties()
         if TYPE_CHECKING:
             assert self._properties is not None
         return self._properties
+
+    @property
+    def decoded_properties(self) -> Dict[str, Optional[str]]:
+        """Return properties as strings."""
+        if self._decoded_properties is None:
+            self._generate_decoded_properties()
+        if TYPE_CHECKING:
+            assert self._decoded_properties is not None
+        return self._decoded_properties
 
     def async_clear_cache(self) -> None:
         """Clear the cache for this service info."""
@@ -356,21 +361,31 @@ class ServiceInfo(RecordUpdateListener):
 
     def _set_properties(self, properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]]) -> None:
         """Sets properties and text of this info from a dictionary"""
-        self._properties = properties
         list_: List[bytes] = []
+        properties_contain_str = False
         result = b''
         for key, value in properties.items():
             if isinstance(key, str):
                 key = key.encode('utf-8')
+                properties_contain_str = True
 
             record = key
             if value is not None:
                 if not isinstance(value, bytes):
                     value = str(value).encode('utf-8')
+                    properties_contain_str = True
                 record += b'=' + value
             list_.append(record)
         for item in list_:
             result = b''.join((result, bytes((len(item),)), item))
+        if not properties_contain_str:
+            # If there are no str keys or values, we can use the properties
+            # as-is, without decoding them, otherwise calling
+            # self.properties will lazy decode them, which is expensive.
+            if TYPE_CHECKING:
+                self._properties = cast("Dict[bytes, Optional[bytes]]", properties)
+            else:
+                self._properties = properties
         self.text = result
 
     def _set_text(self, text: bytes) -> None:
@@ -380,6 +395,14 @@ class ServiceInfo(RecordUpdateListener):
         self.text = text
         # Clear the properties cache
         self._properties = None
+
+    def _generate_decoded_properties(self) -> None:
+        """Generates decoded properties from the properties"""
+        decoded_properties: dict[str, Optional[str]] = {
+            k.decode("ascii", "replace"): None if v is None else v.decode("utf-8", "replace")
+            for k, v in self.properties.items()
+        }
+        self._decoded_properties = decoded_properties
 
     def _unpack_text_into_properties(self) -> None:
         """Unpacks the text field into properties"""
@@ -392,7 +415,7 @@ class ServiceInfo(RecordUpdateListener):
             return
 
         index = 0
-        properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]] = {}
+        properties: Dict[bytes, Optional[bytes]] = {}
         while index < end:
             length = text[index]
             index += 1

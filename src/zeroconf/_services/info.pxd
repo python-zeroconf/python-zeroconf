@@ -53,6 +53,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public str server
     cdef public str server_key
     cdef public cython.dict _properties
+    cdef public cython.dict _decoded_properties
     cdef public object host_ttl
     cdef public object other_ttl
     cdef public object interface_index
@@ -72,6 +73,10 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(length="unsigned char", index="unsigned int", key_value=bytes, key_sep_value=tuple)
     cdef void _unpack_text_into_properties(self)
 
+    @cython.locals(k=bytes, v=bytes)
+    cdef void _generate_decoded_properties(self)
+
+    @cython.locals(properties_contain_str=bint)
     cpdef _set_properties(self, cython.dict properties)
 
     cdef _set_text(self, cython.bytes text)
