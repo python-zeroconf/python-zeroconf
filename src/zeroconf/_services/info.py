@@ -161,7 +161,7 @@ class ServiceInfo(RecordUpdateListener):
         port: Optional[int] = None,
         weight: int = 0,
         priority: int = 0,
-        properties: Union[bytes, Dict[Union[str, bytes], Optional[Union[str, bytes]]]] = b'',
+        properties: Union[bytes, Dict] = b'',
         server: Optional[str] = None,
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
