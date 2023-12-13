@@ -58,12 +58,18 @@ class ZeroconfIPv6Address(IPv6Address):
 def _cached_ip_addresses(address: Union[str, bytes, int]) -> Optional[Union[IPv4Address, IPv6Address]]:
     """Cache IP addresses."""
     try:
-        return ZeroconfIPv4Address(address) or ZeroconfIPv6Address(address)
+        return ZeroconfIPv4Address(address)
+    except (AddressValueError, NetmaskValueError):
+        pass
+
+    try:
+        return ZeroconfIPv6Address(address)
     except (AddressValueError, NetmaskValueError):
         return None
 
 
 cached_ip_addresses_wrapper = _cached_ip_addresses
+cached_ip_addresses = cached_ip_addresses_wrapper
 
 
 def get_ip_address_object_from_record(record: DNSAddress) -> Optional[Union[IPv4Address, IPv6Address]]:
@@ -87,3 +93,11 @@ def str_without_scope_id(addr: Union[IPv4Address, IPv6Address]) -> str:
         address_str = str(addr)
         return address_str.partition('%')[0]
     return str(addr)
+
+
+__all__ = (
+    "cached_ip_addresses",
+    "get_ip_address_object_from_record",
+    "ip_bytes_and_scope_to_address",
+    "str_without_scope_id",
+)

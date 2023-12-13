@@ -47,7 +47,7 @@ from .._utils.asyncio import (
     wait_for_future_set_or_timeout,
 )
 from .._utils.ipaddress import (
-    cached_ip_addresses_wrapper,
+    cached_ip_addresses,
     get_ip_address_object_from_record,
     ip_bytes_and_scope_to_address,
     str_without_scope_id,
@@ -244,7 +244,7 @@ class ServiceInfo(RecordUpdateListener):
             if IPADDRESS_SUPPORTS_SCOPE_ID and len(address) == 16 and self.interface_index is not None:
                 addr = ip_bytes_and_scope_to_address(address, self.interface_index)
             else:
-                addr = cached_ip_addresses_wrapper(address)
+                addr = cached_ip_addresses(address)
             if addr is None:
                 raise TypeError(
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
