@@ -37,10 +37,16 @@ class ZeroconfIPv4Address(IPv4Address):
         """Initialize a new IPv4 address."""
         super().__init__(*args, **kwargs)
         self._str = super().__str__()
+        self._is_link_local = super().is_link_local
 
     def __str__(self) -> str:
         """Return the string representation of the IPv4 address."""
         return self._str
+
+    @property
+    def is_link_local(self) -> bool:
+        """Return True if this is a link-local address."""
+        return self._is_link_local
 
 
 class ZeroconfIPv6Address(IPv6Address):
@@ -48,10 +54,16 @@ class ZeroconfIPv6Address(IPv6Address):
         """Initialize a new IPv6 address."""
         super().__init__(*args, **kwargs)
         self._str = super().__str__()
+        self._is_link_local = super().is_link_local
 
     def __str__(self) -> str:
         """Return the string representation of the IPv6 address."""
         return self._str
+
+    @property
+    def is_link_local(self) -> bool:
+        """Return True if this is a link-local address."""
+        return self._is_link_local
 
 
 @lru_cache(maxsize=512)
