@@ -10,6 +10,10 @@
 * Ensure ServiceInfo.properties always returns bytes ([#1333](https://github.com/python-zeroconf/python-zeroconf/issues/1333)) ([`d29553a`](https://github.com/python-zeroconf/python-zeroconf/commit/d29553ab7de6b7af70769ddb804fe2aaf492f320))
 * Cache is_unspecified for zeroconf ip address objects ([#1331](https://github.com/python-zeroconf/python-zeroconf/issues/1331)) ([`a1c84dc`](https://github.com/python-zeroconf/python-zeroconf/commit/a1c84dc6adeebd155faec1a647c0f70d70de2945))
 
+### Technically breaking change
+
+* `ServiceInfo.properties` always returns a dictionary with type `dict[bytes, bytes | None]` instead of a mix `str` and `bytes`. It was only possible to get a mixed dictionary if it was manually passed in when `ServiceInfo` was constructed.
+
 ## v0.128.5 (2023-12-13)
 
 ### Fix
