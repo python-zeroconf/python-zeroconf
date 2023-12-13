@@ -399,11 +399,10 @@ class ServiceInfo(RecordUpdateListener):
 
     def _generate_decoded_properties(self) -> None:
         """Generates decoded properties from the properties"""
-        decoded_properties: dict[str, Optional[str]] = {
+        self._decoded_properties = {
             k.decode("ascii", "replace"): None if v is None else v.decode("utf-8", "replace")
             for k, v in self.properties.items()
         }
-        self._decoded_properties = decoded_properties
 
     def _unpack_text_into_properties(self) -> None:
         """Unpacks the text field into properties"""
