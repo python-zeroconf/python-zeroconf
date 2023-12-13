@@ -7,7 +7,6 @@ from .._protocol.outgoing cimport DNSOutgoing
 from .._record_update cimport RecordUpdate
 from .._updates cimport RecordUpdateListener
 from .._utils.ipaddress cimport (
-    IPADDRESS_SUPPORTS_SCOPE_ID,
     cached_ip_addresses_wrapper,
     get_ip_address_object_from_record,
     ip_bytes_and_scope_to_address,
@@ -38,7 +37,7 @@ cdef object _IPVersion_V4Only_value
 cdef cython.set _ADDRESS_RECORD_TYPES
 
 cdef bint TYPE_CHECKING
-
+cdef bint IPADDRESS_SUPPORTS_SCOPE_ID
 
 cdef class ServiceInfo(RecordUpdateListener):
 
