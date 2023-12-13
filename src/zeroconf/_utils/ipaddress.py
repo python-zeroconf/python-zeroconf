@@ -60,7 +60,7 @@ def _cached_ip_addresses(address: Union[str, bytes, int]) -> Optional[Union[IPv4
     try:
         return ZeroconfIPv4Address(address) or ZeroconfIPv6Address(address)
     except (AddressValueError, NetmaskValueError):
-        raise ValueError(f'{address!r} does not appear to be an IPv4 or IPv6 address')
+        return None
 
 
 cached_ip_addresses_wrapper = _cached_ip_addresses
