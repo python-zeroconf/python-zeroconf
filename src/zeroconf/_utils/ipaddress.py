@@ -34,13 +34,14 @@ IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 class ZeroconfIPv4Address(IPv4Address):
 
-    __slots__ = ("_str", "_is_link_local")
+    __slots__ = ("_str", "_is_link_local", "_is_unspecified")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv4 address."""
         super().__init__(*args, **kwargs)
         self._str = super().__str__()
         self._is_link_local = super().is_link_local
+        self._is_unspecified = super().is_unspecified
 
     def __str__(self) -> str:
         """Return the string representation of the IPv4 address."""
@@ -51,16 +52,22 @@ class ZeroconfIPv4Address(IPv4Address):
         """Return True if this is a link-local address."""
         return self._is_link_local
 
+    @property
+    def is_unspecified(self) -> bool:
+        """Return True if this is an unspecified address."""
+        return self._is_unspecified
+
 
 class ZeroconfIPv6Address(IPv6Address):
 
-    __slots__ = ("_str", "_is_link_local")
+    __slots__ = ("_str", "_is_link_local", "_is_unspecified")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv6 address."""
         super().__init__(*args, **kwargs)
         self._str = super().__str__()
         self._is_link_local = super().is_link_local
+        self._is_unspecified = super().is_unspecified
 
     def __str__(self) -> str:
         """Return the string representation of the IPv6 address."""
@@ -70,6 +77,11 @@ class ZeroconfIPv6Address(IPv6Address):
     def is_link_local(self) -> bool:
         """Return True if this is a link-local address."""
         return self._is_link_local
+
+    @property
+    def is_unspecified(self) -> bool:
+        """Return True if this is an unspecified address."""
+        return self._is_unspecified
 
 
 @lru_cache(maxsize=512)
