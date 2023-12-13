@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.128.5 (2023-12-13)
+
+### Fix
+
+* Performance regression with ServiceInfo IPv6Addresses ([#1330](https://github.com/python-zeroconf/python-zeroconf/issues/1330)) ([`e2f9f81`](https://github.com/python-zeroconf/python-zeroconf/commit/e2f9f81dbc54c3dd527eeb3298897d63f99d33f4))
+
 ## v0.128.4 (2023-12-10)
 
 ### Fix
