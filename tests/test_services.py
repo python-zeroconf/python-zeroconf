@@ -207,7 +207,7 @@ class ListenerTest(unittest.TestCase):
             cached_info.load_from_cache(zeroconf_browser)
             assert cached_info.properties is not None
             assert cached_info.properties[b'prop_blank'] == properties['prop_blank']
-            assert cached_info.decoded_properties['prop_blank'] == b'a blanked string'.decode('utf-8')
+            assert cached_info.decoded_properties['prop_blank'] == b'an updated string'.decode('utf-8')
 
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
