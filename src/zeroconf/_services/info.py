@@ -23,8 +23,7 @@
 import asyncio
 import random
 import sys
-from functools import lru_cache
-from ipaddress import IPv4Address, IPv6Address, _BaseAddress, ip_address
+from ipaddress import IPv4Address, IPv6Address, _BaseAddress
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
 from .._dns import (
@@ -47,6 +46,12 @@ from .._utils.asyncio import (
     run_coro_with_timeout,
     wait_for_future_set_or_timeout,
 )
+from .._utils.ipaddress import (
+    cached_ip_addresses,
+    get_ip_address_object_from_record,
+    ip_bytes_and_scope_to_address,
+    str_without_scope_id,
+)
 from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis
@@ -67,6 +72,8 @@ from ..const import (
     _TYPE_TXT,
 )
 
+IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
+
 _IPVersion_All_value = IPVersion.All.value
 _IPVersion_V4Only_value = IPVersion.V4Only.value
 # https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
@@ -86,7 +93,6 @@ int_ = int
 DNS_QUESTION_TYPE_QU = DNSQuestionType.QU
 DNS_QUESTION_TYPE_QM = DNSQuestionType.QM
 
-IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -100,41 +106,6 @@ def instance_name_from_service_info(info: "ServiceInfo", strict: bool = True) ->
     if not info.type.endswith(service_name):
         raise BadTypeInNameException
     return info.name[: -len(service_name) - 1]
-
-
-@lru_cache(maxsize=512)
-def _cached_ip_addresses(address: Union[str, bytes, int]) -> Optional[Union[IPv4Address, IPv6Address]]:
-    """Cache IP addresses."""
-    try:
-        return ip_address(address)
-    except ValueError:
-        return None
-
-
-_cached_ip_addresses_wrapper = _cached_ip_addresses
-
-
-def _get_ip_address_object_from_record(record: DNSAddress) -> Optional[Union[IPv4Address, IPv6Address]]:
-    """Get the IP address object from the record."""
-    if IPADDRESS_SUPPORTS_SCOPE_ID and record.type == _TYPE_AAAA and record.scope_id is not None:
-        return _ip_bytes_and_scope_to_address(record.address, record.scope_id)
-    return _cached_ip_addresses_wrapper(record.address)
-
-
-def _ip_bytes_and_scope_to_address(address: bytes_, scope: int_) -> Optional[Union[IPv4Address, IPv6Address]]:
-    """Convert the bytes and scope to an IP address object."""
-    base_address = _cached_ip_addresses_wrapper(address)
-    if base_address is not None and base_address.is_link_local:
-        return _cached_ip_addresses_wrapper(f"{base_address}%{scope}")
-    return base_address
-
-
-def _str_without_scope_id(addr: Union[IPv4Address, IPv6Address]) -> str:
-    """Return the string representation of the address without the scope id."""
-    if IPADDRESS_SUPPORTS_SCOPE_ID and addr.version == 6:
-        address_str = str(addr)
-        return address_str.partition('%')[0]
-    return str(addr)
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -271,9 +242,9 @@ class ServiceInfo(RecordUpdateListener):
 
         for address in value:
             if IPADDRESS_SUPPORTS_SCOPE_ID and len(address) == 16 and self.interface_index is not None:
-                addr = _ip_bytes_and_scope_to_address(address, self.interface_index)
+                addr = ip_bytes_and_scope_to_address(address, self.interface_index)
             else:
-                addr = _cached_ip_addresses_wrapper(address)
+                addr = cached_ip_addresses(address)
             if addr is None:
                 raise TypeError(
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
@@ -369,7 +340,7 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        return [_str_without_scope_id(addr) for addr in self._ip_addresses_by_version_value(version.value)]
+        return [str_without_scope_id(addr) for addr in self._ip_addresses_by_version_value(version.value)]
 
     def parsed_scoped_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
         """Equivalent to parsed_addresses, with the exception that IPv6 Link-Local
@@ -446,7 +417,7 @@ class ServiceInfo(RecordUpdateListener):
         for record in self._get_address_records_from_cache_by_type(zc, type):
             if record.is_expired(now):
                 continue
-            ip_addr = _get_ip_address_object_from_record(record)
+            ip_addr = get_ip_address_object_from_record(record)
             if ip_addr is not None and ip_addr not in address_list:
                 address_list.append(ip_addr)
         address_list.reverse()  # Reverse to get LIFO order
@@ -496,7 +467,7 @@ class ServiceInfo(RecordUpdateListener):
             dns_address_record = record
             if TYPE_CHECKING:
                 assert isinstance(dns_address_record, DNSAddress)
-            ip_addr = _get_ip_address_object_from_record(dns_address_record)
+            ip_addr = get_ip_address_object_from_record(dns_address_record)
             if ip_addr is None:
                 log.warning(
                     "Encountered invalid address while processing %s: %s",

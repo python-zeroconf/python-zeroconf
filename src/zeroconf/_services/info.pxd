@@ -6,11 +6,15 @@ from .._dns cimport DNSAddress, DNSNsec, DNSPointer, DNSRecord, DNSService, DNST
 from .._protocol.outgoing cimport DNSOutgoing
 from .._record_update cimport RecordUpdate
 from .._updates cimport RecordUpdateListener
+from .._utils.ipaddress cimport (
+    get_ip_address_object_from_record,
+    ip_bytes_and_scope_to_address,
+    str_without_scope_id,
+)
 from .._utils.time cimport current_time_millis
 
 
 cdef object _resolve_all_futures_to_none
-cdef object _cached_ip_addresses_wrapper
 
 cdef object _TYPE_SRV
 cdef object _TYPE_TXT
@@ -33,13 +37,7 @@ cdef cython.set _ADDRESS_RECORD_TYPES
 
 cdef bint TYPE_CHECKING
 cdef bint IPADDRESS_SUPPORTS_SCOPE_ID
-
-cdef _get_ip_address_object_from_record(DNSAddress record)
-
-@cython.locals(address_str=str)
-cdef _str_without_scope_id(object addr)
-
-cdef _ip_bytes_and_scope_to_address(object addr, object scope_id)
+cdef object cached_ip_addresses
 
 cdef class ServiceInfo(RecordUpdateListener):
 
