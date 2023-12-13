@@ -6,11 +6,17 @@ from .._dns cimport DNSAddress, DNSNsec, DNSPointer, DNSRecord, DNSService, DNST
 from .._protocol.outgoing cimport DNSOutgoing
 from .._record_update cimport RecordUpdate
 from .._updates cimport RecordUpdateListener
+from .._utils.ipaddress cimport (
+    IPADDRESS_SUPPORTS_SCOPE_ID,
+    cached_ip_addresses_wrapper,
+    get_ip_address_object_from_record,
+    ip_bytes_and_scope_to_address,
+    str_without_scope_id,
+)
 from .._utils.time cimport current_time_millis
 
 
 cdef object _resolve_all_futures_to_none
-cdef object _cached_ip_addresses_wrapper
 
 cdef object _TYPE_SRV
 cdef object _TYPE_TXT

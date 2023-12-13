@@ -39,6 +39,7 @@ def build(setup_kwargs: Any) -> None:
                         "src/zeroconf/_services/info.py",
                         "src/zeroconf/_services/registry.py",
                         "src/zeroconf/_updates.py",
+                        "src/zeroconf/_utils/ipaddress.py",
                         "src/zeroconf/_utils/time.py",
                     ],
                     compiler_directives={"language_level": "3"},  # Python 3
