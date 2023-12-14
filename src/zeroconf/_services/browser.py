@@ -147,7 +147,7 @@ class _DNSPointerOutgoingBucket:
     def __init__(self, now_millis: float, multicast: bool) -> None:
         """Create a bucket to wrap a DNSOutgoing."""
         self.now_millis = now_millis
-        self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=multicast)
+        self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast)
         self.bytes = 0
 
     def add(self, max_compressed_size: int_, question: DNSQuestion, answers: Set[DNSPointer]) -> None:

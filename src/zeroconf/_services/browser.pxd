@@ -23,6 +23,8 @@ cdef object _MDNS_PORT, _BROWSER_TIME
 
 cdef object QU_QUESTION
 
+cdef object _FLAGS_QR_QUERY
+
 cdef object heappop, heappush
 
 cdef class _ScheduledQuery:
