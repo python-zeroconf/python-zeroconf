@@ -114,15 +114,25 @@ class _ScheduledQuery:
         """Compare two scheduled queries."""
         return self.when_millis < other.when_millis
 
-    def __gt__(self, other: '_ScheduledQuery') -> bool:
-        """Compare two scheduled queries."""
-        return self.when_millis > other.when_millis
+    def __le__(self, other: Any) -> bool:
+        if isinstance(other, _ScheduledQuery):
+            return self.when_millis < other.when_millis or self.__eq__(other)
+        return NotImplemented
 
     def __eq__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
         if not isinstance(other, _ScheduledQuery):
             return NotImplemented
         return self.when_millis == other.when_millis
+
+    def __ge__(self, other: Any) -> bool:
+        if isinstance(other, _ScheduledQuery):
+            return self.when_millis > other.when_millis or self.__eq__(other)
+        return NotImplemented
+
+    def __gt__(self, other: '_ScheduledQuery') -> bool:
+        """Compare two scheduled queries."""
+        return self.when_millis > other.when_millis
 
 
 class _DNSPointerOutgoingBucket:
