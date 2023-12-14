@@ -95,6 +95,9 @@ str_ = str
 
 _QuestionWithKnownAnswers = Dict[DNSQuestion, Set[DNSPointer]]
 
+heappop = heapq.heappop
+heappush = heapq.heappush
+
 
 class _ScheduledQuery:
 
@@ -302,7 +305,7 @@ class QueryScheduler:
         expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         scheduled_query = _ScheduledQuery(pointer.alias, pointer.name, expire_time)
         self._scheduled[pointer.name] = scheduled_query
-        heapq.heappush(self._query_heap, scheduled_query)
+        heappush(self._query_heap, scheduled_query)
 
     def cancel(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
@@ -332,27 +335,31 @@ class QueryScheduler:
         # which defaults to 1s
 
         # Remove cancelled from head of queue.
-        while self._query_heap and self._query_heap[0].cancelled:
-            heapq.heappop(self._query_heap)
+        while self._query_heap:
+            query = self._query_heap[0]
+            if not query.cancelled:
+                break
+            heappop(self._query_heap)
 
         ready_types: set[str] = set()
+        next_scheduled: _ScheduledQuery | None = None
 
         while self._query_heap:
             query = self._query_heap[0]
             if query.when >= now:
+                next_scheduled = query
                 break
-            heapq.heappop(self._query_heap)
+            heappop(self._query_heap)
             del self._scheduled[query.name]
             ready_types.add(query.type_)
 
         if ready_types:
             self._browser.async_send_ready_queries(False, now, ready_types)
 
-        next_scheduled = self._query_heap[0].when if self._query_heap else 0
         next_time = now + self._min_time_between_queries
 
-        if next_scheduled > next_time:
-            next_when = next_scheduled
+        if next_scheduled and next_scheduled.when > next_time:
+            next_when = next_scheduled.when
         else:
             next_when = next_time
 
