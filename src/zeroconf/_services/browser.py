@@ -86,7 +86,7 @@ SERVICE_STATE_CHANGE_UPDATED = ServiceStateChange.Updated
 
 QU_QUESTION = DNSQuestionType.QU
 
-STARTUP_QUERIES = 3
+STARTUP_QUERIES = 5
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
