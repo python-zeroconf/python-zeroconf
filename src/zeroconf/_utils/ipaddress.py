@@ -113,7 +113,8 @@ def ip_bytes_and_scope_to_address(address: bytes_, scope: int_) -> Optional[Unio
     """Convert the bytes and scope to an IP address object."""
     base_address = cached_ip_addresses_wrapper(address)
     if base_address is not None and base_address.is_link_local:
-        return cached_ip_addresses_wrapper(f"{base_address}%{scope}")
+        # Avoid expensive __format__ call by using PyUnicode_Join
+        return cached_ip_addresses_wrapper("".join((str(base_address), "%", str(scope))))
     return base_address
 
 
