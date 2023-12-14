@@ -83,6 +83,8 @@ SERVICE_STATE_CHANGE_ADDED = ServiceStateChange.Added
 SERVICE_STATE_CHANGE_REMOVED = ServiceStateChange.Removed
 SERVICE_STATE_CHANGE_UPDATED = ServiceStateChange.Updated
 
+QU_QUESTION = DNSQuestionType.QU
+
 STARTUP_QUERIES = 3
 
 if TYPE_CHECKING:
@@ -216,7 +218,7 @@ def generate_service_query(
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
-    qu_question = not multicast if question_type is None else question_type == DNSQuestionType.QU
+    qu_question = not multicast if question_type is None else question_type is QU_QUESTION
     question_history = zc.question_history
     cache = zc.cache
     for type_ in types_:
@@ -613,7 +615,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
         # just starting up and we know our cache is likely empty. This ensures
         # the next outgoing will be sent with the known answers list.
-        question_type = DNSQuestionType.QU if not self.question_type and first_request else self.question_type
+        question_type = QU_QUESTION if self.question_type is None and first_request else self.question_type
         outs = generate_service_query(self.zc, now_millis, ready_types, self.multicast, question_type)
         if outs:
             self._first_request = False

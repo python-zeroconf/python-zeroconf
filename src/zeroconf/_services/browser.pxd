@@ -14,9 +14,12 @@ cdef bint TYPE_CHECKING
 cdef object cached_possible_types
 cdef cython.uint _EXPIRE_REFRESH_TIME_PERCENT, _MAX_MSG_TYPICAL, _DNS_PACKET_HEADER_LEN
 cdef cython.uint _TYPE_PTR
+cdef object _CLASS_IN
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED
 cdef cython.set _ADDRESS_RECORD_TYPES
 cdef cython.uint STARTUP_QUERIES
+
+cdef object QU_QUESTION
 
 cdef object heappop, heappush
 
