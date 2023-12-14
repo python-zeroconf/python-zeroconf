@@ -115,6 +115,7 @@ class _ScheduledQuery:
         return self.when_millis < other.when_millis
 
     def __le__(self, other: Any) -> bool:
+        """Compare two scheduled queries."""
         if isinstance(other, _ScheduledQuery):
             return self.when_millis < other.when_millis or self.__eq__(other)
         return NotImplemented
@@ -126,6 +127,7 @@ class _ScheduledQuery:
         return self.when_millis == other.when_millis
 
     def __ge__(self, other: Any) -> bool:
+        """Compare two scheduled queries."""
         if isinstance(other, _ScheduledQuery):
             return self.when_millis > other.when_millis or self.__eq__(other)
         return NotImplemented
