@@ -315,7 +315,7 @@ class QueryScheduler:
 
     def stop(self) -> None:
         """Stop the scheduler."""
-        if self._next_run:
+        if self._next_run is not None:
             self._next_run.cancel()
             self._next_run = None
 
