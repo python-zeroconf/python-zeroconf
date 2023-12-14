@@ -265,7 +265,7 @@ class QueryScheduler:
         '_min_time_between_queries_millis',
         '_loop',
         '_startup_queries_sent',
-        '_scheduled',
+        '_next_scheduled_for_name',
         '_query_heap',
         '_next_run',
     )
@@ -281,7 +281,7 @@ class QueryScheduler:
         self._min_time_between_queries_millis = delay
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._startup_queries_sent = 0
-        self._scheduled: Dict[str, _ScheduledQuery] = {}
+        self._next_scheduled_for_name: Dict[str, _ScheduledQuery] = {}
         self._query_heap: list[_ScheduledQuery] = []
         self._next_run: Optional[asyncio.TimerHandle] = None
 
@@ -309,12 +309,13 @@ class QueryScheduler:
         """Schedule a query for a pointer."""
         expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         scheduled_query = _ScheduledQuery(pointer.alias, pointer.name, expire_time)
-        self._scheduled[pointer.name] = scheduled_query
+        self._next_scheduled_for_name[pointer.name] = scheduled_query
         heappush(self._query_heap, scheduled_query)
 
     def cancel(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
-        self._scheduled[pointer.name].cancelled = True
+        self._next_scheduled_for_name[pointer.name].cancelled = True
+        del self._next_scheduled_for_name[pointer.name]
 
     def reschedule(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
@@ -357,7 +358,7 @@ class QueryScheduler:
                 next_scheduled = query
                 break
             heappop(self._query_heap)
-            del self._scheduled[query.name]
+            del self._next_scheduled_for_name[query.name]
             ready_types.add(query.type_)
 
         if ready_types:
