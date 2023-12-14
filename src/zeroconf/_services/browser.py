@@ -379,18 +379,14 @@ class QueryScheduler:
         # with a minimum time between queries of _min_time_between_queries
         # which defaults to 10s
 
-        # Remove cancelled from head of queue.
-        while self._query_heap:
-            query = self._query_heap[0]
-            if not query.cancelled:
-                break
-            heappop(self._query_heap)
-
         ready_types: Set[str] = set()
         next_scheduled: Optional[_ScheduledQuery] = None
 
         while self._query_heap:
             query = self._query_heap[0]
+            if query.cancelled:
+                heappop(self._query_heap)
+                continue
             if query.when_millis >= now_millis:
                 next_scheduled = query
                 break
