@@ -321,7 +321,10 @@ class QueryScheduler:
 
     def schedule(self, pointer: DNSPointer) -> None:
         """Schedule a query for a pointer."""
-        expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+        self._schedule(pointer, pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
+
+    def _schedule(self, pointer: DNSPointer, expire_time: float_) -> None:
+        """Schedule a query for a pointer."""
         scheduled_query = _ScheduledQuery(pointer.alias, pointer.name, expire_time)
         self._next_scheduled_for_name[pointer.name] = scheduled_query
         heappush(self._query_heap, scheduled_query)
@@ -335,8 +338,8 @@ class QueryScheduler:
     def reschedule(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
         current = self._next_scheduled_for_name.get(pointer.name)
+        expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         if current is not None:
-            expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
             # If the expire time is within self._min_time_between_queries_millis
             # of the current scheduled time avoid churn by not rescheduling
             if (
@@ -346,7 +349,7 @@ class QueryScheduler:
             ):
                 return
             current.cancelled = True
-        self.schedule(pointer)
+        self._schedule(pointer, expire_time)
 
     def _process_startup_queries(self) -> None:
         if TYPE_CHECKING:
