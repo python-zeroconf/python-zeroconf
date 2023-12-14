@@ -24,7 +24,7 @@ cdef class _ScheduledQuery:
     cdef public str name
     cdef public str type_
     cdef public bint cancelled
-    cdef public float when
+    cdef public double when_millis
 
 cdef class _DNSPointerOutgoingBucket:
 
@@ -50,7 +50,7 @@ cdef class QueryScheduler:
 
     cdef _ServiceBrowserBase _browser
     cdef tuple _first_random_delay_interval
-    cdef double _min_time_between_queries
+    cdef double _min_time_between_queries_millis
     cdef object _loop
     cdef unsigned int _startup_queries_sent
     cdef dict _scheduled

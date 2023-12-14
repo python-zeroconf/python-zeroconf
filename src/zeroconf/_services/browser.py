@@ -101,28 +101,28 @@ heappush = heapq.heappush
 
 class _ScheduledQuery:
 
-    __slots__ = ('name', 'type_', 'cancelled', 'when')
+    __slots__ = ('name', 'type_', 'cancelled', 'when_millis')
 
-    def __init__(self, name: str, type_: str, when: float) -> None:
+    def __init__(self, name: str, type_: str, when_millis: float) -> None:
         """Create a scheduled query."""
         self.name = name
         self.type_ = type_
         self.cancelled = False
-        self.when = when
+        self.when_millis = when_millis
 
     def __lt__(self, other: '_ScheduledQuery') -> bool:
         """Compare two scheduled queries."""
-        return self.when < other.when
+        return self.when_millis < other.when_millis
 
     def __gt__(self, other: '_ScheduledQuery') -> bool:
         """Compare two scheduled queries."""
-        return self.when > other.when
+        return self.when_millis > other.when_millis
 
     def __eq__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
         if not isinstance(other, _ScheduledQuery):
             return NotImplemented
-        return self.when == other.when
+        return self.when_millis == other.when_millis
 
 
 class _DNSPointerOutgoingBucket:
@@ -262,7 +262,7 @@ class QueryScheduler:
     __slots__ = (
         '_browser',
         '_first_random_delay_interval',
-        '_min_time_between_queries',
+        '_min_time_between_queries_millis',
         '_loop',
         '_startup_queries_sent',
         '_scheduled',
@@ -278,7 +278,7 @@ class QueryScheduler:
     ) -> None:
         self._browser = browser
         self._first_random_delay_interval = first_random_delay_interval
-        self._min_time_between_queries = millis_to_seconds(delay)
+        self._min_time_between_queries_millis = delay
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._startup_queries_sent = 0
         self._scheduled: Dict[str, _ScheduledQuery] = {}
@@ -326,7 +326,6 @@ class QueryScheduler:
         if TYPE_CHECKING:
             assert self._loop is not None
         now_millis = current_time_millis()
-        now_seconds = millis_to_seconds(now_millis)
 
         if self._startup_queries_sent < STARTUP_QUERIES:
             # At first we will send 3 queries to get the cache populated
@@ -354,7 +353,7 @@ class QueryScheduler:
 
         while self._query_heap:
             query = self._query_heap[0]
-            if query.when >= now_seconds:
+            if query.when_millis >= now_millis:
                 next_scheduled = query
                 break
             heappop(self._query_heap)
@@ -364,14 +363,14 @@ class QueryScheduler:
         if ready_types:
             self._browser.async_send_ready_queries(False, now_millis, ready_types)
 
-        next_time = now_seconds + self._min_time_between_queries
+        next_time_millis = now_millis + self._min_time_between_queries_millis
 
-        if next_scheduled and next_scheduled.when > next_time:
-            next_when = next_scheduled.when
+        if next_scheduled and next_scheduled.when_millis > next_time_millis:
+            next_when_millis = next_scheduled.when_millis
         else:
-            next_when = next_time
+            next_when_millis = next_time_millis
 
-        self._next_run = self._loop.call_at(next_when, self._process_ready_types)
+        self._next_run = self._loop.call_at(millis_to_seconds(next_when_millis), self._process_ready_types)
 
 
 class _ServiceBrowserBase(RecordUpdateListener):
