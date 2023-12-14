@@ -21,6 +21,7 @@
 """
 
 import asyncio
+import heapq
 import queue
 import random
 import threading
@@ -29,6 +30,7 @@ from functools import partial
 from types import TracebackType  # noqa # used in type hints
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Dict,
     Iterable,
@@ -56,7 +58,6 @@ from .._utils.name import cached_possible_types, service_type_name
 from .._utils.time import current_time_millis, millis_to_seconds
 from ..const import (
     _ADDRESS_RECORD_TYPES,
-    _BROWSER_BACKOFF_LIMIT,
     _BROWSER_TIME,
     _CLASS_IN,
     _DNS_PACKET_HEADER_LEN,
@@ -82,6 +83,8 @@ SERVICE_STATE_CHANGE_ADDED = ServiceStateChange.Added
 SERVICE_STATE_CHANGE_REMOVED = ServiceStateChange.Removed
 SERVICE_STATE_CHANGE_UPDATED = ServiceStateChange.Updated
 
+STARTUP_QUERIES = 3
+
 if TYPE_CHECKING:
     from .._core import Zeroconf
 
@@ -91,6 +94,32 @@ bool_ = bool
 str_ = str
 
 _QuestionWithKnownAnswers = Dict[DNSQuestion, Set[DNSPointer]]
+
+
+class _ScheduledQuery:
+
+    __slots__ = ('name', 'type_', 'cancelled', 'when')
+
+    def __init__(self, name: str, type_: str, when: float) -> None:
+        """Create a scheduled query."""
+        self.name = name
+        self.type_ = type_
+        self.cancelled = False
+        self.when = when
+
+    def __lt__(self, other: '_ScheduledQuery') -> bool:
+        """Compare two scheduled queries."""
+        return self.when < other.when
+
+    def __gt__(self, other: '_ScheduledQuery') -> bool:
+        """Compare two scheduled queries."""
+        return self.when > other.when
+
+    def __eq__(self, other: Any) -> bool:
+        """Compare two scheduled queries."""
+        if not isinstance(other, _ScheduledQuery):
+            return NotImplemented
+        return self.when == other.when
 
 
 class _DNSPointerOutgoingBucket:
@@ -164,7 +193,7 @@ def _group_ptr_queries_with_known_answers(
 
 
 def generate_service_query(
-    zc: 'Zeroconf', now: float_, types_: List[str], multicast: bool, question_type: Optional[DNSQuestionType]
+    zc: 'Zeroconf', now: float_, types_: set[str], multicast: bool, question_type: Optional[DNSQuestionType]
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
@@ -223,25 +252,34 @@ class QueryScheduler:
 
     """
 
-    __slots__ = ('_types', '_next_time', '_first_random_delay_interval', '_delay')
+    __slots__ = (
+        '_browser',
+        '_first_random_delay_interval',
+        '_min_time_between_queries',
+        '_loop',
+        '_startup_queries_sent',
+        '_scheduled',
+        '_query_heap',
+        '_next_run',
+    )
 
     def __init__(
         self,
-        types: Set[str],
+        browser: "_ServiceBrowserBase",
         delay: int,
         first_random_delay_interval: Tuple[int, int],
     ) -> None:
-        self._types = types
-        self._next_time: Dict[str, float] = {}
+        self._browser = browser
         self._first_random_delay_interval = first_random_delay_interval
-        self._delay: Dict[str, float] = {check_type_: delay for check_type_ in self._types}
+        self._min_time_between_queries = millis_to_seconds(delay)
+        self._loop = asyncio.get_running_loop()
+        self._startup_queries_sent = 0
+        self._scheduled: Dict[str, _ScheduledQuery] = {}
+        self._query_heap: list[_ScheduledQuery] = []
+        self._next_run: Optional[asyncio.TimerHandle] = None
 
-    def start(self, now: float_) -> None:
-        """Start the scheduler."""
-        self._generate_first_next_time(now)
-
-    def _generate_first_next_time(self, now: float_) -> None:
-        """Generate the initial next query times.
+    def start(self) -> None:
+        """Start the scheduler.
 
         https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
         To avoid accidental synchronization when, for some reason, multiple
@@ -250,43 +288,75 @@ class QueryScheduler:
         also delay the first query of the series by a randomly chosen amount
         in the range 20-120 ms.
         """
-        delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))
-        next_time = now + delay
-        self._next_time = {check_type_: next_time for check_type_ in self._types}
+        start_delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))
+        self._loop.call_later(start_delay, self._process_ready_types)
 
-    def millis_to_wait(self, now: float_) -> float:
-        """Returns the number of milliseconds to wait for the next event."""
-        # Wait for the type has the smallest next time
-        next_time = min(self._next_time.values())
-        return 0 if next_time <= now else next_time - now
+    def stop(self) -> None:
+        """Stop the scheduler."""
+        if self._next_run:
+            self._next_run.cancel()
+            self._next_run = None
 
-    def reschedule_type(self, type_: str_, next_time: float_) -> bool:
-        """Reschedule the query for a type to happen sooner."""
-        if next_time >= self._next_time[type_]:
-            return False
-        self._next_time[type_] = next_time
-        return True
+    def schedule(self, pointer: DNSPointer) -> None:
+        """Schedule a query for a pointer."""
+        expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+        scheduled_query = _ScheduledQuery(pointer.alias, pointer.name, expire_time)
+        self._scheduled[pointer.name] = scheduled_query
+        heapq.heappush(self._query_heap, scheduled_query)
 
-    def _force_reschedule_type(self, type_: str_, next_time: float_) -> None:
-        """Force a reschedule of a type."""
-        self._next_time[type_] = next_time
+    def cancel(self, pointer: DNSPointer) -> None:
+        """Cancel a query for a pointer."""
+        self._scheduled[pointer.name].cancelled = True
 
-    def process_ready_types(self, now: float_) -> List[str]:
+    def reschedule(self, pointer: DNSPointer) -> None:
+        """Reschedule a query for a pointer."""
+        self.cancel(pointer)
+        self.schedule(pointer)
+
+    def _process_ready_types(self) -> None:
         """Generate a list of ready types that is due and schedule the next time."""
-        if self.millis_to_wait(now):
-            return []
+        now = current_time_millis()
 
-        ready_types: List[str] = []
+        if self._startup_queries_sent < STARTUP_QUERIES:
+            # At first we will send 3 queries to get the cache populated
+            first_request = self._startup_queries_sent == 0
+            self._startup_queries_sent += 1
+            self._browser.async_send_ready_queries(first_request, now, self._browser.types)
+            self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_ready_types)
+            return
 
-        for type_, due in self._next_time.items():
-            if due > now:
-                continue
+        # Once we have sent the initial queries we will send queries
+        # only when we need to refresh records that are about to expire (aka
+        # _EXPIRE_REFRESH_TIME_PERCENT which is currently 75% of the TTL) and
+        # with a minimum time between queries of _min_time_between_queries
+        # which defaults to 1s
 
-            ready_types.append(type_)
-            self._next_time[type_] = now + self._delay[type_]
-            self._delay[type_] = min(_BROWSER_BACKOFF_LIMIT * 1000, self._delay[type_] * 2)
+        # Remove cancelled from head of queue.
+        while self._query_heap and self._query_heap[0].cancelled:
+            heapq.heappop(self._query_heap)
 
-        return ready_types
+        ready_types: set[str] = set()
+
+        while self._query_heap:
+            query = self._query_heap[0]
+            if query.when >= now:
+                break
+            heapq.heappop(self._query_heap)
+            del self._scheduled[query.name]
+            ready_types.add(query.type_)
+
+        if ready_types:
+            self._browser.async_send_ready_queries(False, now, ready_types)
+
+        next_scheduled = self._query_heap[0].when if self._query_heap else 0
+        next_time = now + self._min_time_between_queries
+
+        if next_scheduled > next_time:
+            next_when = next_scheduled
+        else:
+            next_when = next_time
+
+        self._next_run = self._loop.call_at(next_when, self._process_ready_types)
 
 
 class _ServiceBrowserBase(RecordUpdateListener):
@@ -353,7 +423,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.question_type = question_type
         self._pending_handlers: Dict[Tuple[str, str], ServiceStateChange] = {}
         self._service_state_changed = Signal()
-        self.query_scheduler = QueryScheduler(self.types, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
+        self.query_scheduler = QueryScheduler(self, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
         self.done = False
         self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
@@ -377,7 +447,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         Must be called by uses of this base class after they
         have finished setting their properties.
         """
-        self.query_scheduler.start(current_time_millis())
         self.zc.async_add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
         # Only start queries after the listener is installed
         self._query_sender_task = asyncio.ensure_future(self._async_start_query_sender())
@@ -432,11 +501,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 for type_ in self.types.intersection(cached_possible_types(pointer.name)):
                     if old_record is None:
                         self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias)
+                        self.query_scheduler.schedule(pointer)
                     elif pointer.is_expired(now):
                         self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias)
+                        self.query_scheduler.cancel(pointer)
                     else:
-                        expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
-                        self.reschedule_type(type_, now, expire_time)
+                        self.query_scheduler.reschedule(pointer)
                 continue
 
             # If its expired or already exists in the cache it cannot be updated.
@@ -487,67 +557,31 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def _async_cancel(self) -> None:
         """Cancel the browser."""
         self.done = True
-        self._cancel_send_timer()
+        self.query_scheduler.stop()
         self.zc.async_remove_listener(self)
         assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
         self._query_sender_task.cancel()
-
-    def _generate_ready_queries(self, first_request: bool_, now: float_) -> List[DNSOutgoing]:
-        """Generate the service browser query for any type that is due."""
-        ready_types = self.query_scheduler.process_ready_types(now)
-        if not ready_types:
-            return []
-
-        # If they did not specify and this is the first request, ask QU questions
-        # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
-        # just starting up and we know our cache is likely empty. This ensures
-        # the next outgoing will be sent with the known answers list.
-        question_type = DNSQuestionType.QU if not self.question_type and first_request else self.question_type
-        return generate_service_query(self.zc, now, ready_types, self.multicast, question_type)
 
     async def _async_start_query_sender(self) -> None:
         """Start scheduling queries."""
         if not self.zc.started:
             await self.zc.async_wait_for_start()
-        self._async_send_ready_queries_schedule_next()
+        self.query_scheduler.start()
 
-    def _cancel_send_timer(self) -> None:
-        """Cancel the next send."""
-        if self._next_send_timer:
-            self._next_send_timer.cancel()
-            self._next_send_timer = None
-
-    def reschedule_type(self, type_: str_, now: float_, next_time: float_) -> None:
-        """Reschedule a type to be refreshed in the future."""
-        if self.query_scheduler.reschedule_type(type_, next_time):
-            # We need to send the queries before rescheduling the next one
-            # otherwise we may be scheduling a query to go out in the next
-            # iteration of the event loop which should be sent now.
-            if now >= next_time:
-                self._async_send_ready_queries(now)
-            self._cancel_send_timer()
-            self._async_schedule_next(now)
-
-    def _async_send_ready_queries(self, now: float_) -> None:
+    def async_send_ready_queries(self, first_request: bool, now: float_, ready_types: set[str]) -> None:
         """Send any ready queries."""
-        outs = self._generate_ready_queries(self._first_request, now)
+        if self.done or self.zc.done:
+            return
+        # If they did not specify and this is the first request, ask QU questions
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
+        # just starting up and we know our cache is likely empty. This ensures
+        # the next outgoing will be sent with the known answers list.
+        question_type = DNSQuestionType.QU if not self.question_type and first_request else self.question_type
+        outs = generate_service_query(self.zc, now, ready_types, self.multicast, question_type)
         if outs:
             self._first_request = False
             for out in outs:
                 self.zc.async_send(out, addr=self.addr, port=self.port)
-
-    def _async_send_ready_queries_schedule_next(self) -> None:
-        """Send ready queries and schedule next one checking for done first."""
-        if self.done or self.zc.done:
-            return
-        now = current_time_millis()
-        self._async_send_ready_queries(now)
-        self._async_schedule_next(now)
-
-    def _async_schedule_next(self, now: float_) -> None:
-        """Scheule the next time."""
-        delay = millis_to_seconds(self.query_scheduler.millis_to_wait(now))
-        self._next_send_timer = self._loop.call_later(delay, self._async_send_ready_queries_schedule_next)
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):

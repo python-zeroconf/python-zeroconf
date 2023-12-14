@@ -17,6 +17,13 @@ cdef cython.uint _TYPE_PTR
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED
 cdef cython.set _ADDRESS_RECORD_TYPES
 
+cdef class _ScheduledQuery:
+
+    cdef public str name
+    cdef public str type_
+    cdef public bint cancelled
+    cdef public float when
+
 cdef class _DNSPointerOutgoingBucket:
 
     cdef public object now
@@ -29,7 +36,7 @@ cdef class _DNSPointerOutgoingBucket:
 cpdef generate_service_query(
     object zc,
     double now,
-    list type_,
+    set types_,
     bint multicast,
     object question_type
 )
@@ -39,16 +46,21 @@ cdef _group_ptr_queries_with_known_answers(object now, object multicast, cython.
 
 cdef class QueryScheduler:
 
-    cdef cython.set _types
-    cdef cython.dict _next_time
+    cdef _ServiceBrowserBase _browser
     cdef object _first_random_delay_interval
-    cdef cython.dict _delay
+    cdef object _min_time_between_queries
+    cdef object _loop
+    cdef unsigned int _startup_queries_sent
+    cdef dict _scheduled
+    cdef list _query_heap
+    cdef object _next_run
 
-    cpdef millis_to_wait(self, object now)
+    cpdef schedule(self, DNSPointer pointer)
 
-    cpdef reschedule_type(self, object type_, object next_time)
+    cpdef cancel(self, DNSPointer pointer)
 
-    cpdef process_ready_types(self, object now)
+    cpdef reschedule(self, DNSPointer pointer)
+
 
 cdef class _ServiceBrowserBase(RecordUpdateListener):
 
@@ -90,3 +102,5 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cpdef _cancel_send_timer(self)
 
     cpdef async_update_records_complete(self)
+
+    cpdef async_send_ready_queries(self, first_request: bint ,double now, set ready_types)
