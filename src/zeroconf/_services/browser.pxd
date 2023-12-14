@@ -99,4 +99,4 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cpdef async_update_records_complete(self)
 
-    cpdef async_send_ready_queries(self, first_request: bint, double now_millis, set ready_types)
+    cpdef async_send_ready_queries(self, bint first_request, double now_millis, set ready_types)
