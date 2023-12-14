@@ -309,7 +309,7 @@ class QueryScheduler:
         """
         start_delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))
         self._loop = loop
-        loop.call_later(start_delay, self._process_ready_types)
+        self._next_run = loop.call_later(start_delay, self._process_startup_queries)
 
     def stop(self) -> None:
         """Stop the scheduler."""
@@ -334,22 +334,32 @@ class QueryScheduler:
         self.cancel(pointer)
         self.schedule(pointer)
 
+    def _process_startup_queries(self) -> None:
+        if TYPE_CHECKING:
+            assert self._loop is not None
+        now_millis = current_time_millis()
+
+        # At first we will send 3 queries to get the cache populated
+        self._browser.async_send_ready_queries(
+            self._startup_queries_sent == 0, now_millis, self._browser.types
+        )
+        self._startup_queries_sent += 1
+
+        # Once we finish sending the initial queries we will
+        # switch to a strategy of sending queries only when we
+        # need to refresh records that are about to expire
+        if self._startup_queries_sent >= STARTUP_QUERIES:
+            self._process_ready_types()
+            return
+
+        self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_startup_queries)
+
     def _process_ready_types(self) -> None:
         """Generate a list of ready types that is due and schedule the next time."""
         if TYPE_CHECKING:
             assert self._loop is not None
         now_millis = current_time_millis()
-
-        if self._startup_queries_sent < STARTUP_QUERIES:
-            # At first we will send 3 queries to get the cache populated
-            first_request = self._startup_queries_sent == 0
-            self._browser.async_send_ready_queries(first_request, now_millis, self._browser.types)
-            self._startup_queries_sent += 1
-            self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_ready_types)
-            return
-
-        # Once we have sent the initial queries we will send queries
-        # only when we need to refresh records that are about to expire (aka
+        # Refresh records that are about to expire (aka
         # _EXPIRE_REFRESH_TIME_PERCENT which is currently 75% of the TTL) and
         # with a minimum time between queries of _min_time_between_queries
         # which defaults to 1s
