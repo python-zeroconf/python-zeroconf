@@ -19,6 +19,8 @@ cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_ST
 cdef cython.set _ADDRESS_RECORD_TYPES
 cdef cython.uint STARTUP_QUERIES
 
+cdef object _MDNS_PORT, _BROWSER_TIME
+
 cdef object QU_QUESTION
 
 cdef object heappop, heappush
