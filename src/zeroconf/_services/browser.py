@@ -334,7 +334,32 @@ class QueryScheduler:
 
     def reschedule(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
-        self.cancel(pointer)
+        current = self._next_scheduled_for_name.get(pointer.name)
+        if current is not None:
+            expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+            # If the expire time is within self._min_time_between_queries_millis
+            # of the current scheduled time avoid churn by not rescheduling
+            import pprint
+
+            pprint.pprint(
+                [
+                    'Check if we should reschedule',
+                    current.when_millis,
+                    expire_time,
+                    current.when_millis - expire_time,
+                ]
+            )
+            if (
+                -self._min_time_between_queries_millis
+                <= expire_time - current.when_millis
+                <= self._min_time_between_queries_millis
+            ):
+                pprint.pprint(
+                    ['No reschedule', current.when_millis, expire_time, current.when_millis - expire_time]
+                )
+                return
+            pprint.pprint(['Reschedule', current.when_millis, expire_time, current.when_millis - expire_time])
+            current.cancelled = True
         self.schedule(pointer)
 
     def _process_startup_queries(self) -> None:
@@ -363,7 +388,7 @@ class QueryScheduler:
         # Refresh records that are about to expire (aka
         # _EXPIRE_REFRESH_TIME_PERCENT which is currently 75% of the TTL) and
         # with a minimum time between queries of _min_time_between_queries
-        # which defaults to 1s
+        # which defaults to 10s
 
         # Remove cancelled from head of queue.
         while self._query_heap:
