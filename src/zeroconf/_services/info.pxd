@@ -124,4 +124,4 @@ cdef class ServiceInfo(RecordUpdateListener):
     cpdef async_clear_cache(self)
 
     @cython.locals(cache=DNSCache)
-    cdef _generate_request_query(self, object zc, object now, object question_type)
+    cdef _generate_request_query(self, object zc, double now, object question_type)

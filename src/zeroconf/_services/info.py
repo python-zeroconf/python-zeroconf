@@ -845,7 +845,7 @@ class ServiceInfo(RecordUpdateListener):
         out.add_question_or_one_cache(cache, now, name, _TYPE_TXT, _CLASS_IN)
         out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_A, _CLASS_IN)
         out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN)
-        if question_type == DNS_QUESTION_TYPE_QU:
+        if question_type is DNS_QUESTION_TYPE_QU:
             for question in out.questions:
                 question.unicast = True
         return out
