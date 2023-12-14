@@ -196,7 +196,7 @@ def _group_ptr_queries_with_known_answers(
 
 
 def generate_service_query(
-    zc: 'Zeroconf', now: float_, types_: set[str], multicast: bool, question_type: Optional[DNSQuestionType]
+    zc: 'Zeroconf', now: float_, types_: Set[str], multicast: bool, question_type: Optional[DNSQuestionType]
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
@@ -341,8 +341,8 @@ class QueryScheduler:
                 break
             heappop(self._query_heap)
 
-        ready_types: set[str] = set()
-        next_scheduled: _ScheduledQuery | None = None
+        ready_types: Set[str] = set()
+        next_scheduled: Optional[_ScheduledQuery] = None
 
         while self._query_heap:
             query = self._query_heap[0]
@@ -575,7 +575,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             await self.zc.async_wait_for_start()
         self.query_scheduler.start()
 
-    def async_send_ready_queries(self, first_request: bool, now: float_, ready_types: set[str]) -> None:
+    def async_send_ready_queries(self, first_request: bool, now: float_, ready_types: Set[str]) -> None:
         """Send any ready queries."""
         if self.done or self.zc.done:
             return
