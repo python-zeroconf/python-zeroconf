@@ -340,9 +340,7 @@ class QueryScheduler:
         now_millis = current_time_millis()
 
         # At first we will send 3 queries to get the cache populated
-        self._browser.async_send_ready_queries(
-            self._startup_queries_sent == 0, now_millis, self._browser.types
-        )
+        self._browser.async_send_ready_queries(True, now_millis, self._browser.types)
         self._startup_queries_sent += 1
 
         # Once we finish sending the initial queries we will
@@ -388,7 +386,7 @@ class QueryScheduler:
 
         next_time_millis = now_millis + self._min_time_between_queries_millis
 
-        if next_scheduled and next_scheduled.when_millis > next_time_millis:
+        if next_scheduled is not None and next_scheduled.when_millis > next_time_millis:
             next_when_millis = next_scheduled.when_millis
         else:
             next_when_millis = next_time_millis
@@ -620,7 +618,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if outs:
             self._first_request = False
             for out in outs:
-                self.zc.async_send(out, addr=self.addr, port=self.port)
+                self.zc.async_send(out, self.addr, self.port)
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):

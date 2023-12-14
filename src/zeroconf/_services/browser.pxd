@@ -16,6 +16,7 @@ cdef cython.uint _EXPIRE_REFRESH_TIME_PERCENT, _MAX_MSG_TYPICAL, _DNS_PACKET_HEA
 cdef cython.uint _TYPE_PTR
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED
 cdef cython.set _ADDRESS_RECORD_TYPES
+cdef cython.uint STARTUP_QUERIES
 
 cdef object heappop, heappush
 
@@ -35,7 +36,7 @@ cdef class _DNSPointerOutgoingBucket:
     cpdef add(self, cython.uint max_compressed_size, DNSQuestion question, cython.set answers)
 
 @cython.locals(cache=DNSCache, question_history=QuestionHistory, record=DNSRecord, qu_question=bint)
-cpdef generate_service_query(
+cpdef list generate_service_query(
     object zc,
     double now_millis,
     set types_,
@@ -78,13 +79,13 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cdef object _loop
     cdef public object addr
     cdef public object port
-    cdef public object multicast
+    cdef public bint multicast
     cdef public object question_type
     cdef public cython.dict _pending_handlers
     cdef public object _service_state_changed
     cdef public QueryScheduler query_scheduler
     cdef public bint done
-    cdef public object _first_request
+    cdef public bint _first_request
     cdef public object _next_send_timer
     cdef public object _query_sender_task
 
