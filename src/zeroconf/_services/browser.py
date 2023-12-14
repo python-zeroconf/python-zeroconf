@@ -275,13 +275,13 @@ class QueryScheduler:
         self._browser = browser
         self._first_random_delay_interval = first_random_delay_interval
         self._min_time_between_queries = millis_to_seconds(delay)
-        self._loop = asyncio.get_running_loop()
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._startup_queries_sent = 0
         self._scheduled: Dict[str, _ScheduledQuery] = {}
         self._query_heap: list[_ScheduledQuery] = []
         self._next_run: Optional[asyncio.TimerHandle] = None
 
-    def start(self) -> None:
+    def start(self, loop: asyncio.AbstractEventLoop) -> None:
         """Start the scheduler.
 
         https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
@@ -292,7 +292,8 @@ class QueryScheduler:
         in the range 20-120 ms.
         """
         start_delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))
-        self._loop.call_later(start_delay, self._process_ready_types)
+        self._loop = loop
+        loop.call_later(start_delay, self._process_ready_types)
 
     def stop(self) -> None:
         """Stop the scheduler."""
@@ -318,6 +319,8 @@ class QueryScheduler:
 
     def _process_ready_types(self) -> None:
         """Generate a list of ready types that is due and schedule the next time."""
+        if TYPE_CHECKING:
+            assert self._loop is not None
         now = current_time_millis()
 
         if self._startup_queries_sent < STARTUP_QUERIES:
@@ -573,7 +576,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         """Start scheduling queries."""
         if not self.zc.started:
             await self.zc.async_wait_for_start()
-        self.query_scheduler.start()
+        self.query_scheduler.start(self._loop)
 
     def async_send_ready_queries(self, first_request: bool, now: float_, ready_types: Set[str]) -> None:
         """Send any ready queries."""
