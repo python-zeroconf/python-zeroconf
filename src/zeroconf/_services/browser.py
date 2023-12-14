@@ -128,11 +128,11 @@ class _ScheduledQuery:
 class _DNSPointerOutgoingBucket:
     """A DNSOutgoing bucket."""
 
-    __slots__ = ('now', 'out', 'bytes')
+    __slots__ = ('now_millis', 'out', 'bytes')
 
-    def __init__(self, now: float, multicast: bool) -> None:
-        """Create a bucke to wrap a DNSOutgoing."""
-        self.now = now
+    def __init__(self, now_millis: float, multicast: bool) -> None:
+        """Create a bucket to wrap a DNSOutgoing."""
+        self.now_millis = now_millis
         self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast=multicast)
         self.bytes = 0
 
@@ -140,7 +140,7 @@ class _DNSPointerOutgoingBucket:
         """Add a new set of questions and known answers to the outgoing."""
         self.out.add_question(question)
         for answer in answers:
-            self.out.add_answer_at_time(answer, self.now)
+            self.out.add_answer_at_time(answer, self.now_millis)
         self.bytes += max_compressed_size
 
 
@@ -159,7 +159,7 @@ def group_ptr_queries_with_known_answers(
 
 
 def _group_ptr_queries_with_known_answers(
-    now: float_, multicast: bool_, question_with_known_answers: _QuestionWithKnownAnswers
+    now_millis: float_, multicast: bool_, question_with_known_answers: _QuestionWithKnownAnswers
 ) -> List[DNSOutgoing]:
     """Inner wrapper for group_ptr_queries_with_known_answers."""
     # This is the maximum size the query + known answers can be with name compression.
@@ -188,7 +188,7 @@ def _group_ptr_queries_with_known_answers(
             # If a single question and known answers won't fit in a packet
             # we will end up generating multiple packets, but there will never
             # be multiple questions
-            query_bucket = _DNSPointerOutgoingBucket(now, multicast)
+            query_bucket = _DNSPointerOutgoingBucket(now_millis, multicast)
             query_bucket.add(max_compressed_size, question, answers)
             query_buckets.append(query_bucket)
 
@@ -196,7 +196,11 @@ def _group_ptr_queries_with_known_answers(
 
 
 def generate_service_query(
-    zc: 'Zeroconf', now: float_, types_: Set[str], multicast: bool, question_type: Optional[DNSQuestionType]
+    zc: 'Zeroconf',
+    now_millis: float_,
+    types_: Set[str],
+    multicast: bool,
+    question_type: Optional[DNSQuestionType],
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
@@ -209,9 +213,9 @@ def generate_service_query(
         known_answers = {
             record
             for record in cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
-            if not record.is_stale(now)
+            if not record.is_stale(now_millis)
         }
-        if not qu_question and question_history.suppresses(question, now, known_answers):
+        if not qu_question and question_history.suppresses(question, now_millis, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
         if TYPE_CHECKING:
@@ -220,9 +224,9 @@ def generate_service_query(
             pointer_known_answers = known_answers
         questions_with_known_answers[question] = pointer_known_answers
         if not qu_question:
-            question_history.add_question_at_time(question, now, known_answers)
+            question_history.add_question_at_time(question, now_millis, known_answers)
 
-    return _group_ptr_queries_with_known_answers(now, multicast, questions_with_known_answers)
+    return _group_ptr_queries_with_known_answers(now_millis, multicast, questions_with_known_answers)
 
 
 def _on_change_dispatcher(
@@ -321,13 +325,14 @@ class QueryScheduler:
         """Generate a list of ready types that is due and schedule the next time."""
         if TYPE_CHECKING:
             assert self._loop is not None
-        now = current_time_millis()
+        now_millis = current_time_millis()
+        now_seconds = millis_to_seconds(now_millis)
 
         if self._startup_queries_sent < STARTUP_QUERIES:
             # At first we will send 3 queries to get the cache populated
             first_request = self._startup_queries_sent == 0
+            self._browser.async_send_ready_queries(first_request, now_millis, self._browser.types)
             self._startup_queries_sent += 1
-            self._browser.async_send_ready_queries(first_request, now, self._browser.types)
             self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_ready_types)
             return
 
@@ -349,7 +354,7 @@ class QueryScheduler:
 
         while self._query_heap:
             query = self._query_heap[0]
-            if query.when >= now:
+            if query.when >= now_seconds:
                 next_scheduled = query
                 break
             heappop(self._query_heap)
@@ -357,9 +362,9 @@ class QueryScheduler:
             ready_types.add(query.type_)
 
         if ready_types:
-            self._browser.async_send_ready_queries(False, now, ready_types)
+            self._browser.async_send_ready_queries(False, now_millis, ready_types)
 
-        next_time = now + self._min_time_between_queries
+        next_time = now_seconds + self._min_time_between_queries
 
         if next_scheduled and next_scheduled.when > next_time:
             next_when = next_scheduled.when
@@ -578,7 +583,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
             await self.zc.async_wait_for_start()
         self.query_scheduler.start(self._loop)
 
-    def async_send_ready_queries(self, first_request: bool, now: float_, ready_types: Set[str]) -> None:
+    def async_send_ready_queries(
+        self, first_request: bool, now_millis: float_, ready_types: Set[str]
+    ) -> None:
         """Send any ready queries."""
         if self.done or self.zc.done:
             return
@@ -587,7 +594,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         # just starting up and we know our cache is likely empty. This ensures
         # the next outgoing will be sent with the known answers list.
         question_type = DNSQuestionType.QU if not self.question_type and first_request else self.question_type
-        outs = generate_service_query(self.zc, now, ready_types, self.multicast, question_type)
+        outs = generate_service_query(self.zc, now_millis, ready_types, self.multicast, question_type)
         if outs:
             self._first_request = False
             for out in outs:

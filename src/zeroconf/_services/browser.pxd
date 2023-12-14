@@ -28,7 +28,7 @@ cdef class _ScheduledQuery:
 
 cdef class _DNSPointerOutgoingBucket:
 
-    cdef public object now
+    cdef public double now_millis
     cdef public DNSOutgoing out
     cdef public cython.uint bytes
 
@@ -37,14 +37,14 @@ cdef class _DNSPointerOutgoingBucket:
 @cython.locals(cache=DNSCache, question_history=QuestionHistory, record=DNSRecord, qu_question=bint)
 cpdef generate_service_query(
     object zc,
-    double now,
+    double now_millis,
     set types_,
     bint multicast,
     object question_type
 )
 
 @cython.locals(answer=DNSPointer, query_buckets=list, question=DNSQuestion, max_compressed_size=cython.uint, max_bucket_size=cython.uint, query_bucket=_DNSPointerOutgoingBucket)
-cdef _group_ptr_queries_with_known_answers(object now, object multicast, cython.dict question_with_known_answers)
+cdef _group_ptr_queries_with_known_answers(double now_millis, object multicast, cython.dict question_with_known_answers)
 
 cdef class QueryScheduler:
 
@@ -96,4 +96,4 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cpdef async_update_records_complete(self)
 
-    cpdef async_send_ready_queries(self, first_request: bint ,double now, set ready_types)
+    cpdef async_send_ready_queries(self, first_request: bint, double now_millis, set ready_types)
