@@ -326,8 +326,8 @@ class QueryScheduler:
 
     def cancel(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
-        self._next_scheduled_for_name[pointer.name].cancelled = True
-        del self._next_scheduled_for_name[pointer.name]
+        scheduled = self._next_scheduled_for_name.pop(pointer.name)
+        scheduled.cancelled = True
 
     def reschedule(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
