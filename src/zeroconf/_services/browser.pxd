@@ -49,7 +49,7 @@ cdef _group_ptr_queries_with_known_answers(object now, object multicast, cython.
 cdef class QueryScheduler:
 
     cdef _ServiceBrowserBase _browser
-    cdef double _first_random_delay_interval
+    cdef tuple _first_random_delay_interval
     cdef double _min_time_between_queries
     cdef object _loop
     cdef unsigned int _startup_queries_sent
