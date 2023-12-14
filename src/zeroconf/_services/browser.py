@@ -339,26 +339,12 @@ class QueryScheduler:
             expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
             # If the expire time is within self._min_time_between_queries_millis
             # of the current scheduled time avoid churn by not rescheduling
-            import pprint
-
-            pprint.pprint(
-                [
-                    'Check if we should reschedule',
-                    current.when_millis,
-                    expire_time,
-                    current.when_millis - expire_time,
-                ]
-            )
             if (
                 -self._min_time_between_queries_millis
                 <= expire_time - current.when_millis
                 <= self._min_time_between_queries_millis
             ):
-                pprint.pprint(
-                    ['No reschedule', current.when_millis, expire_time, current.when_millis - expire_time]
-                )
                 return
-            pprint.pprint(['Reschedule', current.when_millis, expire_time, current.when_millis - expire_time])
             current.cancelled = True
         self.schedule(pointer)
 
