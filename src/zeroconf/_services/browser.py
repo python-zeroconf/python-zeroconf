@@ -25,6 +25,7 @@ import heapq
 import queue
 import random
 import threading
+import time
 import warnings
 from functools import partial
 from types import TracebackType  # noqa # used in type hints
@@ -282,6 +283,7 @@ class QueryScheduler:
         '_next_scheduled_for_name',
         '_query_heap',
         '_next_run',
+        '_clock_resolution_millis',
     )
 
     def __init__(
@@ -298,6 +300,7 @@ class QueryScheduler:
         self._next_scheduled_for_name: Dict[str, _ScheduledQuery] = {}
         self._query_heap: list[_ScheduledQuery] = []
         self._next_run: Optional[asyncio.TimerHandle] = None
+        self._clock_resolution_millis = time.get_clock_info('monotonic').resolution * 1000
 
     def start(self, loop: asyncio.AbstractEventLoop) -> None:
         """Start the scheduler.
@@ -381,13 +384,14 @@ class QueryScheduler:
 
         ready_types: Set[str] = set()
         next_scheduled: Optional[_ScheduledQuery] = None
+        end_time_millis = now_millis + self._clock_resolution_millis
 
         while self._query_heap:
             query = self._query_heap[0]
             if query.cancelled:
                 heappop(self._query_heap)
                 continue
-            if query.when_millis >= now_millis:
+            if query.when_millis > end_time_millis:
                 next_scheduled = query
                 break
             heappop(self._query_heap)

@@ -64,6 +64,7 @@ cdef class QueryScheduler:
     cdef dict _next_scheduled_for_name
     cdef list _query_heap
     cdef object _next_run
+    cdef double _clock_resolution_millis
 
     cpdef void schedule(self, DNSPointer pointer)
 
