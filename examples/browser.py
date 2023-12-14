@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     zeroconf = Zeroconf(ip_version=ip_version)
 
-    services = ["_http._tcp.local.", "_hap._tcp.local."]
+    services = ["_http._tcp.local.", "_hap._tcp.local.", "_esphomelib._tcp.local.", "_airplay._tcp.local."]
     if args.find:
         services = list(ZeroconfServiceTypes.find(zc=zeroconf))
 

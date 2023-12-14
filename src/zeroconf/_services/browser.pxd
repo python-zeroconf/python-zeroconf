@@ -61,6 +61,7 @@ cdef class QueryScheduler:
 
     cpdef cancel(self, DNSPointer pointer)
 
+    @cython.locals(current=_ScheduledQuery)
     cpdef reschedule(self, DNSPointer pointer)
 
     @cython.locals(query=_ScheduledQuery, next_scheduled=_ScheduledQuery, next_when=double)
