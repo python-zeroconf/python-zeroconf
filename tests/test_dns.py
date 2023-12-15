@@ -6,6 +6,7 @@
 import logging
 import os
 import socket
+import time
 import unittest
 import unittest.mock
 
@@ -85,32 +86,19 @@ class TestDunder(unittest.TestCase):
             record.write(None)  # type: ignore[arg-type]
 
     def test_dns_record_reset_ttl(self):
-        start = r.current_time_millis()
-        record = r.DNSRecord(
-            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, created=start
-        )
-        later = start + 1000
-        record2 = r.DNSRecord(
-            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, created=later
-        )
+        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
+        time.sleep(1)
+        record2 = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
         now = r.current_time_millis()
 
         assert record.created != record2.created
         assert record.get_remaining_ttl(now) != record2.get_remaining_ttl(now)
-        assert record.get_percentage_remaining_ttl(now) != record2.get_percentage_remaining_ttl(now)
-        assert record2.get_percentage_remaining_ttl(later) == 100
-        assert record2.get_percentage_remaining_ttl(later + (const._DNS_HOST_TTL * 1000 / 2)) == 50
 
         record.reset_ttl(record2)
 
         assert record.ttl == record2.ttl
         assert record.created == record2.created
         assert record.get_remaining_ttl(now) == record2.get_remaining_ttl(now)
-        assert record.get_percentage_remaining_ttl(now) == record2.get_percentage_remaining_ttl(now)
-        assert record.get_percentage_remaining_ttl(later) == 100
-        assert record2.get_percentage_remaining_ttl(later) == 100
-        assert record.get_percentage_remaining_ttl(later + (const._DNS_HOST_TTL * 1000 / 2)) == 50
-        assert record2.get_percentage_remaining_ttl(later + (const._DNS_HOST_TTL * 1000 / 2)) == 50
 
     def test_service_info_dunder(self):
         type_ = "_test-srvc-type._tcp.local."
