@@ -394,7 +394,7 @@ class QueryScheduler:
         expire_time_millis = pointer.get_expiration_time(100)
         self._schedule_pointer_refresh(pointer, expire_time_millis, refresh_time_millis)
 
-    def schedule_next_refresh_query(
+    def schedule_rescue_query(
         self, query: _ScheduledPTRQuery, now_millis: float_, additional_percentage: float_
     ) -> None:
         """Reschedule a query for a pointer at an additional percentage of expiration."""
@@ -469,7 +469,7 @@ class QueryScheduler:
             # schedule a query again to try to recuse the record
             # from expiring. If the record is refreshed before
             # the query, the query will get cancelled.
-            self.schedule_next_refresh_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
+            self.schedule_rescue_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
             ready_types.add(query.name)
 
         if ready_types:
