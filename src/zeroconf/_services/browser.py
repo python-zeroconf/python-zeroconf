@@ -86,7 +86,7 @@ SERVICE_STATE_CHANGE_UPDATED = ServiceStateChange.Updated
 
 QU_QUESTION = DNSQuestionType.QU
 
-STARTUP_QUERIES = 5
+STARTUP_QUERIES = 4
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -370,8 +370,10 @@ class QueryScheduler:
 
         now_millis = current_time_millis()
 
-        # At first we will send 3 queries to get the cache populated
-        self._browser.async_send_ready_queries(True, now_millis, self._browser.types)
+        # At first we will send STARTUP_QUERIES queries to get the cache populated
+        self._browser.async_send_ready_queries(
+            self._startup_queries_sent == 0, now_millis, self._browser.types
+        )
         self._startup_queries_sent += 1
 
         # Once we finish sending the initial queries we will
