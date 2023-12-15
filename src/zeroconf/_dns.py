@@ -194,7 +194,7 @@ class DNSRecord(DNSEntry):
         return self.created + (percent * self.ttl * 10)
 
     def get_percentage_remaining_ttl(self, now: _float) -> float:
-        """Returns the percentage remaining off the ttl."""
+        """Returns the percentage remaining of the ttl between 0-100."""
         remain = (self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) - now) / 1000.0
         return 0 if remain < 0 else (remain / self.ttl) * 100
 
