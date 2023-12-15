@@ -47,11 +47,16 @@ def test_question_suppression():
 def test_question_expire():
     history = QuestionHistory()
 
-    question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
     now = r.current_time_millis()
+    question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
     other_known_answers: Set[r.DNSRecord] = {
         r.DNSPointer(
-            "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            10000,
+            'known-to-other._hap._tcp.local.',
+            created=now,
         )
     }
     history.add_question_at_time(question, now, other_known_answers)
