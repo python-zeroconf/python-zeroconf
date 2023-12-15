@@ -361,6 +361,8 @@ class QueryScheduler:
     def _process_startup_queries(self) -> None:
         if TYPE_CHECKING:
             assert self._loop is not None
+        # This is a safety to ensure we stop sending queries if Zeroconf instance
+        # is stopped without the browser being cancelled
         if self._browser.zc.done:
             return
 
@@ -383,6 +385,8 @@ class QueryScheduler:
         """Generate a list of ready types that is due and schedule the next time."""
         if TYPE_CHECKING:
             assert self._loop is not None
+        # This is a safety to ensure we stop sending queries if Zeroconf instance
+        # is stopped without the browser being cancelled
         if self._browser.zc.done:
             return
 
