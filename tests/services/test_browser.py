@@ -596,11 +596,15 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
             assert not unexpected_ttl.is_set()
 
             assert len(questions) == _services_browser.STARTUP_QUERIES + 1
-            # The startup questions should be QU questions
-            for question in questions[0:-2]:
-                assert question[0].unicast is True
-            # The refresh questions should be QM questions
-            assert questions[-1][0].unicast is False
+            # The first question should be QU to try to
+            # populate the known answers and limit the impact
+            # of the QM questions that follow. We still
+            # have to ask QM questions for the startup queries
+            # because some devices will not respond to QU
+            assert questions[0][0].unicast is True
+            # The remaining questions should be QM questions
+            for question in questions[1:]:
+                assert question[0].unicast is False
             # Don't remove service, allow close() to cleanup
         finally:
             await aio_zeroconf_registrar.async_close()
