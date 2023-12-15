@@ -117,8 +117,20 @@ class _ScheduledPTRQuery:
         """Create a scheduled query."""
         self.alias = alias
         self.name = name
+        # Since queries are stored in a heap we need to track if they are cancelled
+        # so we can remove them from the heap when they are cancelled as it would
+        # be too expensive to search the heap for the record to remove and instead
+        # we just mark it as cancelled and ignore it when we pop it off the heap
+        # when the query is due.
         self.cancelled = False
+        # Expire time millis is the actual millisecond time the record will expire
         self.expire_time_millis = expire_time_millis
+        # When millis is the millisecond time the query should be sent
+        # For the first query this is the refresh time which is 75% of the TTL
+        #
+        # For subsequent queries we increase the time by 10% of the TTL
+        # until we reach the expire time and then we stop because it means
+        # we failed to rescue the record.
         self.when_millis = when_millis
 
     def __repr__(self) -> str:
