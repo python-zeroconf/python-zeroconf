@@ -155,8 +155,8 @@ class _ScheduledPTRQuery:
     def __eq__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
         if type(other) is _ScheduledPTRQuery:
-            return NotImplemented
-        return self.when_millis == other.when_millis
+            return self.when_millis == other.when_millis
+        return NotImplemented
 
     def __ge__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
