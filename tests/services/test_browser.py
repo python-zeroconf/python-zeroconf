@@ -27,7 +27,7 @@ from zeroconf import (
     millis_to_seconds,
 )
 from zeroconf._services import ServiceStateChange
-from zeroconf._services.browser import ServiceBrowser
+from zeroconf._services.browser import ServiceBrowser, _ScheduledPTRQuery
 from zeroconf._services.info import ServiceInfo
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 
@@ -1201,3 +1201,33 @@ def test_service_browser_expire_callbacks():
     browser.cancel()
 
     zc.close()
+
+
+def test_scheduled_ptr_query_dunder_methods():
+    query75 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 75)
+    query80 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 80)
+    query75_2 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 140, 75)
+    other = object()
+    stringified = str(query75)
+    assert "zoomy._hap._tcp.local." in stringified
+    assert "120" in stringified
+    assert "75" in stringified
+    assert "ScheduledPTRQuery" in stringified
+
+    assert query75 == query75
+    assert query75 != query80
+    assert query75 == query75_2
+    assert query75 < query80
+    assert query75 <= query80
+    assert query80 > query75
+    assert query80 >= query75
+
+    assert query75 != other
+    with pytest.raises(TypeError):
+        query75 < other  # type: ignore[operator]
+    with pytest.raises(TypeError):
+        query75 <= other
+    with pytest.raises(TypeError):
+        query75 > other  # type: ignore[operator]
+    with pytest.raises(TypeError):
+        query75 >= other
