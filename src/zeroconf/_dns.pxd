@@ -54,7 +54,7 @@ cdef class DNSRecord(DNSEntry):
 
     cpdef get_remaining_ttl(self, double now)
 
-    cpdef double get_percentage_remaining_ttl(self, double now)
+    cpdef unsigned int get_percentage_remaining_ttl(self, double now)
 
     cpdef double get_expiration_time(self, cython.uint percent)
 
