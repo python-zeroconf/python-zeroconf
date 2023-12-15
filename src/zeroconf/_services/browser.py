@@ -102,44 +102,44 @@ heappop = heapq.heappop
 heappush = heapq.heappush
 
 
-class _ScheduledQuery:
+class _ScheduledPTRQuery:
 
-    __slots__ = ('name', 'type_', 'cancelled', 'when_millis')
+    __slots__ = ('alias', 'name', 'cancelled', 'when_millis')
 
-    def __init__(self, name: str, type_: str, when_millis: float) -> None:
+    def __init__(self, alias: str, name: str, when_millis: float) -> None:
         """Create a scheduled query."""
+        self.alias = alias
         self.name = name
-        self.type_ = type_
         self.cancelled = False
         self.when_millis = when_millis
 
     def __repr__(self) -> str:
         """Return a string representation of the scheduled query."""
-        return f"<{self.__class__.__name__} {self.name} {self.type_} cancelled={self.cancelled} when={self.when_millis}>"
+        return f"<{self.__class__.__name__} alias={self.alias} name={self.name} cancelled={self.cancelled} when={self.when_millis}>"
 
-    def __lt__(self, other: '_ScheduledQuery') -> bool:
+    def __lt__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
         return self.when_millis < other.when_millis
 
     def __le__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
-        if isinstance(other, _ScheduledQuery):
+        if isinstance(other, _ScheduledPTRQuery):
             return self.when_millis < other.when_millis or self.__eq__(other)
         return NotImplemented
 
     def __eq__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
-        if not isinstance(other, _ScheduledQuery):
+        if not isinstance(other, _ScheduledPTRQuery):
             return NotImplemented
         return self.when_millis == other.when_millis
 
     def __ge__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
-        if isinstance(other, _ScheduledQuery):
+        if isinstance(other, _ScheduledPTRQuery):
             return self.when_millis > other.when_millis or self.__eq__(other)
         return NotImplemented
 
-    def __gt__(self, other: '_ScheduledQuery') -> bool:
+    def __gt__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
         return self.when_millis > other.when_millis
 
@@ -284,7 +284,7 @@ class QueryScheduler:
         '_min_time_between_queries_millis',
         '_loop',
         '_startup_queries_sent',
-        '_next_scheduled_for_name',
+        '_next_scheduled_for_alias',
         '_query_heap',
         '_next_run',
         '_clock_resolution_millis',
@@ -301,8 +301,8 @@ class QueryScheduler:
         self._min_time_between_queries_millis = delay
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._startup_queries_sent = 0
-        self._next_scheduled_for_name: Dict[str, _ScheduledQuery] = {}
-        self._query_heap: list[_ScheduledQuery] = []
+        self._next_scheduled_for_alias: Dict[str, _ScheduledPTRQuery] = {}
+        self._query_heap: list[_ScheduledPTRQuery] = []
         self._next_run: Optional[asyncio.TimerHandle] = None
         self._clock_resolution_millis = time.get_clock_info('monotonic').resolution * 1000
 
@@ -332,19 +332,19 @@ class QueryScheduler:
 
     def _schedule(self, pointer: DNSPointer, expire_time: float_) -> None:
         """Schedule a query for a pointer."""
-        scheduled_query = _ScheduledQuery(pointer.alias, pointer.name, expire_time)
-        self._next_scheduled_for_name[pointer.alias] = scheduled_query
+        scheduled_query = _ScheduledPTRQuery(pointer.alias, pointer.name, expire_time)
+        self._next_scheduled_for_alias[pointer.alias] = scheduled_query
         heappush(self._query_heap, scheduled_query)
 
     def cancel(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
-        scheduled = self._next_scheduled_for_name.pop(pointer.alias, None)
+        scheduled = self._next_scheduled_for_alias.pop(pointer.alias, None)
         if scheduled:
             scheduled.cancelled = True
 
     def reschedule(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
-        current = self._next_scheduled_for_name.get(pointer.alias)
+        current = self._next_scheduled_for_alias.get(pointer.alias)
         expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         if current is not None:
             # If the expire time is within self._min_time_between_queries_millis
@@ -387,7 +387,7 @@ class QueryScheduler:
         # which defaults to 10s
 
         ready_types: Set[str] = set()
-        next_scheduled: Optional[_ScheduledQuery] = None
+        next_scheduled: Optional[_ScheduledPTRQuery] = None
         end_time_millis = now_millis + self._clock_resolution_millis
 
         while self._query_heap:
@@ -399,8 +399,8 @@ class QueryScheduler:
                 next_scheduled = query
                 break
             query = heappop(self._query_heap)
-            del self._next_scheduled_for_name[query.name]
-            ready_types.add(query.type_)
+            del self._next_scheduled_for_alias[query.alias]
+            ready_types.add(query.name)
 
         if ready_types:
             self._browser.async_send_ready_queries(False, now_millis, ready_types)

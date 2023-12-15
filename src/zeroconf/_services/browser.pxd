@@ -26,7 +26,7 @@ cdef object _FLAGS_QR_QUERY
 
 cdef object heappop, heappush
 
-cdef class _ScheduledQuery:
+cdef class _ScheduledPTRQuery:
 
     cdef public str name
     cdef public str type_
@@ -60,7 +60,7 @@ cdef class QueryScheduler:
     cdef double _min_time_between_queries_millis
     cdef object _loop
     cdef unsigned int _startup_queries_sent
-    cdef public dict _next_scheduled_for_name
+    cdef public dict _next_scheduled_for_alias
     cdef public list _query_heap
     cdef object _next_run
     cdef double _clock_resolution_millis
