@@ -451,7 +451,7 @@ class QueryScheduler:
             del self._next_scheduled_for_alias[query.alias]
             # If there is still more than 10% of the TTL remaining
             # schedule a query again to try to recuse the record
-            # from expiring. If the record is not refreshed before
+            # from expiring. If the record is refreshed before
             # the query, the query will get cancelled.
             self.reschedule_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
 
