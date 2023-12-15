@@ -23,7 +23,7 @@ import asyncio
 import socket
 import time
 from functools import lru_cache
-from typing import List, Set
+from typing import List, Optional, Set
 from unittest import mock
 
 import ifaddr
@@ -89,7 +89,7 @@ def _clear_cache(zc: Zeroconf) -> None:
     zc.question_history.clear()
 
 
-def time_changed_millis(millis: float | None = None) -> None:
+def time_changed_millis(millis: Optional[float] = None) -> None:
     """Call all scheduled events for a time."""
     loop = asyncio.get_running_loop()
     loop_time = loop.time()
