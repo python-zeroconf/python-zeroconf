@@ -17,6 +17,7 @@ cdef cython.uint _TYPE_PTR
 cdef object _CLASS_IN
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED
 cdef cython.set _ADDRESS_RECORD_TYPES
+cdef float RESCUE_RECORD_RETRY_TTL_PERCENTAGE
 
 cdef object _MDNS_PORT, _BROWSER_TIME
 
@@ -26,11 +27,14 @@ cdef object _FLAGS_QR_QUERY
 
 cdef object heappop, heappush
 
+cdef double _first_refresh_time(double expire_time_millis)
+
 cdef class _ScheduledPTRQuery:
 
     cdef public str alias
     cdef public str name
     cdef public bint cancelled
+    cdef public double expire_time_millis
     cdef public double when_millis
 
 cdef class _DNSPointerOutgoingBucket:
@@ -65,15 +69,19 @@ cdef class QueryScheduler:
     cdef object _next_run
     cdef double _clock_resolution_millis
 
-    cpdef void schedule(self, DNSPointer pointer)
+    cpdef void schedule_pointer_first_refresh(self, DNSPointer pointer)
 
-    cdef void _schedule(self, DNSPointer pointer, double expire_time)
+    cdef void _schedule_pointer_first_refresh(self, DNSPointer pointer, double expire_time)
+
+    cdef void _schedule_ptr_query(self, _ScheduledPTRQuery scheduled_query)
 
     @cython.locals(scheduled=_ScheduledPTRQuery)
-    cpdef void cancel(self, DNSPointer pointer)
+    cpdef void cancel_pointer_refresh(self, DNSPointer pointer)
 
     @cython.locals(current=_ScheduledPTRQuery, expire_time=double)
-    cpdef void reschedule(self, DNSPointer pointer)
+    cpdef void reschedule_pointer_first_refresh(self, DNSPointer pointer)
+
+    cpdef reschedule_query(self, _ScheduledPTRQuery query, double now_millis, float additional_percentage)
 
     cpdef void _process_startup_queries(self)
 

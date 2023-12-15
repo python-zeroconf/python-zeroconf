@@ -88,6 +88,8 @@ QU_QUESTION = DNSQuestionType.QU
 
 STARTUP_QUERIES = 4
 
+RESCUE_RECORD_RETRY_TTL_PERCENTAGE = 0.1
+
 if TYPE_CHECKING:
     from .._core import Zeroconf
 
@@ -102,15 +104,21 @@ heappop = heapq.heappop
 heappush = heapq.heappush
 
 
+def _first_refresh_time(expire_time_millis: float_) -> float_:
+    """Return the refresh time from an expire time."""
+    return expire_time_millis * (_EXPIRE_REFRESH_TIME_PERCENT / 100)
+
+
 class _ScheduledPTRQuery:
 
-    __slots__ = ('alias', 'name', 'cancelled', 'when_millis')
+    __slots__ = ('alias', 'name', 'cancelled', 'expire_time_millis', 'when_millis')
 
-    def __init__(self, alias: str, name: str, when_millis: float) -> None:
+    def __init__(self, alias: str, name: str, expire_time_millis: float, when_millis: float) -> None:
         """Create a scheduled query."""
         self.alias = alias
         self.name = name
         self.cancelled = False
+        self.expire_time_millis = expire_time_millis
         self.when_millis = when_millis
 
     def __repr__(self) -> str:
@@ -328,37 +336,63 @@ class QueryScheduler:
         self._next_scheduled_for_alias.clear()
         self._query_heap.clear()
 
-    def schedule(self, pointer: DNSPointer) -> None:
+    def schedule_pointer_first_refresh(self, pointer: DNSPointer) -> None:
         """Schedule a query for a pointer."""
-        self._schedule(pointer, pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT))
+        self._schedule_pointer_first_refresh(pointer, pointer.get_expiration_time(100))
 
-    def _schedule(self, pointer: DNSPointer, expire_time: float_) -> None:
+    def _schedule_pointer_first_refresh(self, pointer: DNSPointer, expire_time_millis: float_) -> None:
         """Schedule a query for a pointer."""
-        scheduled_query = _ScheduledPTRQuery(pointer.alias, pointer.name, expire_time)
-        self._next_scheduled_for_alias[pointer.alias] = scheduled_query
+        refresh_time_millis = _first_refresh_time(expire_time_millis)
+        scheduled_ptr_query = _ScheduledPTRQuery(
+            pointer.alias, pointer.name, expire_time_millis, refresh_time_millis
+        )
+        self._schedule_ptr_query(scheduled_ptr_query)
+
+    def _schedule_ptr_query(self, scheduled_query: _ScheduledPTRQuery) -> None:
+        """Schedule a query for a pointer."""
+        self._next_scheduled_for_alias[scheduled_query.alias] = scheduled_query
         heappush(self._query_heap, scheduled_query)
 
-    def cancel(self, pointer: DNSPointer) -> None:
+    def cancel_pointer_refresh(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
         scheduled = self._next_scheduled_for_alias.pop(pointer.alias, None)
         if scheduled:
             scheduled.cancelled = True
 
-    def reschedule(self, pointer: DNSPointer) -> None:
+    def reschedule_pointer_first_refresh(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
         current = self._next_scheduled_for_alias.get(pointer.alias)
-        expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
+        expire_time_millis = pointer.get_expiration_time(100)
+        refresh_time_millis = _first_refresh_time(expire_time_millis)
         if current is not None:
             # If the expire time is within self._min_time_between_queries_millis
             # of the current scheduled time avoid churn by not rescheduling
             if (
                 -self._min_time_between_queries_millis
-                <= expire_time - current.when_millis
+                <= refresh_time_millis - current.when_millis
                 <= self._min_time_between_queries_millis
             ):
                 return
             current.cancelled = True
-        self._schedule(pointer, expire_time)
+        self._schedule_pointer_first_refresh(pointer, expire_time_millis)
+
+    def reschedule_query(
+        self, query: _ScheduledPTRQuery, now_millis: float_, additional_percentage: float_
+    ) -> None:
+        """Reschedule a query for a pointer at an additional percentage of expiration."""
+        next_percent_remaining = additional_percentage + (
+            (query.expire_time_millis - now_millis) / query.expire_time_millis
+        )
+        if next_percent_remaining >= 1:
+            # If we would schedule past the expire time
+            # there is no point in scheduling as we already
+            # tried to rescue the record and failed
+            return
+        next_query_time = query.expire_time_millis * next_percent_remaining
+        scheduled_ptr_query = _ScheduledPTRQuery(
+            query.alias, query.name, query.expire_time_millis, next_query_time
+        )
+        self._schedule_ptr_query(scheduled_ptr_query)
 
     def _process_startup_queries(self) -> None:
         if TYPE_CHECKING:
@@ -412,9 +446,14 @@ class QueryScheduler:
             if query.when_millis > end_time_millis:
                 next_scheduled = query
                 break
+            ready_types.add(query.name)
             heappop(self._query_heap)
             del self._next_scheduled_for_alias[query.alias]
-            ready_types.add(query.name)
+            # If there is still more than 10% of the TTL remaining
+            # schedule a query again to try to recuse the record
+            # from expiring. If the record is not refreshed before
+            # the query, the query will get cancelled.
+            self.reschedule_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
 
         if ready_types:
             self._browser.async_send_ready_queries(False, now_millis, ready_types)
@@ -569,12 +608,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 for type_ in self.types.intersection(cached_possible_types(pointer.name)):
                     if old_record is None:
                         self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias)
-                        self.query_scheduler.schedule(pointer)
+                        self.query_scheduler.schedule_pointer_first_refresh(pointer)
                     elif pointer.is_expired(now):
                         self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias)
-                        self.query_scheduler.cancel(pointer)
+                        self.query_scheduler.cancel_pointer_refresh(pointer)
                     else:
-                        self.query_scheduler.reschedule(pointer)
+                        self.query_scheduler.reschedule_pointer_first_refresh(pointer)
                 continue
 
             # If its expired or already exists in the cache it cannot be updated.
