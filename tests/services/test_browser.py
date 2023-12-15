@@ -517,8 +517,8 @@ def test_backoff():
     # patch the zeroconf current_time_millis
     # patch the backoff limit to prevent test running forever
     with patch.object(zeroconf_browser, "async_send", send), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
-    ), patch.object(_services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)):
+        _services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)
+    ):
         # dummy service callback
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
@@ -536,7 +536,7 @@ def test_backoff():
                 if time_offset == expected_query_time:
                     assert got_query.is_set()
                     got_query.clear()
-                    if next_query_interval == _services_browser._BROWSER_BACKOFF_LIMIT:
+                    if next_query_interval == 2**_services_browser.STARTUP_QUERIES:
                         # Only need to test up to the point where we've seen a query
                         # after the backoff limit has been hit
                         break
@@ -545,7 +545,7 @@ def test_backoff():
                         expected_query_time = initial_query_interval
                     else:
                         next_query_interval = min(
-                            2 * next_query_interval, _services_browser._BROWSER_BACKOFF_LIMIT
+                            2 * next_query_interval, 2**_services_browser.STARTUP_QUERIES
                         )
                         expected_query_time += next_query_interval
                 else:

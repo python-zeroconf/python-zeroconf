@@ -1027,7 +1027,7 @@ async def test_integration():
     # by asking the same question over and over
     with patch.object(zeroconf_browser, "async_send", send), patch(
         "zeroconf._services.browser.current_time_millis", _new_current_time_millis
-    ), patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
+    ):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
