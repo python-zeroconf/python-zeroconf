@@ -328,7 +328,7 @@ class QueryScheduler:
 
     def __init__(
         self,
-        zc: Zeroconf,
+        zc: "Zeroconf",
         types: Set[str],
         addr: Optional[str],
         port: int,
