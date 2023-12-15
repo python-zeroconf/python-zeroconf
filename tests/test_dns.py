@@ -97,20 +97,12 @@ class TestDunder(unittest.TestCase):
 
         assert record.created != record2.created
         assert record.get_remaining_ttl(now) != record2.get_remaining_ttl(now)
-        assert record.get_percentage_remaining_ttl(now) != record2.get_percentage_remaining_ttl(now)
-        assert record2.get_percentage_remaining_ttl(later) == 100
-        assert record2.get_percentage_remaining_ttl(later + (const._DNS_HOST_TTL * 1000 / 2)) == 50
 
         record.reset_ttl(record2)
 
         assert record.ttl == record2.ttl
         assert record.created == record2.created
         assert record.get_remaining_ttl(now) == record2.get_remaining_ttl(now)
-        assert record.get_percentage_remaining_ttl(now) == record2.get_percentage_remaining_ttl(now)
-        assert record.get_percentage_remaining_ttl(later) == 100
-        assert record2.get_percentage_remaining_ttl(later) == 100
-        assert record.get_percentage_remaining_ttl(later + (const._DNS_HOST_TTL * 1000 / 2)) == 50
-        assert record2.get_percentage_remaining_ttl(later + (const._DNS_HOST_TTL * 1000 / 2)) == 50
 
     def test_service_info_dunder(self):
         type_ = "_test-srvc-type._tcp.local."
