@@ -458,7 +458,6 @@ class QueryScheduler:
             if query.when_millis > end_time_millis:
                 next_scheduled = query
                 break
-            ready_types.add(query.name)
             heappop(self._query_heap)
             del self._next_scheduled_for_alias[query.alias]
             # If there is still more than 10% of the TTL remaining
@@ -466,6 +465,7 @@ class QueryScheduler:
             # from expiring. If the record is refreshed before
             # the query, the query will get cancelled.
             self.reschedule_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
+            ready_types.add(query.name)
 
         if ready_types:
             self._browser.async_send_ready_queries(False, now_millis, ready_types)
