@@ -100,6 +100,7 @@ class TestDunder(unittest.TestCase):
         assert record.get_percentage_remaining_ttl(now) != record2.get_percentage_remaining_ttl(now)
         assert record.get_percentage_remaining_ttl(now) < 100
         assert record2.get_percentage_remaining_ttl(later) == 100
+        assert record2.get_percentage_remaining_ttl(later + (const._DNS_HOST_TTL * 1000 / 2)) == 50
 
         record.reset_ttl(record2)
 
