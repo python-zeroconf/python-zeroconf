@@ -460,6 +460,7 @@ class QueryScheduler:
         now_millis = current_time_millis()
         # Refresh records that are about to expire (aka
         # _EXPIRE_REFRESH_TIME_PERCENT which is currently 75% of the TTL) and
+        # additional rescue queries if the 75% query failed to refresh the record
         # with a minimum time between queries of _min_time_between_queries
         # which defaults to 10s
 
