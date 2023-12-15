@@ -359,13 +359,13 @@ class QueryScheduler:
         self._next_scheduled_for_alias.clear()
         self._query_heap.clear()
 
-    def schedule_pointer_first_refresh(self, pointer: DNSPointer) -> None:
+    def schedule_ptr_first_refresh(self, pointer: DNSPointer) -> None:
         """Schedule a query for a pointer."""
         expire_time_millis = pointer.get_expiration_time(100)
         refresh_time_millis = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
-        self._schedule_pointer_refresh(pointer, expire_time_millis, refresh_time_millis)
+        self._schedule_ptr_refresh(pointer, expire_time_millis, refresh_time_millis)
 
-    def _schedule_pointer_refresh(
+    def _schedule_ptr_refresh(
         self, pointer: DNSPointer, expire_time_millis: float_, refresh_time_millis: float_
     ) -> None:
         """Schedule a query for a pointer."""
@@ -380,13 +380,13 @@ class QueryScheduler:
         self._next_scheduled_for_alias[scheduled_query.alias] = scheduled_query
         heappush(self._query_heap, scheduled_query)
 
-    def cancel_pointer_refresh(self, pointer: DNSPointer) -> None:
+    def cancel_ptr_refresh(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
         scheduled = self._next_scheduled_for_alias.pop(pointer.alias, None)
         if scheduled:
             scheduled.cancelled = True
 
-    def reschedule_pointer_first_refresh(self, pointer: DNSPointer) -> None:
+    def reschedule_ptr_first_refresh(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
         current = self._next_scheduled_for_alias.get(pointer.alias)
         refresh_time_millis = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
@@ -401,7 +401,7 @@ class QueryScheduler:
                 return
             current.cancelled = True
         expire_time_millis = pointer.get_expiration_time(100)
-        self._schedule_pointer_refresh(pointer, expire_time_millis, refresh_time_millis)
+        self._schedule_ptr_refresh(pointer, expire_time_millis, refresh_time_millis)
 
     def schedule_rescue_query(
         self, query: _ScheduledPTRQuery, now_millis: float_, additional_percentage: float_
@@ -644,12 +644,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 for type_ in self.types.intersection(cached_possible_types(pointer.name)):
                     if old_record is None:
                         self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias)
-                        self.query_scheduler.schedule_pointer_first_refresh(pointer)
+                        self.query_scheduler.schedule_ptr_first_refresh(pointer)
                     elif pointer.is_expired(now):
                         self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias)
-                        self.query_scheduler.cancel_pointer_refresh(pointer)
+                        self.query_scheduler.cancel_ptr_refresh(pointer)
                     else:
-                        self.query_scheduler.reschedule_pointer_first_refresh(pointer)
+                        self.query_scheduler.reschedule_ptr_first_refresh(pointer)
                 continue
 
             # If its expired or already exists in the cache it cannot be updated.
