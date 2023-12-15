@@ -6,7 +6,6 @@
 import logging
 import os
 import socket
-import time
 import unittest
 import unittest.mock
 
@@ -86,9 +85,14 @@ class TestDunder(unittest.TestCase):
             record.write(None)  # type: ignore[arg-type]
 
     def test_dns_record_reset_ttl(self):
-        record = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
-        time.sleep(1)
-        record2 = r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
+        start = r.current_time_millis()
+        record = r.DNSRecord(
+            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, created=start
+        )
+        later = start + 1000
+        record2 = r.DNSRecord(
+            'irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, created=later
+        )
         now = r.current_time_millis()
 
         assert record.created != record2.created
