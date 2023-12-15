@@ -69,15 +69,15 @@ cdef class QueryScheduler:
 
     cdef void _schedule(self, DNSPointer pointer, double expire_time)
 
-    @cython.locals(scheduled=_ScheduledQuery)
+    @cython.locals(scheduled=_ScheduledPTRQuery)
     cpdef void cancel(self, DNSPointer pointer)
 
-    @cython.locals(current=_ScheduledQuery, expire_time=double)
+    @cython.locals(current=_ScheduledPTRQuery, expire_time=double)
     cpdef void reschedule(self, DNSPointer pointer)
 
     cpdef void _process_startup_queries(self)
 
-    @cython.locals(query=_ScheduledQuery, next_scheduled=_ScheduledQuery, next_when=double)
+    @cython.locals(query=_ScheduledPTRQuery, next_scheduled=_ScheduledPTRQuery, next_when=double)
     cpdef void _process_ready_types(self)
 
 cdef class _ServiceBrowserBase(RecordUpdateListener):
