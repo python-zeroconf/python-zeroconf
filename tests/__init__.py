@@ -19,9 +19,9 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
     USA
 """
-
 import asyncio
 import socket
+import time
 from functools import lru_cache
 from typing import List, Set
 
@@ -29,6 +29,8 @@ import ifaddr
 
 from zeroconf import DNSIncoming, DNSQuestion, DNSRecord, Zeroconf
 from zeroconf._history import QuestionHistory
+
+_MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
@@ -84,3 +86,25 @@ def has_working_ipv6():
 def _clear_cache(zc: Zeroconf) -> None:
     zc.cache.cache.clear()
     zc.question_history.clear()
+
+
+def time_changed_millis(millis: float | None = None) -> None:
+    """Call all scheduled events for a time."""
+    loop = asyncio.get_running_loop()
+    loop_time = loop.time()
+    if millis is not None:
+        mock_seconds_into_future = millis / 1000
+    else:
+        mock_seconds_into_future = loop_time
+
+    for task in list(loop._scheduled):  # type: ignore[attr-defined]
+        if not isinstance(task, asyncio.TimerHandle):
+            continue
+        if task.cancelled():
+            continue
+
+        future_seconds = task.when() - (loop_time + _MONOTONIC_RESOLUTION)
+
+        if mock_seconds_into_future >= future_seconds:
+            task._run()
+            task.cancel()
