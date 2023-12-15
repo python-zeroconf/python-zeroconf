@@ -1025,20 +1025,21 @@ async def test_integration():
     await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
 
     assert len(zeroconf_registrar.engine.protocols) == 2
-    # patch the zeroconf send
-    # patch the zeroconf current_time_millis
-    # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
-    # Disable duplicate question suppression and duplicate packet suppression for this test as it works
-    # by asking the same question over and over
+    # patch the zeroconf send so we can capture what is being sent
     with patch.object(zeroconf_browser, "async_send", send):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-
-        desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
