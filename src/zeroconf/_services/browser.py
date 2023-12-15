@@ -104,11 +104,6 @@ heappop = heapq.heappop
 heappush = heapq.heappush
 
 
-def _first_refresh_time(expire_time_millis: float_) -> float_:
-    """Return the refresh time from an expire time."""
-    return expire_time_millis * (_EXPIRE_REFRESH_TIME_PERCENT / 100)
-
-
 class _ScheduledPTRQuery:
 
     __slots__ = ('alias', 'name', 'cancelled', 'expire_time_millis', 'when_millis')
@@ -135,7 +130,15 @@ class _ScheduledPTRQuery:
 
     def __repr__(self) -> str:
         """Return a string representation of the scheduled query."""
-        return f"<{self.__class__.__name__} alias={self.alias} name={self.name} cancelled={self.cancelled} when={self.when_millis}>"
+        return (
+            f"<{self.__class__.__name__} "
+            f"alias={self.alias} "
+            f"name={self.name} "
+            f"cancelled={self.cancelled} "
+            f"expire_time_millis={self.expire_time_millis} "
+            f"when_millis={self.when_millis}"
+            ">"
+        )
 
     def __lt__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
@@ -351,7 +354,7 @@ class QueryScheduler:
     def schedule_pointer_first_refresh(self, pointer: DNSPointer) -> None:
         """Schedule a query for a pointer."""
         expire_time_millis = pointer.get_expiration_time(100)
-        refresh_time_millis = _first_refresh_time(expire_time_millis)
+        refresh_time_millis = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         self._schedule_pointer_refresh(pointer, expire_time_millis, refresh_time_millis)
 
     def _schedule_pointer_refresh(
@@ -378,7 +381,7 @@ class QueryScheduler:
         """Reschedule a query for a pointer."""
         current = self._next_scheduled_for_alias.get(pointer.alias)
         expire_time_millis = pointer.get_expiration_time(100)
-        refresh_time_millis = _first_refresh_time(expire_time_millis)
+        refresh_time_millis = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         if current is not None:
             # If the expire time is within self._min_time_between_queries_millis
             # of the current scheduled time avoid churn by not rescheduling
@@ -395,15 +398,14 @@ class QueryScheduler:
         self, query: _ScheduledPTRQuery, now_millis: float_, additional_percentage: float_
     ) -> None:
         """Reschedule a query for a pointer at an additional percentage of expiration."""
-        next_percent_remaining = additional_percentage + (
-            (query.expire_time_millis - now_millis) / query.expire_time_millis
-        )
-        if next_percent_remaining >= 1:
+        percentage_remaining = (query.expire_time_millis - now_millis) / query.expire_time_millis
+        if percentage_remaining < additional_percentage:
             # If we would schedule past the expire time
             # there is no point in scheduling as we already
             # tried to rescue the record and failed
             return
-        next_query_time = query.expire_time_millis * next_percent_remaining
+        next_percent_remaining = percentage_remaining - additional_percentage
+        next_query_time = query.expire_time_millis * (1 - next_percent_remaining)
         scheduled_ptr_query = _ScheduledPTRQuery(
             query.alias, query.name, query.expire_time_millis, next_query_time
         )
@@ -467,7 +469,7 @@ class QueryScheduler:
             # schedule a query again to try to recuse the record
             # from expiring. If the record is refreshed before
             # the query, the query will get cancelled.
-            # self.schedule_next_refresh_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
+            self.schedule_next_refresh_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
             ready_types.add(query.name)
 
         if ready_types:
