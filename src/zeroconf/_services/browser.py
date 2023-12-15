@@ -142,29 +142,33 @@ class _ScheduledPTRQuery:
 
     def __lt__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
-        return self.when_millis < other.when_millis
+        if type(other) is _ScheduledPTRQuery:
+            return self.when_millis < other.when_millis
+        return NotImplemented
 
-    def __le__(self, other: Any) -> bool:
+    def __le__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
-        if isinstance(other, _ScheduledPTRQuery):
+        if type(other) is _ScheduledPTRQuery:
             return self.when_millis < other.when_millis or self.__eq__(other)
         return NotImplemented
 
     def __eq__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
-        if not isinstance(other, _ScheduledPTRQuery):
+        if type(other) is _ScheduledPTRQuery:
             return NotImplemented
         return self.when_millis == other.when_millis
 
-    def __ge__(self, other: Any) -> bool:
+    def __ge__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
-        if isinstance(other, _ScheduledPTRQuery):
+        if type(other) is _ScheduledPTRQuery:
             return self.when_millis > other.when_millis or self.__eq__(other)
         return NotImplemented
 
     def __gt__(self, other: '_ScheduledPTRQuery') -> bool:
         """Compare two scheduled queries."""
-        return self.when_millis > other.when_millis
+        if type(other) is _ScheduledPTRQuery:
+            return self.when_millis > other.when_millis
+        return NotImplemented
 
 
 class _DNSPointerOutgoingBucket:
