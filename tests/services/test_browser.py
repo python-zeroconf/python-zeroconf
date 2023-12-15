@@ -1226,8 +1226,156 @@ def test_scheduled_ptr_query_dunder_methods():
     with pytest.raises(TypeError):
         query75 < other  # type: ignore[operator]
     with pytest.raises(TypeError):
-        query75 <= other
+        query75 <= other  # type: ignore[operator]
     with pytest.raises(TypeError):
         query75 > other  # type: ignore[operator]
     with pytest.raises(TypeError):
-        query75 >= other
+        query75 >= other  # type: ignore[operator]
+
+
+@pytest.mark.asyncio
+async def test_close_zeroconf_without_browser_before_start_up_queries():
+    """Test that we stop sending startup queries if zeroconf is closed out from under the browser."""
+    service_added = asyncio.Event()
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
+    await zeroconf_browser.async_wait_for_start()
+
+    sends: list[r.DNSIncoming] = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
+
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zeroconf_browser, "async_send", send):
+        service_added = asyncio.Event()
+
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+            await aiozc.async_close()
+            sends.clear()
+            # Make sure the startup queries are sent
+            original_now = loop.time()
+            now_millis = original_now * 1000
+            for query_count in range(_services_browser.STARTUP_QUERIES):
+                now_millis += (2**query_count) * 1000
+                time_changed_millis(now_millis)
+
+            # We should not send any queries after close
+            assert not sends
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await browser.async_cancel()
+
+
+@pytest.mark.asyncio
+async def test_close_zeroconf_without_browser_after_start_up_queries():
+    """Test that we stop sending rescue queries if zeroconf is closed out from under the browser."""
+    service_added = asyncio.Event()
+
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
+    await zeroconf_browser.async_wait_for_start()
+
+    sends: list[r.DNSIncoming] = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
+
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zeroconf_browser, "async_send", send):
+        service_added = asyncio.Event()
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        expected_ttl = const._DNS_OTHER_TTL
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+            sends.clear()
+            # Make sure the startup queries are sent
+            original_now = loop.time()
+            now_millis = original_now * 1000
+            for query_count in range(_services_browser.STARTUP_QUERIES):
+                now_millis += (2**query_count) * 1000
+                time_changed_millis(now_millis)
+
+            # We should not send any queries after close
+            assert sends
+
+            await aiozc.async_close()
+            sends.clear()
+
+            now_millis = original_now * 1000
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 75% of the TTL)
+            now_millis += (expected_ttl * 1000) / 0.80
+            time_changed_millis(now_millis)
+
+            # We should not send the query after close
+            assert not sends
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await browser.async_cancel()
