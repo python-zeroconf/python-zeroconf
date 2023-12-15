@@ -73,17 +73,17 @@ cdef class QueryScheduler:
     cdef double _clock_resolution_millis
     cdef object _question_type
 
-    cpdef void schedule_pointer_first_refresh(self, DNSPointer pointer)
+    cpdef void schedule_ptr_first_refresh(self, DNSPointer pointer)
 
-    cdef void _schedule_pointer_refresh(self, DNSPointer pointer, double expire_time_millis, double refresh_time_millis)
+    cdef void _schedule_ptr_refresh(self, DNSPointer pointer, double expire_time_millis, double refresh_time_millis)
 
     cdef void _schedule_ptr_query(self, _ScheduledPTRQuery scheduled_query)
 
     @cython.locals(scheduled=_ScheduledPTRQuery)
-    cpdef void cancel_pointer_refresh(self, DNSPointer pointer)
+    cpdef void cancel_ptr_refresh(self, DNSPointer pointer)
 
     @cython.locals(current=_ScheduledPTRQuery, expire_time=double)
-    cpdef void reschedule_pointer_first_refresh(self, DNSPointer pointer)
+    cpdef void reschedule_ptr_first_refresh(self, DNSPointer pointer)
 
     cpdef void schedule_rescue_query(self, _ScheduledPTRQuery query, double now_millis, float additional_percentage)
 
