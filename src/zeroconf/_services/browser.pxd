@@ -71,7 +71,7 @@ cdef class QueryScheduler:
 
     cpdef void schedule_pointer_first_refresh(self, DNSPointer pointer)
 
-    cdef void _schedule_pointer_first_refresh(self, DNSPointer pointer, double expire_time)
+    cdef void _schedule_pointer_refresh(self, DNSPointer pointer, double expire_time_millis, double refresh_time_millis)
 
     cdef void _schedule_ptr_query(self, _ScheduledPTRQuery scheduled_query)
 

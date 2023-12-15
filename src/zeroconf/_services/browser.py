@@ -350,11 +350,14 @@ class QueryScheduler:
 
     def schedule_pointer_first_refresh(self, pointer: DNSPointer) -> None:
         """Schedule a query for a pointer."""
-        self._schedule_pointer_first_refresh(pointer, pointer.get_expiration_time(100))
-
-    def _schedule_pointer_first_refresh(self, pointer: DNSPointer, expire_time_millis: float_) -> None:
-        """Schedule a query for a pointer."""
+        expire_time_millis = pointer.get_expiration_time(100)
         refresh_time_millis = _first_refresh_time(expire_time_millis)
+        self._schedule_pointer_refresh(pointer, expire_time_millis, refresh_time_millis)
+
+    def _schedule_pointer_refresh(
+        self, pointer: DNSPointer, expire_time_millis: float_, refresh_time_millis: float_
+    ) -> None:
+        """Schedule a query for a pointer."""
         scheduled_ptr_query = _ScheduledPTRQuery(
             pointer.alias, pointer.name, expire_time_millis, refresh_time_millis
         )
@@ -386,7 +389,7 @@ class QueryScheduler:
             ):
                 return
             current.cancelled = True
-        self._schedule_pointer_first_refresh(pointer, expire_time_millis)
+        self._schedule_pointer_refresh(pointer, expire_time_millis, refresh_time_millis)
 
     def schedule_next_refresh_query(
         self, query: _ScheduledPTRQuery, now_millis: float_, additional_percentage: float_
@@ -464,7 +467,7 @@ class QueryScheduler:
             # schedule a query again to try to recuse the record
             # from expiring. If the record is refreshed before
             # the query, the query will get cancelled.
-            self.schedule_next_refresh_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
+            # self.schedule_next_refresh_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
             ready_types.add(query.name)
 
         if ready_types:
