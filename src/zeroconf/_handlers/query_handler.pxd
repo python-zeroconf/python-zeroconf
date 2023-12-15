@@ -39,7 +39,7 @@ cdef class _QueryResponse:
 
     cdef bint _is_probe
     cdef cython.list _questions
-    cdef float _now
+    cdef double _now
     cdef DNSCache _cache
     cdef cython.dict _additionals
     cdef cython.set _ucast
@@ -91,7 +91,7 @@ cdef class QueryHandler:
         known_answers_set=cython.set,
         is_unicast=bint,
         is_probe=object,
-        now=float
+        now=double
     )
     cpdef async_response(self, cython.list msgs, cython.bint unicast_source)
 
