@@ -563,23 +563,17 @@ class _ServiceBrowserBase(RecordUpdateListener):
             record_type = record.type
 
             if record_type is _TYPE_PTR:
-                import pprint
-
-                pprint.pprint(['got new record', record_type, record])
                 if TYPE_CHECKING:
                     record = cast(DNSPointer, record)
                 pointer = record
                 for type_ in self.types.intersection(cached_possible_types(pointer.name)):
                     if old_record is None:
-                        pprint.pprint(['added', pointer])
                         self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias)
                         self.query_scheduler.schedule(pointer)
                     elif pointer.is_expired(now):
-                        pprint.pprint(['removed', pointer])
                         self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias)
                         self.query_scheduler.cancel(pointer)
                     else:
-                        pprint.pprint(['updated', pointer])
                         self.query_scheduler.reschedule(pointer)
                 continue
 

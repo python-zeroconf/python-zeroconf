@@ -1002,9 +1002,6 @@ async def test_integration():
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
         pout = DNSIncoming(out.packets()[0])
-        import pprint
-
-        pprint.pprint(pout)
         last_answers = pout.answers()
         answers.append(last_answers)
 
