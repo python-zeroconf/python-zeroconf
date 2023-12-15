@@ -17,7 +17,6 @@ cdef cython.uint _TYPE_PTR
 cdef object _CLASS_IN
 cdef object SERVICE_STATE_CHANGE_ADDED, SERVICE_STATE_CHANGE_REMOVED, SERVICE_STATE_CHANGE_UPDATED
 cdef cython.set _ADDRESS_RECORD_TYPES
-cdef cython.uint STARTUP_QUERIES
 
 cdef object _MDNS_PORT, _BROWSER_TIME
 
@@ -61,8 +60,8 @@ cdef class QueryScheduler:
     cdef double _min_time_between_queries_millis
     cdef object _loop
     cdef unsigned int _startup_queries_sent
-    cdef dict _next_scheduled_for_name
-    cdef list _query_heap
+    cdef public dict _next_scheduled_for_name
+    cdef public list _query_heap
     cdef object _next_run
     cdef double _clock_resolution_millis
 

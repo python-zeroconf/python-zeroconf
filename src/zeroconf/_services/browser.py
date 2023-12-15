@@ -113,6 +113,10 @@ class _ScheduledQuery:
         self.cancelled = False
         self.when_millis = when_millis
 
+    def __repr__(self) -> str:
+        """Return a string representation of the scheduled query."""
+        return f"<{self.__class__.__name__} {self.name} {self.type_} cancelled={self.cancelled} when={self.when_millis}>"
+
     def __lt__(self, other: '_ScheduledQuery') -> bool:
         """Compare two scheduled queries."""
         return self.when_millis < other.when_millis
@@ -329,18 +333,18 @@ class QueryScheduler:
     def _schedule(self, pointer: DNSPointer, expire_time: float_) -> None:
         """Schedule a query for a pointer."""
         scheduled_query = _ScheduledQuery(pointer.alias, pointer.name, expire_time)
-        self._next_scheduled_for_name[pointer.name] = scheduled_query
+        self._next_scheduled_for_name[pointer.alias] = scheduled_query
         heappush(self._query_heap, scheduled_query)
 
     def cancel(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
-        scheduled = self._next_scheduled_for_name.pop(pointer.name, None)
+        scheduled = self._next_scheduled_for_name.pop(pointer.alias, None)
         if scheduled:
             scheduled.cancelled = True
 
     def reschedule(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
-        current = self._next_scheduled_for_name.get(pointer.name)
+        current = self._next_scheduled_for_name.get(pointer.alias)
         expire_time = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         if current is not None:
             # If the expire time is within self._min_time_between_queries_millis
@@ -394,7 +398,7 @@ class QueryScheduler:
             if query.when_millis > end_time_millis:
                 next_scheduled = query
                 break
-            heappop(self._query_heap)
+            query = heappop(self._query_heap)
             del self._next_scheduled_for_name[query.name]
             ready_types.add(query.type_)
 

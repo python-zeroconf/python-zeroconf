@@ -24,6 +24,7 @@ import socket
 import time
 from functools import lru_cache
 from typing import List, Set
+from unittest import mock
 
 import ifaddr
 
@@ -97,14 +98,16 @@ def time_changed_millis(millis: float | None = None) -> None:
     else:
         mock_seconds_into_future = loop_time
 
-    for task in list(loop._scheduled):  # type: ignore[attr-defined]
-        if not isinstance(task, asyncio.TimerHandle):
-            continue
-        if task.cancelled():
-            continue
+    with mock.patch("time.monotonic", return_value=mock_seconds_into_future):
 
-        future_seconds = task.when() - (loop_time + _MONOTONIC_RESOLUTION)
+        for task in list(loop._scheduled):  # type: ignore[attr-defined]
+            if not isinstance(task, asyncio.TimerHandle):
+                continue
+            if task.cancelled():
+                continue
 
-        if mock_seconds_into_future >= future_seconds:
-            task._run()
-            task.cancel()
+            future_seconds = task.when() - (loop_time + _MONOTONIC_RESOLUTION)
+
+            if mock_seconds_into_future >= future_seconds:
+                task._run()
+                task.cancel()
