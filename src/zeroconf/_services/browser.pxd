@@ -27,8 +27,6 @@ cdef object _FLAGS_QR_QUERY
 
 cdef object heappop, heappush
 
-cdef double _first_refresh_time(double expire_time_millis)
-
 cdef class _ScheduledPTRQuery:
 
     cdef public str alias
