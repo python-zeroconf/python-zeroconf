@@ -70,10 +70,10 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cpdef _generate_ready_queries(self, object first_request, object now)
 
-    cpdef _enqueue_callback(self, object state_change, object type_, object name)
+    cpdef void _enqueue_callback(self, object state_change, object type_, object name)
 
     @cython.locals(record_update=RecordUpdate, record=DNSRecord, cache=DNSCache, service=DNSRecord, pointer=DNSPointer)
-    cpdef async_update_records(self, object zc, double now, cython.list records)
+    cpdef void async_update_records(self, object zc, double now, cython.list records)
 
     cpdef cython.list _names_matching_types(self, object types)
 
@@ -89,4 +89,4 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
 
     cpdef _cancel_send_timer(self)
 
-    cpdef async_update_records_complete(self)
+    cpdef void async_update_records_complete(self)
