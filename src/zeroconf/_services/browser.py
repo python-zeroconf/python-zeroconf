@@ -361,6 +361,9 @@ class QueryScheduler:
     def _process_startup_queries(self) -> None:
         if TYPE_CHECKING:
             assert self._loop is not None
+        if self._browser.zc.done:
+            return
+
         now_millis = current_time_millis()
 
         # At first we will send 3 queries to get the cache populated
@@ -380,6 +383,9 @@ class QueryScheduler:
         """Generate a list of ready types that is due and schedule the next time."""
         if TYPE_CHECKING:
             assert self._loop is not None
+        if self._browser.zc.done:
+            return
+
         now_millis = current_time_millis()
         # Refresh records that are about to expire (aka
         # _EXPIRE_REFRESH_TIME_PERCENT which is currently 75% of the TTL) and
@@ -628,8 +634,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self, first_request: bool, now_millis: float_, ready_types: Set[str]
     ) -> None:
         """Send any ready queries."""
-        if self.done or self.zc.done:
-            return
         # If they did not specify and this is the first request, ask QU questions
         # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
         # just starting up and we know our cache is likely empty. This ensures
