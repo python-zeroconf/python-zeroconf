@@ -408,7 +408,7 @@ class QueryScheduler:
             if query.when_millis > end_time_millis:
                 next_scheduled = query
                 break
-            query = heappop(self._query_heap)
+            heappop(self._query_heap)
             del self._next_scheduled_for_alias[query.alias]
             ready_types.add(query.name)
 
