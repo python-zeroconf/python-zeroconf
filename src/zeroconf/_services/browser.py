@@ -106,12 +106,15 @@ heappush = heapq.heappush
 
 class _ScheduledPTRQuery:
 
-    __slots__ = ('alias', 'name', 'cancelled', 'expire_time_millis', 'when_millis')
+    __slots__ = ('alias', 'name', 'ttl', 'cancelled', 'expire_time_millis', 'when_millis')
 
-    def __init__(self, alias: str, name: str, expire_time_millis: float, when_millis: float) -> None:
+    def __init__(
+        self, alias: str, name: str, ttl: int, expire_time_millis: float, when_millis: float
+    ) -> None:
         """Create a scheduled query."""
         self.alias = alias
         self.name = name
+        self.ttl = ttl
         # Since queries are stored in a heap we need to track if they are cancelled
         # so we can remove them from the heap when they are cancelled as it would
         # be too expensive to search the heap for the record to remove and instead
@@ -134,6 +137,7 @@ class _ScheduledPTRQuery:
             f"<{self.__class__.__name__} "
             f"alias={self.alias} "
             f"name={self.name} "
+            f"ttl={self.ttl} "
             f"cancelled={self.cancelled} "
             f"expire_time_millis={self.expire_time_millis} "
             f"when_millis={self.when_millis}"
@@ -365,8 +369,9 @@ class QueryScheduler:
         self, pointer: DNSPointer, expire_time_millis: float_, refresh_time_millis: float_
     ) -> None:
         """Schedule a query for a pointer."""
+        ttl = int(pointer.ttl) if isinstance(pointer.ttl, float) else pointer.ttl
         scheduled_ptr_query = _ScheduledPTRQuery(
-            pointer.alias, pointer.name, expire_time_millis, refresh_time_millis
+            pointer.alias, pointer.name, ttl, expire_time_millis, refresh_time_millis
         )
         self._schedule_ptr_query(scheduled_ptr_query)
 
@@ -402,16 +407,16 @@ class QueryScheduler:
         self, query: _ScheduledPTRQuery, now_millis: float_, additional_percentage: float_
     ) -> None:
         """Reschedule a query for a pointer at an additional percentage of expiration."""
-        percentage_remaining = (query.expire_time_millis - now_millis) / query.expire_time_millis
-        if percentage_remaining < additional_percentage:
+        ttl_millis = query.ttl * 1000
+        additional_wait = ttl_millis * additional_percentage
+        next_query_time = now_millis + additional_wait
+        if next_query_time >= query.expire_time_millis:
             # If we would schedule past the expire time
             # there is no point in scheduling as we already
             # tried to rescue the record and failed
             return
-        next_percent_remaining = percentage_remaining - additional_percentage
-        next_query_time = query.expire_time_millis * (1 - next_percent_remaining)
         scheduled_ptr_query = _ScheduledPTRQuery(
-            query.alias, query.name, query.expire_time_millis, next_query_time
+            query.alias, query.name, query.ttl, query.expire_time_millis, next_query_time
         )
         self._schedule_ptr_query(scheduled_ptr_query)
 
@@ -435,7 +440,10 @@ class QueryScheduler:
         # switch to a strategy of sending queries only when we
         # need to refresh records that are about to expire
         if self._startup_queries_sent >= STARTUP_QUERIES:
-            self._process_ready_types()
+            self._next_run = self._loop.call_at(
+                millis_to_seconds(now_millis + self._min_time_between_queries_millis),
+                self._process_ready_types,
+            )
             return
 
         self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_startup_queries)
@@ -458,6 +466,7 @@ class QueryScheduler:
         ready_types: Set[str] = set()
         next_scheduled: Optional[_ScheduledPTRQuery] = None
         end_time_millis = now_millis + self._clock_resolution_millis
+        schedule_rescue: List[_ScheduledPTRQuery] = []
 
         while self._query_heap:
             query = self._query_heap[0]
@@ -467,14 +476,19 @@ class QueryScheduler:
             if query.when_millis > end_time_millis:
                 next_scheduled = query
                 break
+
+            ready_types.add(query.name)
+
             heappop(self._query_heap)
             del self._next_scheduled_for_alias[query.alias]
             # If there is still more than 10% of the TTL remaining
             # schedule a query again to try to recuse the record
             # from expiring. If the record is refreshed before
             # the query, the query will get cancelled.
+            schedule_rescue.append(query)
+
+        for query in schedule_rescue:
             self.schedule_rescue_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
-            ready_types.add(query.name)
 
         if ready_types:
             self._browser.async_send_ready_queries(False, now_millis, ready_types)

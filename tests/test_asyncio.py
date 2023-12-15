@@ -998,10 +998,12 @@ async def test_integration():
     expected_ttl = const._DNS_OTHER_TTL
     nbr_answers = 0
     answers = []
+    packets = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
         pout = DNSIncoming(out.packets()[0])
+        packets.append(pout)
         last_answers = pout.answers()
         answers.append(last_answers)
 
@@ -1046,21 +1048,29 @@ async def test_integration():
             assert service_added.is_set()
             # Make sure the startup queries are sent
             original_now = loop.time()
-            now_millis = original_now * 1000
+            start_millis = original_now * 1000
+
+            now_millis = start_millis
             for query_count in range(_services_browser.STARTUP_QUERIES):
                 now_millis += (2**query_count) * 1000
                 time_changed_millis(now_millis)
 
             got_query.clear()
-            now_millis = original_now * 1000
             assert not unexpected_ttl.is_set()
+
+            assert len(packets) == _services_browser.STARTUP_QUERIES
+            packets.clear()
+
+            # Wait for the first refresh query
             # Move time forward past when the TTL is no longer
-            # fresh (AKA 75% of the TTL)
-            now_millis += (expected_ttl * 1000) / 0.80
+            # fresh (AKA ~75% of the TTL)
+            now_millis = start_millis + ((expected_ttl * 1000) * 0.76)
             time_changed_millis(now_millis)
 
             await asyncio.wait_for(got_query.wait(), 1)
             assert not unexpected_ttl.is_set()
+            assert len(packets) == 1
+            packets.clear()
 
             assert len(answers) == _services_browser.STARTUP_QUERIES + 1
             # The first question should have no known answers
@@ -1071,6 +1081,34 @@ async def test_integration():
                 assert len(answer_list) == 1
             # Once the TTL is reached, the last question should have no known answers
             assert len(answers[-1]) == 0
+
+            got_query.clear()
+            packets.clear()
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 85% of the TTL) to ensure we try
+            # to recuse the record
+            now_millis = start_millis + ((expected_ttl * 1000) * 0.87)
+            time_changed_millis(now_millis)
+
+            await asyncio.wait_for(got_query.wait(), 1)
+            assert len(packets) == 1
+            assert not unexpected_ttl.is_set()
+
+            packets.clear()
+            got_query.clear()
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 95% of the TTL). At this point
+            # nothing should get scheduled rescued because the rescue
+            # would exceed the TTL
+            now_millis = start_millis + ((expected_ttl * 1000) * 0.98)
+
+            # Verify we don't send a query for a record that is
+            # past the TTL as we should not try to rescue it
+            # once its past the TTL
+            time_changed_millis(now_millis)
+            await asyncio.wait_for(got_query.wait(), 1)
+            assert len(packets) == 1
+
             # Don't remove service, allow close() to cleanup
         finally:
             await aio_zeroconf_registrar.async_close()

@@ -31,6 +31,7 @@ cdef class _ScheduledPTRQuery:
 
     cdef public str alias
     cdef public str name
+    cdef public unsigned int ttl
     cdef public bint cancelled
     cdef public double expire_time_millis
     cdef public double when_millis

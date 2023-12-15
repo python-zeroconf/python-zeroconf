@@ -1204,9 +1204,9 @@ def test_service_browser_expire_callbacks():
 
 
 def test_scheduled_ptr_query_dunder_methods():
-    query75 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 75)
-    query80 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 80)
-    query75_2 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 140, 75)
+    query75 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 75)
+    query80 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 80)
+    query75_2 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 140, 75)
     other = object()
     stringified = str(query75)
     assert "zoomy._hap._tcp.local." in stringified
