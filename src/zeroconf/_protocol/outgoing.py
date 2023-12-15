@@ -148,9 +148,9 @@ class DNSOutgoing:
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
         """Adds an answer"""
         if not record.suppressed_by(inp):
-            self.add_answer_at_time(record, 0)
+            self.add_answer_at_time(record, 0.0)
 
-    def add_answer_at_time(self, record: Optional[DNSRecord], now: Union[float, int]) -> None:
+    def add_answer_at_time(self, record: Optional[DNSRecord], now: float_) -> None:
         """Adds an answer if it does not expire by a certain time"""
         now_double = now
         if record is not None and (now_double == 0 or not record.is_expired(now_double)):
