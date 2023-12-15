@@ -94,7 +94,6 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cdef public object _service_state_changed
     cdef public QueryScheduler query_scheduler
     cdef public bint done
-    cdef public bint _first_request
     cdef public object _next_send_timer
     cdef public object _query_sender_task
 

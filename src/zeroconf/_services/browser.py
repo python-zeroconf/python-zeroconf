@@ -441,7 +441,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         '_service_state_changed',
         'query_scheduler',
         'done',
-        '_first_request',
         '_next_send_timer',
         '_query_sender_task',
     )
@@ -491,7 +490,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._service_state_changed = Signal()
         self.query_scheduler = QueryScheduler(self, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
         self.done = False
-        self._first_request: bool = True
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
         self._query_sender_task: Optional[asyncio.Task] = None
 
@@ -645,7 +643,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         question_type = QU_QUESTION if self.question_type is None and first_request else self.question_type
         outs = generate_service_query(self.zc, now_millis, ready_types, self.multicast, question_type)
         if outs:
-            self._first_request = False
             for out in outs:
                 self.zc.async_send(out, self.addr, self.port)
 
