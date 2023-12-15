@@ -325,6 +325,8 @@ class QueryScheduler:
         if self._next_run is not None:
             self._next_run.cancel()
             self._next_run = None
+        self._next_scheduled_for_alias.clear()
+        self._query_heap.clear()
 
     def schedule(self, pointer: DNSPointer) -> None:
         """Schedule a query for a pointer."""
