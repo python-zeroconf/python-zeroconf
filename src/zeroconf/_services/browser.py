@@ -380,7 +380,6 @@ class QueryScheduler:
     def reschedule_pointer_first_refresh(self, pointer: DNSPointer) -> None:
         """Reschedule a query for a pointer."""
         current = self._next_scheduled_for_alias.get(pointer.alias)
-        expire_time_millis = pointer.get_expiration_time(100)
         refresh_time_millis = pointer.get_expiration_time(_EXPIRE_REFRESH_TIME_PERCENT)
         if current is not None:
             # If the expire time is within self._min_time_between_queries_millis
@@ -392,6 +391,7 @@ class QueryScheduler:
             ):
                 return
             current.cancelled = True
+        expire_time_millis = pointer.get_expiration_time(100)
         self._schedule_pointer_refresh(pointer, expire_time_millis, refresh_time_millis)
 
     def schedule_next_refresh_query(
