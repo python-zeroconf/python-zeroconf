@@ -28,8 +28,8 @@ cdef object heappop, heappush
 
 cdef class _ScheduledPTRQuery:
 
+    cdef public str alias
     cdef public str name
-    cdef public str type_
     cdef public bint cancelled
     cdef public double when_millis
 
