@@ -310,7 +310,11 @@ class QueryScheduler:
     """
 
     __slots__ = (
-        '_browser',
+        '_zc',
+        '_types',
+        '_addr',
+        '_port',
+        '_multicast',
         '_first_random_delay_interval',
         '_min_time_between_queries_millis',
         '_loop',
@@ -319,15 +323,25 @@ class QueryScheduler:
         '_query_heap',
         '_next_run',
         '_clock_resolution_millis',
+        '_question_type',
     )
 
     def __init__(
         self,
-        browser: "_ServiceBrowserBase",
+        zc: Zeroconf,
+        types: Set[str],
+        addr: Optional[str],
+        port: int,
+        multicast: bool,
         delay: int,
         first_random_delay_interval: Tuple[int, int],
+        question_type: Optional[DNSQuestionType],
     ) -> None:
-        self._browser = browser
+        self._zc = zc
+        self._types = types
+        self._addr = addr
+        self._port = port
+        self._multicast = multicast
         self._first_random_delay_interval = first_random_delay_interval
         self._min_time_between_queries_millis = delay
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -336,6 +350,7 @@ class QueryScheduler:
         self._query_heap: list[_ScheduledPTRQuery] = []
         self._next_run: Optional[asyncio.TimerHandle] = None
         self._clock_resolution_millis = time.get_clock_info('monotonic').resolution * 1000
+        self._question_type = question_type
 
     def start(self, loop: asyncio.AbstractEventLoop) -> None:
         """Start the scheduler.
@@ -425,15 +440,13 @@ class QueryScheduler:
             assert self._loop is not None
         # This is a safety to ensure we stop sending queries if Zeroconf instance
         # is stopped without the browser being cancelled
-        if self._browser.zc.done:
+        if self._zc.done:
             return
 
         now_millis = current_time_millis()
 
         # At first we will send STARTUP_QUERIES queries to get the cache populated
-        self._browser.async_send_ready_queries(
-            self._startup_queries_sent == 0, now_millis, self._browser.types
-        )
+        self.async_send_ready_queries(self._startup_queries_sent == 0, now_millis, self._types)
         self._startup_queries_sent += 1
 
         # Once we finish sending the initial queries we will
@@ -454,7 +467,7 @@ class QueryScheduler:
             assert self._loop is not None
         # This is a safety to ensure we stop sending queries if Zeroconf instance
         # is stopped without the browser being cancelled
-        if self._browser.zc.done:
+        if self._zc.done:
             return
 
         now_millis = current_time_millis()
@@ -492,7 +505,7 @@ class QueryScheduler:
             self.schedule_rescue_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
 
         if ready_types:
-            self._browser.async_send_ready_queries(False, now_millis, ready_types)
+            self.async_send_ready_queries(False, now_millis, ready_types)
 
         next_time_millis = now_millis + self._min_time_between_queries_millis
 
@@ -502,6 +515,20 @@ class QueryScheduler:
             next_when_millis = next_time_millis
 
         self._next_run = self._loop.call_at(millis_to_seconds(next_when_millis), self._process_ready_types)
+
+    def async_send_ready_queries(
+        self, first_request: bool, now_millis: float_, ready_types: Set[str]
+    ) -> None:
+        """Send any ready queries."""
+        # If they did not specify and this is the first request, ask QU questions
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
+        # just starting up and we know our cache is likely empty. This ensures
+        # the next outgoing will be sent with the known answers list.
+        question_type = QU_QUESTION if self._question_type is None and first_request else self._question_type
+        outs = generate_service_query(self._zc, now_millis, ready_types, self._multicast, question_type)
+        if outs:
+            for out in outs:
+                self._zc.async_send(out, self._addr, self._port)
 
 
 class _ServiceBrowserBase(RecordUpdateListener):
@@ -567,7 +594,16 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.question_type = question_type
         self._pending_handlers: Dict[Tuple[str, str], ServiceStateChange] = {}
         self._service_state_changed = Signal()
-        self.query_scheduler = QueryScheduler(self, delay, _FIRST_QUERY_DELAY_RANDOM_INTERVAL)
+        self.query_scheduler = QueryScheduler(
+            zc,
+            self.types,
+            addr,
+            port,
+            self.multicast,
+            delay,
+            _FIRST_QUERY_DELAY_RANDOM_INTERVAL,
+            question_type,
+        )
         self.done = False
         self._next_send_timer: Optional[asyncio.TimerHandle] = None
         self._query_sender_task: Optional[asyncio.Task] = None
@@ -710,20 +746,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         if not self.zc.started:
             await self.zc.async_wait_for_start()
         self.query_scheduler.start(self._loop)
-
-    def async_send_ready_queries(
-        self, first_request: bool, now_millis: float_, ready_types: Set[str]
-    ) -> None:
-        """Send any ready queries."""
-        # If they did not specify and this is the first request, ask QU questions
-        # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
-        # just starting up and we know our cache is likely empty. This ensures
-        # the next outgoing will be sent with the known answers list.
-        question_type = QU_QUESTION if self.question_type is None and first_request else self.question_type
-        outs = generate_service_query(self.zc, now_millis, ready_types, self.multicast, question_type)
-        if outs:
-            for out in outs:
-                self.zc.async_send(out, self.addr, self.port)
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):

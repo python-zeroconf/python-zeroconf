@@ -58,7 +58,11 @@ cdef list _group_ptr_queries_with_known_answers(double now_millis, bint multicas
 
 cdef class QueryScheduler:
 
-    cdef _ServiceBrowserBase _browser
+    cdef object _zc
+    cdef set _types
+    cdef str _addr
+    cdef int _port
+    cdef bint _multicast
     cdef tuple _first_random_delay_interval
     cdef double _min_time_between_queries_millis
     cdef object _loop
@@ -67,6 +71,7 @@ cdef class QueryScheduler:
     cdef public list _query_heap
     cdef object _next_run
     cdef double _clock_resolution_millis
+    cdef object _question_type
 
     cpdef void schedule_pointer_first_refresh(self, DNSPointer pointer)
 
@@ -86,6 +91,8 @@ cdef class QueryScheduler:
 
     @cython.locals(query=_ScheduledPTRQuery, next_scheduled=_ScheduledPTRQuery, next_when=double)
     cpdef void _process_ready_types(self)
+
+    cpdef void async_send_ready_queries(self, bint first_request, double now_millis, set ready_types)
 
 cdef class _ServiceBrowserBase(RecordUpdateListener):
 
@@ -114,5 +121,3 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cpdef _fire_service_state_changed_event(self, cython.tuple event)
 
     cpdef async_update_records_complete(self)
-
-    cpdef void async_send_ready_queries(self, bint first_request, double now_millis, set ready_types)
