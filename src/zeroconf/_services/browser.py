@@ -539,15 +539,10 @@ class _ServiceBrowserBase(RecordUpdateListener):
         'zc',
         '_cache',
         '_loop',
-        'addr',
-        'port',
-        'multicast',
-        'question_type',
         '_pending_handlers',
         '_service_state_changed',
         'query_scheduler',
         'done',
-        '_next_send_timer',
         '_query_sender_task',
     )
 
@@ -588,10 +583,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._cache = zc.cache
         assert zc.loop is not None
         self._loop = zc.loop
-        self.addr = addr
-        self.port = port
-        self.multicast = self.addr in (None, _MDNS_ADDR, _MDNS_ADDR6)
-        self.question_type = question_type
         self._pending_handlers: Dict[Tuple[str, str], ServiceStateChange] = {}
         self._service_state_changed = Signal()
         self.query_scheduler = QueryScheduler(
@@ -599,13 +590,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self.types,
             addr,
             port,
-            self.multicast,
+            addr in (None, _MDNS_ADDR, _MDNS_ADDR6),
             delay,
             _FIRST_QUERY_DELAY_RANDOM_INTERVAL,
             question_type,
         )
         self.done = False
-        self._next_send_timer: Optional[asyncio.TimerHandle] = None
         self._query_sender_task: Optional[asyncio.Task] = None
 
         if hasattr(handlers, 'add_service'):
@@ -740,6 +730,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.zc.async_remove_listener(self)
         assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
         self._query_sender_task.cancel()
+        self._query_sender_task = None
 
     async def _async_start_query_sender(self) -> None:
         """Start scheduling queries."""

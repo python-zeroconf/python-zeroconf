@@ -100,15 +100,10 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cdef public object zc
     cdef DNSCache _cache
     cdef object _loop
-    cdef public object addr
-    cdef public object port
-    cdef public bint multicast
-    cdef public object question_type
     cdef public cython.dict _pending_handlers
     cdef public object _service_state_changed
     cdef public QueryScheduler query_scheduler
     cdef public bint done
-    cdef public object _next_send_timer
     cdef public object _query_sender_task
 
     cpdef _enqueue_callback(self, object state_change, object type_, object name)
