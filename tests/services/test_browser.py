@@ -747,11 +747,13 @@ async def test_ttl_refresh_cancelled_rescue_query():
             await aiozc.async_close()
 
 
-def test_asking_qm_questions():
+@pytest.mark.asyncio
+async def test_asking_qm_questions():
     """Verify explictly asking QM questions."""
     type_ = "_quservice._tcp.local."
-    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
-
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    await zeroconf_browser.async_wait_for_start()
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
 
@@ -770,21 +772,24 @@ def test_asking_qm_questions():
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
 
-        browser = ServiceBrowser(
+        browser = AsyncServiceBrowser(
             zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QM
         )
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        await asyncio.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
             assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         finally:
-            browser.cancel()
-            zeroconf_browser.close()
+            await browser.async_cancel()
+            await aiozc.async_close()
 
 
-def test_asking_qu_questions():
+@pytest.mark.asyncio
+async def test_asking_qu_questions():
     """Verify the service browser can ask QU questions."""
     type_ = "_quservice._tcp.local."
-    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    await zeroconf_browser.async_wait_for_start()
 
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
@@ -804,15 +809,15 @@ def test_asking_qu_questions():
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
 
-        browser = ServiceBrowser(
+        browser = AsyncServiceBrowser(
             zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QU
         )
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        await asyncio.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         finally:
-            browser.cancel()
-            zeroconf_browser.close()
+            await browser.async_cancel()
+            await aiozc.async_close()
 
 
 def test_legacy_record_update_listener():
