@@ -823,9 +823,13 @@ class ServiceInfo(RecordUpdateListener):
                         question_type or DNS_QUESTION_TYPE_QU if first_request else DNS_QUESTION_TYPE_QM,
                     )
                     first_request = False
-                    if not out.questions:
-                        return self._load_from_cache(zc, now)
-                    zc.async_send(out, addr, port)
+                    if out.questions:
+                        # All questions may have been suppressed
+                        # by the question history, so nothing to send,
+                        # but keep waiting for answers in case another
+                        # client on the network is asking the same
+                        # question or they have not arrived yet.
+                        zc.async_send(out, addr, port)
                     next_ = now + delay
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
 
