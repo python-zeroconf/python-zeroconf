@@ -1185,7 +1185,7 @@ async def test_query_scheduler():
             "disappear._hap._tcp.local.",
         )
 
-        query_scheduler.schedule_ptr_first_refresh(ptr_record)
+        query_scheduler.reschedule_ptr_first_refresh(ptr_record)
         expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
         expected_expire_time = ptr_record.get_expiration_time(100)
         ptr_query = _ScheduledPTRQuery(
@@ -1193,7 +1193,7 @@ async def test_query_scheduler():
         )
         assert query_scheduler._query_heap == [ptr_query]
 
-        query_scheduler.schedule_ptr_first_refresh(ptr2_record)
+        query_scheduler.reschedule_ptr_first_refresh(ptr2_record)
         expected_when_time = ptr2_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
         expected_expire_time = ptr2_record.get_expiration_time(100)
         ptr2_query = _ScheduledPTRQuery(
@@ -1268,7 +1268,7 @@ async def test_query_scheduler_rescue_records():
             "zoomer._hap._tcp.local.",
         )
 
-        query_scheduler.schedule_ptr_first_refresh(ptr_record)
+        query_scheduler.reschedule_ptr_first_refresh(ptr_record)
         expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
         expected_expire_time = ptr_record.get_expiration_time(100)
         ptr_query = _ScheduledPTRQuery(

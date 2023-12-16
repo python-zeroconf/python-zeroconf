@@ -73,8 +73,6 @@ cdef class QueryScheduler:
     cdef double _clock_resolution_millis
     cdef object _question_type
 
-    cpdef void schedule_ptr_first_refresh(self, DNSPointer pointer)
-
     cdef void _schedule_ptr_refresh(self, DNSPointer pointer, double expire_time_millis, double refresh_time_millis)
 
     cdef void _schedule_ptr_query(self, _ScheduledPTRQuery scheduled_query)
