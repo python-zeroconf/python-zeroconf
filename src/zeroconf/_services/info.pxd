@@ -44,6 +44,8 @@ cdef object _IPVersion_V4Only_value
 
 cdef cython.set _ADDRESS_RECORD_TYPES
 
+cdef unsigned int _DUPLICATE_QUESTION_INTERVAL
+
 cdef bint TYPE_CHECKING
 cdef bint IPADDRESS_SUPPORTS_SCOPE_ID
 cdef object cached_ip_addresses
