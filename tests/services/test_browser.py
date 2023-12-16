@@ -1142,6 +1142,168 @@ async def test_generate_service_query_suppress_duplicate_questions():
     await aiozc.async_close()
 
 
+@pytest.mark.asyncio
+async def test_query_scheduler():
+    delay = const._BROWSER_TIME
+    types_ = {"_hap._tcp.local.", "_http._tcp.local."}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
+    sends: List[r.DNSIncoming] = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
+
+    query_scheduler = _services_browser.QueryScheduler(zc, types_, None, 0, True, delay, (0, 0), None)
+    loop = asyncio.get_running_loop()
+
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zc, "async_send", send):
+
+        query_scheduler.start(loop)
+
+        original_now = loop.time()
+        now_millis = original_now * 1000
+        for query_count in range(_services_browser.STARTUP_QUERIES):
+            now_millis += (2**query_count) * 1000
+            time_changed_millis(now_millis)
+
+        ptr_record = r.DNSPointer(
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            "zoomer._hap._tcp.local.",
+        )
+        ptr2_record = r.DNSPointer(
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            "disappear._hap._tcp.local.",
+        )
+
+        query_scheduler.schedule_ptr_first_refresh(ptr_record)
+        expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
+        expected_expire_time = ptr_record.get_expiration_time(100)
+        ptr_query = _ScheduledPTRQuery(
+            ptr_record.alias, ptr_record.name, int(ptr_record.ttl), expected_expire_time, expected_when_time
+        )
+        assert query_scheduler._query_heap == [ptr_query]
+
+        query_scheduler.schedule_ptr_first_refresh(ptr2_record)
+        expected_when_time = ptr2_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
+        expected_expire_time = ptr2_record.get_expiration_time(100)
+        ptr2_query = _ScheduledPTRQuery(
+            ptr2_record.alias,
+            ptr2_record.name,
+            int(ptr2_record.ttl),
+            expected_expire_time,
+            expected_when_time,
+        )
+
+        assert query_scheduler._query_heap == [ptr_query, ptr2_query]
+
+        # Simulate PTR one goodbye
+
+        query_scheduler.cancel_ptr_refresh(ptr_record)
+        ptr_query.cancelled = True
+
+        assert query_scheduler._query_heap == [ptr_query, ptr2_query]
+        assert query_scheduler._query_heap[0].cancelled is True
+        assert query_scheduler._query_heap[1].cancelled is False
+
+        # Move time forward past when the TTL is no longer
+        # fresh (AKA 75% of the TTL)
+        now_millis += (ptr2_record.ttl * 1000) * 0.80
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 1
+        first_heap = query_scheduler._query_heap[0]
+        assert first_heap.cancelled is False
+        assert first_heap.alias == ptr2_record.alias
+
+        # Move time forward past when the record expires
+        now_millis += (ptr2_record.ttl * 1000) * 0.20
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 0
+
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_query_scheduler_rescue_records():
+    delay = const._BROWSER_TIME
+    types_ = {"_hap._tcp.local.", "_http._tcp.local."}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
+    sends: List[r.DNSIncoming] = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
+
+    query_scheduler = _services_browser.QueryScheduler(zc, types_, None, 0, True, delay, (0, 0), None)
+    loop = asyncio.get_running_loop()
+
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zc, "async_send", send):
+
+        query_scheduler.start(loop)
+
+        original_now = loop.time()
+        now_millis = original_now * 1000
+        for query_count in range(_services_browser.STARTUP_QUERIES):
+            now_millis += (2**query_count) * 1000
+            time_changed_millis(now_millis)
+
+        ptr_record = r.DNSPointer(
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            "zoomer._hap._tcp.local.",
+        )
+
+        query_scheduler.schedule_ptr_first_refresh(ptr_record)
+        expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
+        expected_expire_time = ptr_record.get_expiration_time(100)
+        ptr_query = _ScheduledPTRQuery(
+            ptr_record.alias, ptr_record.name, int(ptr_record.ttl), expected_expire_time, expected_when_time
+        )
+        assert query_scheduler._query_heap == [ptr_query]
+        assert query_scheduler._query_heap[0].cancelled is False
+
+        # Move time forward past when the TTL is no longer
+        # fresh (AKA 75% of the TTL)
+        now_millis += (ptr_record.ttl * 1000) * 0.76
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 1
+        new_when = query_scheduler._query_heap[0].when_millis
+        assert query_scheduler._query_heap[0].cancelled is False
+        assert new_when >= expected_when_time
+
+        # Move time forward again, but not enough to expire the
+        # record to make sure we try to rescue it
+        now_millis += (ptr_record.ttl * 1000) * 0.11
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 1
+        second_new_when = query_scheduler._query_heap[0].when_millis
+        assert query_scheduler._query_heap[0].cancelled is False
+        assert second_new_when >= new_when
+
+        # Move time forward again, enough that we will no longer
+        # try to rescue the record
+        now_millis += (ptr_record.ttl * 1000) * 0.11
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 0
+
+    await aiozc.async_close()
+
+
 def test_service_browser_matching():
     """Test that the ServiceBrowser matching does not match partial names."""
 
