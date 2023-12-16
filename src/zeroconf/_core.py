@@ -265,7 +265,7 @@ class Zeroconf(QuietLogger):
     ) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
-        which defaults to 3.0 seconds."""
+        which defaults to 3 seconds."""
         info = ServiceInfo(type_, name)
         if info.request(self, timeout, question_type):
             return info
