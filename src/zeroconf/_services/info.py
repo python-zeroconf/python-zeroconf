@@ -855,7 +855,7 @@ class ServiceInfo(RecordUpdateListener):
     def _add_question_with_known_answers(
         self,
         out: DNSOutgoing,
-        question_type: DNSQuestionType,
+        qu_question: bool,
         question_history: QuestionHistory,
         cache: DNSCache,
         now: float_,
@@ -871,7 +871,6 @@ class ServiceInfo(RecordUpdateListener):
         if skip_if_known_answers and known_answers:
             return
         question = DNSQuestion(name, type_, class_)
-        qu_question = question_type is QU_QUESTION
         if qu_question:
             question.unicast = True
         elif question_history.suppresses(question, now, known_answers):
@@ -891,17 +890,18 @@ class ServiceInfo(RecordUpdateListener):
         server = self.server or name
         cache = zc.cache
         history = zc.question_history
+        qu_question = question_type is QU_QUESTION
         self._add_question_with_known_answers(
-            out, question_type, history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
+            out, qu_question, history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
         )
         self._add_question_with_known_answers(
-            out, question_type, history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
+            out, qu_question, history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
         )
         self._add_question_with_known_answers(
-            out, question_type, history, cache, now, server, _TYPE_A, _CLASS_IN, False
+            out, qu_question, history, cache, now, server, _TYPE_A, _CLASS_IN, False
         )
         self._add_question_with_known_answers(
-            out, question_type, history, cache, now, server, _TYPE_AAAA, _CLASS_IN, False
+            out, qu_question, history, cache, now, server, _TYPE_AAAA, _CLASS_IN, False
         )
         return out
 
