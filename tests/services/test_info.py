@@ -435,7 +435,7 @@ class TestServiceInfo(unittest.TestCase):
                 # by the question history
                 last_sent = None
                 send_event.clear()
-                send_event.wait(wait_time / 2)  # Wait long enough to be inside the question history window
+                send_event.wait(wait_time * 0.75)  # Wait long enough to be inside the question history window
                 now = r.current_time_millis()
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
@@ -446,7 +446,7 @@ class TestServiceInfo(unittest.TestCase):
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN), now, set()
                 )
-                send_event.wait(wait_time / 2)
+                send_event.wait(wait_time * 0.25)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 1  # type: ignore[unreachable]
                 assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
@@ -458,7 +458,7 @@ class TestServiceInfo(unittest.TestCase):
                 # Expect no queries as all are suppressed by the question history
                 last_sent = None
                 send_event.clear()
-                send_event.wait(wait_time / 2)  # Wait long enough to be inside the question history window
+                send_event.wait(wait_time * 0.75)  # Wait long enough to be inside the question history window
                 now = r.current_time_millis()
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
@@ -472,7 +472,7 @@ class TestServiceInfo(unittest.TestCase):
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN), now, set()
                 )
-                send_event.wait(wait_time / 2)
+                send_event.wait(wait_time * 0.25)
                 # All questions are suppressed so no query should be sent
                 assert last_sent is None
                 assert service_info is None
