@@ -857,6 +857,8 @@ class ServiceInfo(RecordUpdateListener):
             question.unicast = True
         elif question_history.suppresses(question, now, known_answers):
             return
+        else:
+            question_history.add_question_at_time(question, now, known_answers)
         out.add_question(question)
         for answer in known_answers:
             out.add_answer_at_time(answer, now)
