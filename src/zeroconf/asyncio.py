@@ -239,7 +239,7 @@ class AsyncZeroconf:
     ) -> Optional[AsyncServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
-        which defaults to 3.5 seconds."""
+        which defaults to 3.6 seconds."""
         info = AsyncServiceInfo(type_, name)
         if await info.async_request(self.zeroconf, timeout, question_type):
             return info
