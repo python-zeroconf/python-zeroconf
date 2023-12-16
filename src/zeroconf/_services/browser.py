@@ -493,7 +493,7 @@ class QueryScheduler:
 
             ready_types.add(query.name)
 
-            heappop(self._query_heap)
+            query = heappop(self._query_heap)
             del self._next_scheduled_for_alias[query.alias]
             # If there is still more than 10% of the TTL remaining
             # schedule a query again to try to rescue the record
