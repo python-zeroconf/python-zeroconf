@@ -64,6 +64,7 @@ from ..const import (
     _CLASS_IN_UNIQUE,
     _DNS_HOST_TTL,
     _DNS_OTHER_TTL,
+    _DUPLICATE_QUESTION_INTERVAL,
     _FLAGS_QR_QUERY,
     _LISTENER_TIME,
     _MDNS_PORT,
@@ -830,6 +831,7 @@ class ServiceInfo(RecordUpdateListener):
                         # client on the network is asking the same
                         # question or they have not arrived yet.
                         zc.async_send(out, addr, port)
+                    delay = max(delay, _DUPLICATE_QUESTION_INTERVAL)
                     next_ = now + delay
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
 

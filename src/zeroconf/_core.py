@@ -261,11 +261,11 @@ class Zeroconf(QuietLogger):
             _resolve_all_futures_to_none(notify_futures)
 
     def get_service_info(
-        self, type_: str, name: str, timeout: int = 3600, question_type: Optional[DNSQuestionType] = None
+        self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
     ) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
-        which defaults to 3.6 seconds."""
+        which defaults to 3.0 seconds."""
         info = ServiceInfo(type_, name)
         if info.request(self, timeout, question_type):
             return info
