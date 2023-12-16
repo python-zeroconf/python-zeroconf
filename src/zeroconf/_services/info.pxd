@@ -2,7 +2,16 @@
 import cython
 
 from .._cache cimport DNSCache
-from .._dns cimport DNSAddress, DNSNsec, DNSPointer, DNSRecord, DNSService, DNSText
+from .._dns cimport (
+    DNSAddress,
+    DNSNsec,
+    DNSPointer,
+    DNSQuestion,
+    DNSRecord,
+    DNSService,
+    DNSText,
+)
+from .._history cimport QuestionHistory
 from .._protocol.outgoing cimport DNSOutgoing
 from .._record_update cimport RecordUpdate
 from .._updates cimport RecordUpdateListener
@@ -123,5 +132,18 @@ cdef class ServiceInfo(RecordUpdateListener):
 
     cpdef void async_clear_cache(self)
 
-    @cython.locals(cache=DNSCache)
+    @cython.locals(cache=DNSCache, question_history=QuestionHistory, out=DNSOutgoing)
     cdef DNSOutgoing _generate_request_query(self, object zc, double now, object question_type)
+
+    @cython.locals(question=DNSQuestion)
+    cdef void _add_question_with_known_answers(
+        self,
+        DNSOutgoing out,
+        object question_type,
+        QuestionHistory question_history,
+        DNSCache cache,
+        double now,
+        str name,
+        object type_,
+        object class_
+    )

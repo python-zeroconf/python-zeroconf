@@ -26,16 +26,19 @@ import sys
 from ipaddress import IPv4Address, IPv6Address, _BaseAddress
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
+from .._cache import DNSCache
 from .._dns import (
     DNSAddress,
     DNSNsec,
     DNSPointer,
+    DNSQuestion,
     DNSQuestionType,
     DNSRecord,
     DNSService,
     DNSText,
 )
 from .._exceptions import BadTypeInNameException
+from .._history import QuestionHistory
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._record_update import RecordUpdate
@@ -89,6 +92,7 @@ _AVOID_SYNC_DELAY_RANDOM_INTERVAL = (20, 120)
 bytes_ = bytes
 float_ = float
 int_ = int
+str_ = str
 
 DNS_QUESTION_TYPE_QU = DNSQuestionType.QU
 DNS_QUESTION_TYPE_QM = DNSQuestionType.QM
@@ -823,7 +827,6 @@ class ServiceInfo(RecordUpdateListener):
                         return self._load_from_cache(zc, now)
                     zc.async_send(out, addr, port)
                     next_ = now + delay
-                    delay *= 2
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
 
                 await self.async_wait(min(next_, last) - now, zc.loop)
@@ -833,6 +836,27 @@ class ServiceInfo(RecordUpdateListener):
 
         return True
 
+    def _add_question_with_known_answers(
+        self,
+        out: DNSOutgoing,
+        question_type: DNSQuestionType,
+        question_history: QuestionHistory,
+        cache: DNSCache,
+        now: float_,
+        name: str_,
+        type_: int_,
+        class_: int_,
+    ) -> None:
+        """Add a question with known answers if its not suppressed."""
+        known_answers = cache.get_all_by_details(name, type_, class_)
+        question = DNSQuestion(name, type_, class_)
+        if not question_history.suppresses(question, now, set(known_answers)):
+            if question_type is DNS_QUESTION_TYPE_QU:
+                question.unicast = True
+            out.add_question(question)
+            for answer in known_answers:
+                out.add_answer_at_time(answer, now)
+
     def _generate_request_query(
         self, zc: 'Zeroconf', now: float_, question_type: DNSQuestionType
     ) -> DNSOutgoing:
@@ -841,13 +865,19 @@ class ServiceInfo(RecordUpdateListener):
         name = self._name
         server_or_name = self.server or name
         cache = zc.cache
-        out.add_question_or_one_cache(cache, now, name, _TYPE_SRV, _CLASS_IN)
-        out.add_question_or_one_cache(cache, now, name, _TYPE_TXT, _CLASS_IN)
-        out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_A, _CLASS_IN)
-        out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN)
-        if question_type is DNS_QUESTION_TYPE_QU:
-            for question in out.questions:
-                question.unicast = True
+        question_history = zc.question_history
+        self._add_question_with_known_answers(
+            out, question_type, question_history, cache, now, name, _TYPE_SRV, _CLASS_IN
+        )
+        self._add_question_with_known_answers(
+            out, question_type, question_history, cache, now, name, _TYPE_TXT, _CLASS_IN
+        )
+        self._add_question_with_known_answers(
+            out, question_type, question_history, cache, now, server_or_name, _TYPE_A, _CLASS_IN
+        )
+        self._add_question_with_known_answers(
+            out, question_type, question_history, cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN
+        )
         return out
 
     def __repr__(self) -> str:

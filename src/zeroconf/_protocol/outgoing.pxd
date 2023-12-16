@@ -1,7 +1,6 @@
 
 import cython
 
-from .._cache cimport DNSCache
 from .._dns cimport DNSEntry, DNSPointer, DNSQuestion, DNSRecord
 from .incoming cimport DNSIncoming
 
@@ -126,10 +125,6 @@ cdef class DNSOutgoing:
         additionals_written="unsigned int",
     )
     cpdef packets(self)
-
-    cpdef add_question_or_all_cache(self, DNSCache cache, double now, str name, object type_, object class_)
-
-    cpdef add_question_or_one_cache(self, DNSCache cache, double now, str name, object type_, object class_)
 
     cpdef add_question(self, DNSQuestion question)
 
