@@ -22,20 +22,23 @@
 
 import asyncio
 import random
-from functools import lru_cache
-from ipaddress import IPv4Address, IPv6Address, _BaseAddress, ip_address
+import sys
+from ipaddress import IPv4Address, IPv6Address, _BaseAddress
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
+from .._cache import DNSCache
 from .._dns import (
     DNSAddress,
     DNSNsec,
     DNSPointer,
+    DNSQuestion,
     DNSQuestionType,
     DNSRecord,
     DNSService,
     DNSText,
 )
 from .._exceptions import BadTypeInNameException
+from .._history import QuestionHistory
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
 from .._record_update import RecordUpdate
@@ -46,6 +49,12 @@ from .._utils.asyncio import (
     run_coro_with_timeout,
     wait_for_future_set_or_timeout,
 )
+from .._utils.ipaddress import (
+    cached_ip_addresses,
+    get_ip_address_object_from_record,
+    ip_bytes_and_scope_to_address,
+    str_without_scope_id,
+)
 from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis
@@ -55,6 +64,7 @@ from ..const import (
     _CLASS_IN_UNIQUE,
     _DNS_HOST_TTL,
     _DNS_OTHER_TTL,
+    _DUPLICATE_QUESTION_INTERVAL,
     _FLAGS_QR_QUERY,
     _LISTENER_TIME,
     _MDNS_PORT,
@@ -65,6 +75,8 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
+
+IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 _IPVersion_All_value = IPVersion.All.value
 _IPVersion_V4Only_value = IPVersion.V4Only.value
@@ -78,11 +90,15 @@ _IPVersion_V4Only_value = IPVersion.V4Only.value
 # the A/AAAA/SRV records for a host.
 _AVOID_SYNC_DELAY_RANDOM_INTERVAL = (20, 120)
 
+bytes_ = bytes
 float_ = float
 int_ = int
+str_ = str
 
-DNS_QUESTION_TYPE_QU = DNSQuestionType.QU
-DNS_QUESTION_TYPE_QM = DNSQuestionType.QM
+QU_QUESTION = DNSQuestionType.QU
+QM_QUESTION = DNSQuestionType.QM
+
+randint = random.randint
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -96,18 +112,6 @@ def instance_name_from_service_info(info: "ServiceInfo", strict: bool = True) ->
     if not info.type.endswith(service_name):
         raise BadTypeInNameException
     return info.name[: -len(service_name) - 1]
-
-
-@lru_cache(maxsize=512)
-def _cached_ip_addresses(address: Union[str, bytes, int]) -> Optional[Union[IPv4Address, IPv6Address]]:
-    """Cache IP addresses."""
-    try:
-        return ip_address(address)
-    except ValueError:
-        return None
-
-
-_cached_ip_addresses_wrapper = _cached_ip_addresses
 
 
 class ServiceInfo(RecordUpdateListener):
@@ -145,6 +149,7 @@ class ServiceInfo(RecordUpdateListener):
         "server",
         "server_key",
         "_properties",
+        "_decoded_properties",
         "host_ttl",
         "other_ttl",
         "interface_index",
@@ -177,6 +182,7 @@ class ServiceInfo(RecordUpdateListener):
             raise TypeError("addresses and parsed_addresses cannot be provided together")
         if not type_.endswith(service_type_name(name, strict=False)):
             raise BadTypeInNameException
+        self.interface_index = interface_index
         self.text = b''
         self.type = type_
         self._name = name
@@ -192,14 +198,14 @@ class ServiceInfo(RecordUpdateListener):
         self.priority = priority
         self.server = server if server else None
         self.server_key = server.lower() if server else None
-        self._properties: Optional[Dict[Union[str, bytes], Optional[Union[str, bytes]]]] = None
+        self._properties: Optional[Dict[bytes, Optional[bytes]]] = None
+        self._decoded_properties: Optional[Dict[str, Optional[str]]] = None
         if isinstance(properties, bytes):
             self._set_text(properties)
         else:
             self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
-        self.interface_index = interface_index
         self._new_records_futures: Optional[Set[asyncio.Future]] = None
         self._dns_address_cache: Optional[List[DNSAddress]] = None
         self._dns_pointer_cache: Optional[DNSPointer] = None
@@ -243,7 +249,10 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
-            addr = _cached_ip_addresses_wrapper(address)
+            if IPADDRESS_SUPPORTS_SCOPE_ID and len(address) == 16 and self.interface_index is not None:
+                addr = ip_bytes_and_scope_to_address(address, self.interface_index)
+            else:
+                addr = cached_ip_addresses(address)
             if addr is None:
                 raise TypeError(
                     "Addresses must either be IPv4 or IPv6 strings, bytes, or integers;"
@@ -259,19 +268,22 @@ class ServiceInfo(RecordUpdateListener):
                 self._ipv6_addresses.append(addr)
 
     @property
-    def properties(self) -> Dict[Union[str, bytes], Optional[Union[str, bytes]]]:
-        """If properties were set in the constructor this property returns the original dictionary
-        of type `Dict[Union[bytes, str], Any]`.
-
-        If properties are coming from the network, after decoding a TXT record, the keys are always
-        bytes and the values are either bytes, if there was a value, even empty, or `None`, if there
-        was none. No further decoding is attempted. The type returned is `Dict[bytes, Optional[bytes]]`.
-        """
+    def properties(self) -> Dict[bytes, Optional[bytes]]:
+        """Return properties as bytes."""
         if self._properties is None:
             self._unpack_text_into_properties()
         if TYPE_CHECKING:
             assert self._properties is not None
         return self._properties
+
+    @property
+    def decoded_properties(self) -> Dict[str, Optional[str]]:
+        """Return properties as strings."""
+        if self._decoded_properties is None:
+            self._generate_decoded_properties()
+        if TYPE_CHECKING:
+            assert self._decoded_properties is not None
+        return self._decoded_properties
 
     def async_clear_cache(self) -> None:
         """Clear the cache for this service info."""
@@ -322,10 +334,10 @@ class ServiceInfo(RecordUpdateListener):
 
     def _ip_addresses_by_version_value(
         self, version_value: int_
-    ) -> Union[List[IPv4Address], List[IPv6Address], List[_BaseAddress]]:
+    ) -> Union[List[IPv4Address], List[IPv6Address]]:
         """Backend for addresses_by_version that uses the raw value."""
         if version_value == _IPVersion_All_value:
-            return [*self._ipv4_addresses, *self._ipv6_addresses]
+            return [*self._ipv4_addresses, *self._ipv6_addresses]  # type: ignore[return-value]
         if version_value == _IPVersion_V4Only_value:
             return self._ipv4_addresses
         return self._ipv6_addresses
@@ -339,7 +351,7 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        return [str(addr) for addr in self._ip_addresses_by_version_value(version.value)]
+        return [str_without_scope_id(addr) for addr in self._ip_addresses_by_version_value(version.value)]
 
     def parsed_scoped_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
         """Equivalent to parsed_addresses, with the exception that IPv6 Link-Local
@@ -351,30 +363,35 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        if self.interface_index is None:
-            return self.parsed_addresses(version)
-        return [
-            f"{addr}%{self.interface_index}" if addr.version == 6 and addr.is_link_local else str(addr)
-            for addr in self._ip_addresses_by_version_value(version.value)
-        ]
+        return [str(addr) for addr in self._ip_addresses_by_version_value(version.value)]
 
     def _set_properties(self, properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]]) -> None:
         """Sets properties and text of this info from a dictionary"""
-        self._properties = properties
         list_: List[bytes] = []
+        properties_contain_str = False
         result = b''
         for key, value in properties.items():
             if isinstance(key, str):
                 key = key.encode('utf-8')
+                properties_contain_str = True
 
             record = key
             if value is not None:
                 if not isinstance(value, bytes):
                     value = str(value).encode('utf-8')
+                    properties_contain_str = True
                 record += b'=' + value
             list_.append(record)
         for item in list_:
             result = b''.join((result, bytes((len(item),)), item))
+        if not properties_contain_str:
+            # If there are no str keys or values, we can use the properties
+            # as-is, without decoding them, otherwise calling
+            # self.properties will lazy decode them, which is expensive.
+            if TYPE_CHECKING:
+                self._properties = cast("Dict[bytes, Optional[bytes]]", properties)
+            else:
+                self._properties = properties
         self.text = result
 
     def _set_text(self, text: bytes) -> None:
@@ -384,31 +401,38 @@ class ServiceInfo(RecordUpdateListener):
         self.text = text
         # Clear the properties cache
         self._properties = None
+        self._decoded_properties = None
+
+    def _generate_decoded_properties(self) -> None:
+        """Generates decoded properties from the properties"""
+        self._decoded_properties = {
+            k.decode("ascii", "replace"): None if v is None else v.decode("utf-8", "replace")
+            for k, v in self.properties.items()
+        }
 
     def _unpack_text_into_properties(self) -> None:
         """Unpacks the text field into properties"""
         text = self.text
-        if not text:
+        end = len(text)
+        if end == 0:
             # Properties should be set atomically
             # in case another thread is reading them
             self._properties = {}
             return
 
         index = 0
-        pairs: List[bytes] = []
-        end = len(text)
+        properties: Dict[bytes, Optional[bytes]] = {}
         while index < end:
             length = text[index]
             index += 1
-            pairs.append(text[index : index + length])
+            key_value = text[index : index + length]
+            key_sep_value = key_value.partition(b'=')
+            key = key_sep_value[0]
+            if key not in properties:
+                properties[key] = key_sep_value[2] or None
             index += length
 
-        # Reverse the list so that the first item in the list
-        # is the last item in the text field. This is important
-        # to preserve backwards compatibility where the first
-        # key always wins if the key is seen multiple times.
-        pairs.reverse()
-        self._properties = {key: value or None for key, _, value in (pair.partition(b'=') for pair in pairs)}
+        self._properties = properties
 
     def get_name(self) -> str:
         """Name accessor"""
@@ -422,8 +446,8 @@ class ServiceInfo(RecordUpdateListener):
         for record in self._get_address_records_from_cache_by_type(zc, type):
             if record.is_expired(now):
                 continue
-            ip_addr = _cached_ip_addresses_wrapper(record.address)
-            if ip_addr is not None:
+            ip_addr = get_ip_address_object_from_record(record)
+            if ip_addr is not None and ip_addr not in address_list:
                 address_list.append(ip_addr)
         address_list.reverse()  # Reverse to get LIFO order
         return address_list
@@ -472,7 +496,7 @@ class ServiceInfo(RecordUpdateListener):
             dns_address_record = record
             if TYPE_CHECKING:
                 assert isinstance(dns_address_record, DNSAddress)
-            ip_addr = _cached_ip_addresses_wrapper(dns_address_record.address)
+            ip_addr = get_ip_address_object_from_record(dns_address_record)
             if ip_addr is None:
                 log.warning(
                     "Encountered invalid address while processing %s: %s",
@@ -756,6 +780,12 @@ class ServiceInfo(RecordUpdateListener):
             )
         )
 
+    def _get_initial_delay(self) -> float_:
+        return _LISTENER_TIME
+
+    def _get_random_delay(self) -> int_:
+        return randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
+
     async def async_request(
         self,
         zc: 'Zeroconf',
@@ -786,7 +816,7 @@ class ServiceInfo(RecordUpdateListener):
             assert zc.loop is not None
 
         first_request = True
-        delay = _LISTENER_TIME
+        delay = self._get_initial_delay()
         next_ = now
         last = now + timeout
         try:
@@ -795,18 +825,25 @@ class ServiceInfo(RecordUpdateListener):
                 if last <= now:
                     return False
                 if next_ <= now:
-                    out = self.generate_request_query(
-                        zc,
-                        now,
-                        question_type or DNS_QUESTION_TYPE_QU if first_request else DNS_QUESTION_TYPE_QM,
-                    )
+                    this_question_type = question_type or QU_QUESTION if first_request else QM_QUESTION
+                    out = self._generate_request_query(zc, now, this_question_type)
                     first_request = False
-                    if not out.questions:
-                        return self._load_from_cache(zc, now)
-                    zc.async_send(out, addr, port)
+                    if out.questions:
+                        # All questions may have been suppressed
+                        # by the question history, so nothing to send,
+                        # but keep waiting for answers in case another
+                        # client on the network is asking the same
+                        # question or they have not arrived yet.
+                        zc.async_send(out, addr, port)
                     next_ = now + delay
-                    delay *= 2
-                    next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
+                    next_ += self._get_random_delay()
+                    if this_question_type is QM_QUESTION and delay < _DUPLICATE_QUESTION_INTERVAL:
+                        # If we just asked a QM question, we need to
+                        # wait at least the duplicate question interval
+                        # before asking another QM question otherwise
+                        # its likely to be suppressed by the question
+                        # history of the remote responder.
+                        delay = _DUPLICATE_QUESTION_INTERVAL
 
                 await self.async_wait(min(next_, last) - now, zc.loop)
                 now = current_time_millis()
@@ -815,21 +852,57 @@ class ServiceInfo(RecordUpdateListener):
 
         return True
 
-    def generate_request_query(
-        self, zc: 'Zeroconf', now: float_, question_type: Optional[DNSQuestionType] = None
+    def _add_question_with_known_answers(
+        self,
+        out: DNSOutgoing,
+        qu_question: bool,
+        question_history: QuestionHistory,
+        cache: DNSCache,
+        now: float_,
+        name: str_,
+        type_: int_,
+        class_: int_,
+        skip_if_known_answers: bool,
+    ) -> None:
+        """Add a question with known answers if its not suppressed."""
+        known_answers = {
+            answer for answer in cache.get_all_by_details(name, type_, class_) if not answer.is_stale(now)
+        }
+        if skip_if_known_answers and known_answers:
+            return
+        question = DNSQuestion(name, type_, class_)
+        if qu_question:
+            question.unicast = True
+        elif question_history.suppresses(question, now, known_answers):
+            return
+        else:
+            question_history.add_question_at_time(question, now, known_answers)
+        out.add_question(question)
+        for answer in known_answers:
+            out.add_answer_at_time(answer, now)
+
+    def _generate_request_query(
+        self, zc: 'Zeroconf', now: float_, question_type: DNSQuestionType
     ) -> DNSOutgoing:
         """Generate the request query."""
         out = DNSOutgoing(_FLAGS_QR_QUERY)
         name = self._name
-        server_or_name = self.server or name
+        server = self.server or name
         cache = zc.cache
-        out.add_question_or_one_cache(cache, now, name, _TYPE_SRV, _CLASS_IN)
-        out.add_question_or_one_cache(cache, now, name, _TYPE_TXT, _CLASS_IN)
-        out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_A, _CLASS_IN)
-        out.add_question_or_all_cache(cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN)
-        if question_type == DNS_QUESTION_TYPE_QU:
-            for question in out.questions:
-                question.unicast = True
+        history = zc.question_history
+        qu_question = question_type is QU_QUESTION
+        self._add_question_with_known_answers(
+            out, qu_question, history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
+        )
+        self._add_question_with_known_answers(
+            out, qu_question, history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
+        )
+        self._add_question_with_known_answers(
+            out, qu_question, history, cache, now, server, _TYPE_A, _CLASS_IN, False
+        )
+        self._add_question_with_known_answers(
+            out, qu_question, history, cache, now, server, _TYPE_AAAA, _CLASS_IN, False
+        )
         return out
 
     def __repr__(self) -> str:

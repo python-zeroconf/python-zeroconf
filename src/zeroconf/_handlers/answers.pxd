@@ -15,8 +15,8 @@ cdef class QuestionAnswers:
 
 cdef class AnswerGroup:
 
-    cdef public float send_after
-    cdef public float send_before
+    cdef public double send_after
+    cdef public double send_before
     cdef public cython.dict answers
 
 

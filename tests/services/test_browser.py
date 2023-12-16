@@ -10,7 +10,7 @@ import socket
 import time
 import unittest
 from threading import Event
-from typing import Iterable, Set, cast
+from typing import Iterable, List, Set, cast
 from unittest.mock import patch
 
 import pytest
@@ -27,15 +27,16 @@ from zeroconf import (
     millis_to_seconds,
 )
 from zeroconf._services import ServiceStateChange
-from zeroconf._services.browser import ServiceBrowser
+from zeroconf._services.browser import ServiceBrowser, _ScheduledPTRQuery
 from zeroconf._services.info import ServiceInfo
-from zeroconf.asyncio import AsyncZeroconf
+from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 
 from .. import (
     QuestionHistoryWithoutSuppression,
     _inject_response,
     _wait_for_start,
     has_working_ipv6,
+    time_changed_millis,
 )
 
 log = logging.getLogger('zeroconf')
@@ -51,6 +52,13 @@ def setup_module():
 def teardown_module():
     if original_logging_level != logging.NOTSET:
         log.setLevel(original_logging_level)
+
+
+def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    for record in records:
+        generated.add_answer_at_time(record, 0)
+    return r.DNSIncoming(generated.packets()[0])
 
 
 def test_service_browser_cancel_multiple_times():
@@ -213,7 +221,7 @@ class TestServiceBrowser(unittest.TestCase):
                 assert service_info.server.lower() == service_server.lower()
                 service_updated_event.set()
 
-        def mock_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
+        def mock_record_update_incoming_msg(service_state_change: r.ServiceStateChange) -> r.DNSIncoming:
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             assert generated.is_response() is True
 
@@ -291,7 +299,7 @@ class TestServiceBrowser(unittest.TestCase):
             wait_time = 3
 
             # service added
-            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Added))
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Added))
             service_add_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 0
@@ -300,7 +308,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service SRV updated
             service_updated_event.clear()
             service_server = 'ash-2.local.'
-            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 1
@@ -309,7 +317,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service TXT updated
             service_updated_event.clear()
             service_text = b'path=/~matt2/'
-            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 2
@@ -318,7 +326,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service TXT updated - duplicate update should not trigger another service_updated
             service_updated_event.clear()
             service_text = b'path=/~matt2/'
-            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 2
@@ -329,7 +337,7 @@ class TestServiceBrowser(unittest.TestCase):
             service_address = '10.0.1.3'
             # Verify we match on uppercase
             service_server = service_server.upper()
-            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 3
@@ -340,14 +348,14 @@ class TestServiceBrowser(unittest.TestCase):
             service_server = 'ash-3.local.'
             service_text = b'path=/~matt3/'
             service_address = '10.0.1.3'
-            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 4
             assert service_removed_count == 0
 
             # service removed
-            _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Removed))
             service_removed_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 4
@@ -385,7 +393,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                 if service_removed_count == 3:
                     service_removed_event.set()
 
-        def mock_incoming_msg(
+        def mock_record_update_incoming_msg(
             service_state_change: r.ServiceStateChange, service_type: str, service_name: str, ttl: int
         ) -> r.DNSIncoming:
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -403,11 +411,15 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             # all three services added
             _inject_response(
                 zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
+                mock_record_update_incoming_msg(
+                    r.ServiceStateChange.Added, service_types[0], service_names[0], 120
+                ),
             )
             _inject_response(
                 zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Added, service_types[1], service_names[1], 120),
+                mock_record_update_incoming_msg(
+                    r.ServiceStateChange.Added, service_types[1], service_names[1], 120
+                ),
             )
             time.sleep(0.1)
 
@@ -424,14 +436,18 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             with patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
                 _inject_response(
                     zeroconf,
-                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[0], service_names[0], 120),
+                    mock_record_update_incoming_msg(
+                        r.ServiceStateChange.Added, service_types[0], service_names[0], 120
+                    ),
                 )
                 # Add the last record after updating the first one
                 # to ensure the service_add_event only gets set
                 # after the update
                 _inject_response(
                     zeroconf,
-                    mock_incoming_msg(r.ServiceStateChange.Added, service_types[2], service_names[2], 120),
+                    mock_record_update_incoming_msg(
+                        r.ServiceStateChange.Added, service_types[2], service_names[2], 120
+                    ),
                 )
                 service_add_event.wait(wait_time)
             assert called_with_refresh_time_check is True
@@ -440,21 +456,29 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
 
             _inject_response(
                 zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Updated, service_types[0], service_names[0], 0),
+                mock_record_update_incoming_msg(
+                    r.ServiceStateChange.Updated, service_types[0], service_names[0], 0
+                ),
             )
 
             # all three services removed
             _inject_response(
                 zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[0], service_names[0], 0),
+                mock_record_update_incoming_msg(
+                    r.ServiceStateChange.Removed, service_types[0], service_names[0], 0
+                ),
             )
             _inject_response(
                 zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[1], service_names[1], 0),
+                mock_record_update_incoming_msg(
+                    r.ServiceStateChange.Removed, service_types[1], service_names[1], 0
+                ),
             )
             _inject_response(
                 zeroconf,
-                mock_incoming_msg(r.ServiceStateChange.Removed, service_types[2], service_names[2], 0),
+                mock_record_update_incoming_msg(
+                    r.ServiceStateChange.Removed, service_types[2], service_names[2], 0
+                ),
             )
             service_removed_event.wait(wait_time)
             assert service_added_count == 3
@@ -470,93 +494,6 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
             assert len(zeroconf.listeners) == 0
             zeroconf.remove_all_service_listeners()
             zeroconf.close()
-
-
-def test_backoff():
-    got_query = Event()
-
-    type_ = "_http._tcp.local."
-    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
-    _wait_for_start(zeroconf_browser)
-    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
-
-    # we are going to patch the zeroconf send to check query transmission
-    old_send = zeroconf_browser.async_send
-
-    time_offset = 0.0
-    start_time = time.monotonic() * 1000
-    initial_query_interval = _services_browser._BROWSER_TIME / 1000
-
-    def _current_time_millis():
-        """Current system time in milliseconds"""
-        return start_time + time_offset * 1000
-
-    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
-        got_query.set()
-        old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
-
-    class ServiceBrowserWithPatchedTime(_services_browser.ServiceBrowser):
-        def _async_start(self) -> None:
-            """Generate the next time and setup listeners.
-
-            Must be called by uses of this base class after they
-            have finished setting their properties.
-            """
-            super()._async_start()
-            self.query_scheduler.start(_current_time_millis())
-
-        def _async_send_ready_queries_schedule_next(self):
-            if self.done or self.zc.done:
-                return
-            now = _current_time_millis()
-            self._async_send_ready_queries(now)
-            self._async_schedule_next(now)
-
-    # patch the zeroconf send
-    # patch the zeroconf current_time_millis
-    # patch the backoff limit to prevent test running forever
-    with patch.object(zeroconf_browser, "async_send", send), patch.object(
-        _services_browser, "_BROWSER_BACKOFF_LIMIT", 10
-    ), patch.object(_services_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (0, 0)):
-        # dummy service callback
-        def on_service_state_change(zeroconf, service_type, state_change, name):
-            pass
-
-        browser = ServiceBrowserWithPatchedTime(zeroconf_browser, type_, [on_service_state_change])
-
-        try:
-            # Test that queries are sent at increasing intervals
-            sleep_count = 0
-            next_query_interval = 0.0
-            expected_query_time = 0.0
-            while True:
-                sleep_count += 1
-                got_query.wait(0.1)
-                if time_offset == expected_query_time:
-                    assert got_query.is_set()
-                    got_query.clear()
-                    if next_query_interval == _services_browser._BROWSER_BACKOFF_LIMIT:
-                        # Only need to test up to the point where we've seen a query
-                        # after the backoff limit has been hit
-                        break
-                    elif next_query_interval == 0:
-                        next_query_interval = initial_query_interval
-                        expected_query_time = initial_query_interval
-                    else:
-                        next_query_interval = min(
-                            2 * next_query_interval, _services_browser._BROWSER_BACKOFF_LIMIT
-                        )
-                        expected_query_time += next_query_interval
-                else:
-                    assert not got_query.is_set()
-                time_offset += initial_query_interval
-                assert zeroconf_browser.loop is not None
-                zeroconf_browser.loop.call_soon_threadsafe(browser._async_send_ready_queries_schedule_next)
-
-        finally:
-            browser.cancel()
-            zeroconf_browser.close()
 
 
 def test_first_query_delay():
@@ -598,48 +535,225 @@ def test_first_query_delay():
             zeroconf_browser.close()
 
 
-def test_asking_default_is_asking_qm_questions_after_the_first_qu():
-    """Verify the service browser's first question is QU and subsequent ones are QM questions."""
-    type_ = "_quservice._tcp.local."
-    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+@pytest.mark.asyncio
+async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
+    """Verify the service browser's first questions are QU and refresh queries are QM."""
+    service_added = asyncio.Event()
+    service_removed = asyncio.Event()
+    unexpected_ttl = asyncio.Event()
+    got_query = asyncio.Event()
 
-    # we are going to patch the zeroconf send to check query transmission
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+            elif state_change is ServiceStateChange.Removed:
+                service_removed.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
+    await zeroconf_browser.async_wait_for_start()
+
+    # we are going to patch the zeroconf send to check packet sizes
     old_send = zeroconf_browser.async_send
 
-    first_outgoing = None
-    second_outgoing = None
+    expected_ttl = const._DNS_OTHER_TTL
+    questions: List[List[DNSQuestion]] = []
 
-    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
-        nonlocal first_outgoing
-        nonlocal second_outgoing
-        if first_outgoing is not None and second_outgoing is None:  # type: ignore[unreachable]
-            second_outgoing = out  # type: ignore[unreachable]
-        if first_outgoing is None:
-            first_outgoing = out
-        old_send(out, addr=addr, port=port)
+        pout = r.DNSIncoming(out.packets()[0])
+        questions.append(pout.questions)
+        got_query.set()
+        old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
 
-    # patch the zeroconf send
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    # patch the zeroconf send so we can capture what is being sent
     with patch.object(zeroconf_browser, "async_send", send):
-        # dummy service callback
-        def on_service_state_change(zeroconf, service_type, state_change, name):
-            pass
+        service_added = asyncio.Event()
+        service_removed = asyncio.Event()
 
-        browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change], delay=5)
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 120 + 50))
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+        loop = asyncio.get_running_loop()
         try:
-            assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
-            assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+            # Make sure the startup queries are sent
+            original_now = loop.time()
+            now_millis = original_now * 1000
+            for query_count in range(_services_browser.STARTUP_QUERIES):
+                now_millis += (2**query_count) * 1000
+                time_changed_millis(now_millis)
+
+            got_query.clear()
+            now_millis = original_now * 1000
+            assert not unexpected_ttl.is_set()
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 75% of the TTL)
+            now_millis += (expected_ttl * 1000) * 0.80
+            time_changed_millis(now_millis)
+
+            await asyncio.wait_for(got_query.wait(), 1)
+            assert not unexpected_ttl.is_set()
+
+            assert len(questions) == _services_browser.STARTUP_QUERIES + 1
+            # The first question should be QU to try to
+            # populate the known answers and limit the impact
+            # of the QM questions that follow. We still
+            # have to ask QM questions for the startup queries
+            # because some devices will not respond to QU
+            assert questions[0][0].unicast is True
+            # The remaining questions should be QM questions
+            for question in questions[1:]:
+                assert question[0].unicast is False
+            # Don't remove service, allow close() to cleanup
         finally:
-            browser.cancel()
-            zeroconf_browser.close()
+            await aio_zeroconf_registrar.async_close()
+            await asyncio.wait_for(service_removed.wait(), 1)
+            assert service_removed.is_set()
+            await browser.async_cancel()
+            await aiozc.async_close()
 
 
-def test_asking_qm_questions():
+@pytest.mark.asyncio
+async def test_ttl_refresh_cancelled_rescue_query():
+    """Verify seeing a name again cancels the rescue query."""
+    service_added = asyncio.Event()
+    service_removed = asyncio.Event()
+    unexpected_ttl = asyncio.Event()
+    got_query = asyncio.Event()
+
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+            elif state_change is ServiceStateChange.Removed:
+                service_removed.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
+    await zeroconf_browser.async_wait_for_start()
+
+    # we are going to patch the zeroconf send to check packet sizes
+    old_send = zeroconf_browser.async_send
+
+    expected_ttl = const._DNS_OTHER_TTL
+    packets = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        packets.append(pout)
+        got_query.set()
+        old_send(out, addr=addr, port=port, v6_flow_scope=v6_flow_scope)
+
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zeroconf_browser, "async_send", send):
+        service_added = asyncio.Event()
+        service_removed = asyncio.Event()
+
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+            # Make sure the startup queries are sent
+            original_now = loop.time()
+            now_millis = original_now * 1000
+            for query_count in range(_services_browser.STARTUP_QUERIES):
+                now_millis += (2**query_count) * 1000
+                time_changed_millis(now_millis)
+
+            now_millis = original_now * 1000
+            assert not unexpected_ttl.is_set()
+            await asyncio.wait_for(got_query.wait(), 1)
+            got_query.clear()
+            assert len(packets) == _services_browser.STARTUP_QUERIES
+            packets.clear()
+
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 75% of the TTL)
+            now_millis += (expected_ttl * 1000) * 0.80
+            # Inject a response that will reschedule
+            # the rescue query so it does not happen
+            with patch("time.monotonic", return_value=now_millis / 1000):
+                zeroconf_browser.record_manager.async_updates_from_response(
+                    mock_incoming_msg([info.dns_pointer()]),
+                )
+
+            time_changed_millis(now_millis)
+            await asyncio.sleep(0)
+
+            # Verify we did not send a rescue query
+            assert not packets
+
+            # We should still get a rescue query once the rescheduled
+            # query time is reached
+            now_millis += (expected_ttl * 1000) * 0.76
+            time_changed_millis(now_millis)
+            await asyncio.wait_for(got_query.wait(), 1)
+            assert len(packets) == 1
+            # Don't remove service, allow close() to cleanup
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await asyncio.wait_for(service_removed.wait(), 1)
+            assert service_removed.is_set()
+            await browser.async_cancel()
+            await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_asking_qm_questions():
     """Verify explictly asking QM questions."""
     type_ = "_quservice._tcp.local."
-    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
-
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    await zeroconf_browser.async_wait_for_start()
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
 
@@ -658,21 +772,24 @@ def test_asking_qm_questions():
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
 
-        browser = ServiceBrowser(
+        browser = AsyncServiceBrowser(
             zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QM
         )
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        await asyncio.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
             assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         finally:
-            browser.cancel()
-            zeroconf_browser.close()
+            await browser.async_cancel()
+            await aiozc.async_close()
 
 
-def test_asking_qu_questions():
+@pytest.mark.asyncio
+async def test_asking_qu_questions():
     """Verify the service browser can ask QU questions."""
     type_ = "_quservice._tcp.local."
-    zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    await zeroconf_browser.async_wait_for_start()
 
     # we are going to patch the zeroconf send to check query transmission
     old_send = zeroconf_browser.async_send
@@ -692,15 +809,15 @@ def test_asking_qu_questions():
         def on_service_state_change(zeroconf, service_type, state_change, name):
             pass
 
-        browser = ServiceBrowser(
+        browser = AsyncServiceBrowser(
             zeroconf_browser, type_, [on_service_state_change], question_type=r.DNSQuestionType.QU
         )
-        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
+        await asyncio.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         finally:
-            browser.cancel()
-            zeroconf_browser.close()
+            await browser.async_cancel()
+            await aiozc.async_close()
 
 
 def test_legacy_record_update_listener():
@@ -788,12 +905,6 @@ def test_service_browser_is_aware_of_port_changes():
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
-    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        for record in records:
-            generated.add_answer_at_time(record, 0)
-        return r.DNSIncoming(generated.packets()[0])
-
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
@@ -861,12 +972,6 @@ def test_service_browser_listeners_update_service():
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
-    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        for record in records:
-            generated.add_answer_at_time(record, 0)
-        return r.DNSIncoming(generated.packets()[0])
-
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
@@ -920,12 +1025,6 @@ def test_service_browser_listeners_no_update_service():
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
-    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        for record in records:
-            generated.add_answer_at_time(record, 0)
-        return r.DNSIncoming(generated.packets()[0])
-
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
@@ -948,7 +1047,7 @@ def test_service_browser_listeners_no_update_service():
     zc.close()
 
 
-def test_servicebrowser_uses_non_strict_names():
+def test_service_browser_uses_non_strict_names():
     """Verify we can look for technically invalid names as we cannot change what others do."""
 
     # dummy service callback
@@ -1010,32 +1109,34 @@ async def test_generate_service_query_suppress_duplicate_questions():
     assert zc.question_history.suppresses(question, now, other_known_answers)
 
     # The known answer list is different, do not suppress
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert outs
 
     zc.cache.async_add_records([answer])
     # The known answer list contains all the asked questions in the history
     # we should suppress
 
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert not outs
 
     # We do not suppress once the question history expires
-    outs = _services_browser.generate_service_query(zc, now + 1000, [name], multicast=True)
+    outs = _services_browser.generate_service_query(
+        zc, now + 1000, {name}, multicast=True, question_type=None
+    )
     assert outs
 
     # We do not suppress QU queries ever
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=False)
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=False, question_type=None)
     assert outs
 
     zc.question_history.async_expire(now + 2000)
     # No suppression after clearing the history
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert outs
 
     # The previous query we just sent is still remembered and
     # the next one is suppressed
-    outs = _services_browser.generate_service_query(zc, now, [name], multicast=True)
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert not outs
 
     await aiozc.async_close()
@@ -1045,47 +1146,162 @@ async def test_generate_service_query_suppress_duplicate_questions():
 async def test_query_scheduler():
     delay = const._BROWSER_TIME
     types_ = {"_hap._tcp.local.", "_http._tcp.local."}
-    query_scheduler = _services_browser.QueryScheduler(types_, delay, (0, 0))
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
+    sends: List[r.DNSIncoming] = []
 
-    now = current_time_millis()
-    query_scheduler.start(now)
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
 
-    # Test query interval is increasing
-    assert query_scheduler.millis_to_wait(now - 1) == 1
-    assert query_scheduler.millis_to_wait(now) == 0
-    assert query_scheduler.millis_to_wait(now + 1) == 0
+    query_scheduler = _services_browser.QueryScheduler(zc, types_, None, 0, True, delay, (0, 0), None)
+    loop = asyncio.get_running_loop()
 
-    assert set(query_scheduler.process_ready_types(now)) == types_
-    assert set(query_scheduler.process_ready_types(now)) == set()
-    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay, 0.00001)
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zc, "async_send", send):
 
-    assert set(query_scheduler.process_ready_types(now + delay)) == types_
-    assert set(query_scheduler.process_ready_types(now + delay)) == set()
-    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 3, 0.00001)
+        query_scheduler.start(loop)
 
-    assert set(query_scheduler.process_ready_types(now + delay * 3)) == types_
-    assert set(query_scheduler.process_ready_types(now + delay * 3)) == set()
-    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 7, 0.00001)
+        original_now = loop.time()
+        now_millis = original_now * 1000
+        for query_count in range(_services_browser.STARTUP_QUERIES):
+            now_millis += (2**query_count) * 1000
+            time_changed_millis(now_millis)
 
-    assert set(query_scheduler.process_ready_types(now + delay * 7)) == types_
-    assert set(query_scheduler.process_ready_types(now + delay * 7)) == set()
-    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 15, 0.00001)
+        ptr_record = r.DNSPointer(
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            "zoomer._hap._tcp.local.",
+        )
+        ptr2_record = r.DNSPointer(
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            "disappear._hap._tcp.local.",
+        )
 
-    assert set(query_scheduler.process_ready_types(now + delay * 15)) == types_
-    assert set(query_scheduler.process_ready_types(now + delay * 15)) == set()
+        query_scheduler.reschedule_ptr_first_refresh(ptr_record)
+        expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
+        expected_expire_time = ptr_record.get_expiration_time(100)
+        ptr_query = _ScheduledPTRQuery(
+            ptr_record.alias, ptr_record.name, int(ptr_record.ttl), expected_expire_time, expected_when_time
+        )
+        assert query_scheduler._query_heap == [ptr_query]
 
-    # Test if we reschedule 1 second later, the millis_to_wait goes up by 1
-    query_scheduler.reschedule_type("_hap._tcp.local.", now + delay * 16)
-    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 16, 0.00001)
+        query_scheduler.reschedule_ptr_first_refresh(ptr2_record)
+        expected_when_time = ptr2_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
+        expected_expire_time = ptr2_record.get_expiration_time(100)
+        ptr2_query = _ScheduledPTRQuery(
+            ptr2_record.alias,
+            ptr2_record.name,
+            int(ptr2_record.ttl),
+            expected_expire_time,
+            expected_when_time,
+        )
 
-    assert set(query_scheduler.process_ready_types(now + delay * 15)) == set()
+        assert query_scheduler._query_heap == [ptr_query, ptr2_query]
 
-    # Test if we reschedule 1 second later... and its ready for processing
-    assert set(query_scheduler.process_ready_types(now + delay * 16)) == {"_hap._tcp.local."}
-    assert query_scheduler.millis_to_wait(now) == pytest.approx(delay * 31, 0.00001)
-    assert set(query_scheduler.process_ready_types(now + delay * 20)) == set()
+        # Simulate PTR one goodbye
 
-    assert set(query_scheduler.process_ready_types(now + delay * 31)) == {"_http._tcp.local."}
+        query_scheduler.cancel_ptr_refresh(ptr_record)
+        ptr_query.cancelled = True
+
+        assert query_scheduler._query_heap == [ptr_query, ptr2_query]
+        assert query_scheduler._query_heap[0].cancelled is True
+        assert query_scheduler._query_heap[1].cancelled is False
+
+        # Move time forward past when the TTL is no longer
+        # fresh (AKA 75% of the TTL)
+        now_millis += (ptr2_record.ttl * 1000) * 0.80
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 1
+        first_heap = query_scheduler._query_heap[0]
+        assert first_heap.cancelled is False
+        assert first_heap.alias == ptr2_record.alias
+
+        # Move time forward past when the record expires
+        now_millis += (ptr2_record.ttl * 1000) * 0.20
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 0
+
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_query_scheduler_rescue_records():
+    delay = const._BROWSER_TIME
+    types_ = {"_hap._tcp.local.", "_http._tcp.local."}
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
+    sends: List[r.DNSIncoming] = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
+
+    query_scheduler = _services_browser.QueryScheduler(zc, types_, None, 0, True, delay, (0, 0), None)
+    loop = asyncio.get_running_loop()
+
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zc, "async_send", send):
+
+        query_scheduler.start(loop)
+
+        original_now = loop.time()
+        now_millis = original_now * 1000
+        for query_count in range(_services_browser.STARTUP_QUERIES):
+            now_millis += (2**query_count) * 1000
+            time_changed_millis(now_millis)
+
+        ptr_record = r.DNSPointer(
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            "zoomer._hap._tcp.local.",
+        )
+
+        query_scheduler.reschedule_ptr_first_refresh(ptr_record)
+        expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
+        expected_expire_time = ptr_record.get_expiration_time(100)
+        ptr_query = _ScheduledPTRQuery(
+            ptr_record.alias, ptr_record.name, int(ptr_record.ttl), expected_expire_time, expected_when_time
+        )
+        assert query_scheduler._query_heap == [ptr_query]
+        assert query_scheduler._query_heap[0].cancelled is False
+
+        # Move time forward past when the TTL is no longer
+        # fresh (AKA 75% of the TTL)
+        now_millis += (ptr_record.ttl * 1000) * 0.76
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 1
+        new_when = query_scheduler._query_heap[0].when_millis
+        assert query_scheduler._query_heap[0].cancelled is False
+        assert new_when >= expected_when_time
+
+        # Move time forward again, but not enough to expire the
+        # record to make sure we try to rescue it
+        now_millis += (ptr_record.ttl * 1000) * 0.11
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 1
+        second_new_when = query_scheduler._query_heap[0].when_millis
+        assert query_scheduler._query_heap[0].cancelled is False
+        assert second_new_when >= new_when
+
+        # Move time forward again, enough that we will no longer
+        # try to rescue the record
+        now_millis += (ptr_record.ttl * 1000) * 0.11
+        time_changed_millis(now_millis)
+        assert len(query_scheduler._query_heap) == 0
+
+    await aiozc.async_close()
 
 
 def test_service_browser_matching():
@@ -1127,12 +1343,6 @@ def test_service_browser_matching():
     should_not_match = ServiceInfo(
         not_match_type_, not_match_registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
     )
-
-    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        for record in records:
-            generated.add_answer_at_time(record, 0)
-        return r.DNSIncoming(generated.packets()[0])
 
     _inject_response(
         zc,
@@ -1219,12 +1429,6 @@ def test_service_browser_expire_callbacks():
         addresses=[address],
     )
 
-    def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        for record in records:
-            generated.add_answer_at_time(record, 0)
-        return r.DNSIncoming(generated.packets()[0])
-
     _inject_response(
         zc,
         mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text(), *info.dns_addresses()]),
@@ -1267,3 +1471,181 @@ def test_service_browser_expire_callbacks():
     browser.cancel()
 
     zc.close()
+
+
+def test_scheduled_ptr_query_dunder_methods():
+    query75 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 75)
+    query80 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 80)
+    query75_2 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 140, 75)
+    other = object()
+    stringified = str(query75)
+    assert "zoomy._hap._tcp.local." in stringified
+    assert "120" in stringified
+    assert "75" in stringified
+    assert "ScheduledPTRQuery" in stringified
+
+    assert query75 == query75
+    assert query75 != query80
+    assert query75 == query75_2
+    assert query75 < query80
+    assert query75 <= query80
+    assert query80 > query75
+    assert query80 >= query75
+
+    assert query75 != other
+    with pytest.raises(TypeError):
+        query75 < other  # type: ignore[operator]
+    with pytest.raises(TypeError):
+        query75 <= other  # type: ignore[operator]
+    with pytest.raises(TypeError):
+        query75 > other  # type: ignore[operator]
+    with pytest.raises(TypeError):
+        query75 >= other  # type: ignore[operator]
+
+
+@pytest.mark.asyncio
+async def test_close_zeroconf_without_browser_before_start_up_queries():
+    """Test that we stop sending startup queries if zeroconf is closed out from under the browser."""
+    service_added = asyncio.Event()
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
+    await zeroconf_browser.async_wait_for_start()
+
+    sends: list[r.DNSIncoming] = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
+
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zeroconf_browser, "async_send", send):
+        service_added = asyncio.Event()
+
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+            await aiozc.async_close()
+            sends.clear()
+            # Make sure the startup queries are sent
+            original_now = loop.time()
+            now_millis = original_now * 1000
+            for query_count in range(_services_browser.STARTUP_QUERIES):
+                now_millis += (2**query_count) * 1000
+                time_changed_millis(now_millis)
+
+            # We should not send any queries after close
+            assert not sends
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await browser.async_cancel()
+
+
+@pytest.mark.asyncio
+async def test_close_zeroconf_without_browser_after_start_up_queries():
+    """Test that we stop sending rescue queries if zeroconf is closed out from under the browser."""
+    service_added = asyncio.Event()
+
+    type_ = "_http._tcp.local."
+    registration_name = "xxxyyy.%s" % type_
+
+    def on_service_state_change(zeroconf, service_type, state_change, name):
+        if name == registration_name:
+            if state_change is ServiceStateChange.Added:
+                service_added.set()
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_browser = aiozc.zeroconf
+    zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
+    await zeroconf_browser.async_wait_for_start()
+
+    sends: list[r.DNSIncoming] = []
+
+    def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+        """Sends an outgoing packet."""
+        pout = r.DNSIncoming(out.packets()[0])
+        sends.append(pout)
+
+    assert len(zeroconf_browser.engine.protocols) == 2
+
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
+    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
+
+    assert len(zeroconf_registrar.engine.protocols) == 2
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zeroconf_browser, "async_send", send):
+        service_added = asyncio.Event()
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        expected_ttl = const._DNS_OTHER_TTL
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        task = await aio_zeroconf_registrar.async_register_service(info)
+        await task
+        loop = asyncio.get_running_loop()
+        try:
+            await asyncio.wait_for(service_added.wait(), 1)
+            assert service_added.is_set()
+            sends.clear()
+            # Make sure the startup queries are sent
+            original_now = loop.time()
+            now_millis = original_now * 1000
+            for query_count in range(_services_browser.STARTUP_QUERIES):
+                now_millis += (2**query_count) * 1000
+                time_changed_millis(now_millis)
+
+            # We should not send any queries after close
+            assert sends
+
+            await aiozc.async_close()
+            sends.clear()
+
+            now_millis = original_now * 1000
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 75% of the TTL)
+            now_millis += (expected_ttl * 1000) * 0.80
+            time_changed_millis(now_millis)
+
+            # We should not send the query after close
+            assert not sends
+        finally:
+            await aio_zeroconf_registrar.async_close()
+            await browser.async_cancel()

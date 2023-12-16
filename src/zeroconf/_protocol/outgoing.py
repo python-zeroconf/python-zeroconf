@@ -25,12 +25,13 @@ import logging
 from struct import Struct
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 
-from .._cache import DNSCache
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import NamePartTooLongException
 from .._logger import log
 from ..const import (
     _CLASS_UNIQUE,
+    _DNS_HOST_TTL,
+    _DNS_OTHER_TTL,
     _DNS_PACKET_HEADER_LEN,
     _FLAGS_QR_MASK,
     _FLAGS_QR_QUERY,
@@ -53,7 +54,11 @@ PACK_BYTE = Struct('>B').pack
 PACK_SHORT = Struct('>H').pack
 PACK_LONG = Struct('>L').pack
 
+SHORT_CACHE_MAX = 128
+
 BYTE_TABLE = tuple(PACK_BYTE(i) for i in range(256))
+SHORT_LOOKUP = tuple(PACK_SHORT(i) for i in range(SHORT_CACHE_MAX))
+LONG_LOOKUP = {i: PACK_LONG(i) for i in (_DNS_OTHER_TTL, _DNS_HOST_TTL, 0)}
 
 
 class State(enum.Enum):
@@ -61,8 +66,8 @@ class State(enum.Enum):
     finished = 1
 
 
-STATE_INIT = State.init
-STATE_FINISHED = State.finished
+STATE_INIT = State.init.value
+STATE_FINISHED = State.finished.value
 
 LOGGING_IS_ENABLED_FOR = log.isEnabledFor
 LOGGING_DEBUG = logging.DEBUG
@@ -142,12 +147,12 @@ class DNSOutgoing:
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
         """Adds an answer"""
         if not record.suppressed_by(inp):
-            self.add_answer_at_time(record, 0)
+            self.add_answer_at_time(record, 0.0)
 
-    def add_answer_at_time(self, record: Optional[DNSRecord], now: Union[float, int]) -> None:
+    def add_answer_at_time(self, record: Optional[DNSRecord], now: float_) -> None:
         """Adds an answer if it does not expire by a certain time"""
-        now_float = now
-        if record is not None and (now_float == 0 or not record.is_expired(now_float)):
+        now_double = now
+        if record is not None and (now_double == 0 or not record.is_expired(now_double)):
             self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
@@ -192,50 +197,36 @@ class DNSOutgoing:
         """
         self.additionals.append(record)
 
-    def add_question_or_one_cache(
-        self, cache: DNSCache, now: float_, name: str_, type_: int_, class_: int_
-    ) -> None:
-        """Add a question if it is not already cached."""
-        cached_entry = cache.get_by_details(name, type_, class_)
-        if not cached_entry:
-            self.add_question(DNSQuestion(name, type_, class_))
-        else:
-            self.add_answer_at_time(cached_entry, now)
-
-    def add_question_or_all_cache(
-        self, cache: DNSCache, now: float_, name: str_, type_: int_, class_: int_
-    ) -> None:
-        """Add a question if it is not already cached.
-        This is currently only used for IPv6 addresses.
-        """
-        cached_entries = cache.get_all_by_details(name, type_, class_)
-        if not cached_entries:
-            self.add_question(DNSQuestion(name, type_, class_))
-            return
-        for cached_entry in cached_entries:
-            self.add_answer_at_time(cached_entry, now)
-
     def _write_byte(self, value: int_) -> None:
         """Writes a single byte to the packet"""
         self.data.append(BYTE_TABLE[value])
         self.size += 1
 
+    def _get_short(self, value: int_) -> bytes:
+        """Convert an unsigned short to 2 bytes."""
+        return SHORT_LOOKUP[value] if value < SHORT_CACHE_MAX else PACK_SHORT(value)
+
     def _insert_short_at_start(self, value: int_) -> None:
         """Inserts an unsigned short at the start of the packet"""
-        self.data.insert(0, PACK_SHORT(value))
+        self.data.insert(0, self._get_short(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
         """Replaces an unsigned short in a certain position in the packet"""
-        self.data[index] = PACK_SHORT(value)
+        self.data[index] = self._get_short(value)
 
     def write_short(self, value: int_) -> None:
         """Writes an unsigned short to the packet"""
-        self.data.append(PACK_SHORT(value))
+        self.data.append(self._get_short(value))
         self.size += 2
 
     def _write_int(self, value: Union[float, int]) -> None:
         """Writes an unsigned integer to the packet"""
-        self.data.append(PACK_LONG(int(value)))
+        value_as_int = int(value)
+        long_bytes = LONG_LOOKUP.get(value_as_int)
+        if long_bytes is not None:
+            self.data.append(long_bytes)
+        else:
+            self.data.append(PACK_LONG(value_as_int))
         self.size += 4
 
     def write_string(self, value: bytes_) -> None:
@@ -277,29 +268,40 @@ class DNSOutgoing:
         """
 
         # split name into each label
-        name_length = 0
         if name.endswith('.'):
-            name = name[: len(name) - 1]
-        labels = name.split('.')
-        # Write each new label or a pointer to the existing
-        # on in the packet
+            name = name[:-1]
+
+        index = self.names.get(name, 0)
+        if index:
+            self._write_link_to_name(index)
+            return
+
         start_size = self.size
-        for count in range(len(labels)):
-            label = name if count == 0 else '.'.join(labels[count:])
-            index = self.names.get(label, 0)
+        labels = name.split('.')
+        # Write each new label or a pointer to the existing one in the packet
+        self.names[name] = start_size
+        self._write_utf(labels[0])
+
+        name_length = 0
+        for count in range(1, len(labels)):
+            partial_name = '.'.join(labels[count:])
+            index = self.names.get(partial_name, 0)
             if index:
-                # If part of the name already exists in the packet,
-                # create a pointer to it
-                self._write_byte((index >> 8) | 0xC0)
-                self._write_byte(index & 0xFF)
+                self._write_link_to_name(index)
                 return
             if name_length == 0:
                 name_length = len(name.encode('utf-8'))
-            self.names[label] = start_size + name_length - len(label.encode('utf-8'))
+            self.names[partial_name] = start_size + name_length - len(partial_name.encode('utf-8'))
             self._write_utf(labels[count])
 
         # this is the end of a name
         self._write_byte(0)
+
+    def _write_link_to_name(self, index: int_) -> None:
+        # If part of the name already exists in the packet,
+        # create a pointer to it
+        self._write_byte((index >> 8) | 0xC0)
+        self._write_byte(index & 0xFF)
 
     def _write_question(self, question: DNSQuestion_) -> bool:
         """Writes a question to the packet"""
@@ -312,10 +314,11 @@ class DNSOutgoing:
 
     def _write_record_class(self, record: Union[DNSQuestion_, DNSRecord_]) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
-        if record.unique and self.multicast:
-            self.write_short(record.class_ | _CLASS_UNIQUE)
+        class_ = record.class_
+        if record.unique is True and self.multicast:
+            self.write_short(class_ | _CLASS_UNIQUE)
         else:
-            self.write_short(record.class_)
+            self.write_short(class_)
 
     def _write_ttl(self, record: DNSRecord_, now: float_) -> None:
         """Write out the record ttl."""
@@ -406,24 +409,20 @@ class DNSOutgoing:
         will be written out to a single oversized packet no more than
         _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
         fragmentation potentially)."""
-        return self._packets()
+        packets_data = self.packets_data
 
-    def _packets(self) -> List[bytes]:
         if self.state == STATE_FINISHED:
-            return self.packets_data
+            return packets_data
 
         questions_offset = 0
         answer_offset = 0
         authority_offset = 0
         additional_offset = 0
         # we have to at least write out the question
-        first_time = True
-        debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG)
+        debug_enable = LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG) is True
+        has_more_to_add = True
 
-        while first_time or self._has_more_to_add(
-            questions_offset, answer_offset, authority_offset, additional_offset
-        ):
-            first_time = False
+        while has_more_to_add:
             if debug_enable:
                 log.debug(
                     "offsets = questions=%d, answers=%d, authorities=%d, additionals=%d",
@@ -445,6 +444,8 @@ class DNSOutgoing:
             authorities_written = self._write_records_from_offset(self.authorities, authority_offset)
             additionals_written = self._write_records_from_offset(self.additionals, additional_offset)
 
+            made_progress = bool(self.data)
+
             self._insert_short_at_start(additionals_written)
             self._insert_short_at_start(authorities_written)
             self._insert_short_at_start(answers_written)
@@ -463,9 +464,11 @@ class DNSOutgoing:
                     additional_offset,
                 )
 
-            if self.is_query() and self._has_more_to_add(
+            has_more_to_add = self._has_more_to_add(
                 questions_offset, answer_offset, authority_offset, additional_offset
-            ):
+            )
+
+            if has_more_to_add and self.is_query():
                 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.2
                 if debug_enable:  # pragma: no branch
                     log.debug("Setting TC flag")
@@ -478,17 +481,18 @@ class DNSOutgoing:
             else:
                 self._insert_short_at_start(self.id)
 
-            self.packets_data.append(b''.join(self.data))
-            self._reset_for_next_packet()
+            packets_data.append(b''.join(self.data))
 
-            if (
-                not questions_written
-                and not answers_written
-                and not authorities_written
-                and not additionals_written
-                and (self.questions or self.answers or self.authorities or self.additionals)
-            ):
+            if not made_progress:
+                # Generating an empty packet is not a desirable outcome, but currently
+                # too many internals rely on this behavior.  So, we'll just return an
+                # empty packet and log a warning until this can be refactored at a later
+                # date.
                 log.warning("packets() made no progress adding records; returning")
                 break
+
+            if has_more_to_add:
+                self._reset_for_next_packet()
+
         self.state = STATE_FINISHED
-        return self.packets_data
+        return packets_data

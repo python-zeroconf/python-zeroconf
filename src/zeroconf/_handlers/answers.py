@@ -59,6 +59,14 @@ class QuestionAnswers:
         self.mcast_aggregate = mcast_aggregate
         self.mcast_aggregate_last_second = mcast_aggregate_last_second
 
+    def __repr__(self) -> str:
+        """Return a string representation of this QuestionAnswers."""
+        return (
+            f'QuestionAnswers(ucast={self.ucast}, mcast_now={self.mcast_now}, '
+            f'mcast_aggregate={self.mcast_aggregate}, '
+            f'mcast_aggregate_last_second={self.mcast_aggregate_last_second})'
+        )
+
 
 class AnswerGroup:
     """A group of answers scheduled to be sent at the same time."""

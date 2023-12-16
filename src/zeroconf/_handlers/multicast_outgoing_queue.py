@@ -77,7 +77,7 @@ class MulticastOutgoingQueue:
             # If we calculate a random delay for the send after time
             # that is less than the last group scheduled to go out,
             # we instead add the answers to the last group as this
-            # allows aggregating additonal responses
+            # allows aggregating additional responses
             last_group = self.queue[-1]
             if send_after <= last_group.send_after:
                 last_group.answers.update(answers)
@@ -116,7 +116,7 @@ class MulticastOutgoingQueue:
             # be sure we schedule them to go out later
             loop.call_at(loop.time() + millis_to_seconds(self.queue[0].send_after - now), self.async_ready)
 
-        if answers:
+        if answers:  # pragma: no branch
             # If we have the same answer scheduled to go out, remove them
             self._remove_answers_from_queue(answers)
             zc.async_send(construct_outgoing_multicast_answers(answers))

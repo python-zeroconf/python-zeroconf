@@ -31,7 +31,7 @@ cdef class RecordManager:
         record=DNSRecord,
         answers=cython.list,
         maybe_entry=DNSRecord,
-        now_float=cython.float
+        now_double=double
     )
     cpdef async_updates_from_response(self, DNSIncoming msg)
 

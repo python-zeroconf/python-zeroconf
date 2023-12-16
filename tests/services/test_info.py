@@ -7,6 +7,7 @@ import asyncio
 import logging
 import os
 import socket
+import sys
 import threading
 import unittest
 from ipaddress import ip_address
@@ -246,7 +247,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent = None  # type: Optional[r.DNSOutgoing]
+        last_sent: Optional[r.DNSOutgoing] = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -279,7 +280,7 @@ class TestServiceInfo(unittest.TestCase):
                 helper_thread.start()
                 wait_time = 1
 
-                # Expext query for SRV, TXT, A, AAAA
+                # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 4
@@ -289,7 +290,7 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
-                # Expext query for SRV, A, AAAA
+                # Expect query for SRV, A, AAAA
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -314,7 +315,7 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
-                # Expext query for A, AAAA
+                # Expect query for A, AAAA
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -342,7 +343,7 @@ class TestServiceInfo(unittest.TestCase):
                 last_sent = None
                 assert service_info is None
 
-                # Expext no further queries
+                # Expect no further queries
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -370,6 +371,117 @@ class TestServiceInfo(unittest.TestCase):
                 send_event.wait(wait_time)
                 assert last_sent is None
                 assert service_info is not None
+
+            finally:
+                helper_thread.join()
+                zc.remove_all_service_listeners()
+                zc.close()
+
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
+    def test_get_info_suppressed_by_question_history(self):
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+
+        service_info = None
+        send_event = Event()
+        service_info_event = Event()
+
+        last_sent: Optional[r.DNSOutgoing] = None
+
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+            """Sends an outgoing packet."""
+            nonlocal last_sent
+
+            last_sent = out
+            send_event.set()
+
+        # patch the zeroconf send
+        with patch.object(zc, "async_send", send):
+
+            def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
+                generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+
+                for record in records:
+                    generated.add_answer_at_time(record, 0)
+
+                return r.DNSIncoming(generated.packets()[0])
+
+            def get_service_info_helper(zc, type, name):
+                nonlocal service_info
+                service_info = zc.get_service_info(type, name)
+                service_info_event.set()
+
+            try:
+                helper_thread = threading.Thread(
+                    target=get_service_info_helper, args=(zc, service_type, service_name)
+                )
+                helper_thread.start()
+                wait_time = (const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5) / 1000
+
+                # Expect query for SRV, TXT, A, AAAA
+                send_event.wait(wait_time)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 4
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
+                assert service_info is None
+
+                # Expect query for SRV only as A, AAAA, and TXT are suppressed
+                # by the question history
+                last_sent = None
+                send_event.clear()
+                for _ in range(3):
+                    send_event.wait(
+                        wait_time * 0.25
+                    )  # Wait long enough to be inside the question history window
+                    now = r.current_time_millis()
+                    zc.question_history.add_question_at_time(
+                        r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
+                    )
+                    zc.question_history.add_question_at_time(
+                        r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN), now, set()
+                    )
+                    zc.question_history.add_question_at_time(
+                        r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN), now, set()
+                    )
+                send_event.wait(wait_time * 0.25)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 1  # type: ignore[unreachable]
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert service_info is None
+
+                wait_time = (
+                    const._DUPLICATE_QUESTION_INTERVAL + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5
+                ) / 1000
+                # Expect no queries as all are suppressed by the question history
+                last_sent = None
+                send_event.clear()
+                for _ in range(3):
+                    send_event.wait(
+                        wait_time * 0.25
+                    )  # Wait long enough to be inside the question history window
+                    now = r.current_time_millis()
+                    zc.question_history.add_question_at_time(
+                        r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
+                    )
+                    zc.question_history.add_question_at_time(
+                        r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN), now, set()
+                    )
+                    zc.question_history.add_question_at_time(
+                        r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN), now, set()
+                    )
+                    zc.question_history.add_question_at_time(
+                        r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN), now, set()
+                    )
+                send_event.wait(wait_time * 0.25)
+                # All questions are suppressed so no query should be sent
+                assert last_sent is None
+                assert service_info is None
 
             finally:
                 helper_thread.join()
@@ -538,6 +650,7 @@ def test_multiple_addresses():
     assert info.addresses == [address, address]
     assert info.parsed_addresses() == [address_parsed, address_parsed]
     assert info.parsed_scoped_addresses() == [address_parsed, address_parsed]
+    ipaddress_supports_scope_id = sys.version_info >= (3, 9, 0)
 
     if has_working_ipv6() and not os.environ.get('SKIP_IPV6'):
         address_v6_parsed = "2001:db8::1"
@@ -576,14 +689,18 @@ def test_multiple_addresses():
             assert info.ip_addresses_by_version(r.IPVersion.All) == [
                 ip_address(address),
                 ip_address(address_v6),
-                ip_address(address_v6_ll),
+                ip_address(address_v6_ll_scoped_parsed)
+                if ipaddress_supports_scope_id
+                else ip_address(address_v6_ll),
             ]
             assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
             assert info.ip_addresses_by_version(r.IPVersion.V4Only) == [ip_address(address)]
             assert info.addresses_by_version(r.IPVersion.V6Only) == [address_v6, address_v6_ll]
             assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [
                 ip_address(address_v6),
-                ip_address(address_v6_ll),
+                ip_address(address_v6_ll_scoped_parsed)
+                if ipaddress_supports_scope_id
+                else ip_address(address_v6_ll),
             ]
             assert info.parsed_addresses() == [address_parsed, address_v6_parsed, address_v6_ll_parsed]
             assert info.parsed_addresses(r.IPVersion.V4Only) == [address_parsed]
@@ -591,13 +708,58 @@ def test_multiple_addresses():
             assert info.parsed_scoped_addresses() == [
                 address_parsed,
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed,
+                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
             ]
             assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed,
+                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
             ]
+
+
+@unittest.skipIf(sys.version_info < (3, 9, 0), 'Requires newer python')
+def test_scoped_addresses_from_cache():
+    type_ = "_http._tcp.local."
+    registration_name = f"scoped.{type_}"
+    zeroconf = r.Zeroconf(interfaces=['127.0.0.1'])
+    host = "scoped.local."
+
+    zeroconf.cache.async_add_records(
+        [
+            r.DNSPointer(
+                type_,
+                const._TYPE_PTR,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                registration_name,
+            ),
+            r.DNSService(
+                registration_name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                80,
+                host,
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_AAAA,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_pton(socket.AF_INET6, "fe80::52e:c2f2:bc5f:e9c6"),
+                scope_id=12,
+            ),
+        ]
+    )
+
+    # New kwarg way
+    info = ServiceInfo(type_, registration_name)
+    info.load_from_cache(zeroconf)
+    assert info.parsed_scoped_addresses() == ["fe80::52e:c2f2:bc5f:e9c6%12"]
+    assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [ip_address("fe80::52e:c2f2:bc5f:e9c6%12")]
+    zeroconf.close()
 
 
 # This test uses asyncio because it needs to access the cache directly

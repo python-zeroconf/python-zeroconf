@@ -11,6 +11,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import Zeroconf, const
+from zeroconf._record_update import RecordUpdate
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 
@@ -87,3 +88,16 @@ def test_legacy_record_update_listener():
     zc.remove_listener(listener)
 
     zc.close()
+
+
+def test_record_update_compat():
+    """Test a RecordUpdate can fetch by index."""
+    new = r.DNSPointer('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 'new')
+    old = r.DNSPointer('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 'old')
+    update = RecordUpdate(new, old)
+    assert update[0] == new
+    assert update[1] == old
+    with pytest.raises(IndexError):
+        update[2]
+    assert update.new == new
+    assert update.old == old

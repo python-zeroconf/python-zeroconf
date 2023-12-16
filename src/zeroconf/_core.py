@@ -573,19 +573,21 @@ class Zeroconf(QuietLogger):
         addr: str,
         port: int,
         transport: _WrappedTransport,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
     ) -> None:
         """Respond to a (re)assembled query.
 
-        If the protocol recieved packets with the TC bit set, it will
+        If the protocol received packets with the TC bit set, it will
         wait a bit for the rest of the packets and only call
         handle_assembled_query once it has a complete set of packets
         or the timer expires. If the TC bit is not set, a single
         packet will be in packets.
         """
-        now = packets[0].now
         ucast_source = port != _MDNS_PORT
         question_answers = self.query_handler.async_response(packets, ucast_source)
+        if not question_answers:
+            return
+        now = packets[0].now
         if question_answers.ucast:
             questions = packets[0].questions
             id_ = packets[0].id

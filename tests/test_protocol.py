@@ -12,6 +12,8 @@ import unittest
 import unittest.mock
 from typing import cast
 
+import pytest
+
 import zeroconf as r
 from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
 
@@ -65,7 +67,22 @@ class PacketGeneration(unittest.TestCase):
         parsed = r.DNSIncoming(generated.packets()[0])
         assert answer in parsed.answers()
 
-        # Types > 255 should be ignored
+        # Now with the higher RD type first
+        answer = r.DNSNsec(
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            [const._TYPE_SRV, const._TYPE_TXT],
+        )
+
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(answer, 0)
+        parsed = r.DNSIncoming(generated.packets()[0])
+        assert answer in parsed.answers()
+
+        # Types > 255 should raise an exception
         answer_invalid_types = r.DNSNsec(
             'eufy HomeBase2-2464._hap._tcp.local.',
             const._TYPE_NSEC,
@@ -76,8 +93,22 @@ class PacketGeneration(unittest.TestCase):
         )
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(answer_invalid_types, 0)
-        parsed = r.DNSIncoming(generated.packets()[0])
-        assert answer in parsed.answers()
+        with pytest.raises(ValueError, match='rdtype 1000 is too large for NSEC'):
+            generated.packets()
+
+        # Empty rdtypes are not allowed
+        answer_invalid_types = r.DNSNsec(
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            const._TYPE_NSEC,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            const._DNS_OTHER_TTL,
+            'eufy HomeBase2-2464._hap._tcp.local.',
+            [],
+        )
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        generated.add_answer_at_time(answer_invalid_types, 0)
+        with pytest.raises(ValueError, match='NSEC must have at least one rdtype'):
+            generated.packets()
 
     def test_parse_own_packet_response(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
@@ -316,6 +347,7 @@ class PacketGeneration(unittest.TestCase):
         parsed1 = r.DNSIncoming(packets[0])
         assert parsed1.questions[0].unicast is True
         assert len(parsed1.questions) == 30
+        assert parsed1.num_questions == 30
         assert parsed1.num_authorities == 88
         assert parsed1.truncated
         parsed2 = r.DNSIncoming(packets[1])

@@ -8,7 +8,6 @@ import logging
 import os
 import socket
 import threading
-import time
 from typing import cast
 from unittest.mock import ANY, call, patch
 
@@ -44,7 +43,12 @@ from zeroconf.asyncio import (
 )
 from zeroconf.const import _LISTENER_TIME
 
-from . import QuestionHistoryWithoutSuppression, _clear_cache, has_working_ipv6
+from . import (
+    QuestionHistoryWithoutSuppression,
+    _clear_cache,
+    has_working_ipv6,
+    time_changed_millis,
+)
 
 log = logging.getLogger('zeroconf')
 original_logging_level = logging.NOTSET
@@ -991,20 +995,20 @@ async def test_integration():
     # we are going to patch the zeroconf send to check packet sizes
     old_send = zeroconf_browser.async_send
 
-    time_offset = 0.0
-
-    def _new_current_time_millis():
-        """Current system time in milliseconds"""
-        return (time.monotonic() * 1000) + (time_offset * 1000)
-
-    expected_ttl = const._DNS_HOST_TTL
+    expected_ttl = const._DNS_OTHER_TTL
     nbr_answers = 0
+    answers = []
+    packets = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
         pout = DNSIncoming(out.packets()[0])
+        packets.append(pout)
+        last_answers = pout.answers()
+        answers.append(last_answers)
+
         nonlocal nbr_answers
-        for answer in pout.answers():
+        for answer in last_answers:
             nbr_answers += 1
             if not answer.ttl > expected_ttl / 2:
                 unexpected_ttl.set()
@@ -1020,49 +1024,91 @@ async def test_integration():
     await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
 
     assert len(zeroconf_registrar.engine.protocols) == 2
-    # patch the zeroconf send
-    # patch the zeroconf current_time_millis
-    # patch the backoff limit to ensure we always get one query every 1/4 of the DNS TTL
-    # Disable duplicate question suppression and duplicate packet suppression for this test as it works
-    # by asking the same question over and over
-    with patch.object(zeroconf_browser, "async_send", send), patch(
-        "zeroconf._services.browser.current_time_millis", _new_current_time_millis
-    ), patch.object(_services_browser, "_BROWSER_BACKOFF_LIMIT", int(expected_ttl / 4)):
+    # patch the zeroconf send so we can capture what is being sent
+    with patch.object(zeroconf_browser, "async_send", send):
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-
-        desc = {'path': '/~paulsm/'}
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {'path': '/~paulsm/'},
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
-
+        loop = asyncio.get_running_loop()
         try:
             await asyncio.wait_for(service_added.wait(), 1)
             assert service_added.is_set()
+            # Make sure the startup queries are sent
+            original_now = loop.time()
+            start_millis = original_now * 1000
 
-            # Test that we receive queries containing answers only if the remaining TTL
-            # is greater than half the original TTL
-            sleep_count = 0
-            test_iterations = 50
+            now_millis = start_millis
+            for query_count in range(_services_browser.STARTUP_QUERIES):
+                now_millis += (2**query_count) * 1000
+                time_changed_millis(now_millis)
 
-            while nbr_answers < test_iterations:
-                # Increase simulated time shift by 1/4 of the TTL in seconds
-                time_offset += expected_ttl / 4
-                now = _new_current_time_millis()
-                # Force the next query to be sent since we are testing
-                # to see if the query contains answers and not the scheduler
-                browser.query_scheduler._force_reschedule_type(type_, now + (1000 * expected_ttl))
-                browser.reschedule_type(type_, now, now)
-                sleep_count += 1
-                await asyncio.wait_for(got_query.wait(), 1)
-                got_query.clear()
-                # Prevent the test running indefinitely in an error condition
-                assert sleep_count < test_iterations * 4
+            got_query.clear()
             assert not unexpected_ttl.is_set()
+
+            assert len(packets) == _services_browser.STARTUP_QUERIES
+            packets.clear()
+
+            # Wait for the first refresh query
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA ~75% of the TTL)
+            now_millis = start_millis + ((expected_ttl * 1000) * 0.76)
+            time_changed_millis(now_millis)
+
+            await asyncio.wait_for(got_query.wait(), 1)
+            assert not unexpected_ttl.is_set()
+            assert len(packets) == 1
+            packets.clear()
+
+            assert len(answers) == _services_browser.STARTUP_QUERIES + 1
+            # The first question should have no known answers
+            assert len(answers[0]) == 0
+            # The rest of the startup questions should have
+            # known answers
+            for answer_list in answers[1:-2]:
+                assert len(answer_list) == 1
+            # Once the TTL is reached, the last question should have no known answers
+            assert len(answers[-1]) == 0
+
+            got_query.clear()
+            packets.clear()
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 85% of the TTL) to ensure we try
+            # to rescue the record
+            now_millis = start_millis + ((expected_ttl * 1000) * 0.87)
+            time_changed_millis(now_millis)
+
+            await asyncio.wait_for(got_query.wait(), 1)
+            assert len(packets) == 1
+            assert not unexpected_ttl.is_set()
+
+            packets.clear()
+            got_query.clear()
+            # Move time forward past when the TTL is no longer
+            # fresh (AKA 95% of the TTL). At this point
+            # nothing should get scheduled rescued because the rescue
+            # would exceed the TTL
+            now_millis = start_millis + ((expected_ttl * 1000) * 0.98)
+
+            # Verify we don't send a query for a record that is
+            # past the TTL as we should not try to rescue it
+            # once its past the TTL
+            time_changed_millis(now_millis)
+            await asyncio.wait_for(got_query.wait(), 1)
+            assert len(packets) == 1
+
             # Don't remove service, allow close() to cleanup
         finally:
             await aio_zeroconf_registrar.async_close()
@@ -1305,67 +1351,3 @@ async def test_update_with_uppercase_names(run_isolated):
         ('add', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
         ('update', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
     ]
-
-
-@pytest.mark.asyncio
-async def test_service_browser_does_not_try_to_send_if_not_ready():
-    """Test that the service browser does not try to send if not ready when rescheduling a type."""
-    service_added = asyncio.Event()
-    type_ = "_http._tcp.local."
-    registration_name = "nosend.%s" % type_
-
-    def on_service_state_change(zeroconf, service_type, state_change, name):
-        if name == registration_name:
-            if state_change is ServiceStateChange.Added:
-                service_added.set()
-
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
-    zeroconf_browser = aiozc.zeroconf
-    await zeroconf_browser.async_wait_for_start()
-
-    expected_ttl = const._DNS_HOST_TTL
-    time_offset = 0.0
-
-    def _new_current_time_millis():
-        """Current system time in milliseconds"""
-        return (time.monotonic() * 1000) + (time_offset * 1000)
-
-    assert len(zeroconf_browser.engine.protocols) == 2
-
-    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
-    zeroconf_registrar = aio_zeroconf_registrar.zeroconf
-    await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
-    assert len(zeroconf_registrar.engine.protocols) == 2
-    with patch("zeroconf._services.browser.current_time_millis", _new_current_time_millis):
-        service_added = asyncio.Event()
-        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-        desc = {'path': '/~paulsm/'}
-        info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
-        )
-        task = await aio_zeroconf_registrar.async_register_service(info)
-        await task
-
-        try:
-            await asyncio.wait_for(service_added.wait(), 1)
-            time_offset = 1000 * expected_ttl  # set the time to the end of the ttl
-            now = _new_current_time_millis()
-            browser.query_scheduler._force_reschedule_type(type_, now + (1000 * expected_ttl))
-            # Make sure the query schedule is to a time in the future
-            # so we will reschedule
-            with patch.object(
-                browser, "_async_send_ready_queries"
-            ) as _async_send_ready_queries, patch.object(
-                browser, "_async_send_ready_queries_schedule_next"
-            ) as _async_send_ready_queries_schedule_next:
-                # Reschedule the type to be sent in 1ms in the future
-                # to make sure the query is not sent
-                browser.reschedule_type(type_, now, now + 1)
-                assert not _async_send_ready_queries.called
-                await asyncio.sleep(0.01)
-                # Make sure it does happen after the sleep
-                assert _async_send_ready_queries_schedule_next.called
-        finally:
-            await aio_zeroconf_registrar.async_close()
-            await browser.async_cancel()
-            await aiozc.async_close()

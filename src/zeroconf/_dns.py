@@ -67,10 +67,13 @@ class DNSEntry:
 
     __slots__ = ('key', 'name', 'type', 'class_', 'unique')
 
-    def __init__(self, name: str, type_: _int, class_: _int) -> None:
+    def __init__(self, name: str, type_: int, class_: int) -> None:
         self.name = name
         self.key = name.lower()
         self.type = type_
+        self._set_class(class_)
+
+    def _set_class(self, class_: _int) -> None:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
@@ -241,7 +244,6 @@ class DNSAddress(DNSRecord):
         class_: int,
         ttl: int,
         address: bytes,
-        *,
         scope_id: Optional[int] = None,
         created: Optional[float] = None,
     ) -> None:
@@ -371,7 +373,6 @@ class DNSText(DNSRecord):
     def __init__(
         self, name: str, type_: int, class_: int, ttl: int, text: bytes, created: Optional[float] = None
     ) -> None:
-        assert isinstance(text, (bytes, type(None)))
         super().__init__(name, type_, class_, ttl, created)
         self.text = text
         self._hash = hash((self.key, type_, self.class_, text))
@@ -479,17 +480,21 @@ class DNSNsec(DNSRecord):
     def write(self, out: 'DNSOutgoing') -> None:
         """Used in constructing an outgoing packet."""
         bitmap = bytearray(b'\0' * 32)
+        total_octets = 0
         for rdtype in self.rdtypes:
             if rdtype > 255:  # mDNS only supports window 0
-                continue
-            offset = rdtype % 256
-            byte = offset // 8
+                raise ValueError(f"rdtype {rdtype} is too large for NSEC")
+            byte = rdtype // 8
             total_octets = byte + 1
-            bitmap[byte] |= 0x80 >> (offset % 8)
+            bitmap[byte] |= 0x80 >> (rdtype % 8)
+        if total_octets == 0:
+            # NSEC must have at least one rdtype
+            # Writing an empty bitmap is not allowed
+            raise ValueError("NSEC must have at least one rdtype")
         out_bytes = bytes(bitmap[0:total_octets])
         out.write_name(self.next_name)
-        out.write_short(0)
-        out.write_short(len(out_bytes))
+        out._write_byte(0)  # Always window 0
+        out._write_byte(len(out_bytes))
         out.write_string(out_bytes)
 
     def __eq__(self, other: Any) -> bool:

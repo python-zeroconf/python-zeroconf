@@ -35,7 +35,7 @@ class ServiceRegistry:
     the event loop as it is not thread safe.
     """
 
-    __slots__ = ("_services", "types", "servers")
+    __slots__ = ("_services", "types", "servers", "has_entries")
 
     def __init__(
         self,
@@ -44,6 +44,7 @@ class ServiceRegistry:
         self._services: Dict[str, ServiceInfo] = {}
         self.types: Dict[str, List] = {}
         self.servers: Dict[str, List] = {}
+        self.has_entries: bool = False
 
     def async_add(self, info: ServiceInfo) -> None:
         """Add a new service to the registry."""
@@ -95,14 +96,17 @@ class ServiceRegistry:
         self._services[info.key] = info
         self.types.setdefault(info.type.lower(), []).append(info.key)
         self.servers.setdefault(info.server_key, []).append(info.key)
+        self.has_entries = True
 
     def _remove(self, infos: List[ServiceInfo]) -> None:
         """Remove a services under the lock."""
         for info in infos:
-            if info.key not in self._services:
+            old_service_info = self._services.get(info.key)
+            if old_service_info is None:
                 continue
-            old_service_info = self._services[info.key]
             assert old_service_info.server_key is not None
             self.types[old_service_info.type.lower()].remove(info.key)
             self.servers[old_service_info.server_key].remove(info.key)
             del self._services[info.key]
+
+        self.has_entries = bool(self._services)

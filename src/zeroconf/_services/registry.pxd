@@ -9,6 +9,7 @@ cdef class ServiceRegistry:
     cdef cython.dict _services
     cdef public cython.dict types
     cdef public cython.dict servers
+    cdef public bint has_entries
 
     @cython.locals(
         record_list=cython.list,
@@ -17,6 +18,10 @@ cdef class ServiceRegistry:
 
     cdef _add(self, ServiceInfo info)
 
+    @cython.locals(
+        info=ServiceInfo,
+        old_service_info=ServiceInfo
+    )
     cdef _remove(self, cython.list infos)
 
     cpdef ServiceInfo async_get_info_name(self, str name)

@@ -26,15 +26,17 @@ import time
 _float = float
 
 
-def current_time_millis() -> float:
+def current_time_millis() -> _float:
     """Current time in milliseconds.
 
     The current implemention uses `time.monotonic`
     but may change in the future.
+
+    The design requires the time to match asyncio.loop.time()
     """
     return time.monotonic() * 1000
 
 
-def millis_to_seconds(millis: _float) -> float:
+def millis_to_seconds(millis: _float) -> _float:
     """Convert milliseconds to seconds."""
     return millis / 1000.0
