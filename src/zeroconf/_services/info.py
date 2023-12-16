@@ -853,12 +853,13 @@ class ServiceInfo(RecordUpdateListener):
         }
         question = DNSQuestion(name, type_, class_)
         qu_question = question_type is DNS_QUESTION_TYPE_QU
-        if qu_question or not question_history.suppresses(question, now, set(known_answers)):
-            if qu_question:
-                question.unicast = True
-            out.add_question(question)
-            for answer in known_answers:
-                out.add_answer_at_time(answer, now)
+        if qu_question:
+            question.unicast = True
+        elif question_history.suppresses(question, now, known_answers):
+            return
+        out.add_question(question)
+        for answer in known_answers:
+            out.add_answer_at_time(answer, now)
 
     def _generate_request_query(
         self, zc: 'Zeroconf', now: float_, question_type: DNSQuestionType
