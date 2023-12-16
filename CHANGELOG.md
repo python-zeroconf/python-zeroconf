@@ -2,6 +2,25 @@
 
 <!--next-version-placeholder-->
 
+## v0.130.0 (2023-12-16)
+
+### Feature
+
+* Make ServiceInfo aware of question history ([#1348](https://github.com/python-zeroconf/python-zeroconf/issues/1348)) ([`b9aae1d`](https://github.com/python-zeroconf/python-zeroconf/commit/b9aae1de07bf1491e873bc314f8a1d7996127ad3))
+* Small speed up to ServiceInfo construction ([#1346](https://github.com/python-zeroconf/python-zeroconf/issues/1346)) ([`b329d99`](https://github.com/python-zeroconf/python-zeroconf/commit/b329d99917bb731b4c70bf20c7c010eeb85ad9fd))
+* Significantly improve efficiency of the ServiceBrowser scheduler ([#1335](https://github.com/python-zeroconf/python-zeroconf/issues/1335)) ([`c65d869`](https://github.com/python-zeroconf/python-zeroconf/commit/c65d869aec731b803484871e9d242a984f9f5848))
+* Small speed up to processing incoming records ([#1345](https://github.com/python-zeroconf/python-zeroconf/issues/1345)) ([`7de655b`](https://github.com/python-zeroconf/python-zeroconf/commit/7de655b6f05012f20a3671e0bcdd44a1913d7b52))
+* Small performance improvement for converting time ([#1342](https://github.com/python-zeroconf/python-zeroconf/issues/1342)) ([`73d3ab9`](https://github.com/python-zeroconf/python-zeroconf/commit/73d3ab90dd3b59caab771235dd6dbedf05bfe0b3))
+* Small performance improvement for ServiceInfo asking questions ([#1341](https://github.com/python-zeroconf/python-zeroconf/issues/1341)) ([`810a309`](https://github.com/python-zeroconf/python-zeroconf/commit/810a3093c5a9411ee97740b468bd706bdf4a95de))
+* Small performance improvement constructing outgoing questions ([#1340](https://github.com/python-zeroconf/python-zeroconf/issues/1340)) ([`157185f`](https://github.com/python-zeroconf/python-zeroconf/commit/157185f28bf1e83e6811e2a5cd1fa9b38966f780))
+
+### Fix
+
+* Scheduling race with the QueryScheduler ([#1347](https://github.com/python-zeroconf/python-zeroconf/issues/1347)) ([`cf40470`](https://github.com/python-zeroconf/python-zeroconf/commit/cf40470b89f918d3c24d7889d3536f3ffa44846c))
+* Ensure question history suppresses duplicates ([#1338](https://github.com/python-zeroconf/python-zeroconf/issues/1338)) ([`6f23656`](https://github.com/python-zeroconf/python-zeroconf/commit/6f23656576daa04e3de44e100f3ddd60ee4c560d))
+* Microsecond precision loss in the query handler ([#1339](https://github.com/python-zeroconf/python-zeroconf/issues/1339)) ([`6560fad`](https://github.com/python-zeroconf/python-zeroconf/commit/6560fad584e0d392962c9a9248759f17c416620e))
+* Ensure IPv6 scoped address construction uses the string cache ([#1336](https://github.com/python-zeroconf/python-zeroconf/issues/1336)) ([`f78a196`](https://github.com/python-zeroconf/python-zeroconf/commit/f78a196db632c4fe017a34f1af8a58903c15a575))
+
 ## v0.129.0 (2023-12-13)
 
 ### Feature
