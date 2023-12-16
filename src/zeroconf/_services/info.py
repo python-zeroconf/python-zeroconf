@@ -831,6 +831,11 @@ class ServiceInfo(RecordUpdateListener):
                     next_ = now + delay
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
                     if this_question_type is QM_QUESTION:
+                        # If we just asked a QM question, we need to
+                        # wait at least the duplicate question interval
+                        # before asking another QM question otherwise
+                        # its likely to be suppressed by the question
+                        # history of the remote responder.
                         delay = max(delay, _DUPLICATE_QUESTION_INTERVAL)
 
                 await self.async_wait(min(next_, last) - now, zc.loop)
