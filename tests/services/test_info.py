@@ -278,9 +278,9 @@ class TestServiceInfo(unittest.TestCase):
                     target=get_service_info_helper, args=(zc, service_type, service_name)
                 )
                 helper_thread.start()
-                wait_time = 1
+                wait_time = 1.2
 
-                # Expext query for SRV, TXT, A, AAAA
+                # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 4
@@ -290,7 +290,7 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
-                # Expext query for SRV, A, AAAA
+                # Expect query for SRV, A, AAAA
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -315,7 +315,7 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
-                # Expext query for A, AAAA
+                # Expect query for A, AAAA
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -343,7 +343,7 @@ class TestServiceInfo(unittest.TestCase):
                 last_sent = None
                 assert service_info is None
 
-                # Expext no further queries
+                # Expect no further queries
                 last_sent = None
                 send_event.clear()
                 _inject_response(

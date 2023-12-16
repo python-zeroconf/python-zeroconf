@@ -846,11 +846,14 @@ class ServiceInfo(RecordUpdateListener):
         name: str_,
         type_: int_,
         class_: int_,
+        skip_if_known_answers: bool,
     ) -> None:
         """Add a question with known answers if its not suppressed."""
         known_answers = {
             record for record in cache.get_all_by_details(name, type_, class_) if not record.is_stale(now)
         }
+        if skip_if_known_answers and known_answers:
+            return
         question = DNSQuestion(name, type_, class_)
         qu_question = question_type is DNS_QUESTION_TYPE_QU
         if qu_question:
@@ -873,16 +876,16 @@ class ServiceInfo(RecordUpdateListener):
         cache = zc.cache
         question_history = zc.question_history
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, name, _TYPE_SRV, _CLASS_IN
+            out, question_type, question_history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
         )
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, name, _TYPE_TXT, _CLASS_IN
+            out, question_type, question_history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
         )
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, server_or_name, _TYPE_A, _CLASS_IN
+            out, question_type, question_history, cache, now, server_or_name, _TYPE_A, _CLASS_IN, False
         )
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN
+            out, question_type, question_history, cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN, False
         )
         return out
 

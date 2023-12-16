@@ -145,5 +145,6 @@ cdef class ServiceInfo(RecordUpdateListener):
         double now,
         str name,
         object type_,
-        object class_
+        object class_,
+        bint skip_if_known_answers
     )
