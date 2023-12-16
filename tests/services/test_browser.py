@@ -732,7 +732,7 @@ async def test_ttl_refresh_cancelled_rescue_query():
             # Verify we did not send a rescue query
             assert not packets
 
-            # We should still get a recuse query once the rescheduled
+            # We should still get a rescue query once the rescheduled
             # query time is reached
             now_millis += (expected_ttl * 1000) * 0.76
             time_changed_millis(now_millis)

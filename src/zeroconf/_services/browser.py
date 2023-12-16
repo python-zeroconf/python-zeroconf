@@ -496,7 +496,7 @@ class QueryScheduler:
             heappop(self._query_heap)
             del self._next_scheduled_for_alias[query.alias]
             # If there is still more than 10% of the TTL remaining
-            # schedule a query again to try to recuse the record
+            # schedule a query again to try to rescue the record
             # from expiring. If the record is refreshed before
             # the query, the query will get cancelled.
             schedule_rescue.append(query)

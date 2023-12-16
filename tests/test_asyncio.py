@@ -1086,7 +1086,7 @@ async def test_integration():
             packets.clear()
             # Move time forward past when the TTL is no longer
             # fresh (AKA 85% of the TTL) to ensure we try
-            # to recuse the record
+            # to rescue the record
             now_millis = start_millis + ((expected_ttl * 1000) * 0.87)
             time_changed_millis(now_millis)
 
