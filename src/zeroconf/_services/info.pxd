@@ -77,9 +77,9 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef void _generate_decoded_properties(self)
 
     @cython.locals(properties_contain_str=bint)
-    cpdef _set_properties(self, cython.dict properties)
+    cpdef void _set_properties(self, cython.dict properties)
 
-    cdef _set_text(self, cython.bytes text)
+    cdef void _set_text(self, cython.bytes text)
 
     @cython.locals(record=DNSAddress)
     cdef _get_ip_addresses_from_cache_lifo(self, object zc, double now, object type)
@@ -94,9 +94,9 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(cache=DNSCache)
     cdef cython.list _get_address_records_from_cache_by_type(self, object zc, object _type)
 
-    cdef _set_ipv4_addresses_from_cache(self, object zc, double now)
+    cdef void _set_ipv4_addresses_from_cache(self, object zc, double now)
 
-    cdef _set_ipv6_addresses_from_cache(self, object zc, double now)
+    cdef void _set_ipv6_addresses_from_cache(self, object zc, double now)
 
     cdef cython.list _ip_addresses_by_version_value(self, object version_value)
 
@@ -121,7 +121,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(cacheable=cython.bint)
     cdef cython.set _get_address_and_nsec_records(self, object override_ttl)
 
-    cpdef async_clear_cache(self)
+    cpdef void async_clear_cache(self)
 
     @cython.locals(cache=DNSCache)
-    cdef _generate_request_query(self, object zc, double now, object question_type)
+    cdef DNSOutgoing _generate_request_query(self, object zc, double now, object question_type)
