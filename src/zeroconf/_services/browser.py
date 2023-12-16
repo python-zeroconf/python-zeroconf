@@ -386,8 +386,6 @@ class QueryScheduler:
 
     def _schedule_ptr_query(self, scheduled_query: _ScheduledPTRQuery) -> None:
         """Schedule a query for a pointer."""
-        if scheduled_query.alias in self._next_scheduled_for_alias:
-            raise RuntimeError(f"Attempted to schedule a query for {scheduled_query.alias} twice")
         self._next_scheduled_for_alias[scheduled_query.alias] = scheduled_query
         heappush(self._query_heap, scheduled_query)
 
