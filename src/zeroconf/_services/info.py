@@ -98,6 +98,7 @@ str_ = str
 QU_QUESTION = DNSQuestionType.QU
 QM_QUESTION = DNSQuestionType.QM
 
+randint = random.randint
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -779,6 +780,12 @@ class ServiceInfo(RecordUpdateListener):
             )
         )
 
+    def _get_initial_delay(self) -> float_:
+        return _LISTENER_TIME
+
+    def _get_random_delay(self) -> int_:
+        return randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
+
     async def async_request(
         self,
         zc: 'Zeroconf',
@@ -809,7 +816,7 @@ class ServiceInfo(RecordUpdateListener):
             assert zc.loop is not None
 
         first_request = True
-        delay = _LISTENER_TIME
+        delay = self._get_initial_delay()
         next_ = now
         last = now + timeout
         try:
@@ -829,7 +836,7 @@ class ServiceInfo(RecordUpdateListener):
                         # question or they have not arrived yet.
                         zc.async_send(out, addr, port)
                     next_ = now + delay
-                    next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
+                    next_ += self._get_random_delay()
                     if this_question_type is QM_QUESTION and delay < _DUPLICATE_QUESTION_INTERVAL:
                         # If we just asked a QM question, we need to
                         # wait at least the duplicate question interval

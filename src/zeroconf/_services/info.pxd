@@ -50,6 +50,8 @@ cdef bint TYPE_CHECKING
 cdef bint IPADDRESS_SUPPORTS_SCOPE_ID
 cdef object cached_ip_addresses
 
+cdef object randint
+
 cdef class ServiceInfo(RecordUpdateListener):
 
     cdef public cython.bytes text
@@ -150,3 +152,7 @@ cdef class ServiceInfo(RecordUpdateListener):
         object class_,
         bint skip_if_known_answers
     )
+
+    cdef double _get_initial_delay(self)
+
+    cdef double _get_random_delay(self)
