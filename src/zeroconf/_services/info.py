@@ -872,20 +872,20 @@ class ServiceInfo(RecordUpdateListener):
         """Generate the request query."""
         out = DNSOutgoing(_FLAGS_QR_QUERY)
         name = self._name
-        server_or_name = self.server or name
+        server = self.server or name
         cache = zc.cache
-        question_history = zc.question_history
+        history = zc.question_history
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
+            out, question_type, history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
         )
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
+            out, question_type, history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
         )
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, server_or_name, _TYPE_A, _CLASS_IN, False
+            out, question_type, history, cache, now, server, _TYPE_A, _CLASS_IN, False
         )
         self._add_question_with_known_answers(
-            out, question_type, question_history, cache, now, server_or_name, _TYPE_AAAA, _CLASS_IN, False
+            out, question_type, history, cache, now, server, _TYPE_AAAA, _CLASS_IN, False
         )
         return out
 

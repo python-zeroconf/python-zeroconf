@@ -132,7 +132,7 @@ cdef class ServiceInfo(RecordUpdateListener):
 
     cpdef void async_clear_cache(self)
 
-    @cython.locals(cache=DNSCache, question_history=QuestionHistory, out=DNSOutgoing)
+    @cython.locals(cache=DNSCache, history=QuestionHistory, out=DNSOutgoing)
     cdef DNSOutgoing _generate_request_query(self, object zc, double now, object question_type)
 
     @cython.locals(question=DNSQuestion, qu_question=bint)
