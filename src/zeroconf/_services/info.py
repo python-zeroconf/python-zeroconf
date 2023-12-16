@@ -95,8 +95,8 @@ float_ = float
 int_ = int
 str_ = str
 
-DNS_QUESTION_TYPE_QU = DNSQuestionType.QU
-DNS_QUESTION_TYPE_QM = DNSQuestionType.QM
+QU_QUESTION = DNSQuestionType.QU
+QM_QUESTION = DNSQuestionType.QM
 
 
 if TYPE_CHECKING:
@@ -818,10 +818,11 @@ class ServiceInfo(RecordUpdateListener):
                 if last <= now:
                     return False
                 if next_ <= now:
+                    this_question_type = question_type or QU_QUESTION if first_request else QM_QUESTION
                     out = self._generate_request_query(
                         zc,
                         now,
-                        question_type or DNS_QUESTION_TYPE_QU if first_request else DNS_QUESTION_TYPE_QM,
+                        this_question_type,
                     )
                     first_request = False
                     if out.questions:
@@ -831,9 +832,10 @@ class ServiceInfo(RecordUpdateListener):
                         # client on the network is asking the same
                         # question or they have not arrived yet.
                         zc.async_send(out, addr, port)
-                    delay = max(delay, _DUPLICATE_QUESTION_INTERVAL)
                     next_ = now + delay
                     next_ += random.randint(*_AVOID_SYNC_DELAY_RANDOM_INTERVAL)
+                    if this_question_type is QM_QUESTION:
+                        delay = max(delay, _DUPLICATE_QUESTION_INTERVAL)
 
                 await self.async_wait(min(next_, last) - now, zc.loop)
                 now = current_time_millis()
@@ -861,7 +863,7 @@ class ServiceInfo(RecordUpdateListener):
         if skip_if_known_answers and known_answers:
             return
         question = DNSQuestion(name, type_, class_)
-        qu_question = question_type is DNS_QUESTION_TYPE_QU
+        qu_question = question_type is QU_QUESTION
         if qu_question:
             question.unicast = True
         elif question_history.suppresses(question, now, known_answers):

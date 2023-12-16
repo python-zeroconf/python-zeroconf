@@ -36,8 +36,8 @@ cdef object _FLAGS_QR_QUERY
 
 cdef object service_type_name
 
-cdef object DNS_QUESTION_TYPE_QU
-cdef object DNS_QUESTION_TYPE_QM
+cdef object QU_QUESTION
+cdef object QM_QUESTION
 
 cdef object _IPVersion_All_value
 cdef object _IPVersion_V4Only_value
