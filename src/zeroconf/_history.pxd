@@ -9,10 +9,10 @@ cdef class QuestionHistory:
 
     cdef cython.dict _history
 
-    cpdef add_question_at_time(self, DNSQuestion question, double now, cython.set known_answers)
+    cpdef void add_question_at_time(self, DNSQuestion question, double now, cython.set known_answers)
 
     @cython.locals(than=double, previous_question=cython.tuple, previous_known_answers=cython.set)
     cpdef bint suppresses(self, DNSQuestion question, double now, cython.set known_answers)
 
     @cython.locals(than=double, now_known_answers=cython.tuple)
-    cpdef async_expire(self, double now)
+    cpdef void async_expire(self, double now)

@@ -866,7 +866,7 @@ class ServiceInfo(RecordUpdateListener):
     ) -> None:
         """Add a question with known answers if its not suppressed."""
         known_answers = {
-            record for record in cache.get_all_by_details(name, type_, class_) if not record.is_stale(now)
+            answer for answer in cache.get_all_by_details(name, type_, class_) if not answer.is_stale(now)
         }
         if skip_if_known_answers and known_answers:
             return

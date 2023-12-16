@@ -126,16 +126,16 @@ cdef class DNSOutgoing:
     )
     cpdef packets(self)
 
-    cpdef add_question(self, DNSQuestion question)
+    cpdef void add_question(self, DNSQuestion question)
 
-    cpdef add_answer(self, DNSIncoming inp, DNSRecord record)
+    cpdef void add_answer(self, DNSIncoming inp, DNSRecord record)
 
     @cython.locals(now_double=double)
-    cpdef add_answer_at_time(self, DNSRecord record, double now)
+    cpdef void add_answer_at_time(self, DNSRecord record, double now)
 
-    cpdef add_authorative_answer(self, DNSPointer record)
+    cpdef void add_authorative_answer(self, DNSPointer record)
 
-    cpdef add_additional_answer(self, DNSRecord record)
+    cpdef void add_additional_answer(self, DNSRecord record)
 
     cpdef bint is_query(self)
 
