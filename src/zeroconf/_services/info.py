@@ -848,10 +848,13 @@ class ServiceInfo(RecordUpdateListener):
         class_: int_,
     ) -> None:
         """Add a question with known answers if its not suppressed."""
-        known_answers = cache.get_all_by_details(name, type_, class_)
+        known_answers = {
+            record for record in cache.get_all_by_details(name, type_, class_) if not record.is_stale(now)
+        }
         question = DNSQuestion(name, type_, class_)
-        if not question_history.suppresses(question, now, set(known_answers)):
-            if question_type is DNS_QUESTION_TYPE_QU:
+        qu_question = question_type is DNS_QUESTION_TYPE_QU
+        if qu_question or not question_history.suppresses(question, now, set(known_answers)):
+            if qu_question:
                 question.unicast = True
             out.add_question(question)
             for answer in known_answers:
