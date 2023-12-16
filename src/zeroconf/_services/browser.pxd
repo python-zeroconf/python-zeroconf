@@ -106,13 +106,13 @@ cdef class _ServiceBrowserBase(RecordUpdateListener):
     cdef public bint done
     cdef public object _query_sender_task
 
-    cpdef _enqueue_callback(self, object state_change, object type_, object name)
+    cpdef void _enqueue_callback(self, object state_change, object type_, object name)
 
     @cython.locals(record_update=RecordUpdate, record=DNSRecord, cache=DNSCache, service=DNSRecord, pointer=DNSPointer)
-    cpdef async_update_records(self, object zc, double now, cython.list records)
+    cpdef void async_update_records(self, object zc, double now, cython.list records)
 
     cpdef cython.list _names_matching_types(self, object types)
 
     cpdef _fire_service_state_changed_event(self, cython.tuple event)
 
-    cpdef async_update_records_complete(self)
+    cpdef void async_update_records_complete(self)
