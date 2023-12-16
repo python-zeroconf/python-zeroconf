@@ -278,7 +278,7 @@ class TestServiceInfo(unittest.TestCase):
                     target=get_service_info_helper, args=(zc, service_type, service_name)
                 )
                 helper_thread.start()
-                wait_time = (const._LISTENER_TIME * 1.2) / 1000
+                wait_time = 1
 
                 # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
@@ -419,7 +419,7 @@ class TestServiceInfo(unittest.TestCase):
                     target=get_service_info_helper, args=(zc, service_type, service_name)
                 )
                 helper_thread.start()
-                wait_time = (const._LISTENER_TIME * 1.2) / 1000
+                wait_time = (const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5) / 1000
 
                 # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
@@ -435,7 +435,7 @@ class TestServiceInfo(unittest.TestCase):
                 # by the question history
                 last_sent = None
                 send_event.clear()
-                send_event.wait(0.3)  # Wait long enough to be inside the question history window
+                send_event.wait(wait_time / 2)  # Wait long enough to be inside the question history window
                 now = r.current_time_millis()
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
@@ -446,16 +446,19 @@ class TestServiceInfo(unittest.TestCase):
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN), now, set()
                 )
-                send_event.wait(wait_time)
+                send_event.wait(wait_time / 2)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 1  # type: ignore[unreachable]
                 assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
+                wait_time = (
+                    const._DUPLICATE_QUESTION_INTERVAL + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5
+                ) / 1000
                 # Expect no queries as all are suppressed by the question history
                 last_sent = None
                 send_event.clear()
-                send_event.wait(0.3)  # Wait long enough to be inside the question history window
+                send_event.wait(wait_time / 2)  # Wait long enough to be inside the question history window
                 now = r.current_time_millis()
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
@@ -469,7 +472,7 @@ class TestServiceInfo(unittest.TestCase):
                 zc.question_history.add_question_at_time(
                     r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN), now, set()
                 )
-                send_event.wait(wait_time)
+                send_event.wait(wait_time / 2)
                 # All questions are suppressed so no query should be sent
                 assert last_sent is None
                 assert service_info is None
