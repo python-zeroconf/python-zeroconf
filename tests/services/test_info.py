@@ -452,6 +452,28 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
+                # Expect no queries as all are suppressed by the question history
+                last_sent = None
+                send_event.clear()
+                send_event.wait(0.3)  # Wait long enough to be inside the question history window
+                now = r.current_time_millis()
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
+                )
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN), now, set()
+                )
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN), now, set()
+                )
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN), now, set()
+                )
+                send_event.wait(wait_time)
+                # All questions are suppressed so no query should be sent
+                assert last_sent is None
+                assert service_info is None
+
             finally:
                 helper_thread.join()
                 zc.remove_all_service_listeners()
