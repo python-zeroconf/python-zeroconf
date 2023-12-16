@@ -490,10 +490,8 @@ class QueryScheduler:
             if query.when_millis > end_time_millis:
                 next_scheduled = query
                 break
-
-            ready_types.add(query.name)
-
             query = heappop(self._query_heap)
+            ready_types.add(query.name)
             del self._next_scheduled_for_alias[query.alias]
             # If there is still more than 10% of the TTL remaining
             # schedule a query again to try to rescue the record
