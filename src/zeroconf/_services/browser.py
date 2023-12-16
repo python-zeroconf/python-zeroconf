@@ -415,6 +415,7 @@ class QueryScheduler:
             ):
                 return
             current.cancelled = True
+            del self._next_scheduled_for_alias[pointer.alias]
         expire_time_millis = pointer.get_expiration_time(100)
         self._schedule_ptr_refresh(pointer, expire_time_millis, refresh_time_millis)
 
