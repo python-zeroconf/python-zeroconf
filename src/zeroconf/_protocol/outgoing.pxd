@@ -1,7 +1,6 @@
 
 import cython
 
-from .._cache cimport DNSCache
 from .._dns cimport DNSEntry, DNSPointer, DNSQuestion, DNSRecord
 from .incoming cimport DNSIncoming
 
@@ -127,20 +126,16 @@ cdef class DNSOutgoing:
     )
     cpdef packets(self)
 
-    cpdef add_question_or_all_cache(self, DNSCache cache, double now, str name, object type_, object class_)
+    cpdef void add_question(self, DNSQuestion question)
 
-    cpdef add_question_or_one_cache(self, DNSCache cache, double now, str name, object type_, object class_)
-
-    cpdef add_question(self, DNSQuestion question)
-
-    cpdef add_answer(self, DNSIncoming inp, DNSRecord record)
+    cpdef void add_answer(self, DNSIncoming inp, DNSRecord record)
 
     @cython.locals(now_double=double)
-    cpdef add_answer_at_time(self, DNSRecord record, double now)
+    cpdef void add_answer_at_time(self, DNSRecord record, double now)
 
-    cpdef add_authorative_answer(self, DNSPointer record)
+    cpdef void add_authorative_answer(self, DNSPointer record)
 
-    cpdef add_additional_answer(self, DNSRecord record)
+    cpdef void add_additional_answer(self, DNSRecord record)
 
     cpdef bint is_query(self)
 

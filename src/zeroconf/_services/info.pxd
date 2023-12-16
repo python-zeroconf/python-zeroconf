@@ -2,7 +2,16 @@
 import cython
 
 from .._cache cimport DNSCache
-from .._dns cimport DNSAddress, DNSNsec, DNSPointer, DNSRecord, DNSService, DNSText
+from .._dns cimport (
+    DNSAddress,
+    DNSNsec,
+    DNSPointer,
+    DNSQuestion,
+    DNSRecord,
+    DNSService,
+    DNSText,
+)
+from .._history cimport QuestionHistory
 from .._protocol.outgoing cimport DNSOutgoing
 from .._record_update cimport RecordUpdate
 from .._updates cimport RecordUpdateListener
@@ -27,17 +36,21 @@ cdef object _FLAGS_QR_QUERY
 
 cdef object service_type_name
 
-cdef object DNS_QUESTION_TYPE_QU
-cdef object DNS_QUESTION_TYPE_QM
+cdef object QU_QUESTION
+cdef object QM_QUESTION
 
 cdef object _IPVersion_All_value
 cdef object _IPVersion_V4Only_value
 
 cdef cython.set _ADDRESS_RECORD_TYPES
 
+cdef unsigned int _DUPLICATE_QUESTION_INTERVAL
+
 cdef bint TYPE_CHECKING
 cdef bint IPADDRESS_SUPPORTS_SCOPE_ID
 cdef object cached_ip_addresses
+
+cdef object randint
 
 cdef class ServiceInfo(RecordUpdateListener):
 
@@ -123,5 +136,23 @@ cdef class ServiceInfo(RecordUpdateListener):
 
     cpdef void async_clear_cache(self)
 
-    @cython.locals(cache=DNSCache)
+    @cython.locals(cache=DNSCache, history=QuestionHistory, out=DNSOutgoing, qu_question=bint)
     cdef DNSOutgoing _generate_request_query(self, object zc, double now, object question_type)
+
+    @cython.locals(question=DNSQuestion, answer=DNSRecord)
+    cdef void _add_question_with_known_answers(
+        self,
+        DNSOutgoing out,
+        bint qu_question,
+        QuestionHistory question_history,
+        DNSCache cache,
+        double now,
+        str name,
+        object type_,
+        object class_,
+        bint skip_if_known_answers
+    )
+
+    cdef double _get_initial_delay(self)
+
+    cdef double _get_random_delay(self)

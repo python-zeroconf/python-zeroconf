@@ -25,7 +25,6 @@ import logging
 from struct import Struct
 from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
 
-from .._cache import DNSCache
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import NamePartTooLongException
 from .._logger import log
@@ -197,29 +196,6 @@ class DNSOutgoing:
 
         """
         self.additionals.append(record)
-
-    def add_question_or_one_cache(
-        self, cache: DNSCache, now: float_, name: str_, type_: int_, class_: int_
-    ) -> None:
-        """Add a question if it is not already cached."""
-        cached_entry = cache.get_by_details(name, type_, class_)
-        if not cached_entry:
-            self.add_question(DNSQuestion(name, type_, class_))
-        else:
-            self.add_answer_at_time(cached_entry, now)
-
-    def add_question_or_all_cache(
-        self, cache: DNSCache, now: float_, name: str_, type_: int_, class_: int_
-    ) -> None:
-        """Add a question if it is not already cached.
-        This is currently only used for IPv6 addresses.
-        """
-        cached_entries = cache.get_all_by_details(name, type_, class_)
-        if not cached_entries:
-            self.add_question(DNSQuestion(name, type_, class_))
-            return
-        for cached_entry in cached_entries:
-            self.add_answer_at_time(cached_entry, now)
 
     def _write_byte(self, value: int_) -> None:
         """Writes a single byte to the packet"""
