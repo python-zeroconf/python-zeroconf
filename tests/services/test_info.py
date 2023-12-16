@@ -247,7 +247,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent = None  # type: Optional[r.DNSOutgoing]
+        last_sent: Optional[r.DNSOutgoing] = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -278,7 +278,7 @@ class TestServiceInfo(unittest.TestCase):
                     target=get_service_info_helper, args=(zc, service_type, service_name)
                 )
                 helper_thread.start()
-                wait_time = 1.2
+                wait_time = (const._LISTENER_TIME * 1.2) / 1000
 
                 # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
@@ -371,6 +371,86 @@ class TestServiceInfo(unittest.TestCase):
                 send_event.wait(wait_time)
                 assert last_sent is None
                 assert service_info is not None
+
+            finally:
+                helper_thread.join()
+                zc.remove_all_service_listeners()
+                zc.close()
+
+    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
+    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
+    def test_get_info_suppressed_by_question_history(self):
+        zc = r.Zeroconf(interfaces=['127.0.0.1'])
+
+        service_name = 'name._type._tcp.local.'
+        service_type = '_type._tcp.local.'
+
+        service_info = None
+        send_event = Event()
+        service_info_event = Event()
+
+        last_sent: Optional[r.DNSOutgoing] = None
+
+        def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
+            """Sends an outgoing packet."""
+            nonlocal last_sent
+
+            last_sent = out
+            send_event.set()
+
+        # patch the zeroconf send
+        with patch.object(zc, "async_send", send):
+
+            def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
+                generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+
+                for record in records:
+                    generated.add_answer_at_time(record, 0)
+
+                return r.DNSIncoming(generated.packets()[0])
+
+            def get_service_info_helper(zc, type, name):
+                nonlocal service_info
+                service_info = zc.get_service_info(type, name)
+                service_info_event.set()
+
+            try:
+                helper_thread = threading.Thread(
+                    target=get_service_info_helper, args=(zc, service_type, service_name)
+                )
+                helper_thread.start()
+                wait_time = (const._LISTENER_TIME * 1.2) / 1000
+
+                # Expect query for SRV, TXT, A, AAAA
+                send_event.wait(wait_time)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 4
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
+                assert service_info is None
+
+                # Expect query for SRV only as A, AAAA, and TXT are suppressed
+                # by the question history
+                last_sent = None
+                send_event.clear()
+                send_event.wait(0.3)  # Wait long enough to be inside the question history window
+                now = r.current_time_millis()
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN), now, set()
+                )
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN), now, set()
+                )
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN), now, set()
+                )
+                send_event.wait(wait_time)
+                assert last_sent is not None
+                assert len(last_sent.questions) == 1  # type: ignore[unreachable]
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert service_info is None
 
             finally:
                 helper_thread.join()
