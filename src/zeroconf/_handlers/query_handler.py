@@ -23,7 +23,6 @@
 from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Union, cast
 
 from .._cache import DNSCache, _UniqueRecordsType
-from .._core import _MDNS_PORT
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
 from .._protocol.incoming import DNSIncoming
 from .._services.info import ServiceInfo
@@ -33,6 +32,7 @@ from ..const import (
     _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
     _DNS_OTHER_TTL,
+    _MDNS_PORT,
     _ONE_SECOND,
     _SERVICE_TYPE_ENUMERATION_NAME,
     _TYPE_A,
