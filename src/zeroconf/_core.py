@@ -182,15 +182,16 @@ class Zeroconf(QuietLogger):
         self.registry = ServiceRegistry()
         self.cache = DNSCache()
         self.question_history = QuestionHistory()
+
+        self.out_queue = MulticastOutgoingQueue(self, 0, _AGGREGATION_DELAY)
+        self.out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY)
+
         self.query_handler = QueryHandler(self)
         self.record_manager = RecordManager(self)
 
         self._notify_futures: Set[asyncio.Future] = set()
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
-
-        self.out_queue = MulticastOutgoingQueue(self, 0, _AGGREGATION_DELAY)
-        self.out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY)
 
         self.start()
 
