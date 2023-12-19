@@ -36,7 +36,6 @@ from ._handlers.query_handler import QueryHandler
 from ._handlers.record_manager import RecordManager
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
-from ._protocol.incoming import DNSIncoming
 from ._protocol.outgoing import DNSOutgoing
 from ._services import ServiceListener
 from ._services.browser import ServiceBrowser
@@ -556,12 +555,6 @@ class Zeroconf(QuietLogger):
         This function is not threadsafe and must be called in the eventloop.
         """
         self.record_manager.async_remove_listener(listener)
-
-    def handle_response(self, msg: DNSIncoming) -> None:
-        """Deal with incoming response packets.  All answers
-        are held in the cache, and listeners are notified."""
-        self.log_warning_once("handle_response is deprecated, use record_manager.async_updates_from_response")
-        self.record_manager.async_updates_from_response(msg)
 
     def send(
         self,
