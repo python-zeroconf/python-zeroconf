@@ -70,7 +70,7 @@ cdef class DNSIncoming:
 
     cpdef bint is_probe(self)
 
-    cpdef answers(self)
+    cpdef list answers(self)
 
     cpdef bint is_response(self)
 
@@ -86,16 +86,16 @@ cdef class DNSIncoming:
     cdef unsigned int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
     @cython.locals(offset="unsigned int")
-    cdef _read_header(self)
+    cdef void _read_header(self)
 
-    cdef _initial_parse(self)
+    cdef void _initial_parse(self)
 
     @cython.locals(
         end="unsigned int",
         length="unsigned int",
         offset="unsigned int"
     )
-    cdef _read_others(self)
+    cdef void _read_others(self)
 
     @cython.locals(offset="unsigned int")
     cdef _read_questions(self)
@@ -123,6 +123,6 @@ cdef class DNSIncoming:
         i="unsigned int",
         bitmap_length="unsigned int",
     )
-    cdef _read_bitmap(self, unsigned int end)
+    cdef list _read_bitmap(self, unsigned int end)
 
-    cdef _read_name(self)
+    cdef str _read_name(self)
