@@ -93,7 +93,7 @@ cdef class QueryHandler:
         is_probe=object,
         now=double
     )
-    cpdef async_response(self, cython.list msgs, cython.bint unicast_source)
+    cpdef QuestionAnswers async_response(self, cython.list msgs, cython.bint unicast_source)
 
     @cython.locals(name=str, question_lower_name=str)
     cdef _get_answer_strategies(self, DNSQuestion question)

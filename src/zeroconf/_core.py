@@ -102,16 +102,20 @@ _PROTECTED_AGGREGATION_DELAY = 200  # ms
 
 _REGISTER_BROADCASTS = 3
 
+_str = str
+_int = int
+_bytes = bytes
+
 
 def async_send_with_transport(
     log_debug: bool,
     transport: _WrappedTransport,
-    packet: bytes,
-    packet_num: int,
+    packet: _bytes,
+    packet_num: _int,
     out: DNSOutgoing,
-    addr: Optional[str],
-    port: int,
-    v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    addr: Optional[_str],
+    port: _int,
+    v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
 ) -> None:
     ipv6_socket = transport.is_ipv6
     if addr is None:
@@ -140,7 +144,7 @@ def async_send_with_transport(
     transport.transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
 
-class Zeroconf(QuietLogger):
+class Zeroconf:
 
     """Implementation of Zeroconf Multicast DNS Service Discovery
 
@@ -561,17 +565,11 @@ class Zeroconf(QuietLogger):
         """
         self.record_manager.async_remove_listener(listener)
 
-    def handle_response(self, msg: DNSIncoming) -> None:
-        """Deal with incoming response packets.  All answers
-        are held in the cache, and listeners are notified."""
-        self.log_warning_once("handle_response is deprecated, use record_manager.async_updates_from_response")
-        self.record_manager.async_updates_from_response(msg)
-
     def handle_assembled_query(
         self,
         packets: List[DNSIncoming],
-        addr: str,
-        port: int,
+        addr: _str,
+        port: _int,
         transport: _WrappedTransport,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
     ) -> None:
@@ -587,17 +585,20 @@ class Zeroconf(QuietLogger):
         question_answers = self.query_handler.async_response(packets, ucast_source)
         if not question_answers:
             return
-        now = packets[0].now
+        first_packet = packets[0]
+        now = first_packet.now
         if question_answers.ucast:
-            questions = packets[0].questions
-            id_ = packets[0].id
+            questions = first_packet.questions
+            id_ = first_packet.id
             out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
             # When sending unicast, only send back the reply
             # via the same socket that it was recieved from
             # as we know its reachable from that socket
-            self.async_send(out, addr, port, v6_flow_scope, transport)
+            self._async_send(out, addr, port, v6_flow_scope, transport)
         if question_answers.mcast_now:
-            self.async_send(construct_outgoing_multicast_answers(question_answers.mcast_now))
+            self._async_send(
+                construct_outgoing_multicast_answers(question_answers.mcast_now), None, _MDNS_PORT, (), None
+            )
         if question_answers.mcast_aggregate:
             self._out_queue.async_add(now, question_answers.mcast_aggregate)
         if question_answers.mcast_aggregate_last_second:
@@ -616,7 +617,10 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
+        self.loop.call_soon_threadsafe(self._async_send, out, addr, port, v6_flow_scope, transport)
+
+    def _debug_enabled(self) -> bool:
+        return log.isEnabledFor(logging.DEBUG)
 
     def async_send(
         self,
@@ -627,17 +631,31 @@ class Zeroconf(QuietLogger):
         transport: Optional[_WrappedTransport] = None,
     ) -> None:
         """Sends an outgoing packet."""
+        self._async_send(out, addr, port, v6_flow_scope, transport)
+
+    def _async_send(
+        self,
+        out: DNSOutgoing,
+        addr: Optional[str],
+        port: _int,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
+        transport: Optional[_WrappedTransport],
+    ) -> None:
+        """Sends an outgoing packet."""
         if self.done:
             return
 
         # If no transport is specified, we send to all the ones
         # with the same address family
         transports = [transport] if transport else self.engine.senders
-        log_debug = log.isEnabledFor(logging.DEBUG)
+        log_debug = self._debug_enabled()
+        max_size = _MAX_MSG_ABSOLUTE
 
         for packet_num, packet in enumerate(out.packets()):
-            if len(packet) > _MAX_MSG_ABSOLUTE:
-                self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
+            if len(packet) > max_size:
+                QuietLogger.log_warning_once(
+                    "Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet
+                )
                 return
             for send_transport in transports:
                 async_send_with_transport(

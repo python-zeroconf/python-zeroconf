@@ -25,6 +25,7 @@ def build(setup_kwargs: Any) -> None:
                     [
                         "src/zeroconf/_dns.py",
                         "src/zeroconf/_cache.py",
+                        "src/zeroconf/_core.py",
                         "src/zeroconf/_history.py",
                         "src/zeroconf/_record_update.py",
                         "src/zeroconf/_listener.py",
@@ -38,6 +39,7 @@ def build(setup_kwargs: Any) -> None:
                         "src/zeroconf/_services/browser.py",
                         "src/zeroconf/_services/info.py",
                         "src/zeroconf/_services/registry.py",
+                        "src/zeroconf/_transport.py",
                         "src/zeroconf/_updates.py",
                         "src/zeroconf/_utils/ipaddress.py",
                         "src/zeroconf/_utils/time.py",
