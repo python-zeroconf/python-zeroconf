@@ -106,6 +106,7 @@ cdef class QueryHandler:
 
     @cython.locals(
         first_packet=DNSIncoming,
+        ucast_source=bint,
         out_queue=MulticastOutgoingQueue,
         out_delay_queue=MulticastOutgoingQueue
     )

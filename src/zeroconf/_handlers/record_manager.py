@@ -84,7 +84,6 @@ class RecordManager:
         other_adds: List[DNSRecord] = []
         removes: Set[DNSRecord] = set()
         now = msg.now
-        now_double = now
         unique_types: Set[Tuple[str, int, int]] = set()
         cache = self.cache
         answers = msg.answers()
@@ -113,7 +112,7 @@ class RecordManager:
                 record = cast(_UniqueRecordsType, record)
 
             maybe_entry = cache.async_get_unique(record)
-            if not record.is_expired(now_double):
+            if not record.is_expired(now):
                 if maybe_entry is not None:
                     maybe_entry.reset_ttl(record)
                 else:
@@ -129,7 +128,7 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now_double)
+            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now)
 
         if updates:
             self.async_updates(now, updates)

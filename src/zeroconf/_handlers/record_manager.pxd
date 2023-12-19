@@ -22,22 +22,21 @@ cdef class RecordManager:
     cdef public DNSCache cache
     cdef public cython.set listeners
 
-    cpdef async_updates(self, object now, object records)
+    cpdef void async_updates(self, object now, object records)
 
-    cpdef async_updates_complete(self, object notify)
+    cpdef void async_updates_complete(self, bint notify)
 
     @cython.locals(
         cache=DNSCache,
         record=DNSRecord,
         answers=cython.list,
         maybe_entry=DNSRecord,
-        now_double=double
     )
-    cpdef async_updates_from_response(self, DNSIncoming msg)
+    cpdef void async_updates_from_response(self, DNSIncoming msg)
 
-    cpdef async_add_listener(self, RecordUpdateListener listener, object question)
+    cpdef void async_add_listener(self, RecordUpdateListener listener, object question)
 
-    cpdef async_remove_listener(self, RecordUpdateListener listener)
+    cpdef void async_remove_listener(self, RecordUpdateListener listener)
 
     @cython.locals(question=DNSQuestion, record=DNSRecord)
-    cdef _async_update_matching_records(self, RecordUpdateListener listener, cython.list questions)
+    cdef void _async_update_matching_records(self, RecordUpdateListener listener, cython.list questions)

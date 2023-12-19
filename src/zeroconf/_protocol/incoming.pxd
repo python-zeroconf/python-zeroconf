@@ -56,7 +56,7 @@ cdef class DNSIncoming:
     cdef cython.uint _num_authorities
     cdef cython.uint _num_additionals
     cdef public bint valid
-    cdef public object now
+    cdef public double now
     cdef public object scope_id
     cdef public object source
     cdef bint _has_qu_question
