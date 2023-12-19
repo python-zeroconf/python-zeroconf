@@ -114,6 +114,6 @@ cdef class QueryHandler:
         list packets,
         object addr,
         object port,
-        _WrappedTransport transport,
+        object transport,
         tuple v6_flow_scope
     )
