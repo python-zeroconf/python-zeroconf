@@ -594,11 +594,9 @@ class Zeroconf:
             # When sending unicast, only send back the reply
             # via the same socket that it was recieved from
             # as we know its reachable from that socket
-            self._async_send(out, addr, port, v6_flow_scope, transport)
+            self.async_send(out, addr, port, v6_flow_scope, transport)
         if question_answers.mcast_now:
-            self._async_send(
-                construct_outgoing_multicast_answers(question_answers.mcast_now), None, _MDNS_PORT, (), None
-            )
+            self.async_send(construct_outgoing_multicast_answers(question_answers.mcast_now))
         if question_answers.mcast_aggregate:
             self._out_queue.async_add(now, question_answers.mcast_aggregate)
         if question_answers.mcast_aggregate_last_second:
@@ -617,7 +615,7 @@ class Zeroconf:
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self._async_send, out, addr, port, v6_flow_scope, transport)
+        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
 
     def _debug_enabled(self) -> bool:
         return log.isEnabledFor(logging.DEBUG)
@@ -629,17 +627,6 @@ class Zeroconf:
         port: int = _MDNS_PORT,
         v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
         transport: Optional[_WrappedTransport] = None,
-    ) -> None:
-        """Sends an outgoing packet."""
-        self._async_send(out, addr, port, v6_flow_scope, transport)
-
-    def _async_send(
-        self,
-        out: DNSOutgoing,
-        addr: Optional[str],
-        port: _int,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
-        transport: Optional[_WrappedTransport],
     ) -> None:
         """Sends an outgoing packet."""
         if self.done:

@@ -61,13 +61,3 @@ cdef class Zeroconf:
         _WrappedTransport transport,
         tuple v6_flow_scope
     )
-
-    @cython.locals(max_size="unsigned int")
-    cpdef _async_send(
-        self,
-        DNSOutgoing out,
-        object addr,
-        object port,
-        tuple v6_flow_scope,
-        _WrappedTransport transport
-    )
