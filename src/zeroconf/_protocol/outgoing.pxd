@@ -124,7 +124,7 @@ cdef class DNSOutgoing:
         authorities_written="unsigned int",
         additionals_written="unsigned int",
     )
-    cpdef list packets(self)
+    cpdef packets(self)
 
     cpdef void add_question(self, DNSQuestion question)
 
