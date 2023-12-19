@@ -109,7 +109,7 @@ cdef class DNSOutgoing:
     cpdef void write_string(self, cython.bytes value)
 
     @cython.locals(utfstr=bytes)
-    cpdef _write_utf(self, cython.str value)
+    cdef void _write_utf(self, cython.str value)
 
     @cython.locals(
         debug_enable=bint,
@@ -124,7 +124,7 @@ cdef class DNSOutgoing:
         authorities_written="unsigned int",
         additionals_written="unsigned int",
     )
-    cpdef packets(self)
+    cpdef list packets(self)
 
     cpdef void add_question(self, DNSQuestion question)
 
