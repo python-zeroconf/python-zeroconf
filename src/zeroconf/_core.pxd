@@ -7,6 +7,10 @@ cdef object _MDNS_ADDR6,_MDNS_ADDR
 
 
 from ._cache cimport DNSCache
+from ._handlers.answers cimport (
+    construct_outgoing_multicast_answers,
+    construct_outgoing_unicast_answers,
+)
 from ._handlers.multicast_outgoing_queue cimport MulticastOutgoingQueue
 from ._handlers.query_handler cimport QueryHandler, QuestionAnswers
 from ._history cimport QuestionHistory
