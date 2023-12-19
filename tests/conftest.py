@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from zeroconf import _core, const
+from zeroconf._handlers import query_handler
 
 
 @pytest.fixture(autouse=True)
@@ -23,7 +24,9 @@ def verify_threads_ended():
 @pytest.fixture
 def run_isolated():
     """Change the mDNS port to run the test in isolation."""
-    with patch.object(_core, "_MDNS_PORT", 5454), patch.object(const, "_MDNS_PORT", 5454):
+    with patch.object(query_handler, "_MDNS_PORT", 5454), patch.object(
+        _core, "_MDNS_PORT", 5454
+    ), patch.object(const, "_MDNS_PORT", 5454):
         yield
 
 
