@@ -50,17 +50,17 @@ cdef class DNSOutgoing:
     cdef public cython.list authorities
     cdef public cython.list additionals
 
-    cpdef _reset_for_next_packet(self)
+    cpdef void _reset_for_next_packet(self)
 
-    cdef _write_byte(self, cython.uint value)
+    cdef void _write_byte(self, cython.uint value)
 
     cdef void _insert_short_at_start(self, unsigned int value)
 
-    cdef _replace_short(self, cython.uint index, cython.uint value)
+    cdef void _replace_short(self, cython.uint index, cython.uint value)
 
     cdef _get_short(self, cython.uint value)
 
-    cdef _write_int(self, object value)
+    cdef void _write_int(self, object value)
 
     cdef cython.bint _write_question(self, DNSQuestion question)
 
@@ -73,7 +73,7 @@ cdef class DNSOutgoing:
     cdef cython.bint _write_record(self, DNSRecord record, double now)
 
     @cython.locals(class_=cython.uint)
-    cdef _write_record_class(self, DNSEntry record)
+    cdef void _write_record_class(self, DNSEntry record)
 
     @cython.locals(
         start_size_int=object
@@ -91,7 +91,7 @@ cdef class DNSOutgoing:
 
     cdef bint _has_more_to_add(self, unsigned int questions_offset, unsigned int answer_offset, unsigned int authority_offset, unsigned int additional_offset)
 
-    cdef _write_ttl(self, DNSRecord record, double now)
+    cdef void _write_ttl(self, DNSRecord record, double now)
 
     @cython.locals(
         labels=cython.list,
@@ -100,16 +100,16 @@ cdef class DNSOutgoing:
         start_size=cython.uint,
         name_length=cython.uint,
     )
-    cpdef write_name(self, cython.str name)
+    cpdef void write_name(self, cython.str name)
 
-    cdef _write_link_to_name(self, unsigned int index)
+    cdef void _write_link_to_name(self, unsigned int index)
 
-    cpdef write_short(self, cython.uint value)
+    cpdef void write_short(self, cython.uint value)
 
-    cpdef write_string(self, cython.bytes value)
+    cpdef void write_string(self, cython.bytes value)
 
     @cython.locals(utfstr=bytes)
-    cpdef _write_utf(self, cython.str value)
+    cdef void _write_utf(self, cython.str value)
 
     @cython.locals(
         debug_enable=bint,
