@@ -109,7 +109,7 @@ cdef class QueryHandler:
         out_queue=MulticastOutgoingQueue,
         out_delay_queue=MulticastOutgoingQueue
     )
-    cpdef handle_assembled_query(
+    cpdef void handle_assembled_query(
         self,
         list packets,
         object addr,
