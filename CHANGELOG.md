@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.131.0 (2023-12-19)
+
+### Feature
+
+* Small speed up to constructing outgoing packets ([#1354](https://github.com/python-zeroconf/python-zeroconf/issues/1354)) ([`517d7d0`](https://github.com/python-zeroconf/python-zeroconf/commit/517d7d00ca7738c770077738125aec0e4824c000))
+* Speed up processing incoming packets ([#1352](https://github.com/python-zeroconf/python-zeroconf/issues/1352)) ([`6c15325`](https://github.com/python-zeroconf/python-zeroconf/commit/6c153258a995cf9459a6f23267b7e379b5e2550f))
+* Speed up the query handler ([#1350](https://github.com/python-zeroconf/python-zeroconf/issues/1350)) ([`9eac0a1`](https://github.com/python-zeroconf/python-zeroconf/commit/9eac0a122f28a7a4fa76cbfdda21d9a3571d7abb))
+
 ## v0.130.0 (2023-12-16)
 
 ### Feature
