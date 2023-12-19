@@ -53,12 +53,12 @@ cdef class _QueryResponse:
     cdef cython.set _mcast_aggregate_last_second
 
     @cython.locals(record=DNSRecord)
-    cdef add_qu_question_response(self, cython.dict answers)
+    cdef void add_qu_question_response(self, cython.dict answers)
 
-    cdef add_ucast_question_response(self, cython.dict answers)
+    cdef void add_ucast_question_response(self, cython.dict answers)
 
     @cython.locals(answer=DNSRecord, question=DNSQuestion)
-    cdef add_mcast_question_response(self, cython.dict answers)
+    cdef void add_mcast_question_response(self, cython.dict answers)
 
     @cython.locals(maybe_entry=DNSRecord)
     cdef bint _has_mcast_within_one_quarter_ttl(self, DNSRecord record)
@@ -74,15 +74,17 @@ cdef class QueryHandler:
     cdef ServiceRegistry registry
     cdef DNSCache cache
     cdef QuestionHistory question_history
+    cdef MulticastOutgoingQueue out_queue
+    cdef MulticastOutgoingQueue out_delay_queue
 
     @cython.locals(service=ServiceInfo)
-    cdef _add_service_type_enumeration_query_answers(self, list types, cython.dict answer_set, DNSRRSet known_answers)
+    cdef void _add_service_type_enumeration_query_answers(self, list types, cython.dict answer_set, DNSRRSet known_answers)
 
     @cython.locals(service=ServiceInfo)
-    cdef _add_pointer_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers)
+    cdef void _add_pointer_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers)
 
     @cython.locals(service=ServiceInfo, dns_address=DNSAddress)
-    cdef _add_address_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
+    cdef void _add_address_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)
     cdef cython.dict _answer_question(self, DNSQuestion question, unsigned int strategy_type, list types, list services, DNSRRSet known_answers)
@@ -102,13 +104,11 @@ cdef class QueryHandler:
     cpdef QuestionAnswers async_response(self, cython.list msgs, cython.bint unicast_source)
 
     @cython.locals(name=str, question_lower_name=str)
-    cdef _get_answer_strategies(self, DNSQuestion question)
+    cdef list _get_answer_strategies(self, DNSQuestion question)
 
     @cython.locals(
         first_packet=DNSIncoming,
         ucast_source=bint,
-        out_queue=MulticastOutgoingQueue,
-        out_delay_queue=MulticastOutgoingQueue
     )
     cpdef void handle_assembled_query(
         self,
