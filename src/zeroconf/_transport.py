@@ -22,7 +22,7 @@
 
 import asyncio
 import socket
-from typing import Any
+from typing import Tuple
 
 
 class _WrappedTransport:
@@ -42,7 +42,7 @@ class _WrappedTransport:
         is_ipv6: bool,
         sock: socket.socket,
         fileno: int,
-        sock_name: Any,
+        sock_name: Tuple,
     ) -> None:
         """Initialize the wrapped transport.
 

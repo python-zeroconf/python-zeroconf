@@ -59,6 +59,7 @@ class AsyncListener:
         'zc',
         '_registry',
         '_record_manager',
+        "_query_handler",
         'data',
         'last_time',
         'last_message',
@@ -72,6 +73,7 @@ class AsyncListener:
         self.zc = zc
         self._registry = zc.registry
         self._record_manager = zc.record_manager
+        self._query_handler = zc.query_handler
         self.data: Optional[bytes] = None
         self.last_time: float = 0
         self.last_message: Optional[DNSIncoming] = None
@@ -228,7 +230,7 @@ class AsyncListener:
         if msg:
             packets.append(msg)
 
-        self.zc.handle_assembled_query(packets, addr, port, transport, v6_flow_scope)
+        self._query_handler.handle_assembled_query(packets, addr, port, transport, v6_flow_scope)
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""

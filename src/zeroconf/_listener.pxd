@@ -1,6 +1,7 @@
 
 import cython
 
+from ._handlers.query_handler cimport QueryHandler
 from ._handlers.record_manager cimport RecordManager
 from ._protocol.incoming cimport DNSIncoming
 from ._services.registry cimport ServiceRegistry
@@ -21,6 +22,7 @@ cdef class AsyncListener:
     cdef public object zc
     cdef ServiceRegistry _registry
     cdef RecordManager _record_manager
+    cdef QueryHandler _query_handler
     cdef public cython.bytes data
     cdef public double last_time
     cdef public DNSIncoming last_message
