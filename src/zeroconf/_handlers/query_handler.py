@@ -20,14 +20,14 @@
     USA
 """
 
-from typing import TYPE_CHECKING, List, Optional, Set, cast
+from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Union, cast
 
 from .._cache import DNSCache, _UniqueRecordsType
+from .._core import _MDNS_PORT
 from .._dns import DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
-from .._history import QuestionHistory
 from .._protocol.incoming import DNSIncoming
 from .._services.info import ServiceInfo
-from .._services.registry import ServiceRegistry
+from .._transport import _WrappedTransport
 from .._utils.net import IPVersion
 from ..const import (
     _ADDRESS_RECORD_TYPES,
@@ -43,7 +43,12 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-from .answers import QuestionAnswers, _AnswerWithAdditionalsType
+from .answers import (
+    QuestionAnswers,
+    _AnswerWithAdditionalsType,
+    construct_outgoing_multicast_answers,
+    construct_outgoing_unicast_answers,
+)
 
 _RESPOND_IMMEDIATE_TYPES = {_TYPE_NSEC, _TYPE_SRV, *_ADDRESS_RECORD_TYPES}
 
@@ -53,13 +58,16 @@ _EMPTY_TYPES_LIST: List[str] = []
 _IPVersion_ALL = IPVersion.All
 
 _int = int
-
+_str = str
 
 _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION = 0
 _ANSWER_STRATEGY_POINTER = 1
 _ANSWER_STRATEGY_ADDRESS = 2
 _ANSWER_STRATEGY_SERVICE = 3
 _ANSWER_STRATEGY_TEXT = 4
+
+if TYPE_CHECKING:
+    from .._core import Zeroconf
 
 
 class _AnswerStrategy:
@@ -183,13 +191,14 @@ class _QueryResponse:
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    __slots__ = ("registry", "cache", "question_history")
+    __slots__ = ("zc", "registry", "cache", "question_history")
 
-    def __init__(self, registry: ServiceRegistry, cache: DNSCache, question_history: QuestionHistory) -> None:
+    def __init__(self, zc: 'Zeroconf') -> None:
         """Init the query handler."""
-        self.registry = registry
-        self.cache = cache
-        self.question_history = question_history
+        self.zc = zc
+        self.registry = zc.registry
+        self.cache = zc.cache
+        self.question_history = zc.question_history
 
     def _add_service_type_enumeration_query_answers(
         self, types: List[str], answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
@@ -385,3 +394,45 @@ class QueryHandler:
                     )
 
         return strategies
+
+    def handle_assembled_query(
+        self,
+        packets: List[DNSIncoming],
+        addr: _str,
+        port: _int,
+        transport: _WrappedTransport,
+        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
+    ) -> None:
+        """Respond to a (re)assembled query.
+
+        If the protocol recieved packets with the TC bit set, it will
+        wait a bit for the rest of the packets and only call
+        handle_assembled_query once it has a complete set of packets
+        or the timer expires. If the TC bit is not set, a single
+        packet will be in packets.
+        """
+        first_packet = packets[0]
+        now = first_packet.now
+        ucast_source = port != _MDNS_PORT
+        question_answers = self.async_response(packets, ucast_source)
+        if not question_answers:
+            return
+        if question_answers.ucast:
+            questions = first_packet.questions
+            id_ = first_packet.id
+            out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
+            # When sending unicast, only send back the reply
+            # via the same socket that it was recieved from
+            # as we know its reachable from that socket
+            self.zc.async_send(out, addr, port, v6_flow_scope, transport)
+        if question_answers.mcast_now:
+            self.zc.async_send(construct_outgoing_multicast_answers(question_answers.mcast_now))
+        if question_answers.mcast_aggregate:
+            out_queue = self.zc.out_queue
+            out_queue.async_add(now, question_answers.mcast_aggregate)
+        if question_answers.mcast_aggregate_last_second:
+            # https://datatracker.ietf.org/doc/html/rfc6762#section-14
+            # If we broadcast it in the last second, we have to delay
+            # at least a second before we send it again
+            out_delay_queue = self.zc.out_delay_queue
+            out_delay_queue.async_add(now, question_answers.mcast_aggregate_last_second)

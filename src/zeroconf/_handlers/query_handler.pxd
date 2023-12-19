@@ -7,7 +7,12 @@ from .._history cimport QuestionHistory
 from .._protocol.incoming cimport DNSIncoming
 from .._services.info cimport ServiceInfo
 from .._services.registry cimport ServiceRegistry
-from .answers cimport QuestionAnswers
+from .answers cimport (
+    QuestionAnswers,
+    construct_outgoing_multicast_answers,
+    construct_outgoing_unicast_answers,
+)
+from .multicast_outgoing_queue cimport MulticastOutgoingQueue
 
 
 cdef bint TYPE_CHECKING
@@ -65,6 +70,7 @@ cdef class _QueryResponse:
 
 cdef class QueryHandler:
 
+    cdef object zc
     cdef ServiceRegistry registry
     cdef DNSCache cache
     cdef QuestionHistory question_history
@@ -97,3 +103,17 @@ cdef class QueryHandler:
 
     @cython.locals(name=str, question_lower_name=str)
     cdef _get_answer_strategies(self, DNSQuestion question)
+
+    @cython.locals(
+        first_packet=DNSIncoming,
+        out_queue=MulticastOutgoingQueue,
+        out_delay_queue=MulticastOutgoingQueue
+    )
+    cpdef handle_assembled_query(
+        self,
+        list packets,
+        object addr,
+        object port,
+        _WrappedTransport transport,
+        tuple v6_flow_scope
+    )
