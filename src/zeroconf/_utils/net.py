@@ -150,15 +150,15 @@ def normalize_interface_choice(
     elif choice is InterfaceChoice.All:
         if ip_version != IPVersion.V4Only:
             result.extend(
-                ip
-                for ip in get_all_addresses_v6()
-                if (ip_address := _cached_ip_addresses(ip[0])) and not ip_address.is_loopback
+                ip_tuple
+                for ip_tuple in get_all_addresses_v6()
+                if (ip_address := _cached_ip_addresses(ip_tuple[0])) and not ip_address.is_loopback
             )
         if ip_version != IPVersion.V6Only:
             result.extend(
                 ip
                 for ip in get_all_addresses()
-                if (ip_address := _cached_ip_addresses(ip[0])) and not ip_address.is_loopback
+                if (ip_address := _cached_ip_addresses(ip)) and not ip_address.is_loopback
             )
         if not result:
             raise RuntimeError(
