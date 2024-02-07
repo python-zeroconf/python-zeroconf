@@ -61,10 +61,6 @@ class IPVersion(enum.Enum):
 # utility functions
 
 
-def _is_v6_address(addr: bytes) -> bool:
-    return len(addr) == 16
-
-
 def _encode_address(address: str) -> bytes:
     is_ipv6 = ':' in address
     address_family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
