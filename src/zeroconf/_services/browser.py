@@ -105,7 +105,6 @@ heappush = heapq.heappush
 
 
 class _ScheduledPTRQuery:
-
     __slots__ = ('alias', 'name', 'ttl', 'cancelled', 'expire_time_millis', 'when_millis')
 
     def __init__(

@@ -71,7 +71,6 @@ if TYPE_CHECKING:
 
 
 class _AnswerStrategy:
-
     __slots__ = ("question", "strategy_type", "types", "services")
 
     def __init__(

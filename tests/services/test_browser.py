@@ -1161,7 +1161,6 @@ async def test_query_scheduler():
 
     # patch the zeroconf send so we can capture what is being sent
     with patch.object(zc, "async_send", send):
-
         query_scheduler.start(loop)
 
         original_now = loop.time()
@@ -1251,7 +1250,6 @@ async def test_query_scheduler_rescue_records():
 
     # patch the zeroconf send so we can capture what is being sent
     with patch.object(zc, "async_send", send):
-
         query_scheduler.start(loop)
 
         original_now = loop.time()

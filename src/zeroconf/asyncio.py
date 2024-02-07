@@ -162,6 +162,10 @@ class AsyncZeroconf:
             * `InterfaceChoice.All` is an alias for `InterfaceChoice.Default`
               on Python versions before 3.8.
 
+            * `InterfaceChoice.AllWithLoopback` is the same as `InterfaceChoice.All`
+               on POSIX systems, but includes the loopback interfaces. This likely
+               only works on macOS/BSD.
+
             Also listening on loopback (``::1``) doesn't work, use a real address.
         :param ip_version: IP versions to support. If `choice` is a list, the default is detected
             from it. Otherwise defaults to V4 only for backward compatibility.
