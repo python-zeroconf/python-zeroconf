@@ -152,7 +152,7 @@ def normalize_interface_choice(
             result.extend(
                 ip_tuple
                 for ip_tuple in get_all_addresses_v6()
-                if (ip_address := _cached_ip_addresses(ip_tuple[0])) and not ip_address.is_loopback
+                if (ip_address := _cached_ip_addresses(ip_tuple[0][0])) and not ip_address.is_loopback
             )
         if ip_version != IPVersion.V6Only:
             result.extend(
