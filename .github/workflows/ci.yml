@@ -59,6 +59,10 @@ jobs:
             python-version: "pypy-3.8"
           - os: windows-latest
             python-version: "pypy-3.9"
+          - os: macos-latest
+            python-version: "pypy-3.8"
+          - os: macos-latest
+            python-version: "pypy-3.9"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
