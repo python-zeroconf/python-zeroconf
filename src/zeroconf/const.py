@@ -156,8 +156,4 @@ _NONTCP_PROTOCOL_LOCAL_TRAILER = '._udp.local.'
 # https://datatracker.ietf.org/doc/html/rfc6763#section-9
 _SERVICE_TYPE_ENUMERATION_NAME = "_services._dns-sd._udp.local."
 
-try:
-    _IPPROTO_IPV6 = socket.IPPROTO_IPV6
-except AttributeError:
-    # Sigh: https://bugs.python.org/issue29515
-    _IPPROTO_IPV6 = 41
+_IPPROTO_IPV6 = socket.IPPROTO_IPV6
