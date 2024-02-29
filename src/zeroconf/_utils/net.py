@@ -22,7 +22,6 @@
 
 import enum
 import errno
-import ipaddress
 import socket
 import struct
 import sys
@@ -32,12 +31,14 @@ import ifaddr
 
 from .._logger import log
 from ..const import _IPPROTO_IPV6, _MDNS_ADDR, _MDNS_ADDR6, _MDNS_PORT
+from .ipaddress import _cached_ip_addresses
 
 
 @enum.unique
 class InterfaceChoice(enum.Enum):
     Default = 1
     All = 2
+    AllWithLoopback = 3
 
 
 InterfacesType = Union[Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
@@ -58,10 +59,6 @@ class IPVersion(enum.Enum):
 
 
 # utility functions
-
-
-def _is_v6_address(addr: bytes) -> bool:
-    return len(addr) == 16
 
 
 def _encode_address(address: str) -> bytes:
@@ -85,11 +82,11 @@ def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
 def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, int, int], int]:
     if '%' in ip:
         ip = ip[: ip.index('%')]  # Strip scope_id.
-    ipaddr = ipaddress.ip_address(ip)
+    ipaddr = _cached_ip_addresses(ip)
     for adapter in adapters:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
-            if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
+            if isinstance(adapter_ip.ip, tuple) and _cached_ip_addresses(adapter_ip.ip[0]) == ipaddr:
                 return (cast(Tuple[str, int, int], adapter_ip.ip), cast(int, adapter.index))
 
     raise RuntimeError('No adapter found for IP address %s' % ip)
@@ -122,7 +119,9 @@ def ip6_addresses_to_indexes(
     for iface in interfaces:
         if isinstance(iface, int):
             result.append((interface_index_to_ip6_address(adapters, iface), iface))
-        elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
+        elif (
+            isinstance(iface, str) and (ip_address := _cached_ip_addresses(iface)) and ip_address.version == 6
+        ):
             result.append(ip6_to_address_and_index(adapters, iface))
 
     return result
@@ -146,6 +145,23 @@ def normalize_interface_choice(
             result.append('0.0.0.0')
     elif choice is InterfaceChoice.All:
         if ip_version != IPVersion.V4Only:
+            result.extend(
+                ip_tuple
+                for ip_tuple in get_all_addresses_v6()
+                if (ip_address := _cached_ip_addresses(ip_tuple[0][0])) and not ip_address.is_loopback
+            )
+        if ip_version != IPVersion.V6Only:
+            result.extend(
+                ip
+                for ip in get_all_addresses()
+                if (ip_address := _cached_ip_addresses(ip)) and not ip_address.is_loopback
+            )
+        if not result:
+            raise RuntimeError(
+                'No interfaces to listen on, check that any interfaces have IP version %s' % ip_version
+            )
+    elif choice is InterfaceChoice.AllWithLoopback:
+        if ip_version != IPVersion.V4Only:
             result.extend(get_all_addresses_v6())
         if ip_version != IPVersion.V6Only:
             result.extend(get_all_addresses())
@@ -155,7 +171,11 @@ def normalize_interface_choice(
             )
     elif isinstance(choice, list):
         # First, take IPv4 addresses.
-        result = [i for i in choice if isinstance(i, str) and ipaddress.ip_address(i).version == 4]
+        result = [
+            i
+            for i in choice
+            if isinstance(i, str) and (ip_address := _cached_ip_addresses(i)) and ip_address.version == 4
+        ]
         # Unlike IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP requires interface indexes.
         result += ip6_addresses_to_indexes(choice)
     else:
@@ -406,10 +426,14 @@ def autodetect_ip_version(interfaces: InterfacesType) -> IPVersion:
     """Auto detect the IP version when it is not provided."""
     if isinstance(interfaces, list):
         has_v6 = any(
-            isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
+            isinstance(i, int)
+            or (isinstance(i, str) and (ip_address := _cached_ip_addresses(i)) and ip_address.version == 6)
             for i in interfaces
         )
-        has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
+        has_v4 = any(
+            isinstance(i, str) and (ip_address := _cached_ip_addresses(i)) and ip_address.version == 4
+            for i in interfaces
+        )
         if has_v4 and has_v6:
             return IPVersion.All
         if has_v6:

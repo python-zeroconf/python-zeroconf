@@ -33,7 +33,6 @@ IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 
 class ZeroconfIPv4Address(IPv4Address):
-
     __slots__ = ("_str", "_is_link_local", "_is_unspecified")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -59,7 +58,6 @@ class ZeroconfIPv4Address(IPv4Address):
 
 
 class ZeroconfIPv6Address(IPv6Address):
-
     __slots__ = ("_str", "_is_link_local", "_is_unspecified")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

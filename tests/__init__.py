@@ -99,7 +99,6 @@ def time_changed_millis(millis: Optional[float] = None) -> None:
         mock_seconds_into_future = loop_time
 
     with mock.patch("time.monotonic", return_value=mock_seconds_into_future):
-
         for task in list(loop._scheduled):  # type: ignore[attr-defined]
             if not isinstance(task, asyncio.TimerHandle):
                 continue
