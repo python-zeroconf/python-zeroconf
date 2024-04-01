@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.132.0 (2024-04-01)
+
+### Feature
+
+* Make async_get_service_info available on the Zeroconf object ([#1366](https://github.com/python-zeroconf/python-zeroconf/issues/1366)) ([`c4c2dee`](https://github.com/python-zeroconf/python-zeroconf/commit/c4c2deeb05279ddbb0eba1330c7ae58795fea001))
+* Drop python 3.7 support ([#1359](https://github.com/python-zeroconf/python-zeroconf/issues/1359)) ([`4877829`](https://github.com/python-zeroconf/python-zeroconf/commit/4877829e6442de5426db152d11827b1ba85dbf59))
+
+### Fix
+
+* Avoid including scope_id in IPv6Address object if its zero ([#1367](https://github.com/python-zeroconf/python-zeroconf/issues/1367)) ([`edc4a55`](https://github.com/python-zeroconf/python-zeroconf/commit/edc4a556819956c238a11332052000dcbcb07e3d))
+
 ## v0.131.0 (2023-12-19)
 
 ### Feature
