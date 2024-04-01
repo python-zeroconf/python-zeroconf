@@ -680,6 +680,10 @@ async def test_service_info_async_request() -> None:
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
 
+    aiosinfo = await aiozc.zeroconf.async_get_service_info(type_, registration_name)
+    assert aiosinfo is not None
+    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
+
     aiosinfos = await asyncio.gather(
         aiozc.async_get_service_info(type_, registration_name),
         aiozc.async_get_service_info(type_, registration_name2),
