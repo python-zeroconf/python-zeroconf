@@ -104,7 +104,7 @@ cached_ip_addresses = cached_ip_addresses_wrapper
 
 def get_ip_address_object_from_record(record: DNSAddress) -> Optional[Union[IPv4Address, IPv6Address]]:
     """Get the IP address object from the record."""
-    if IPADDRESS_SUPPORTS_SCOPE_ID and record.type == _TYPE_AAAA and record.scope_id is not None:
+    if IPADDRESS_SUPPORTS_SCOPE_ID and record.type == _TYPE_AAAA and record.scope_id:
         return ip_bytes_and_scope_to_address(record.address, record.scope_id)
     return cached_ip_addresses_wrapper(record.address)
 
