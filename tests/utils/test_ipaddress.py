@@ -2,6 +2,8 @@
 
 """Unit tests for zeroconf._utils.ipaddress."""
 
+import sys
+
 import pytest
 
 from zeroconf import const
@@ -40,7 +42,7 @@ def test_cached_ip_addresses_wrapper():
     assert ipv6.is_unspecified is True
 
 
-@pytest.mark.skipif(not ipaddress.IPADDRESS_SUPPORTS_SCOPE_ID, reason='scope_id is not supported')
+@pytest.mark.skipif(sys.version_info < (3, 9, 0), reason='scope_id is not supported')
 def test_get_ip_address_object_from_record():
     """Test the get_ip_address_object_from_record."""
     # not link local
