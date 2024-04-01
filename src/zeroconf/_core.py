@@ -39,7 +39,11 @@ from ._logger import QuietLogger, log
 from ._protocol.outgoing import DNSOutgoing
 from ._services import ServiceListener
 from ._services.browser import ServiceBrowser
-from ._services.info import ServiceInfo, instance_name_from_service_info
+from ._services.info import (
+    AsyncServiceInfo,
+    ServiceInfo,
+    instance_name_from_service_info,
+)
 from ._services.registry import ServiceRegistry
 from ._transport import _WrappedTransport
 from ._updates import RecordUpdateListener
@@ -261,7 +265,13 @@ class Zeroconf(QuietLogger):
     ) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
-        which defaults to 3 seconds."""
+        which defaults to 3 seconds.
+
+        :param type_: fully qualified service type name
+        :param name: the name of the service
+        :param timeout: milliseconds to wait for a response
+        :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
+        """
         info = ServiceInfo(type_, name)
         if info.request(self, timeout, question_type):
             return info
@@ -359,6 +369,23 @@ class Zeroconf(QuietLogger):
         service."""
         self.registry.async_update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+
+    async def async_get_service_info(
+        self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
+    ) -> Optional[AsyncServiceInfo]:
+        """Returns network's service information for a particular
+        name and type, or None if no service matches by the timeout,
+        which defaults to 3 seconds.
+
+        :param type_: fully qualified service type name
+        :param name: the name of the service
+        :param timeout: milliseconds to wait for a response
+        :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
+        """
+        info = AsyncServiceInfo(type_, name)
+        if await info.async_request(self, timeout, question_type):
+            return info
+        return None
 
     async def _async_broadcast_service(
         self,
