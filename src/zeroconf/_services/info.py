@@ -770,6 +770,12 @@ class ServiceInfo(RecordUpdateListener):
         While it is not expected during normal operation,
         this function may raise EventLoopBlocked if the underlying
         call to `async_request` cannot be completed.
+
+        :param zc: Zeroconf instance
+        :param timeout: time in milliseconds to wait for a response
+        :param question_type: question type to ask
+        :param addr: address to send the request to
+        :param port: port to send the request to
         """
         assert zc.loop is not None and zc.loop.is_running()
         if zc.loop == get_running_loop():
@@ -803,6 +809,12 @@ class ServiceInfo(RecordUpdateListener):
         mDNS multicast address and port. This is useful for directing
         requests to a specific host that may be able to respond across
         subnets.
+
+        :param zc: Zeroconf instance
+        :param timeout: time in milliseconds to wait for a response
+        :param question_type: question type to ask
+        :param addr: address to send the request to
+        :param port: port to send the request to
         """
         if not zc.started:
             await zc.async_wait_for_start()
@@ -924,3 +936,7 @@ class ServiceInfo(RecordUpdateListener):
                 )
             ),
         )
+
+
+class AsyncServiceInfo(ServiceInfo):
+    """An async version of ServiceInfo."""

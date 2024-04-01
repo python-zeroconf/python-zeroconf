@@ -28,7 +28,7 @@ from ._core import Zeroconf
 from ._dns import DNSQuestionType
 from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
-from ._services.info import ServiceInfo
+from ._services.info import AsyncServiceInfo, ServiceInfo
 from ._services.types import ZeroconfServiceTypes
 from ._utils.net import InterfaceChoice, InterfacesType, IPVersion
 from .const import _BROWSER_TIME, _MDNS_PORT, _SERVICE_TYPE_ENUMERATION_NAME
@@ -39,10 +39,6 @@ __all__ = [
     "AsyncServiceBrowser",
     "AsyncZeroconfServiceTypes",
 ]
-
-
-class AsyncServiceInfo(ServiceInfo):
-    """An async version of ServiceInfo."""
 
 
 class AsyncServiceBrowser(_ServiceBrowserBase):
@@ -239,11 +235,14 @@ class AsyncZeroconf:
     ) -> Optional[AsyncServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
-        which defaults to 3 seconds."""
-        info = AsyncServiceInfo(type_, name)
-        if await info.async_request(self.zeroconf, timeout, question_type):
-            return info
-        return None
+        which defaults to 3 seconds.
+
+        :param type_: fully qualified service type name
+        :param name: the name of the service
+        :param timeout: milliseconds to wait for a response
+        :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
+        """
+        return await self.zeroconf.async_get_service_info(type_, name, timeout, question_type)
 
     async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
