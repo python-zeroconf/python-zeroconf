@@ -1762,3 +1762,77 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
     )
 
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_updates_iteration_safe():
+    """Ensure we can safely iterate over the async_updates."""
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc: Zeroconf = aiozc.zeroconf
+    updated = []
+    good_bye_answer = r.DNSPointer(
+        "myservicelow_tcp._tcp.local.",
+        const._TYPE_PTR,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        0,
+        'goodbye.local.',
+    )
+
+    class OtherListener(r.RecordUpdateListener):
+        """A RecordUpdateListener that does not implement update_records."""
+
+        def async_update_records(self, zc: 'Zeroconf', now: float, records: List[r.RecordUpdate]) -> None:
+            """Update multiple records in one shot."""
+            updated.extend(records)
+
+    other = OtherListener()
+
+    class ListenerThatAddsListener(r.RecordUpdateListener):
+        """A RecordUpdateListener that does not implement update_records."""
+
+        def async_update_records(self, zc: 'Zeroconf', now: float, records: List[r.RecordUpdate]) -> None:
+            """Update multiple records in one shot."""
+            updated.extend(records)
+            zc.async_add_listener(other, None)
+
+    zc.async_add_listener(ListenerThatAddsListener(), None)
+    await asyncio.sleep(0)  # flush out any call soons
+
+    # This should not raise RuntimeError: set changed size during iteration
+    zc.record_manager.async_updates(
+        now=current_time_millis(), records=[r.RecordUpdate(good_bye_answer, None)]
+    )
+
+    assert len(updated) == 1
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_updates_complete_iteration_safe():
+    """Ensure we can safely iterate over the async_updates_complete."""
+
+    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc: Zeroconf = aiozc.zeroconf
+
+    class OtherListener(r.RecordUpdateListener):
+        """A RecordUpdateListener that does not implement update_records."""
+
+        def async_update_records_complete(self) -> None:
+            """Update multiple records in one shot."""
+
+    other = OtherListener()
+
+    class ListenerThatAddsListener(r.RecordUpdateListener):
+        """A RecordUpdateListener that does not implement update_records."""
+
+        def async_update_records_complete(self) -> None:
+            """Update multiple records in one shot."""
+            zc.async_add_listener(other, None)
+
+    zc.async_add_listener(ListenerThatAddsListener(), None)
+    await asyncio.sleep(0)  # flush out any call soons
+
+    # This should not raise RuntimeError: set changed size during iteration
+    zc.record_manager.async_updates_complete(False)
+    await aiozc.async_close()
