@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.132.1 (2024-04-12)
+
+### Fix
+
+* Set change during iteration when dispatching listeners ([#1370](https://github.com/python-zeroconf/python-zeroconf/issues/1370)) ([`e9f8aa5`](https://github.com/python-zeroconf/python-zeroconf/commit/e9f8aa5741ae2d490c33a562b459f0af1014dbb0))
+
 ## v0.132.0 (2024-04-01)
 
 ### Feature
