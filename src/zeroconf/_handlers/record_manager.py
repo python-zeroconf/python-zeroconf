@@ -56,7 +56,7 @@ class RecordManager:
 
         This method will be run in the event loop.
         """
-        for listener in self.listeners:
+        for listener in self.listeners.copy():
             listener.async_update_records(self.zc, now, records)
 
     def async_updates_complete(self, notify: bool) -> None:
@@ -67,7 +67,7 @@ class RecordManager:
 
         This method will be run in the event loop.
         """
-        for listener in self.listeners:
+        for listener in self.listeners.copy():
             listener.async_update_records_complete()
         if notify:
             self.zc.async_notify_all()
