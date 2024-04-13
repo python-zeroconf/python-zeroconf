@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.132.2 (2024-04-13)
+
+### Fix
+
+* Update references to minimum-supported python version of 3.8 ([#1369](https://github.com/python-zeroconf/python-zeroconf/issues/1369)) ([`599524a`](https://github.com/python-zeroconf/python-zeroconf/commit/599524a5ce1e4c1731519dd89377c2a852e59935))
+* Bump cibuildwheel to fix wheel builds ([#1371](https://github.com/python-zeroconf/python-zeroconf/issues/1371)) ([`83e4ce3`](https://github.com/python-zeroconf/python-zeroconf/commit/83e4ce3e31ddd4ae9aec2f8c9d84d7a93f8be210))
+
 ## v0.132.1 (2024-04-12)
 
 ### Fix
