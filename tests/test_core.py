@@ -63,21 +63,29 @@ def threadsafe_query(
 
 class Framework(unittest.TestCase):
     def test_launch_and_close(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.AllWithLoopback)
+        rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All)
         rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
         rv.close()
 
     def test_launch_and_close_context_manager(self):
-        with r.Zeroconf(interfaces=r.InterfaceChoice.All) as rv:
+        with r.Zeroconf(interfaces=r.InterfaceChoice.AllWithLoopback) as rv:
             assert rv.done is False
         assert rv.done is True
 
-        with r.Zeroconf(interfaces=r.InterfaceChoice.Default) as rv:  # type: ignore[unreachable]
+        with r.Zeroconf(interfaces=r.InterfaceChoice.All) as rv:  # type: ignore[unreachable]
+            assert rv.done is False
+        assert rv.done is True
+
+        with r.Zeroconf(interfaces=r.InterfaceChoice.Default) as rv:
             assert rv.done is False
         assert rv.done is True
 
     def test_launch_and_close_unicast(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.AllWithLoopback, unicast=True)
+        rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, unicast=True)
         rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, unicast=True)
@@ -91,6 +99,8 @@ class Framework(unittest.TestCase):
     @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v4_v6(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.AllWithLoopback, ip_version=r.IPVersion.All)
+        rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
         rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
@@ -99,6 +109,8 @@ class Framework(unittest.TestCase):
     @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
     @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
     def test_launch_and_close_v6_only(self):
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.AllWithLoopback, ip_version=r.IPVersion.V6Only)
+        rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
         rv.close()
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)

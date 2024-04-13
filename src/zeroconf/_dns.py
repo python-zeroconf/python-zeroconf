@@ -25,7 +25,6 @@ import socket
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union, cast
 
 from ._exceptions import AbstractMethodException
-from ._utils.net import _is_v6_address
 from ._utils.time import current_time_millis
 from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
 
@@ -275,9 +274,7 @@ class DNSAddress(DNSRecord):
         """String representation"""
         try:
             return self.to_string(
-                socket.inet_ntop(
-                    socket.AF_INET6 if _is_v6_address(self.address) else socket.AF_INET, self.address
-                )
+                socket.inet_ntop(socket.AF_INET6 if len(self.address) == 16 else socket.AF_INET, self.address)
             )
         except (ValueError, OSError):
             return self.to_string(str(self.address))

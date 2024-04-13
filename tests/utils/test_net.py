@@ -68,12 +68,13 @@ def test_ip6_addresses_to_indexes():
         assert netutils.ip6_addresses_to_indexes(interfaces_2) == [(('2001:db8::', 1, 1), 1)]
 
 
-def test_normalize_interface_choice_errors():
+@pytest.mark.parametrize("interface_choice", (r.InterfaceChoice.All, r.InterfaceChoice.AllWithLoopback))
+def test_normalize_interface_choice_errors(interface_choice: r.InterfaceChoice) -> None:
     """Test we generate exception on invalid input."""
     with patch("zeroconf._utils.net.get_all_addresses", return_value=[]), patch(
         "zeroconf._utils.net.get_all_addresses_v6", return_value=[]
     ), pytest.raises(RuntimeError):
-        netutils.normalize_interface_choice(r.InterfaceChoice.All)
+        netutils.normalize_interface_choice(interface_choice)
 
     with pytest.raises(TypeError):
         netutils.normalize_interface_choice("1.2.3.4")
