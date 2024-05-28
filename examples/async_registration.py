@@ -31,6 +31,7 @@ class AsyncRunner:
         background_tasks = await asyncio.gather(*tasks)
         await asyncio.gather(*background_tasks)
         await self.aiozc.async_close()
+        print("\nClosed")
 
 
 if __name__ == '__main__':
@@ -52,16 +53,22 @@ if __name__ == '__main__':
     else:
         ip_version = IPVersion.V4Only
 
+    desc = [{'dummy': 'abcd', 'thread-test': 'a49'},
+            {'a': '2', 'thread-test': 'b50_test'},
+            {'a_dummy': '42', 'thread-test': ''},
+            {'thread-test': '1', 'ignorethis': 'thread-test='},
+            {'a88': 'thread-', 'THREAD-TEST': 'C51', 'ignorethis': 'thread-test'},]
+
     infos = []
-    for i in range(250):
+    for i in range(1,6):
         infos.append(
             AsyncServiceInfo(
-                "_http._tcp.local.",
-                f"Paul's Test Web Site {i}._http._tcp.local.",
-                addresses=[socket.inet_aton("127.0.0.1")],
-                port=80,
-                properties={'path': '/~paulsm/'},
-                server=f"zcdemohost-{i}.local.",
+                "_infra-test._udp.local.",
+                f"service-test-{i}._infra-test._udp.local.",
+                addresses=[socket.inet_pton(socket.AF_INET6,"fe80::6770:70:d014:327"), socket.inet_pton(socket.AF_INET6,"fd40:591:1750:102e:4f65:7721:b7e8:8419")],
+                port=55550+i,
+                properties=desc[i-1],
+                server="host-test-eth.local.",
             )
         )
 

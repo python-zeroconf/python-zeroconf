@@ -28,20 +28,24 @@ if __name__ == '__main__':
     else:
         ip_version = IPVersion.V4Only
 
-    desc = {'path': '/~paulsm/'}
+    desc = {'dummy': 'abcd', 'thread-test': 'a49'}
 
-    info = ServiceInfo(
-        "_http._tcp.local.",
-        "Paul's Test Web Site._http._tcp.local.",
-        addresses=[socket.inet_aton("127.0.0.1")],
-        port=80,
-        properties=desc,
-        server="ash-2.local.",
-    )
+    infos = []
+    for i in range(1,6):
+        infos.append(
+            ServiceInfo(
+                "service-test-1._infra-test._udp.local.",
+                f"service-test-{1}._infra-test._udp.local.",
+                addresses=[socket.inet_pton(socket.AF_INET6,"fe80::6770:70:d014:327"), socket.inet_pton(socket.AF_INET6,"fd40:591:1750:102e:4f65:7721:b7e8:8419")],
+                port=55550+i,
+                properties=desc,
+                server="host-test-eth.local.",
+            )
+        )
 
     zeroconf = Zeroconf(ip_version=ip_version)
     print("Registration of a service, press Ctrl-C to exit...")
-    zeroconf.register_service(info)
+    zeroconf.register_service(infos)
     try:
         while True:
             sleep(0.1)
@@ -49,5 +53,5 @@ if __name__ == '__main__':
         pass
     finally:
         print("Unregistering...")
-        zeroconf.unregister_service(info)
+        zeroconf.unregister_service(infos)
         zeroconf.close()
