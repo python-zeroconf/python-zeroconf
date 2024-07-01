@@ -1,4 +1,5 @@
 """Benchmark for AsyncZeroconf."""
+
 import asyncio
 import time
 

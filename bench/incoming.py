@@ -1,4 +1,5 @@
 """Benchmark for DNSIncoming."""
+
 import socket
 import timeit
 from typing import List

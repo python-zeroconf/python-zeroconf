@@ -74,7 +74,6 @@ LOGGING_DEBUG = logging.DEBUG
 
 
 class DNSOutgoing:
-
     """Object representation of an outgoing packet"""
 
     __slots__ = (

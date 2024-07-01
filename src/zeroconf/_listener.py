@@ -47,7 +47,6 @@ DEBUG_ENABLED = partial(log.isEnabledFor, logging.DEBUG)
 
 
 class AsyncListener:
-
     """A Listener is used by this module to listen on the multicast
     group to which DNS messages are sent, allowing the implementation
     to cache information as it arrives.
