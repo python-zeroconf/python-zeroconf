@@ -62,7 +62,6 @@ class DNSQuestionType(enum.Enum):
 
 
 class DNSEntry:
-
     """A DNS entry"""
 
     __slots__ = ('key', 'name', 'type', 'class_', 'unique')
@@ -107,7 +106,6 @@ class DNSEntry:
 
 
 class DNSQuestion(DNSEntry):
-
     """A DNS question entry"""
 
     __slots__ = ('_hash',)
@@ -157,7 +155,6 @@ class DNSQuestion(DNSEntry):
 
 
 class DNSRecord(DNSEntry):
-
     """A DNS record - like a DNS entry, but has a TTL"""
 
     __slots__ = ('ttl', 'created')
@@ -232,7 +229,6 @@ class DNSRecord(DNSEntry):
 
 
 class DNSAddress(DNSRecord):
-
     """A DNS address record"""
 
     __slots__ = ('_hash', 'address', 'scope_id')
@@ -284,7 +280,6 @@ class DNSAddress(DNSRecord):
 
 
 class DNSHinfo(DNSRecord):
-
     """A DNS host information record"""
 
     __slots__ = ('_hash', 'cpu', 'os')
@@ -320,7 +315,6 @@ class DNSHinfo(DNSRecord):
 
 
 class DNSPointer(DNSRecord):
-
     """A DNS pointer record"""
 
     __slots__ = ('_hash', 'alias', 'alias_key')
@@ -365,7 +359,6 @@ class DNSPointer(DNSRecord):
 
 
 class DNSText(DNSRecord):
-
     """A DNS text record"""
 
     __slots__ = ('_hash', 'text')
@@ -401,7 +394,6 @@ class DNSText(DNSRecord):
 
 
 class DNSService(DNSRecord):
-
     """A DNS service record"""
 
     __slots__ = ('_hash', 'priority', 'weight', 'port', 'server', 'server_key')
@@ -457,7 +449,6 @@ class DNSService(DNSRecord):
 
 
 class DNSNsec(DNSRecord):
-
     """A DNS NSEC record"""
 
     __slots__ = ('_hash', 'next_name', 'rdtypes')

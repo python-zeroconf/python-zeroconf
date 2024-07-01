@@ -1,4 +1,5 @@
 """Benchmark for DNSOutgoing."""
+
 import socket
 import timeit
 
