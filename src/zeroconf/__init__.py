@@ -114,12 +114,3 @@ __all__ = [
     "NotRunningException",
     "ServiceNameAlreadyRegistered",
 ]
-
-if sys.version_info <= (3, 6):  # pragma: no cover
-    raise ImportError(  # pragma: no cover
-        """
-Python version > 3.6 required for python-zeroconf.
-If you need support for Python 2 or Python 3.3-3.4 please use version 19.1
-If you need support for Python 3.5 please use version 0.28.0
-    """
-    )
