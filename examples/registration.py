@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Example of announcing a service (in this case, a fake HTTP server) """
+"""Example of announcing a service (in this case, a fake HTTP server)"""
 
 import argparse
 import logging
@@ -9,18 +9,18 @@ from time import sleep
 
 from zeroconf import IPVersion, ServiceInfo, Zeroconf
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument("--debug", action="store_true")
     version_group = parser.add_mutually_exclusive_group()
-    version_group.add_argument('--v6', action='store_true')
-    version_group.add_argument('--v6-only', action='store_true')
+    version_group.add_argument("--v6", action="store_true")
+    version_group.add_argument("--v6-only", action="store_true")
     args = parser.parse_args()
 
     if args.debug:
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        logging.getLogger("zeroconf").setLevel(logging.DEBUG)
     if args.v6:
         ip_version = IPVersion.All
     elif args.v6_only:
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     else:
         ip_version = IPVersion.V4Only
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
 
     info = ServiceInfo(
         "_http._tcp.local.",

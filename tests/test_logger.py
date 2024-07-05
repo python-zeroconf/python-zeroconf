@@ -11,16 +11,16 @@ from zeroconf._logger import QuietLogger, set_logger_level_if_unset
 
 def test_loading_logger():
     """Test loading logger does not change level unless it is unset."""
-    log = logging.getLogger('zeroconf')
+    log = logging.getLogger("zeroconf")
     log.setLevel(logging.CRITICAL)
     set_logger_level_if_unset()
-    log = logging.getLogger('zeroconf')
+    log = logging.getLogger("zeroconf")
     assert log.level == logging.CRITICAL
 
-    log = logging.getLogger('zeroconf')
+    log = logging.getLogger("zeroconf")
     log.setLevel(logging.NOTSET)
     set_logger_level_if_unset()
-    log = logging.getLogger('zeroconf')
+    log = logging.getLogger("zeroconf")
     assert log.level == logging.WARNING
 
 
@@ -73,12 +73,12 @@ def test_llog_exception_debug():
     with patch("zeroconf._logger.log.debug") as mock_log_debug:
         quiet_logger.log_exception_debug("the exception")
 
-    assert mock_log_debug.mock_calls == [call('the exception', exc_info=True)]
+    assert mock_log_debug.mock_calls == [call("the exception", exc_info=True)]
 
     with patch("zeroconf._logger.log.debug") as mock_log_debug:
         quiet_logger.log_exception_debug("the exception")
 
-    assert mock_log_debug.mock_calls == [call('the exception', exc_info=False)]
+    assert mock_log_debug.mock_calls == [call("the exception", exc_info=False)]
 
 
 def test_log_exception_once():

@@ -31,7 +31,10 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
         for info in infos:
             print("Info for %s" % (info.name))
             if info:
-                addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
+                addresses = [
+                    "%s:%d" % (addr, cast(int, info.port))
+                    for addr in info.parsed_addresses()
+                ]
                 print("  Addresses: %s" % ", ".join(addresses))
                 print("  Weight: %d, priority: %d" % (info.weight, info.priority))
                 print(f"  Server: {info.server}")
@@ -43,7 +46,7 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
                     print("  No properties")
             else:
                 print("  No info")
-            print('\n')
+            print("\n")
 
 
 class AsyncRunner:
@@ -57,7 +60,10 @@ class AsyncRunner:
         assert self.aiozc is not None
 
         def on_service_state_change(
-            zeroconf: Zeroconf, service_type: str, state_change: ServiceStateChange, name: str
+            zeroconf: Zeroconf,
+            service_type: str,
+            state_change: ServiceStateChange,
+            name: str,
         ) -> None:
             """Dummy handler."""
 
@@ -73,18 +79,18 @@ class AsyncRunner:
         await self.aiozc.async_close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument("--debug", action="store_true")
     version_group = parser.add_mutually_exclusive_group()
-    version_group.add_argument('--v6', action='store_true')
-    version_group.add_argument('--v6-only', action='store_true')
+    version_group.add_argument("--v6", action="store_true")
+    version_group.add_argument("--v6-only", action="store_true")
     args = parser.parse_args()
 
     if args.debug:
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        logging.getLogger("zeroconf").setLevel(logging.DEBUG)
     if args.v6:
         ip_version = IPVersion.All
     elif args.v6_only:

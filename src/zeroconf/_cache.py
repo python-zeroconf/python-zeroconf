@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, cast
@@ -119,7 +119,12 @@ class DNSCache:
 
         This function must be run in from event loop.
         """
-        expired = [record for records in self.cache.values() for record in records if record.is_expired(now)]
+        expired = [
+            record
+            for records in self.cache.values()
+            for record in records
+            if record.is_expired(now)
+        ]
         self.async_remove_records(expired)
         return expired
 
@@ -135,7 +140,9 @@ class DNSCache:
             return None
         return store.get(entry)
 
-    def async_all_by_details(self, name: _str, type_: _int, class_: _int) -> List[DNSRecord]:
+    def async_all_by_details(
+        self, name: _str, type_: _int, class_: _int
+    ) -> List[DNSRecord]:
         """Gets all matching entries by details.
 
         This function is not thread-safe and must be called from
@@ -181,7 +188,9 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_by_details(self, name: str, type_: _int, class_: _int) -> Optional[DNSRecord]:
+    def get_by_details(
+        self, name: str, type_: _int, class_: _int
+    ) -> Optional[DNSRecord]:
         """Gets the first matching entry by details. Returns None if no entries match.
 
         Calling this function is not recommended as it will only
@@ -202,13 +211,19 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_all_by_details(self, name: str, type_: _int, class_: _int) -> List[DNSRecord]:
+    def get_all_by_details(
+        self, name: str, type_: _int, class_: _int
+    ) -> List[DNSRecord]:
         """Gets all matching entries by details."""
         key = name.lower()
         records = self.cache.get(key)
         if records is None:
             return []
-        return [entry for entry in list(records) if type_ == entry.type and class_ == entry.class_]
+        return [
+            entry
+            for entry in list(records)
+            if type_ == entry.type and class_ == entry.class_
+        ]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
@@ -218,7 +233,9 @@ class DNSCache:
         """Returns a list of entries whose key matches the name."""
         return list(self.cache.get(name.lower(), []))
 
-    def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
+    def current_entry_with_name_and_alias(
+        self, name: str, alias: str
+    ) -> Optional[DNSRecord]:
         now = current_time_millis()
         for record in reversed(self.entries_with_name(name)):
             if (
@@ -234,7 +251,10 @@ class DNSCache:
         return list(self.cache)
 
     def async_mark_unique_records_older_than_1s_to_expire(
-        self, unique_types: Set[Tuple[_str, _int, _int]], answers: Iterable[DNSRecord], now: _float
+        self,
+        unique_types: Set[Tuple[_str, _int, _int]],
+        answers: Iterable[DNSRecord],
+        now: _float,
     ) -> None:
         # rfc6762#section-10.2 para 2
         # Since unique is set, all old records with that name, rrtype,

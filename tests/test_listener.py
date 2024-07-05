@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-""" Unit tests for zeroconf._listener """
+"""Unit tests for zeroconf._listener"""
 
 import logging
 import unittest
@@ -23,7 +23,7 @@ from zeroconf._protocol.incoming import DNSIncoming
 
 from . import QuestionHistoryWithoutSuppression
 
-log = logging.getLogger('zeroconf')
+log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
 
 
@@ -43,7 +43,7 @@ def test_guard_against_oversized_packets():
 
     These packets can quickly overwhelm the system.
     """
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc = Zeroconf(interfaces=["127.0.0.1"])
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
@@ -54,7 +54,7 @@ def test_guard_against_oversized_packets():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 500,
-                b'path=/~paulsm/',
+                b"path=/~paulsm/",
             ),
             0,
         )
@@ -77,7 +77,7 @@ def test_guard_against_oversized_packets():
         const._TYPE_TXT,
         const._CLASS_IN | const._CLASS_UNIQUE,
         500,
-        b'path=/~paulsm/',
+        b"path=/~paulsm/",
     )
 
     generated.add_answer_at_time(
@@ -91,10 +91,10 @@ def test_guard_against_oversized_packets():
     listener = _listener.AsyncListener(zc)
     listener.transport = unittest.mock.MagicMock()
 
-    listener.datagram_received(ok_packet, ('127.0.0.1', const._MDNS_PORT))
+    listener.datagram_received(ok_packet, ("127.0.0.1", const._MDNS_PORT))
     assert zc.cache.async_get_unique(okpacket_record) is not None
 
-    listener.datagram_received(over_sized_packet, ('127.0.0.1', const._MDNS_PORT))
+    listener.datagram_received(over_sized_packet, ("127.0.0.1", const._MDNS_PORT))
     assert (
         zc.cache.async_get_unique(
             r.DNSText(
@@ -102,15 +102,15 @@ def test_guard_against_oversized_packets():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 500,
-                b'path=/~paulsm/',
+                b"path=/~paulsm/",
             )
         )
         is None
     )
 
-    logging.getLogger('zeroconf').setLevel(logging.INFO)
+    logging.getLogger("zeroconf").setLevel(logging.INFO)
 
-    listener.datagram_received(over_sized_packet, ('::1', const._MDNS_PORT, 1, 1))
+    listener.datagram_received(over_sized_packet, ("::1", const._MDNS_PORT, 1, 1))
     assert (
         zc.cache.async_get_unique(
             r.DNSText(
@@ -118,7 +118,7 @@ def test_guard_against_oversized_packets():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 500,
-                b'path=/~paulsm/',
+                b"path=/~paulsm/",
             )
         )
         is None
@@ -131,9 +131,14 @@ def test_guard_against_duplicate_packets():
     """Ensure we do not process duplicate packets.
     These packets can quickly overwhelm the system.
     """
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc = Zeroconf(interfaces=["127.0.0.1"])
     zc.registry.async_add(
-        ServiceInfo("_http._tcp.local.", "Test._http._tcp.local.", server="Test._http._tcp.local.", port=4)
+        ServiceInfo(
+            "_http._tcp.local.",
+            "Test._http._tcp.local.",
+            server="Test._http._tcp.local.",
+            port=4,
+        )
     )
     zc.question_history = QuestionHistoryWithoutSuppression()
 
@@ -174,14 +179,22 @@ def test_guard_against_duplicate_packets():
         start_time = current_time_millis()
 
         listener._process_datagram_at_time(
-            False, len(packet_with_qm_question), start_time, packet_with_qm_question, addrs
+            False,
+            len(packet_with_qm_question),
+            start_time,
+            packet_with_qm_question,
+            addrs,
         )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the same packet again and handle_query_or_defer should not fire
         listener._process_datagram_at_time(
-            False, len(packet_with_qm_question), start_time, packet_with_qm_question, addrs
+            False,
+            len(packet_with_qm_question),
+            start_time,
+            packet_with_qm_question,
+            addrs,
         )
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
@@ -190,35 +203,55 @@ def test_guard_against_duplicate_packets():
         new_time = start_time + 1100
         # Now call with the same packet again and handle_query_or_defer should fire
         listener._process_datagram_at_time(
-            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+            False,
+            len(packet_with_qm_question),
+            new_time,
+            packet_with_qm_question,
+            addrs,
         )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the different packet and handle_query_or_defer should fire
         listener._process_datagram_at_time(
-            False, len(packet_with_qm_question2), new_time, packet_with_qm_question2, addrs
+            False,
+            len(packet_with_qm_question2),
+            new_time,
+            packet_with_qm_question2,
+            addrs,
         )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the different packet and handle_query_or_defer should fire
         listener._process_datagram_at_time(
-            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+            False,
+            len(packet_with_qm_question),
+            new_time,
+            packet_with_qm_question,
+            addrs,
         )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the different packet with qu question and handle_query_or_defer should fire
         listener._process_datagram_at_time(
-            False, len(packet_with_qu_question), new_time, packet_with_qu_question, addrs
+            False,
+            len(packet_with_qu_question),
+            new_time,
+            packet_with_qu_question,
+            addrs,
         )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call again with the same packet that has a qu question and handle_query_or_defer should fire
         listener._process_datagram_at_time(
-            False, len(packet_with_qu_question), new_time, packet_with_qu_question, addrs
+            False,
+            len(packet_with_qu_question),
+            new_time,
+            packet_with_qu_question,
+            addrs,
         )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
@@ -227,20 +260,30 @@ def test_guard_against_duplicate_packets():
 
         # Call with the QM packet again
         listener._process_datagram_at_time(
-            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+            False,
+            len(packet_with_qm_question),
+            new_time,
+            packet_with_qm_question,
+            addrs,
         )
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the same packet again and handle_query_or_defer should not fire
         listener._process_datagram_at_time(
-            False, len(packet_with_qm_question), new_time, packet_with_qm_question, addrs
+            False,
+            len(packet_with_qm_question),
+            new_time,
+            packet_with_qm_question,
+            addrs,
         )
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 
         # Now call with garbage
-        listener._process_datagram_at_time(False, len(b'garbage'), new_time, b'garbage', addrs)
+        listener._process_datagram_at_time(
+            False, len(b"garbage"), new_time, b"garbage", addrs
+        )
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 

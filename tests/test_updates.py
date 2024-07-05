@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-""" Unit tests for zeroconf._updates. """
+"""Unit tests for zeroconf._updates."""
 
 import logging
 import socket
@@ -15,7 +15,7 @@ from zeroconf._record_update import RecordUpdate
 from zeroconf._services.browser import ServiceBrowser
 from zeroconf._services.info import ServiceInfo
 
-log = logging.getLogger('zeroconf')
+log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
 
 
@@ -34,11 +34,15 @@ def test_legacy_record_update_listener():
     """Test a RecordUpdateListener that does not implement update_records."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc = Zeroconf(interfaces=["127.0.0.1"])
 
     with pytest.raises(RuntimeError):
         r.RecordUpdateListener().update_record(
-            zc, 0, r.DNSRecord('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
+            zc,
+            0,
+            r.DNSRecord(
+                "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL
+            ),
         )
 
     updates = []
@@ -46,7 +50,9 @@ def test_legacy_record_update_listener():
     class LegacyRecordUpdateListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def update_record(self, zc: 'Zeroconf', now: float, record: r.DNSRecord) -> None:
+        def update_record(
+            self, zc: "Zeroconf", now: float, record: r.DNSRecord
+        ) -> None:
             nonlocal updates
             updates.append(record)
 
@@ -65,11 +71,11 @@ def test_legacy_record_update_listener():
 
     info_service = ServiceInfo(
         type_,
-        f'{name}.{type_}',
+        f"{name}.{type_}",
         80,
         0,
         0,
-        {'path': '/~paulsm/'},
+        {"path": "/~paulsm/"},
         "ash-2.local.",
         addresses=[socket.inet_aton("10.0.1.2")],
     )
@@ -81,7 +87,15 @@ def test_legacy_record_update_listener():
     browser.cancel()
 
     assert len(updates)
-    assert len([isinstance(update, r.DNSPointer) and update.name == type_ for update in updates]) >= 1
+    assert (
+        len(
+            [
+                isinstance(update, r.DNSPointer) and update.name == type_
+                for update in updates
+            ]
+        )
+        >= 1
+    )
 
     zc.remove_listener(listener)
     # Removing a second time should not throw
@@ -92,8 +106,12 @@ def test_legacy_record_update_listener():
 
 def test_record_update_compat():
     """Test a RecordUpdate can fetch by index."""
-    new = r.DNSPointer('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 'new')
-    old = r.DNSPointer('irrelevant', const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 'old')
+    new = r.DNSPointer(
+        "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, "new"
+    )
+    old = r.DNSPointer(
+        "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, "old"
+    )
     update = RecordUpdate(new, old)
     assert update[0] == new
     assert update[1] == old

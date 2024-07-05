@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Example of browsing for a service.
+"""Example of browsing for a service.
 
 The default is HTTP and HAP; use --find to search for all available services in the network
 """
@@ -29,7 +29,10 @@ def on_service_state_change(
         print("Info from zeroconf.get_service_info: %r" % (info))
 
         if info:
-            addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
+            addresses = [
+                "%s:%d" % (addr, cast(int, info.port))
+                for addr in info.parsed_scoped_addresses()
+            ]
             print("  Addresses: %s" % ", ".join(addresses))
             print("  Weight: %d, priority: %d" % (info.weight, info.priority))
             print(f"  Server: {info.server}")
@@ -41,22 +44,24 @@ def on_service_state_change(
                 print("  No properties")
         else:
             print("  No info")
-        print('\n')
+        print("\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--find', action='store_true', help='Browse all available services')
+    parser.add_argument("--debug", action="store_true")
+    parser.add_argument(
+        "--find", action="store_true", help="Browse all available services"
+    )
     version_group = parser.add_mutually_exclusive_group()
-    version_group.add_argument('--v6-only', action='store_true')
-    version_group.add_argument('--v4-only', action='store_true')
+    version_group.add_argument("--v6-only", action="store_true")
+    version_group.add_argument("--v4-only", action="store_true")
     args = parser.parse_args()
 
     if args.debug:
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        logging.getLogger("zeroconf").setLevel(logging.DEBUG)
     if args.v6_only:
         ip_version = IPVersion.V6Only
     elif args.v4_only:
@@ -66,7 +71,12 @@ if __name__ == '__main__':
 
     zeroconf = Zeroconf(ip_version=ip_version)
 
-    services = ["_http._tcp.local.", "_hap._tcp.local.", "_esphomelib._tcp.local.", "_airplay._tcp.local."]
+    services = [
+        "_http._tcp.local.",
+        "_hap._tcp.local.",
+        "_esphomelib._tcp.local.",
+        "_airplay._tcp.local.",
+    ]
     if args.find:
         services = list(ZeroconfServiceTypes.find(zc=zeroconf))
 

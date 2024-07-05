@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zeroconf"
-version = "0.131.0"
+version = "0.132.2"
 description = "A pure python implementation of multicast DNS service discovery"
 authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Koston"]
 license = "LGPL"
@@ -16,11 +16,11 @@ classifiers=[
 	'Operating System :: POSIX :: Linux',
 	'Operating System :: MacOS :: MacOS X',
 	'Topic :: Software Development :: Libraries',
-	'Programming Language :: Python :: 3.7',
 	'Programming Language :: Python :: 3.8',
 	'Programming Language :: Python :: 3.9',
 	'Programming Language :: Python :: 3.10',
 	'Programming Language :: Python :: 3.11',
+	'Programming Language :: Python :: 3.12',
 	'Programming Language :: Python :: Implementation :: CPython',
 	'Programming Language :: Python :: Implementation :: PyPy',
 ]
@@ -130,7 +130,7 @@ mypy_path = "src/"
 no_implicit_optional = true
 show_error_codes = true
 warn_unreachable = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 exclude = [
     'docs/*',
     'bench/*',

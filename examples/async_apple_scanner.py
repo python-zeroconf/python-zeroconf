@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Scan for apple devices. """
+"""Scan for apple devices."""
 
 import argparse
 import asyncio
@@ -43,15 +43,21 @@ def async_on_service_state_change(
     device_name = f"{base_name}.{DEVICE_INFO_SERVICE}"
     asyncio.ensure_future(_async_show_service_info(zeroconf, service_type, name))
     # Also probe for device info
-    asyncio.ensure_future(_async_show_service_info(zeroconf, DEVICE_INFO_SERVICE, device_name))
+    asyncio.ensure_future(
+        _async_show_service_info(zeroconf, DEVICE_INFO_SERVICE, device_name)
+    )
 
 
-async def _async_show_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
+async def _async_show_service_info(
+    zeroconf: Zeroconf, service_type: str, name: str
+) -> None:
     info = AsyncServiceInfo(service_type, name)
     await info.async_request(zeroconf, 3000, question_type=DNSQuestionType.QU)
     print("Info from zeroconf.get_service_info: %r" % (info))
     if info:
-        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
+        addresses = [
+            "%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()
+        ]
         print("  Name: %s" % name)
         print("  Addresses: %s" % ", ".join(addresses))
         print("  Weight: %d, priority: %d" % (info.weight, info.priority))
@@ -64,7 +70,7 @@ async def _async_show_service_info(zeroconf: Zeroconf, service_type: str, name: 
             print("  No properties")
     else:
         print("  No info")
-    print('\n')
+    print("\n")
 
 
 class AsyncAppleScanner:
@@ -77,10 +83,17 @@ class AsyncAppleScanner:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)
         await self.aiozc.zeroconf.async_wait_for_start()
         print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % ALL_SERVICES)
-        kwargs = {'handlers': [async_on_service_state_change], 'question_type': DNSQuestionType.QU}
+        kwargs = {
+            "handlers": [async_on_service_state_change],
+            "question_type": DNSQuestionType.QU,
+        }
         if self.args.target:
             kwargs["addr"] = self.args.target
-        self.aiobrowser = AsyncServiceBrowser(self.aiozc.zeroconf, ALL_SERVICES, **kwargs)  # type: ignore
+        self.aiobrowser = AsyncServiceBrowser(
+            self.aiozc.zeroconf,
+            ALL_SERVICES,
+            **kwargs,  # type: ignore[arg-type]
+        )
         while True:
             await asyncio.sleep(1)
 
@@ -91,19 +104,19 @@ class AsyncAppleScanner:
         await self.aiozc.async_close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument("--debug", action="store_true")
     version_group = parser.add_mutually_exclusive_group()
-    version_group.add_argument('--target', help='Unicast target')
-    version_group.add_argument('--v6', action='store_true')
-    version_group.add_argument('--v6-only', action='store_true')
+    version_group.add_argument("--target", help="Unicast target")
+    version_group.add_argument("--v6", action="store_true")
+    version_group.add_argument("--v6-only", action="store_true")
     args = parser.parse_args()
 
     if args.debug:
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        logging.getLogger("zeroconf").setLevel(logging.DEBUG)
     if args.v6:
         ip_version = IPVersion.All
     elif args.v6_only:
