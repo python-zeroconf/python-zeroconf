@@ -20,8 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
-import sys
-
 from ._cache import DNSCache  # noqa # import needed for backwards compat
 from ._core import Zeroconf
 from ._dns import (  # noqa # import needed for backwards compat
