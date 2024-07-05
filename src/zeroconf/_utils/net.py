@@ -144,7 +144,9 @@ def ip6_addresses_to_indexes(
         if isinstance(iface, int):
             result.append((interface_index_to_ip6_address(adapters, iface), iface))
         elif (
-            isinstance(iface, str) and (ip_address := _cached_ip_addresses(iface)) and ip_address.version == 6
+            isinstance(iface, str)
+            and (ip_address := _cached_ip_addresses(iface))
+            and ip_address.version == 6
         ):
             result.append(ip6_to_address_and_index(adapters, iface))
 
@@ -172,17 +174,20 @@ def normalize_interface_choice(
             result.extend(
                 ip_tuple
                 for ip_tuple in get_all_addresses_v6()
-                if (ip_address := _cached_ip_addresses(ip_tuple[0][0])) and not ip_address.is_loopback
+                if (ip_address := _cached_ip_addresses(ip_tuple[0][0]))
+                and not ip_address.is_loopback
             )
         if ip_version != IPVersion.V6Only:
             result.extend(
                 ip
                 for ip in get_all_addresses()
-                if (ip_address := _cached_ip_addresses(ip)) and not ip_address.is_loopback
+                if (ip_address := _cached_ip_addresses(ip))
+                and not ip_address.is_loopback
             )
         if not result:
             raise RuntimeError(
-                'No interfaces to listen on, check that any interfaces have IP version %s' % ip_version
+                "No interfaces to listen on, check that any interfaces have IP version %s"
+                % ip_version
             )
     elif choice is InterfaceChoice.AllWithLoopback:
         if ip_version != IPVersion.V4Only:

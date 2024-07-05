@@ -85,7 +85,9 @@ def test_ip6_addresses_to_indexes():
         ]
 
 
-@pytest.mark.parametrize("interface_choice", (r.InterfaceChoice.All, r.InterfaceChoice.AllWithLoopback))
+@pytest.mark.parametrize(
+    "interface_choice", (r.InterfaceChoice.All, r.InterfaceChoice.AllWithLoopback)
+)
 def test_normalize_interface_choice_errors(interface_choice: r.InterfaceChoice) -> None:
     """Test we generate exception on invalid input."""
     with patch("zeroconf._utils.net.get_all_addresses", return_value=[]), patch(
