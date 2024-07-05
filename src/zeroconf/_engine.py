@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 import asyncio
@@ -45,20 +45,20 @@ class AsyncEngine:
     """An engine wraps sockets in the event loop."""
 
     __slots__ = (
-        'loop',
-        'zc',
-        'protocols',
-        'readers',
-        'senders',
-        'running_event',
-        '_listen_socket',
-        '_respond_sockets',
-        '_cleanup_timer',
+        "loop",
+        "zc",
+        "protocols",
+        "readers",
+        "senders",
+        "running_event",
+        "_listen_socket",
+        "_respond_sockets",
+        "_cleanup_timer",
     )
 
     def __init__(
         self,
-        zeroconf: 'Zeroconf',
+        zeroconf: "Zeroconf",
         listen_socket: Optional[socket.socket],
         respond_sockets: List[socket.socket],
     ) -> None:
@@ -72,7 +72,11 @@ class AsyncEngine:
         self._respond_sockets = respond_sockets
         self._cleanup_timer: Optional[asyncio.TimerHandle] = None
 
-    def setup(self, loop: asyncio.AbstractEventLoop, loop_thread_ready: Optional[threading.Event]) -> None:
+    def setup(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        loop_thread_ready: Optional[threading.Event],
+    ) -> None:
         """Set up the instance."""
         self.loop = loop
         self.running_event = asyncio.Event()
@@ -102,19 +106,28 @@ class AsyncEngine:
 
         for s in reader_sockets:
             transport, protocol = await loop.create_datagram_endpoint(
-                lambda: AsyncListener(self.zc), sock=s  # type: ignore[arg-type, return-value]
+                lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
+                sock=s,
             )
             self.protocols.append(cast(AsyncListener, protocol))
-            self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
+            self.readers.append(
+                make_wrapped_transport(cast(asyncio.DatagramTransport, transport))
+            )
             if s in sender_sockets:
-                self.senders.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
+                self.senders.append(
+                    make_wrapped_transport(cast(asyncio.DatagramTransport, transport))
+                )
 
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
         now = current_time_millis()
         self.zc.question_history.async_expire(now)
         self.zc.record_manager.async_updates(
-            now, [RecordUpdate(record, record) for record in self.zc.cache.async_expire(now)]
+            now,
+            [
+                RecordUpdate(record, record)
+                for record in self.zc.cache.async_expire(now)
+            ],
         )
         self.zc.record_manager.async_updates_complete(False)
         self._async_schedule_next_cache_cleanup()
@@ -123,7 +136,9 @@ class AsyncEngine:
         """Schedule the next cache cleanup."""
         loop = self.loop
         assert loop is not None
-        self._cleanup_timer = loop.call_at(loop.time() + _CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
+        self._cleanup_timer = loop.call_at(
+            loop.time() + _CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup
+        )
 
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""

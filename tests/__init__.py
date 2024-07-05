@@ -1,24 +1,25 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
+
 import asyncio
 import socket
 import time
@@ -35,7 +36,9 @@ _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
-    def suppresses(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> bool:
+    def suppresses(
+        self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]
+    ) -> bool:
         return False
 
 
@@ -70,7 +73,7 @@ def has_working_ipv6():
     sock = None
     try:
         sock = socket.socket(socket.AF_INET6)
-        sock.bind(('::1', 0))
+        sock.bind(("::1", 0))
     except Exception:
         return False
     finally:
@@ -99,7 +102,6 @@ def time_changed_millis(millis: Optional[float] = None) -> None:
         mock_seconds_into_future = loop_time
 
     with mock.patch("time.monotonic", return_value=mock_seconds_into_future):
-
         for task in list(loop._scheduled):  # type: ignore[attr-defined]
             if not isinstance(task, asyncio.TimerHandle):
                 continue

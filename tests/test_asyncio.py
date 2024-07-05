@@ -50,7 +50,7 @@ from . import (
     time_changed_millis,
 )
 
-log = logging.getLogger('zeroconf')
+log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
 
 
@@ -83,14 +83,14 @@ def verify_threads_ended():
 @pytest.mark.asyncio
 async def test_async_basic_usage() -> None:
     """Test we can create and close the instance."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.async_close()
 
 
 @pytest.mark.asyncio
 async def test_async_close_twice() -> None:
     """Test we can close twice."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.async_close()
     await aiozc.async_close()
 
@@ -98,7 +98,7 @@ async def test_async_close_twice() -> None:
 @pytest.mark.asyncio
 async def test_async_with_sync_passed_in() -> None:
     """Test we can create and close the instance when passing in a sync Zeroconf."""
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc = Zeroconf(interfaces=["127.0.0.1"])
     aiozc = AsyncZeroconf(zc=zc)
     assert aiozc.zeroconf is zc
     await aiozc.async_close()
@@ -107,7 +107,7 @@ async def test_async_with_sync_passed_in() -> None:
 @pytest.mark.asyncio
 async def test_async_with_sync_passed_in_closed_in_async() -> None:
     """Test caller closes the sync version in async."""
-    zc = Zeroconf(interfaces=['127.0.0.1'])
+    zc = Zeroconf(interfaces=["127.0.0.1"])
     aiozc = AsyncZeroconf(zc=zc)
     assert aiozc.zeroconf is zc
     zc.close()
@@ -119,8 +119,13 @@ async def test_sync_within_event_loop_executor() -> None:
     """Test sync version still works from an executor within an event loop."""
 
     def sync_code():
-        zc = Zeroconf(interfaces=['127.0.0.1'])
-        assert zc.get_service_info("_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10) is None
+        zc = Zeroconf(interfaces=["127.0.0.1"])
+        assert (
+            zc.get_service_info(
+                "_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10
+            )
+            is None
+        )
         zc.close()
 
     await asyncio.get_event_loop().run_in_executor(None, sync_code)
@@ -129,7 +134,7 @@ async def test_sync_within_event_loop_executor() -> None:
 @pytest.mark.asyncio
 async def test_async_service_registration() -> None:
     """Test registering services broadcasts the registration by default."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -150,7 +155,7 @@ async def test_async_service_registration() -> None:
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -186,10 +191,10 @@ async def test_async_service_registration() -> None:
     await aiozc.async_close()
 
     assert calls == [
-        ('add', type_, registration_name),
-        ('update', type_, registration_name),
-        ('update', type_, registration_name),
-        ('remove', type_, registration_name),
+        ("add", type_, registration_name),
+        ("update", type_, registration_name),
+        ("update", type_, registration_name),
+        ("remove", type_, registration_name),
     ]
 
 
@@ -200,7 +205,7 @@ async def test_async_service_registration_with_server_missing() -> None:
     For backwards compatibility, the server should be set to the
     name that was passed in.
     """
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -221,7 +226,7 @@ async def test_async_service_registration_with_server_missing() -> None:
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -254,16 +259,16 @@ async def test_async_service_registration_with_server_missing() -> None:
     await aiozc.async_close()
 
     assert calls == [
-        ('add', type_, registration_name),
-        ('update', type_, registration_name),
-        ('remove', type_, registration_name),
+        ("add", type_, registration_name),
+        ("update", type_, registration_name),
+        ("remove", type_, registration_name),
     ]
 
 
 @pytest.mark.asyncio
 async def test_async_service_registration_same_server_different_ports() -> None:
     """Test registering services with the same server with different srv records."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "xxxyyy2"
@@ -287,7 +292,7 @@ async def test_async_service_registration_same_server_different_ports() -> None:
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -320,17 +325,17 @@ async def test_async_service_registration_same_server_different_ports() -> None:
     assert info2.dns_service() in entries
     await aiozc.async_close()
     assert calls == [
-        ('add', type_, registration_name),
-        ('add', type_, registration_name2),
-        ('remove', type_, registration_name),
-        ('remove', type_, registration_name2),
+        ("add", type_, registration_name),
+        ("add", type_, registration_name2),
+        ("remove", type_, registration_name),
+        ("remove", type_, registration_name2),
     ]
 
 
 @pytest.mark.asyncio
 async def test_async_service_registration_same_server_same_ports() -> None:
     """Test registering services with the same server with the exact same srv record."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "xxxyyy2"
@@ -354,7 +359,7 @@ async def test_async_service_registration_same_server_same_ports() -> None:
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -387,22 +392,22 @@ async def test_async_service_registration_same_server_same_ports() -> None:
     assert info2.dns_service() in entries
     await aiozc.async_close()
     assert calls == [
-        ('add', type_, registration_name),
-        ('add', type_, registration_name2),
-        ('remove', type_, registration_name),
-        ('remove', type_, registration_name2),
+        ("add", type_, registration_name),
+        ("add", type_, registration_name2),
+        ("remove", type_, registration_name),
+        ("remove", type_, registration_name2),
     ]
 
 
 @pytest.mark.asyncio
 async def test_async_service_registration_name_conflict() -> None:
     """Test registering services throws on name conflict."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc2-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -445,12 +450,12 @@ async def test_async_service_registration_name_conflict() -> None:
 @pytest.mark.asyncio
 async def test_async_service_registration_name_does_not_match_type() -> None:
     """Test registering services throws when the name does not match the type."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc3-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -471,13 +476,13 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
 @pytest.mark.asyncio
 async def test_async_service_registration_name_strict_check() -> None:
     """Test registering services throws when the name does not comply."""
-    zc = Zeroconf(interfaces=['127.0.0.1'])
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_ibisip_http._tcp.local."
     name = "CustomerInformationService-F4D4895E9EEB"
     registration_name = f"{name}.{type_}"
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -507,7 +512,7 @@ async def test_async_service_registration_name_strict_check() -> None:
 async def test_async_tasks() -> None:
     """Test awaiting broadcast tasks"""
 
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc4-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -527,7 +532,7 @@ async def test_async_tasks() -> None:
     listener = MyListener()
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -563,9 +568,9 @@ async def test_async_tasks() -> None:
     await aiozc.async_close()
 
     assert calls == [
-        ('add', type_, registration_name),
-        ('update', type_, registration_name),
-        ('remove', type_, registration_name),
+        ("add", type_, registration_name),
+        ("update", type_, registration_name),
+        ("remove", type_, registration_name),
     ]
 
 
@@ -573,12 +578,12 @@ async def test_async_tasks() -> None:
 async def test_async_wait_unblocks_on_update() -> None:
     """Test async_wait will unblock on update."""
 
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc4-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -608,10 +613,10 @@ async def test_async_wait_unblocks_on_update() -> None:
 @pytest.mark.asyncio
 async def test_service_info_async_request() -> None:
     """Test registering services broadcasts and query with AsyncServceInfo.async_request."""
-    if not has_working_ipv6() or os.environ.get('SKIP_IPV6'):
-        pytest.skip('Requires IPv6')
+    if not has_working_ipv6() or os.environ.get("SKIP_IPV6"):
+        pytest.skip("Requires IPv6")
 
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "abc"
@@ -620,11 +625,15 @@ async def test_service_info_async_request() -> None:
 
     # Start a tasks BEFORE the registration that will keep trying
     # and see the registration a bit later
-    get_service_info_task1 = asyncio.ensure_future(aiozc.async_get_service_info(type_, registration_name))
+    get_service_info_task1 = asyncio.ensure_future(
+        aiozc.async_get_service_info(type_, registration_name)
+    )
     await asyncio.sleep(_LISTENER_TIME / 1000 / 2)
-    get_service_info_task2 = asyncio.ensure_future(aiozc.async_get_service_info(type_, registration_name))
+    get_service_info_task2 = asyncio.ensure_future(
+        aiozc.async_get_service_info(type_, registration_name)
+    )
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -670,7 +679,10 @@ async def test_service_info_async_request() -> None:
         0,
         desc,
         "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3"), socket.inet_pton(socket.AF_INET6, "6001:db8::1")],
+        addresses=[
+            socket.inet_aton("10.0.1.3"),
+            socket.inet_pton(socket.AF_INET6, "6001:db8::1"),
+        ],
     )
 
     task = await aiozc.async_update_service(new_info)
@@ -714,7 +726,7 @@ async def test_service_info_async_request() -> None:
 @pytest.mark.asyncio
 async def test_async_service_browser() -> None:
     """Test AsyncServiceBrowser."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test9-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -734,7 +746,7 @@ async def test_async_service_browser() -> None:
     listener = MyListener()
     await aiozc.async_add_service_listener(type_, listener)
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -765,9 +777,9 @@ async def test_async_service_browser() -> None:
     await aiozc.async_close()
 
     assert calls == [
-        ('add', type_, registration_name),
-        ('update', type_, registration_name),
-        ('remove', type_, registration_name),
+        ("add", type_, registration_name),
+        ("update", type_, registration_name),
+        ("remove", type_, registration_name),
     ]
 
 
@@ -778,14 +790,14 @@ async def test_async_context_manager() -> None:
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    async with AsyncZeroconf(interfaces=['127.0.0.1']) as aiozc:
+    async with AsyncZeroconf(interfaces=["127.0.0.1"]) as aiozc:
         info = ServiceInfo(
             type_,
             registration_name,
             80,
             0,
             0,
-            {'path': '/~paulsm/'},
+            {"path": "/~paulsm/"},
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
@@ -800,7 +812,7 @@ async def test_service_browser_cancel_async_context_manager():
     """Test we can cancel an AsyncServiceBrowser with it being used as an async context manager."""
 
     # instantiate a zeroconf instance
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_hap._tcp.local."
 
@@ -824,14 +836,14 @@ async def test_service_browser_cancel_async_context_manager():
 @pytest.mark.asyncio
 async def test_async_unregister_all_services() -> None:
     """Test unregistering all services."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "abc"
     registration_name = f"{name}.{type_}"
     registration_name2 = f"{name2}.{type_}"
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -886,8 +898,8 @@ async def test_async_zeroconf_service_types():
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
-    desc = {'path': '/~paulsm/'}
+    zeroconf_registrar = AsyncZeroconf(interfaces=["127.0.0.1"])
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -904,10 +916,14 @@ async def test_async_zeroconf_service_types():
     await asyncio.sleep(0.2)
     _clear_cache(zeroconf_registrar.zeroconf)
     try:
-        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=['127.0.0.1'], timeout=2)
+        service_types = await AsyncZeroconfServiceTypes.async_find(
+            interfaces=["127.0.0.1"], timeout=2
+        )
         assert type_ in service_types
         _clear_cache(zeroconf_registrar.zeroconf)
-        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=2)
+        service_types = await AsyncZeroconfServiceTypes.async_find(
+            aiozc=zeroconf_registrar, timeout=2
+        )
         assert type_ in service_types
 
     finally:
@@ -917,9 +933,11 @@ async def test_async_zeroconf_service_types():
 @pytest.mark.asyncio
 async def test_guard_against_running_serviceinfo_request_event_loop() -> None:
     """Test that running ServiceInfo.request from the event loop throws."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
 
-    service_info = AsyncServiceInfo("_hap._tcp.local.", "doesnotmatter._hap._tcp.local.")
+    service_info = AsyncServiceInfo(
+        "_hap._tcp.local.", "doesnotmatter._hap._tcp.local."
+    )
     with pytest.raises(RuntimeError):
         service_info.request(aiozc.zeroconf, 3000)
     await aiozc.async_close()
@@ -930,7 +948,7 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     """Test that the ServiceBrowser will generate Add events with the existing cache when starting."""
 
     # instantiate a zeroconf instance
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_hap._tcp.local."
     registration_name = "xxxyyy.%s" % type_
@@ -954,10 +972,12 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
 
     listener = MyServiceListener()
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
+    )
     zc.cache.async_add_records(
         [info.dns_pointer(), info.dns_service(), *info.dns_addresses(), info.dns_text()]
     )
@@ -967,7 +987,7 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     await asyncio.sleep(0)
 
     assert callbacks == [
-        ('add', type_, registration_name),
+        ("add", type_, registration_name),
     ]
     await browser.async_cancel()
 
@@ -991,7 +1011,7 @@ async def test_integration():
             elif state_change is ServiceStateChange.Removed:
                 service_removed.set()
 
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zeroconf_browser = aiozc.zeroconf
     zeroconf_browser.question_history = QuestionHistoryWithoutSuppression()
     await zeroconf_browser.async_wait_for_start()
@@ -1023,7 +1043,7 @@ async def test_integration():
 
     assert len(zeroconf_browser.engine.protocols) == 2
 
-    aio_zeroconf_registrar = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aio_zeroconf_registrar = AsyncZeroconf(interfaces=["127.0.0.1"])
     zeroconf_registrar = aio_zeroconf_registrar.zeroconf
     await aio_zeroconf_registrar.zeroconf.async_wait_for_start()
 
@@ -1033,14 +1053,16 @@ async def test_integration():
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
-        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
+        browser = AsyncServiceBrowser(
+            zeroconf_browser, type_, [on_service_state_change]
+        )
         info = ServiceInfo(
             type_,
             registration_name,
             80,
             0,
             0,
-            {'path': '/~paulsm/'},
+            {"path": "/~paulsm/"},
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
@@ -1126,15 +1148,22 @@ async def test_integration():
 async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
     """Verify the service info first question is QU and subsequent ones are QM questions."""
     type_ = "_quservice._tcp.local."
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zeroconf_info = aiozc.zeroconf
 
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
     )
 
     zeroconf_info.registry.async_add(info)
@@ -1174,7 +1203,7 @@ async def test_service_browser_ignores_unrelated_updates():
     """Test that the ServiceBrowser ignores unrelated updates."""
 
     # instantiate a zeroconf instance
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_veryuniqueone._tcp.local."
     registration_name = "xxxyyy.%s" % type_
@@ -1198,10 +1227,12 @@ async def test_service_browser_ignores_unrelated_updates():
 
     listener = MyServiceListener()
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
+    )
     zc.cache.async_add_records(
         [
             info.dns_pointer(),
@@ -1216,7 +1247,7 @@ async def test_service_browser_ignores_unrelated_updates():
                 0,
                 0,
                 81,
-                'unrelated.local.',
+                "unrelated.local.",
             ),
         ]
     )
@@ -1235,7 +1266,13 @@ async def test_service_browser_ignores_unrelated_updates():
         0,
     )
     generated.add_answer_at_time(
-        DNSAddress("unrelated.local.", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"1234"),
+        DNSAddress(
+            "unrelated.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            const._DNS_HOST_TTL,
+            b"1234",
+        ),
         0,
     )
     generated.add_answer_at_time(
@@ -1255,7 +1292,7 @@ async def test_service_browser_ignores_unrelated_updates():
     await asyncio.sleep(0)
 
     assert callbacks == [
-        ('add', type_, registration_name),
+        ("add", type_, registration_name),
     ]
     await aiozc.async_close()
 
@@ -1263,10 +1300,15 @@ async def test_service_browser_ignores_unrelated_updates():
 @pytest.mark.asyncio
 async def test_async_request_timeout():
     """Test that the timeout does not throw an exception and finishes close to the actual timeout."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
     start_time = current_time_millis()
-    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.") is None
+    assert (
+        await aiozc.async_get_service_info(
+            "_notfound.local.", "notthere._notfound.local."
+        )
+        is None
+    )
     end_time = current_time_millis()
     await aiozc.async_close()
     # 3000ms for the default timeout
@@ -1277,25 +1319,34 @@ async def test_async_request_timeout():
 @pytest.mark.asyncio
 async def test_async_request_non_running_instance():
     """Test that the async_request throws when zeroconf is not running."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.async_close()
     with pytest.raises(NotRunningException):
-        await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.")
+        await aiozc.async_get_service_info(
+            "_notfound.local.", "notthere._notfound.local."
+        )
 
 
 @pytest.mark.asyncio
 async def test_legacy_unicast_response(run_isolated):
     """Verify legacy unicast responses include questions and correct id."""
     type_ = "_mservice._tcp.local."
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
 
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {'path': '/~paulsm/'}
+    desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        desc,
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
     )
 
     aiozc.zeroconf.registry.async_add(info)
@@ -1305,11 +1356,11 @@ async def test_legacy_unicast_response(run_isolated):
     protocol = aiozc.zeroconf.engine.protocols[0]
 
     with patch.object(aiozc.zeroconf, "async_send") as send_mock:
-        protocol.datagram_received(query.packets()[0], ('127.0.0.1', 6503))
+        protocol.datagram_received(query.packets()[0], ("127.0.0.1", 6503))
 
     calls = send_mock.mock_calls
     # Verify the response is sent back on the socket it was recieved from
-    assert calls == [call(ANY, '127.0.0.1', 6503, (), protocol.transport)]
+    assert calls == [call(ANY, "127.0.0.1", 6503, (), protocol.transport)]
     outgoing = send_mock.call_args[0][0]
     assert isinstance(outgoing, DNSOutgoing)
     assert outgoing.questions == [question]
@@ -1320,7 +1371,7 @@ async def test_legacy_unicast_response(run_isolated):
 @pytest.mark.asyncio
 async def test_update_with_uppercase_names(run_isolated):
     """Test an ip update from a shelly which uses uppercase names."""
-    aiozc = AsyncZeroconf(interfaces=['127.0.0.1'])
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
 
     callbacks = []
@@ -1342,15 +1393,15 @@ async def test_update_with_uppercase_names(run_isolated):
     browser = AsyncServiceBrowser(aiozc.zeroconf, "_http._tcp.local.", None, listener)
     protocol = aiozc.zeroconf.engine.protocols[0]
 
-    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbc=\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'  # noqa: E501
-    protocol.datagram_received(packet, ('127.0.0.1', 6503))
+    packet = b"\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbc=\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@"  # noqa: E501
+    protocol.datagram_received(packet, ("127.0.0.1", 6503))
     await asyncio.sleep(0)
-    packet = b'\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00\'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbcA\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@'  # noqa: E501
-    protocol.datagram_received(packet, ('127.0.0.1', 6503))
+    packet = b"\x00\x00\x84\x80\x00\x00\x00\n\x00\x00\x00\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x14\x07_shelly\x04_tcp\x05local\x00\t_services\x07_dns-sd\x04_udp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x12\x05_http\x04_tcp\x05local\x00\x07_shelly\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00.\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19shellypro4pm-94b97ec07650\x07_shelly\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\"\napp=Pro4PM\x10ver=0.10.0-beta5\x05gen=2\x05_http\x04_tcp\x05local\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00,\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00!\x80\x01\x00\x00\x00x\x00'\x00\x00\x00\x00\x00P\x19ShellyPro4PM-94B97EC07650\x05local\x00\x19ShellyPro4PM-94B97EC07650\x05_http\x04_tcp\x05local\x00\x00\x10\x80\x01\x00\x00\x00x\x00\x06\x05gen=2\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01\x80\x01\x00\x00\x00x\x00\x04\xc0\xa8\xbcA\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00/\x80\x01\x00\x00\x00x\x00$\x19ShellyPro4PM-94B97EC07650\x05local\x00\x00\x01@"  # noqa: E501
+    protocol.datagram_received(packet, ("127.0.0.1", 6503))
     await browser.async_cancel()
     await aiozc.async_close()
 
     assert callbacks == [
-        ('add', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
-        ('update', '_http._tcp.local.', 'ShellyPro4PM-94B97EC07650._http._tcp.local.'),
+        ("add", "_http._tcp.local.", "ShellyPro4PM-94B97EC07650._http._tcp.local."),
+        ("update", "_http._tcp.local.", "ShellyPro4PM-94B97EC07650._http._tcp.local."),
     ]

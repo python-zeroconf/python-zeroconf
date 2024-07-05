@@ -1,24 +1,25 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
+
 import asyncio
 import contextlib
 from types import TracebackType  # noqa # used in type hints
@@ -62,7 +63,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
 
     def __init__(
         self,
-        zeroconf: 'Zeroconf',
+        zeroconf: "Zeroconf",
         type_: Union[str, list],
         handlers: Optional[Union[ServiceListener, List[Callable[..., None]]]] = None,
         listener: Optional[ServiceListener] = None,
@@ -71,14 +72,16 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         delay: int = _BROWSER_TIME,
         question_type: Optional[DNSQuestionType] = None,
     ) -> None:
-        super().__init__(zeroconf, type_, handlers, listener, addr, port, delay, question_type)
+        super().__init__(
+            zeroconf, type_, handlers, listener, addr, port, delay, question_type
+        )
         self._async_start()
 
     async def async_cancel(self) -> None:
         """Cancel the browser."""
         self._async_cancel()
 
-    async def __aenter__(self) -> 'AsyncServiceBrowser':
+    async def __aenter__(self) -> "AsyncServiceBrowser":
         return self
 
     async def __aexit__(
@@ -97,7 +100,7 @@ class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
     @classmethod
     async def async_find(
         cls,
-        aiozc: Optional['AsyncZeroconf'] = None,
+        aiozc: Optional["AsyncZeroconf"] = None,
         timeout: Union[int, float] = 5,
         interfaces: InterfacesType = InterfaceChoice.All,
         ip_version: Optional[IPVersion] = None,
@@ -231,7 +234,11 @@ class AsyncZeroconf:
         await self.zeroconf._async_close()  # pylint: disable=protected-access
 
     async def async_get_service_info(
-        self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
+        self,
+        type_: str,
+        name: str,
+        timeout: int = 3000,
+        question_type: Optional[DNSQuestionType] = None,
     ) -> Optional[AsyncServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
@@ -242,14 +249,20 @@ class AsyncZeroconf:
         :param timeout: milliseconds to wait for a response
         :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
         """
-        return await self.zeroconf.async_get_service_info(type_, name, timeout, question_type)
+        return await self.zeroconf.async_get_service_info(
+            type_, name, timeout, question_type
+        )
 
-    async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
+    async def async_add_service_listener(
+        self, type_: str, listener: ServiceListener
+    ) -> None:
         """Adds a listener for a particular service type.  This object
         will then have its add_service and remove_service methods called when
         services of that type become available and unavailable."""
         await self.async_remove_service_listener(listener)
-        self.async_browsers[listener] = AsyncServiceBrowser(self.zeroconf, type_, listener)
+        self.async_browsers[listener] = AsyncServiceBrowser(
+            self.zeroconf, type_, listener
+        )
 
     async def async_remove_service_listener(self, listener: ServiceListener) -> None:
         """Removes a listener from the set that is currently listening."""
@@ -260,10 +273,13 @@ class AsyncZeroconf:
     async def async_remove_all_service_listeners(self) -> None:
         """Removes a listener from the set that is currently listening."""
         await asyncio.gather(
-            *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
+            *(
+                self.async_remove_service_listener(listener)
+                for listener in list(self.async_browsers)
+            )
         )
 
-    async def __aenter__(self) -> 'AsyncZeroconf':
+    async def __aenter__(self) -> "AsyncZeroconf":
         return self
 
     async def __aexit__(

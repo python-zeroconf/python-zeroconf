@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-""" Unit tests for zeroconf.py """
+"""Unit tests for zeroconf.py"""
 
 import logging
 import socket
@@ -15,7 +15,7 @@ from zeroconf import ServiceInfo, Zeroconf, const
 
 from . import _inject_responses
 
-log = logging.getLogger('zeroconf')
+log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
 
 
@@ -34,7 +34,9 @@ class Names(unittest.TestCase):
     def test_long_name(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion(
-            "this.is.a.very.long.name.with.lots.of.parts.in.it.local.", const._TYPE_SRV, const._CLASS_IN
+            "this.is.a.very.long.name.with.lots.of.parts.in.it.local.",
+            const._TYPE_SRV,
+            const._CLASS_IN,
         )
         generated.add_question(question)
         r.DNSIncoming(generated.packets()[0])
@@ -70,11 +72,11 @@ class Names(unittest.TestCase):
 
     def test_verify_name_change_with_lots_of_names(self):
         # instantiate a zeroconf instance
-        zc = Zeroconf(interfaces=['127.0.0.1'])
+        zc = Zeroconf(interfaces=["127.0.0.1"])
 
         # create a bunch of servers
         type_ = "_my-service._tcp.local."
-        name = 'a wonderful service'
+        name = "a wonderful service"
         server_count = 300
         self.generate_many_hosts(zc, type_, name, server_count)
 
@@ -87,15 +89,15 @@ class Names(unittest.TestCase):
         """Verify we downgrade debug after warning."""
 
         # instantiate a zeroconf instance
-        zc = Zeroconf(interfaces=['127.0.0.1'])
+        zc = Zeroconf(interfaces=["127.0.0.1"])
 
-        with patch('zeroconf._logger.log.warning') as mocked_log_warn, patch(
-            'zeroconf._logger.log.debug'
+        with patch("zeroconf._logger.log.warning") as mocked_log_warn, patch(
+            "zeroconf._logger.log.debug"
         ) as mocked_log_debug:
             # now that we have a long packet in our possession, let's verify the
             # exception handling.
             out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
-            out.data.append(b'\0' * 10000)
+            out.data.append(b"\0" * 10000)
 
             # mock the zeroconf logger and check for the correct logging backoff
             call_counts = mocked_log_warn.call_count, mocked_log_debug.call_count
@@ -112,7 +114,7 @@ class Names(unittest.TestCase):
             zc.send(out, const._MDNS_ADDR, const._MDNS_PORT)
             time.sleep(0.3)
             r.log.debug(
-                'warn %d debug %d was %s',
+                "warn %d debug %d was %s",
                 mocked_log_warn.call_count,
                 mocked_log_debug.call_count,
                 call_counts,
@@ -123,10 +125,10 @@ class Names(unittest.TestCase):
         zc.close()
 
     def verify_name_change(self, zc, type_, name, number_hosts):
-        desc = {'path': '/~paulsm/'}
+        desc = {"path": "/~paulsm/"}
         info_service = ServiceInfo(
             type_,
-            f'{name}.{type_}',
+            f"{name}.{type_}",
             80,
             0,
             0,
@@ -146,7 +148,7 @@ class Names(unittest.TestCase):
         # in the registry
         info_service2 = ServiceInfo(
             type_,
-            f'{name}.{type_}',
+            f"{name}.{type_}",
             80,
             0,
             0,
@@ -155,23 +157,26 @@ class Names(unittest.TestCase):
             addresses=[socket.inet_aton("10.0.1.2")],
         )
         zc.register_service(info_service2, allow_name_change=True)
-        assert info_service2.name.split('.')[0] == '%s-%d' % (name, number_hosts + 1)
+        assert info_service2.name.split(".")[0] == "%s-%d" % (name, number_hosts + 1)
 
     def generate_many_hosts(self, zc, type_, name, number_hosts):
         block_size = 25
         number_hosts = int((number_hosts - 1) / block_size + 1) * block_size
         out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
         for i in range(1, number_hosts + 1):
-            next_name = name if i == 1 else '%s-%d' % (name, i)
+            next_name = name if i == 1 else "%s-%d" % (name, i)
             self.generate_host(out, next_name, type_)
 
         _inject_responses(zc, [r.DNSIncoming(packet) for packet in out.packets()])
 
     @staticmethod
     def generate_host(out, host_name, type_):
-        name = '.'.join((host_name, type_))
+        name = ".".join((host_name, type_))
         out.add_answer_at_time(
-            r.DNSPointer(type_, const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, name), 0
+            r.DNSPointer(
+                type_, const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, name
+            ),
+            0,
         )
         out.add_answer_at_time(
             r.DNSService(

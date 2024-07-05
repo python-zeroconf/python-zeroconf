@@ -17,12 +17,20 @@ def test_question_suppression():
     now = r.current_time_millis()
     other_known_answers: Set[r.DNSRecord] = {
         r.DNSPointer(
-            "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-other._hap._tcp.local.'
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            10000,
+            "known-to-other._hap._tcp.local.",
         )
     }
     our_known_answers: Set[r.DNSRecord] = {
         r.DNSPointer(
-            "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN, 10000, 'known-to-us._hap._tcp.local.'
+            "_hap._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            10000,
+            "known-to-us._hap._tcp.local.",
         )
     }
 
@@ -55,7 +63,7 @@ def test_question_expire():
             const._TYPE_PTR,
             const._CLASS_IN,
             10000,
-            'known-to-other._hap._tcp.local.',
+            "known-to-other._hap._tcp.local.",
             created=now,
         )
     }

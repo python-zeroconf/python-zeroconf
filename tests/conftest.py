@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-""" conftest for zeroconf tests. """
+"""conftest for zeroconf tests."""
 
 import threading
 from unittest.mock import patch

@@ -16,9 +16,16 @@ class TestServiceRegistry(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {'path': '/~paulsm/'}
+        desc = {"path": "/~paulsm/"}
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         registry = r.ServiceRegistry()
@@ -34,12 +41,26 @@ class TestServiceRegistry(unittest.TestCase):
         registration_name = f"{name}.{type_}"
         registration_name2 = f"{name2}.{type_}"
 
-        desc = {'path': '/~paulsm/'}
+        desc = {"path": "/~paulsm/"}
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "same.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "same.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
         info2 = ServiceInfo(
-            type_, registration_name2, 80, 0, 0, desc, "same.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name2,
+            80,
+            0,
+            0,
+            desc,
+            "same.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
         registry = r.ServiceRegistry()
         registry.async_add(info)
@@ -62,9 +83,16 @@ class TestServiceRegistry(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {'path': '/~paulsm/'}
+        desc = {"path": "/~paulsm/"}
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         registry = r.ServiceRegistry()
@@ -78,9 +106,16 @@ class TestServiceRegistry(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {'path': '/~paulsm/'}
+        desc = {"path": "/~paulsm/"}
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ash-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         registry = r.ServiceRegistry()
@@ -97,9 +132,16 @@ class TestServiceRegistry(unittest.TestCase):
         name = "Xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {'path': '/~paulsm/'}
+        desc = {"path": "/~paulsm/"}
         info = ServiceInfo(
-            type_, registration_name, 80, 0, 0, desc, "ASH-2.local.", addresses=[socket.inet_aton("10.0.1.2")]
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            desc,
+            "ASH-2.local.",
+            addresses=[socket.inet_aton("10.0.1.2")],
         )
 
         registry = r.ServiceRegistry()
