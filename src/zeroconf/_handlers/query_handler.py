@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Union, cast
@@ -71,7 +71,6 @@ if TYPE_CHECKING:
 
 
 class _AnswerStrategy:
-
     __slots__ = ("question", "strategy_type", "types", "services")
 
     def __init__(
@@ -103,7 +102,9 @@ class _QueryResponse:
         "_mcast_aggregate_last_second",
     )
 
-    def __init__(self, cache: DNSCache, questions: List[DNSQuestion], is_probe: bool, now: float) -> None:
+    def __init__(
+        self, cache: DNSCache, questions: List[DNSQuestion], is_probe: bool, now: float
+    ) -> None:
         """Build a query response."""
         self._is_probe = is_probe
         self._questions = questions
@@ -158,8 +159,12 @@ class _QueryResponse:
         ucast = {r: self._additionals[r] for r in self._ucast}
         mcast_now = {r: self._additionals[r] for r in self._mcast_now}
         mcast_aggregate = {r: self._additionals[r] for r in self._mcast_aggregate}
-        mcast_aggregate_last_second = {r: self._additionals[r] for r in self._mcast_aggregate_last_second}
-        return QuestionAnswers(ucast, mcast_now, mcast_aggregate, mcast_aggregate_last_second)
+        mcast_aggregate_last_second = {
+            r: self._additionals[r] for r in self._mcast_aggregate_last_second
+        }
+        return QuestionAnswers(
+            ucast, mcast_now, mcast_aggregate, mcast_aggregate_last_second
+        )
 
     def _has_mcast_within_one_quarter_ttl(self, record: DNSRecord) -> bool:
         """Check to see if a record has been mcasted recently.
@@ -185,15 +190,24 @@ class _QueryResponse:
         if TYPE_CHECKING:
             record = cast(_UniqueRecordsType, record)
         maybe_entry = self._cache.async_get_unique(record)
-        return bool(maybe_entry is not None and self._now - maybe_entry.created < _ONE_SECOND)
+        return bool(
+            maybe_entry is not None and self._now - maybe_entry.created < _ONE_SECOND
+        )
 
 
 class QueryHandler:
     """Query the ServiceRegistry."""
 
-    __slots__ = ("zc", "registry", "cache", "question_history", "out_queue", "out_delay_queue")
+    __slots__ = (
+        "zc",
+        "registry",
+        "cache",
+        "question_history",
+        "out_queue",
+        "out_delay_queue",
+    )
 
-    def __init__(self, zc: 'Zeroconf') -> None:
+    def __init__(self, zc: "Zeroconf") -> None:
         """Init the query handler."""
         self.zc = zc
         self.registry = zc.registry
@@ -203,7 +217,10 @@ class QueryHandler:
         self.out_delay_queue = zc.out_delay_queue
 
     def _add_service_type_enumeration_query_answers(
-        self, types: List[str], answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+        self,
+        types: List[str],
+        answer_set: _AnswerWithAdditionalsType,
+        known_answers: DNSRRSet,
     ) -> None:
         """Provide an answer to a service type enumeration query.
 
@@ -211,13 +228,21 @@ class QueryHandler:
         """
         for stype in types:
             dns_pointer = DNSPointer(
-                _SERVICE_TYPE_ENUMERATION_NAME, _TYPE_PTR, _CLASS_IN, _DNS_OTHER_TTL, stype, 0.0
+                _SERVICE_TYPE_ENUMERATION_NAME,
+                _TYPE_PTR,
+                _CLASS_IN,
+                _DNS_OTHER_TTL,
+                stype,
+                0.0,
             )
             if not known_answers.suppresses(dns_pointer):
                 answer_set[dns_pointer] = set()
 
     def _add_pointer_answers(
-        self, services: List[ServiceInfo], answer_set: _AnswerWithAdditionalsType, known_answers: DNSRRSet
+        self,
+        services: List[ServiceInfo],
+        answer_set: _AnswerWithAdditionalsType,
+        known_answers: DNSRRSet,
     ) -> None:
         """Answer PTR/ANY question."""
         for service in services:
@@ -253,12 +278,16 @@ class QueryHandler:
             missing_types: Set[int] = _ADDRESS_RECORD_TYPES - seen_types
             if answers:
                 if missing_types:
-                    assert service.server is not None, "Service server must be set for NSEC record."
+                    assert (
+                        service.server is not None
+                    ), "Service server must be set for NSEC record."
                     additionals.add(service._dns_nsec(list(missing_types), None))
                 for answer in answers:
                     answer_set[answer] = additionals
             elif type_ in missing_types:
-                assert service.server is not None, "Service server must be set for NSEC record."
+                assert (
+                    service.server is not None
+                ), "Service server must be set for NSEC record."
                 answer_set[service._dns_nsec(list(missing_types), None)] = set()
 
     def _answer_question(
@@ -273,11 +302,15 @@ class QueryHandler:
         answer_set: _AnswerWithAdditionalsType = {}
 
         if strategy_type == _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION:
-            self._add_service_type_enumeration_query_answers(types, answer_set, known_answers)
+            self._add_service_type_enumeration_query_answers(
+                types, answer_set, known_answers
+            )
         elif strategy_type == _ANSWER_STRATEGY_POINTER:
             self._add_pointer_answers(services, answer_set, known_answers)
         elif strategy_type == _ANSWER_STRATEGY_ADDRESS:
-            self._add_address_answers(services, answer_set, known_answers, question.type)
+            self._add_address_answers(
+                services, answer_set, known_answers, question.type
+            )
         elif strategy_type == _ANSWER_STRATEGY_SERVICE:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.2.
@@ -334,9 +367,15 @@ class QueryHandler:
             if not is_unicast:
                 if known_answers_set is None:  # pragma: no branch
                     known_answers_set = known_answers.lookup_set()
-                self.question_history.add_question_at_time(question, now, known_answers_set)
+                self.question_history.add_question_at_time(
+                    question, now, known_answers_set
+                )
             answer_set = self._answer_question(
-                question, strategy.strategy_type, strategy.types, strategy.services, known_answers
+                question,
+                strategy.strategy_type,
+                strategy.types,
+                strategy.services,
+                known_answers,
             )
             if not ucast_source and is_unicast:
                 query_res.add_qu_question_response(answer_set)
@@ -364,7 +403,10 @@ class QueryHandler:
             if types:
                 strategies.append(
                     _AnswerStrategy(
-                        question, _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION, types, _EMPTY_SERVICES_LIST
+                        question,
+                        _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION,
+                        types,
+                        _EMPTY_SERVICES_LIST,
                     )
                 )
             return strategies
@@ -373,14 +415,18 @@ class QueryHandler:
             services = self.registry.async_get_infos_type(question_lower_name)
             if services:
                 strategies.append(
-                    _AnswerStrategy(question, _ANSWER_STRATEGY_POINTER, _EMPTY_TYPES_LIST, services)
+                    _AnswerStrategy(
+                        question, _ANSWER_STRATEGY_POINTER, _EMPTY_TYPES_LIST, services
+                    )
                 )
 
         if type_ in (_TYPE_A, _TYPE_AAAA, _TYPE_ANY):
             services = self.registry.async_get_infos_server(question_lower_name)
             if services:
                 strategies.append(
-                    _AnswerStrategy(question, _ANSWER_STRATEGY_ADDRESS, _EMPTY_TYPES_LIST, services)
+                    _AnswerStrategy(
+                        question, _ANSWER_STRATEGY_ADDRESS, _EMPTY_TYPES_LIST, services
+                    )
                 )
 
         if type_ in (_TYPE_SRV, _TYPE_TXT, _TYPE_ANY):
@@ -388,11 +434,21 @@ class QueryHandler:
             if service is not None:
                 if type_ in (_TYPE_SRV, _TYPE_ANY):
                     strategies.append(
-                        _AnswerStrategy(question, _ANSWER_STRATEGY_SERVICE, _EMPTY_TYPES_LIST, [service])
+                        _AnswerStrategy(
+                            question,
+                            _ANSWER_STRATEGY_SERVICE,
+                            _EMPTY_TYPES_LIST,
+                            [service],
+                        )
                     )
                 if type_ in (_TYPE_TXT, _TYPE_ANY):
                     strategies.append(
-                        _AnswerStrategy(question, _ANSWER_STRATEGY_TEXT, _EMPTY_TYPES_LIST, [service])
+                        _AnswerStrategy(
+                            question,
+                            _ANSWER_STRATEGY_TEXT,
+                            _EMPTY_TYPES_LIST,
+                            [service],
+                        )
                     )
 
         return strategies
@@ -421,17 +477,23 @@ class QueryHandler:
         if question_answers.ucast:
             questions = first_packet._questions
             id_ = first_packet.id
-            out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
+            out = construct_outgoing_unicast_answers(
+                question_answers.ucast, ucast_source, questions, id_
+            )
             # When sending unicast, only send back the reply
             # via the same socket that it was recieved from
             # as we know its reachable from that socket
             self.zc.async_send(out, addr, port, v6_flow_scope, transport)
         if question_answers.mcast_now:
-            self.zc.async_send(construct_outgoing_multicast_answers(question_answers.mcast_now))
+            self.zc.async_send(
+                construct_outgoing_multicast_answers(question_answers.mcast_now)
+            )
         if question_answers.mcast_aggregate:
             self.out_queue.async_add(first_packet.now, question_answers.mcast_aggregate)
         if question_answers.mcast_aggregate_last_second:
             # https://datatracker.ietf.org/doc/html/rfc6762#section-14
             # If we broadcast it in the last second, we have to delay
             # at least a second before we send it again
-            self.out_delay_queue.async_add(first_packet.now, question_answers.mcast_aggregate_last_second)
+            self.out_delay_queue.async_add(
+                first_packet.now, question_answers.mcast_aggregate_last_second
+            )

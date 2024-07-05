@@ -2,6 +2,7 @@
 
 
 """Unit tests for zeroconf._utils.name."""
+
 import socket
 
 import pytest
@@ -24,7 +25,9 @@ def test_service_type_name_overlong_full_name():
     with pytest.raises(BadTypeInNameException):
         nameutils.service_type_name(f"{long_name}._tivo-videostream._tcp.local.")
     with pytest.raises(BadTypeInNameException):
-        nameutils.service_type_name(f"{long_name}._tivo-videostream._tcp.local.", strict=False)
+        nameutils.service_type_name(
+            f"{long_name}._tivo-videostream._tcp.local.", strict=False
+        )
 
 
 @pytest.mark.parametrize(
@@ -36,12 +39,19 @@ def test_service_type_name_overlong_full_name():
 )
 def test_service_type_name_non_strict_compliant_names(instance_name, service_type):
     """Test service_type_name for valid names, but not strict-compliant."""
-    desc = {'path': '/~paulsm/'}
-    service_name = f'{instance_name}.{service_type}'
-    service_server = 'ash-1.local.'
+    desc = {"path": "/~paulsm/"}
+    service_name = f"{instance_name}.{service_type}"
+    service_server = "ash-1.local."
     service_address = socket.inet_aton("10.0.1.2")
     info = ServiceInfo(
-        service_type, service_name, 22, 0, 0, desc, service_server, addresses=[service_address]
+        service_type,
+        service_name,
+        22,
+        0,
+        0,
+        desc,
+        service_server,
+        addresses=[service_address],
     )
     assert info.get_name() == instance_name
 
@@ -56,21 +66,25 @@ def test_service_type_name_non_strict_compliant_names(instance_name, service_typ
 
 def test_possible_types():
     """Test possible types from name."""
-    assert nameutils.possible_types('.') == set()
-    assert nameutils.possible_types('local.') == set()
-    assert nameutils.possible_types('_tcp.local.') == set()
-    assert nameutils.possible_types('_test-srvc-type._tcp.local.') == {'_test-srvc-type._tcp.local.'}
-    assert nameutils.possible_types('_any._tcp.local.') == {'_any._tcp.local.'}
-    assert nameutils.possible_types('.._x._tcp.local.') == {'_x._tcp.local.'}
-    assert nameutils.possible_types('x.y._http._tcp.local.') == {'_http._tcp.local.'}
-    assert nameutils.possible_types('1.2.3._mqtt._tcp.local.') == {'_mqtt._tcp.local.'}
-    assert nameutils.possible_types('x.sub._http._tcp.local.') == {'_http._tcp.local.'}
-    assert nameutils.possible_types('6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local.') == {
-        '_http._tcp.local.',
-        '_zget._http._tcp.local.',
+    assert nameutils.possible_types(".") == set()
+    assert nameutils.possible_types("local.") == set()
+    assert nameutils.possible_types("_tcp.local.") == set()
+    assert nameutils.possible_types("_test-srvc-type._tcp.local.") == {
+        "_test-srvc-type._tcp.local."
     }
-    assert nameutils.possible_types('my._printer._sub._http._tcp.local.') == {
-        '_http._tcp.local.',
-        '_sub._http._tcp.local.',
-        '_printer._sub._http._tcp.local.',
+    assert nameutils.possible_types("_any._tcp.local.") == {"_any._tcp.local."}
+    assert nameutils.possible_types(".._x._tcp.local.") == {"_x._tcp.local."}
+    assert nameutils.possible_types("x.y._http._tcp.local.") == {"_http._tcp.local."}
+    assert nameutils.possible_types("1.2.3._mqtt._tcp.local.") == {"_mqtt._tcp.local."}
+    assert nameutils.possible_types("x.sub._http._tcp.local.") == {"_http._tcp.local."}
+    assert nameutils.possible_types(
+        "6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local."
+    ) == {
+        "_http._tcp.local.",
+        "_zget._http._tcp.local.",
+    }
+    assert nameutils.possible_types("my._printer._sub._http._tcp.local.") == {
+        "_http._tcp.local.",
+        "_sub._http._tcp.local.",
+        "_printer._sub._http._tcp.local.",
     }

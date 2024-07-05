@@ -38,14 +38,12 @@ repos:
     hooks:
       - id: pyupgrade
         args: [--py37-plus]
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
     hooks:
-      - id: isort
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
-    hooks:
-      - id: black
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
   #  - repo: https://github.com/codespell-project/codespell
   #    rev: v2.2.1
   #    hooks:

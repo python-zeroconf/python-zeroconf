@@ -114,8 +114,8 @@ def generate_packets() -> DNSOutgoing:
             const._TYPE_TXT,
             const._CLASS_IN | const._CLASS_UNIQUE,
             const._DNS_OTHER_TTL,
-            b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
-            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            b"\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1"
+            b"\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==",
         ),
         0,
     )

@@ -23,23 +23,23 @@ import zeroconf
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx']
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'python-zeroconf'
-copyright = 'python-zeroconf authors'
+project = "python-zeroconf"
+copyright = "python-zeroconf authors"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -62,7 +62,7 @@ release = version
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ["_build"]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None
@@ -79,7 +79,7 @@ exclude_patterns = ['_build']
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -92,7 +92,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = "default"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -121,7 +121,7 @@ html_theme = 'default'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -133,8 +133,8 @@ html_static_path = ['_static']
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
-    'index': ('sidebar.html', 'sourcelink.html', 'searchbox.html'),
-    '**': ('localtoc.html', 'relations.html', 'sourcelink.html', 'searchbox.html'),
+    "index": ("sidebar.html", "sourcelink.html", "searchbox.html"),
+    "**": ("localtoc.html", "relations.html", "sourcelink.html", "searchbox.html"),
 }
 
 # Additional templates that should be rendered to pages, maps page names to
@@ -168,7 +168,7 @@ html_sidebars = {
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'zeroconfdoc'
+htmlhelp_basename = "zeroconfdoc"
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -231,17 +231,17 @@ latex_elements: Dict[str, Any] = {}
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {"http://docs.python.org/": None}
 
 
 def setup(app):  # type: ignore[no-untyped-def]
-    app.connect('autodoc-skip-member', skip_member)
+    app.connect("autodoc-skip-member", skip_member)
 
 
 def skip_member(app, what, name, obj, skip, options):  # type: ignore[no-untyped-def]
     return (
         skip
-        or getattr(obj, '__doc__', None) is None
-        or getattr(obj, '__private__', False) is True
-        or getattr(getattr(obj, '__func__', None), '__private__', False) is True
+        or getattr(obj, "__doc__", None) is None
+        or getattr(obj, "__private__", False) is True
+        or getattr(getattr(obj, "__func__", None), "__private__", False) is True
     )

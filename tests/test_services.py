@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-""" Unit tests for zeroconf._services. """
+"""Unit tests for zeroconf._services."""
 
 import logging
 import os
@@ -9,8 +9,7 @@ import socket
 import time
 import unittest
 from threading import Event
-from typing import Dict
-
+from typing import Dict, Any
 import pytest
 
 import zeroconf as r
@@ -19,7 +18,7 @@ from zeroconf._services.info import ServiceInfo
 
 from . import _clear_cache, has_working_ipv6
 
-log = logging.getLogger('zeroconf')
+log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
 
 
@@ -81,27 +80,32 @@ class ListenerTest(unittest.TestCase):
                 sub_service_updated.set()
 
         listener = MyListener()
-        zeroconf_browser = Zeroconf(interfaces=['127.0.0.1'])
+        zeroconf_browser = Zeroconf(interfaces=["127.0.0.1"])
         zeroconf_browser.add_service_listener(type_, listener)
 
         properties = dict(
             prop_none=None,
-            prop_string=b'a_prop',
+            prop_string=b"a_prop",
             prop_float=1.0,
-            prop_blank=b'a blanked string',
+            prop_blank=b"a blanked string",
             prop_true=1,
             prop_false=0,
         )
 
-        zeroconf_registrar = Zeroconf(interfaces=['127.0.0.1'])
-        desc = {'path': '/~paulsm/'}  # type: Dict
+        zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
+        desc: Dict[str, Any] = {"path": "/~paulsm/"}
         desc.update(properties)
         addresses = [socket.inet_aton("10.0.1.2")]
-        if has_working_ipv6() and not os.environ.get('SKIP_IPV6'):
+        if has_working_ipv6() and not os.environ.get("SKIP_IPV6"):
             addresses.append(socket.inet_pton(socket.AF_INET6, "6001:db8::1"))
             addresses.append(socket.inet_pton(socket.AF_INET6, "2001:db8::1"))
         info_service = ServiceInfo(
-            subtype, registration_name, port=80, properties=desc, server="ash-2.local.", addresses=addresses
+            subtype,
+            registration_name,
+            port=80,
+            properties=desc,
+            server="ash-2.local.",
+            addresses=addresses,
         )
         zeroconf_registrar.register_service(info_service)
 
@@ -127,19 +131,21 @@ class ListenerTest(unittest.TestCase):
             # get service info without answer cache
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
-            assert info.properties[b'prop_none'] is None
-            assert info.properties[b'prop_string'] == properties['prop_string']
-            assert info.properties[b'prop_float'] == b'1.0'
-            assert info.properties[b'prop_blank'] == properties['prop_blank']
-            assert info.properties[b'prop_true'] == b'1'
-            assert info.properties[b'prop_false'] == b'0'
+            assert info.properties[b"prop_none"] is None
+            assert info.properties[b"prop_string"] == properties["prop_string"]
+            assert info.properties[b"prop_float"] == b"1.0"
+            assert info.properties[b"prop_blank"] == properties["prop_blank"]
+            assert info.properties[b"prop_true"] == b"1"
+            assert info.properties[b"prop_false"] == b"0"
 
-            assert info.decoded_properties['prop_none'] is None
-            assert info.decoded_properties['prop_string'] == b'a_prop'.decode('utf-8')
-            assert info.decoded_properties['prop_float'] == '1.0'
-            assert info.decoded_properties['prop_blank'] == b'a blanked string'.decode('utf-8')
-            assert info.decoded_properties['prop_true'] == '1'
-            assert info.decoded_properties['prop_false'] == '0'
+            assert info.decoded_properties["prop_none"] is None
+            assert info.decoded_properties["prop_string"] == b"a_prop".decode("utf-8")
+            assert info.decoded_properties["prop_float"] == "1.0"
+            assert info.decoded_properties["prop_blank"] == b"a blanked string".decode(
+                "utf-8"
+            )
+            assert info.decoded_properties["prop_true"] == "1"
+            assert info.decoded_properties["prop_false"] == "0"
 
             assert info.addresses == addresses[:1]  # no V6 by default
             assert set(info.addresses_by_version(r.IPVersion.All)) == set(addresses)
@@ -155,7 +161,7 @@ class ListenerTest(unittest.TestCase):
             cached_info = ServiceInfo(subtype, registration_name)
             cached_info.load_from_cache(zeroconf_browser)
             assert cached_info.properties is not None
-            assert cached_info.properties[b'prop_float'] == b'1.0'
+            assert cached_info.properties[b"prop_float"] == b"1.0"
 
             # get service info with only the cache with the lowercase name
             cached_info = ServiceInfo(subtype, registration_name.lower())
@@ -164,24 +170,24 @@ class ListenerTest(unittest.TestCase):
             assert cached_info.name == registration_name
             assert cached_info.key == registration_name.lower()
             assert cached_info.properties is not None
-            assert cached_info.properties[b'prop_float'] == b'1.0'
+            assert cached_info.properties[b"prop_float"] == b"1.0"
 
             info = zeroconf_browser.get_service_info(subtype, registration_name)
             assert info is not None
             assert info.properties is not None
-            assert info.properties[b'prop_none'] is None
+            assert info.properties[b"prop_none"] is None
 
             cached_info = ServiceInfo(subtype, registration_name.lower())
             cached_info.load_from_cache(zeroconf_browser)
             assert cached_info.properties is not None
-            assert cached_info.properties[b'prop_none'] is None
+            assert cached_info.properties[b"prop_none"] is None
 
             # test TXT record update
             sublistener = MySubListener()
 
             zeroconf_browser.add_service_listener(subtype, sublistener)
 
-            properties['prop_blank'] = b'an updated string'
+            properties["prop_blank"] = b"an updated string"
             desc.update(properties)
             info_service = ServiceInfo(
                 subtype,
@@ -200,14 +206,18 @@ class ListenerTest(unittest.TestCase):
 
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
-            assert info.properties[b'prop_blank'] == properties['prop_blank']
-            assert info.decoded_properties['prop_blank'] == b'an updated string'.decode('utf-8')
+            assert info.properties[b"prop_blank"] == properties["prop_blank"]
+            assert info.decoded_properties["prop_blank"] == b"an updated string".decode(
+                "utf-8"
+            )
 
             cached_info = ServiceInfo(subtype, registration_name)
             cached_info.load_from_cache(zeroconf_browser)
             assert cached_info.properties is not None
-            assert cached_info.properties[b'prop_blank'] == properties['prop_blank']
-            assert cached_info.decoded_properties['prop_blank'] == b'an updated string'.decode('utf-8')
+            assert cached_info.properties[b"prop_blank"] == properties["prop_blank"]
+            assert cached_info.decoded_properties[
+                "prop_blank"
+            ] == b"an updated string".decode("utf-8")
 
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)
@@ -225,7 +235,7 @@ def test_servicelisteners_raise_not_implemented():
     class MyPartialListener(r.ServiceListener):
         """A listener that does not implement anything."""
 
-    zc = r.Zeroconf(interfaces=['127.0.0.1'])
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
 
     with pytest.raises(NotImplementedError):
         MyPartialListener().add_service(

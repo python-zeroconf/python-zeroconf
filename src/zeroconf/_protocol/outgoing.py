@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 import enum
@@ -50,9 +50,9 @@ DNSQuestion_ = DNSQuestion
 DNSRecord_ = DNSRecord
 
 
-PACK_BYTE = Struct('>B').pack
-PACK_SHORT = Struct('>H').pack
-PACK_LONG = Struct('>L').pack
+PACK_BYTE = Struct(">B").pack
+PACK_SHORT = Struct(">H").pack
+PACK_LONG = Struct(">L").pack
 
 SHORT_CACHE_MAX = 128
 
@@ -77,20 +77,20 @@ class DNSOutgoing:
     """Object representation of an outgoing packet"""
 
     __slots__ = (
-        'flags',
-        'finished',
-        'id',
-        'multicast',
-        'packets_data',
-        'names',
-        'data',
-        'size',
-        'allow_long',
-        'state',
-        'questions',
-        'answers',
-        'authorities',
-        'additionals',
+        "flags",
+        "finished",
+        "id",
+        "multicast",
+        "packets_data",
+        "names",
+        "data",
+        "size",
+        "allow_long",
+        "state",
+        "questions",
+        "answers",
+        "authorities",
+        "additionals",
     )
 
     def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:
@@ -128,14 +128,14 @@ class DNSOutgoing:
         self.allow_long = True
 
     def __repr__(self) -> str:
-        return '<DNSOutgoing:{%s}>' % ', '.join(
+        return "<DNSOutgoing:{%s}>" % ", ".join(
             [
-                'multicast=%s' % self.multicast,
-                'flags=%s' % self.flags,
-                'questions=%s' % self.questions,
-                'answers=%s' % self.answers,
-                'authorities=%s' % self.authorities,
-                'additionals=%s' % self.additionals,
+                "multicast=%s" % self.multicast,
+                "flags=%s" % self.flags,
+                "questions=%s" % self.questions,
+                "answers=%s" % self.answers,
+                "authorities=%s" % self.authorities,
+                "additionals=%s" % self.additionals,
             ]
         )
 
@@ -151,7 +151,9 @@ class DNSOutgoing:
     def add_answer_at_time(self, record: Optional[DNSRecord], now: float_) -> None:
         """Adds an answer if it does not expire by a certain time"""
         now_double = now
-        if record is not None and (now_double == 0 or not record.is_expired(now_double)):
+        if record is not None and (
+            now_double == 0 or not record.is_expired(now_double)
+        ):
             self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
@@ -237,7 +239,7 @@ class DNSOutgoing:
 
     def _write_utf(self, s: str_) -> None:
         """Writes a UTF-8 string of a given length to the packet"""
-        utfstr = s.encode('utf-8')
+        utfstr = s.encode("utf-8")
         length = len(utfstr)
         if length > 64:
             raise NamePartTooLongException
@@ -267,7 +269,7 @@ class DNSOutgoing:
         """
 
         # split name into each label
-        if name.endswith('.'):
+        if name.endswith("."):
             name = name[:-1]
 
         index = self.names.get(name, 0)
@@ -276,21 +278,23 @@ class DNSOutgoing:
             return
 
         start_size = self.size
-        labels = name.split('.')
+        labels = name.split(".")
         # Write each new label or a pointer to the existing one in the packet
         self.names[name] = start_size
         self._write_utf(labels[0])
 
         name_length = 0
         for count in range(1, len(labels)):
-            partial_name = '.'.join(labels[count:])
+            partial_name = ".".join(labels[count:])
             index = self.names.get(partial_name, 0)
             if index:
                 self._write_link_to_name(index)
                 return
             if name_length == 0:
-                name_length = len(name.encode('utf-8'))
-            self.names[partial_name] = start_size + name_length - len(partial_name.encode('utf-8'))
+                name_length = len(name.encode("utf-8"))
+            self.names[partial_name] = (
+                start_size + name_length - len(partial_name.encode("utf-8"))
+            )
             self._write_utf(labels[count])
 
         # this is the end of a name
@@ -345,7 +349,9 @@ class DNSOutgoing:
         self._replace_short(index, length)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-    def _check_data_limit_or_rollback(self, start_data_length: int_, start_size: int_) -> bool:
+    def _check_data_limit_or_rollback(
+        self, start_data_length: int_, start_size: int_
+    ) -> bool:
         """Check data limit, if we go over, then rollback and return False."""
         len_limit = _MAX_MSG_ABSOLUTE if self.allow_long else _MAX_MSG_TYPICAL
         self.allow_long = False
@@ -354,12 +360,18 @@ class DNSOutgoing:
             return True
 
         if LOGGING_IS_ENABLED_FOR(LOGGING_DEBUG):  # pragma: no branch
-            log.debug("Reached data limit (size=%d) > (limit=%d) - rolling back", self.size, len_limit)
+            log.debug(
+                "Reached data limit (size=%d) > (limit=%d) - rolling back",
+                self.size,
+                len_limit,
+            )
         del self.data[start_data_length:]
         self.size = start_size
 
         start_size_int = start_size
-        rollback_names = [name for name, idx in self.names.items() if idx >= start_size_int]
+        rollback_names = [
+            name for name, idx in self.names.items() if idx >= start_size_int
+        ]
         for name in rollback_names:
             del self.names[name]
         return False
@@ -380,7 +392,9 @@ class DNSOutgoing:
             answers_written += 1
         return answers_written
 
-    def _write_records_from_offset(self, records: Sequence[DNSRecord], offset: int_) -> int:
+    def _write_records_from_offset(
+        self, records: Sequence[DNSRecord], offset: int_
+    ) -> int:
         records_written = 0
         for record in records[offset:]:
             if not self._write_record(record, 0):
@@ -389,7 +403,11 @@ class DNSOutgoing:
         return records_written
 
     def _has_more_to_add(
-        self, questions_offset: int_, answer_offset: int_, authority_offset: int_, additional_offset: int_
+        self,
+        questions_offset: int_,
+        answer_offset: int_,
+        authority_offset: int_,
+        additional_offset: int_,
     ) -> bool:
         """Check if all questions, answers, authority, and additionals have been written to the packet."""
         return (
@@ -440,8 +458,12 @@ class DNSOutgoing:
 
             questions_written = self._write_questions_from_offset(questions_offset)
             answers_written = self._write_answers_from_offset(answer_offset)
-            authorities_written = self._write_records_from_offset(self.authorities, authority_offset)
-            additionals_written = self._write_records_from_offset(self.additionals, additional_offset)
+            authorities_written = self._write_records_from_offset(
+                self.authorities, authority_offset
+            )
+            additionals_written = self._write_records_from_offset(
+                self.additionals, additional_offset
+            )
 
             made_progress = bool(self.data)
 
@@ -480,7 +502,7 @@ class DNSOutgoing:
             else:
                 self._insert_short_at_start(self.id)
 
-            packets_data.append(b''.join(self.data))
+            packets_data.append(b"".join(self.data))
 
             if not made_progress:
                 # Generating an empty packet is not a desirable outcome, but currently

@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 import asyncio
@@ -55,20 +55,20 @@ class AsyncListener:
     the read() method called when a socket is available for reading."""
 
     __slots__ = (
-        'zc',
-        '_registry',
-        '_record_manager',
+        "zc",
+        "_registry",
+        "_record_manager",
         "_query_handler",
-        'data',
-        'last_time',
-        'last_message',
-        'transport',
-        'sock_description',
-        '_deferred',
-        '_timers',
+        "data",
+        "last_time",
+        "last_message",
+        "transport",
+        "sock_description",
+        "_deferred",
+        "_timers",
     )
 
-    def __init__(self, zc: 'Zeroconf') -> None:
+    def __init__(self, zc: "Zeroconf") -> None:
         self.zc = zc
         self._registry = zc.registry
         self._record_manager = zc.record_manager
@@ -119,7 +119,7 @@ class AsyncListener:
             # Guard against duplicate packets
             if debug:
                 log.debug(
-                    'Ignoring duplicate message with no unicast questions received from %s [socket %s] (%d bytes) as [%r]',
+                    "Ignoring duplicate message with no unicast questions received from %s [socket %s] (%d bytes) as [%r]",
                     addrs,
                     self.sock_description,
                     data_len,
@@ -139,7 +139,9 @@ class AsyncListener:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs  # type: ignore
             if debug:  # pragma: no branch
-                log.debug('IPv6 scope_id %d associated to the receiving interface', scope)
+                log.debug(
+                    "IPv6 scope_id %d associated to the receiving interface", scope
+                )
             v6_flow_scope = (flow, scope)
             addr_port = (addr, port)
 
@@ -150,7 +152,7 @@ class AsyncListener:
         if msg.valid is True:
             if debug:
                 log.debug(
-                    'Received from %r:%r [socket %s]: %r (%d bytes) as [%r]',
+                    "Received from %r:%r [socket %s]: %r (%d bytes) as [%r]",
                     addr,
                     port,
                     self.sock_description,
@@ -161,7 +163,7 @@ class AsyncListener:
         else:
             if debug:
                 log.debug(
-                    'Received from %r:%r [socket %s]: (%d bytes) [%r]',
+                    "Received from %r:%r [socket %s]: (%d bytes) [%r]",
                     addr,
                     port,
                     self.sock_description,
@@ -207,7 +209,13 @@ class AsyncListener:
         assert loop is not None
         self._cancel_any_timers_for_addr(addr)
         self._timers[addr] = loop.call_at(
-            loop.time() + delay, self._respond_query, None, addr, port, transport, v6_flow_scope
+            loop.time() + delay,
+            self._respond_query,
+            None,
+            addr,
+            port,
+            transport,
+            v6_flow_scope,
         )
 
     def _cancel_any_timers_for_addr(self, addr: _str) -> None:
@@ -229,7 +237,9 @@ class AsyncListener:
         if msg:
             packets.append(msg)
 
-        self._query_handler.handle_assembled_query(packets, addr, port, transport, v6_flow_scope)
+        self._query_handler.handle_assembled_query(
+            packets, addr, port, transport, v6_flow_scope
+        )
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
@@ -241,9 +251,13 @@ class AsyncListener:
         QuietLogger.log_exception_once(exc, msg_str, exc)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        wrapped_transport = make_wrapped_transport(cast(asyncio.DatagramTransport, transport))
+        wrapped_transport = make_wrapped_transport(
+            cast(asyncio.DatagramTransport, transport)
+        )
         self.transport = wrapped_transport
-        self.sock_description = f"{wrapped_transport.fileno} ({wrapped_transport.sock_name})"
+        self.sock_description = (
+            f"{wrapped_transport.fileno} ({wrapped_transport.sock_name})"
+        )
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
