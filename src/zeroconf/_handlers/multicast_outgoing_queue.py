@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 import random
@@ -53,7 +53,9 @@ class MulticastOutgoingQueue:
         "_aggregation_delay",
     )
 
-    def __init__(self, zeroconf: 'Zeroconf', additional_delay: _int, max_aggregation_delay: _int) -> None:
+    def __init__(
+        self, zeroconf: "Zeroconf", additional_delay: _int, max_aggregation_delay: _int
+    ) -> None:
         self.zc = zeroconf
         self.queue: deque[AnswerGroup] = deque()
         # Additional delay is used to implement
@@ -69,7 +71,9 @@ class MulticastOutgoingQueue:
         loop = self.zc.loop
         if TYPE_CHECKING:
             assert loop is not None
-        random_int = RAND_INT(self._multicast_delay_random_min, self._multicast_delay_random_max)
+        random_int = RAND_INT(
+            self._multicast_delay_random_min, self._multicast_delay_random_max
+        )
         random_delay = random_int + self._additional_delay
         send_after = now + random_delay
         send_before = now + self._aggregation_delay + self._additional_delay
@@ -83,7 +87,9 @@ class MulticastOutgoingQueue:
                 last_group.answers.update(answers)
                 return
         else:
-            loop.call_at(loop.time() + millis_to_seconds(random_delay), self.async_ready)
+            loop.call_at(
+                loop.time() + millis_to_seconds(random_delay), self.async_ready
+            )
         self.queue.append(AnswerGroup(send_after, send_before, answers))
 
     def _remove_answers_from_queue(self, answers: _AnswerWithAdditionalsType) -> None:
@@ -103,7 +109,10 @@ class MulticastOutgoingQueue:
         if len(self.queue) > 1 and self.queue[0].send_before > now:
             # There is more than one answer in the queue,
             # delay until we have to send it (first answer group reaches send_before)
-            loop.call_at(loop.time() + millis_to_seconds(self.queue[0].send_before - now), self.async_ready)
+            loop.call_at(
+                loop.time() + millis_to_seconds(self.queue[0].send_before - now),
+                self.async_ready,
+            )
             return
 
         answers: _AnswerWithAdditionalsType = {}
@@ -114,7 +123,10 @@ class MulticastOutgoingQueue:
         if len(self.queue):
             # If there are still groups in the queue that are not ready to send
             # be sure we schedule them to go out later
-            loop.call_at(loop.time() + millis_to_seconds(self.queue[0].send_after - now), self.async_ready)
+            loop.call_at(
+                loop.time() + millis_to_seconds(self.queue[0].send_after - now),
+                self.async_ready,
+            )
 
         if answers:  # pragma: no branch
             # If we have the same answer scheduled to go out, remove them

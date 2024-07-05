@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 import asyncio
@@ -121,7 +121,7 @@ def async_send_with_transport(
             return
     if log_debug:
         log.debug(
-            'Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...',
+            "Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...",
             real_addr,
             port or _MDNS_PORT,
             transport.fileno,
@@ -140,7 +140,6 @@ def async_send_with_transport(
 
 
 class Zeroconf(QuietLogger):
-
     """Implementation of Zeroconf Multicast DNS Service Discovery
 
     Supports registration, unregistration, queries and browsing.
@@ -173,12 +172,18 @@ class Zeroconf(QuietLogger):
 
         self.done = False
 
-        if apple_p2p and sys.platform != 'darwin':
-            raise RuntimeError('Option `apple_p2p` is not supported on non-Apple platforms.')
+        if apple_p2p and sys.platform != "darwin":
+            raise RuntimeError(
+                "Option `apple_p2p` is not supported on non-Apple platforms."
+            )
 
         self.unicast = unicast
-        listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
-        log.debug('Listen socket %s, respond sockets %s', listen_socket, respond_sockets)
+        listen_socket, respond_sockets = create_sockets(
+            interfaces, unicast, ip_version, apple_p2p=apple_p2p
+        )
+        log.debug(
+            "Listen socket %s, respond sockets %s", listen_socket, respond_sockets
+        )
 
         self.engine = AsyncEngine(self, listen_socket, respond_sockets)
 
@@ -188,7 +193,9 @@ class Zeroconf(QuietLogger):
         self.question_history = QuestionHistory()
 
         self.out_queue = MulticastOutgoingQueue(self, 0, _AGGREGATION_DELAY)
-        self.out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY)
+        self.out_delay_queue = MulticastOutgoingQueue(
+            self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY
+        )
 
         self.query_handler = QueryHandler(self)
         self.record_manager = RecordManager(self)
@@ -202,7 +209,11 @@ class Zeroconf(QuietLogger):
     @property
     def started(self) -> bool:
         """Check if the instance has started."""
-        return bool(not self.done and self.engine.running_event and self.engine.running_event.is_set())
+        return bool(
+            not self.done
+            and self.engine.running_event
+            and self.engine.running_event.is_set()
+        )
 
     def start(self) -> None:
         """Start Zeroconf."""
@@ -261,7 +272,11 @@ class Zeroconf(QuietLogger):
             _resolve_all_futures_to_none(notify_futures)
 
     def get_service_info(
-        self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
+        self,
+        type_: str,
+        name: str,
+        timeout: int = 3000,
+        question_type: Optional[DNSQuestionType] = None,
     ) -> Optional[ServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
@@ -317,7 +332,9 @@ class Zeroconf(QuietLogger):
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(
-                self.async_register_service(info, ttl, allow_name_change, cooperating_responders, strict)
+                self.async_register_service(
+                    info, ttl, allow_name_change, cooperating_responders, strict
+                )
             ),
             self.loop,
             _REGISTER_TIME * _REGISTER_BROADCASTS,
@@ -345,9 +362,13 @@ class Zeroconf(QuietLogger):
 
         info.set_server_if_missing()
         await self.async_wait_for_start()
-        await self.async_check_service(info, allow_name_change, cooperating_responders, strict)
+        await self.async_check_service(
+            info, allow_name_change, cooperating_responders, strict
+        )
         self.registry.async_add(info)
-        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+        return asyncio.ensure_future(
+            self._async_broadcast_service(info, _REGISTER_TIME, None)
+        )
 
     def update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
@@ -360,7 +381,9 @@ class Zeroconf(QuietLogger):
         """
         assert self.loop is not None
         run_coro_with_timeout(
-            await_awaitable(self.async_update_service(info)), self.loop, _REGISTER_TIME * _REGISTER_BROADCASTS
+            await_awaitable(self.async_update_service(info)),
+            self.loop,
+            _REGISTER_TIME * _REGISTER_BROADCASTS,
         )
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
@@ -368,10 +391,16 @@ class Zeroconf(QuietLogger):
         Zeroconf will then respond to requests for information for that
         service."""
         self.registry.async_update(info)
-        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+        return asyncio.ensure_future(
+            self._async_broadcast_service(info, _REGISTER_TIME, None)
+        )
 
     async def async_get_service_info(
-        self, type_: str, name: str, timeout: int = 3000, question_type: Optional[DNSQuestionType] = None
+        self,
+        type_: str,
+        name: str,
+        timeout: int = 3000,
+        question_type: Optional[DNSQuestionType] = None,
     ) -> Optional[AsyncServiceInfo]:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
@@ -398,7 +427,9 @@ class Zeroconf(QuietLogger):
         for i in range(_REGISTER_BROADCASTS):
             if i != 0:
                 await asyncio.sleep(millis_to_seconds(interval))
-            self.async_send(self.generate_service_broadcast(info, ttl, broadcast_addresses))
+            self.async_send(
+                self.generate_service_broadcast(info, ttl, broadcast_addresses)
+            )
 
     def generate_service_broadcast(
         self,
@@ -453,7 +484,9 @@ class Zeroconf(QuietLogger):
         """
         assert self.loop is not None
         run_coro_with_timeout(
-            self.async_unregister_service(info), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS
+            self.async_unregister_service(info),
+            self.loop,
+            _UNREGISTER_TIME * _REGISTER_BROADCASTS,
         )
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
@@ -467,7 +500,9 @@ class Zeroconf(QuietLogger):
         entries = self.registry.async_get_infos_server(info.server_key)
         broadcast_addresses = not bool(entries)
         return asyncio.ensure_future(
-            self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
+            self._async_broadcast_service(
+                info, _UNREGISTER_TIME, 0, broadcast_addresses
+            )
         )
 
     def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
@@ -506,7 +541,9 @@ class Zeroconf(QuietLogger):
         """
         assert self.loop is not None
         run_coro_with_timeout(
-            self.async_unregister_all_services(), self.loop, _UNREGISTER_TIME * _REGISTER_BROADCASTS
+            self.async_unregister_all_services(),
+            self.loop,
+            _UNREGISTER_TIME * _REGISTER_BROADCASTS,
         )
 
     async def async_check_service(
@@ -531,7 +568,7 @@ class Zeroconf(QuietLogger):
                     raise NonUniqueNameException
 
                 # change the name and look for a conflict
-                info.name = f'{instance_name}-{next_instance_number}.{info.type}'
+                info.name = f"{instance_name}-{next_instance_number}.{info.type}"
                 next_instance_number += 1
                 service_type_name(info.name, strict=strict)
                 next_time = now
@@ -547,7 +584,9 @@ class Zeroconf(QuietLogger):
             next_time += _CHECK_TIME
 
     def add_listener(
-        self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
+        self,
+        listener: RecordUpdateListener,
+        question: Optional[Union[DNSQuestion, List[DNSQuestion]]],
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
@@ -556,7 +595,9 @@ class Zeroconf(QuietLogger):
         This function is threadsafe
         """
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.record_manager.async_add_listener, listener, question)
+        self.loop.call_soon_threadsafe(
+            self.record_manager.async_add_listener, listener, question
+        )
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
         """Removes a listener.
@@ -564,10 +605,14 @@ class Zeroconf(QuietLogger):
         This function is threadsafe
         """
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.record_manager.async_remove_listener, listener)
+        self.loop.call_soon_threadsafe(
+            self.record_manager.async_remove_listener, listener
+        )
 
     def async_add_listener(
-        self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
+        self,
+        listener: RecordUpdateListener,
+        question: Optional[Union[DNSQuestion, List[DNSQuestion]]],
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
@@ -594,7 +639,9 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
+        self.loop.call_soon_threadsafe(
+            self.async_send, out, addr, port, v6_flow_scope, transport
+        )
 
     def async_send(
         self,
@@ -615,11 +662,23 @@ class Zeroconf(QuietLogger):
 
         for packet_num, packet in enumerate(out.packets()):
             if len(packet) > _MAX_MSG_ABSOLUTE:
-                self.log_warning_once("Dropping %r over-sized packet (%d bytes) %r", out, len(packet), packet)
+                self.log_warning_once(
+                    "Dropping %r over-sized packet (%d bytes) %r",
+                    out,
+                    len(packet),
+                    packet,
+                )
                 return
             for send_transport in transports:
                 async_send_with_transport(
-                    log_debug, send_transport, packet, packet_num, out, addr, port, v6_flow_scope
+                    log_debug,
+                    send_transport,
+                    packet,
+                    packet_num,
+                    out,
+                    addr,
+                    port,
+                    v6_flow_scope,
                 )
 
     def _close(self) -> None:
@@ -672,7 +731,7 @@ class Zeroconf(QuietLogger):
         await self.engine._async_close()  # pylint: disable=protected-access
         self._shutdown_threads()
 
-    def __enter__(self) -> 'Zeroconf':
+    def __enter__(self) -> "Zeroconf":
         return self
 
     def __exit__(  # pylint: disable=useless-return

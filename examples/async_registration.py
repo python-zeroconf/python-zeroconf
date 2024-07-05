@@ -33,18 +33,18 @@ class AsyncRunner:
         await self.aiozc.async_close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument("--debug", action="store_true")
     version_group = parser.add_mutually_exclusive_group()
-    version_group.add_argument('--v6', action='store_true')
-    version_group.add_argument('--v6-only', action='store_true')
+    version_group.add_argument("--v6", action="store_true")
+    version_group.add_argument("--v6-only", action="store_true")
     args = parser.parse_args()
 
     if args.debug:
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        logging.getLogger("zeroconf").setLevel(logging.DEBUG)
     if args.v6:
         ip_version = IPVersion.All
     elif args.v6_only:
@@ -60,7 +60,7 @@ if __name__ == '__main__':
                 f"Paul's Test Web Site {i}._http._tcp.local.",
                 addresses=[socket.inet_aton("127.0.0.1")],
                 port=80,
-                properties={'path': '/~paulsm/'},
+                properties={"path": "/~paulsm/"},
                 server=f"zcdemohost-{i}.local.",
             )
         )

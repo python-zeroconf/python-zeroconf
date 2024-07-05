@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 import asyncio
@@ -60,7 +60,9 @@ async def wait_for_future_set_or_timeout(
     """Wait for a future or timeout (in milliseconds)."""
     future = loop.create_future()
     future_set.add(future)
-    handle = loop.call_later(millis_to_seconds(timeout), _set_future_none_if_not_done, future)
+    handle = loop.call_later(
+        millis_to_seconds(timeout), _set_future_none_if_not_done, future
+    )
     try:
         await future
     finally:
@@ -98,7 +100,9 @@ async def await_awaitable(aw: Awaitable) -> None:
     await task
 
 
-def run_coro_with_timeout(aw: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float) -> Any:
+def run_coro_with_timeout(
+    aw: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float
+) -> Any:
     """Run a coroutine with a timeout.
 
     The timeout should only be used as a safeguard to prevent
@@ -120,13 +124,15 @@ def run_coro_with_timeout(aw: Coroutine, loop: asyncio.AbstractEventLoop, timeou
 def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
     """Wait for pending tasks and stop an event loop."""
     pending_tasks = set(
-        asyncio.run_coroutine_threadsafe(_async_get_all_tasks(loop), loop).result(_GET_ALL_TASKS_TIMEOUT)
+        asyncio.run_coroutine_threadsafe(_async_get_all_tasks(loop), loop).result(
+            _GET_ALL_TASKS_TIMEOUT
+        )
     )
     pending_tasks -= {task for task in pending_tasks if task.done()}
     if pending_tasks:
-        asyncio.run_coroutine_threadsafe(_wait_for_loop_tasks(pending_tasks), loop).result(
-            _WAIT_FOR_LOOP_TASKS_TIMEOUT
-        )
+        asyncio.run_coroutine_threadsafe(
+            _wait_for_loop_tasks(pending_tasks), loop
+        ).result(_WAIT_FOR_LOOP_TASKS_TIMEOUT)
     loop.call_soon_threadsafe(loop.stop)
 
 

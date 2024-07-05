@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Example of browsing for a service.
+"""Example of browsing for a service.
 
 The default is HTTP and HAP; use --find to search for all available services in the network
 """
@@ -28,12 +28,17 @@ def async_on_service_state_change(
     asyncio.ensure_future(async_display_service_info(zeroconf, service_type, name))
 
 
-async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
+async def async_display_service_info(
+    zeroconf: Zeroconf, service_type: str, name: str
+) -> None:
     info = AsyncServiceInfo(service_type, name)
     await info.async_request(zeroconf, 3000)
     print("Info from zeroconf.get_service_info: %r" % (info))
     if info:
-        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
+        addresses = [
+            "%s:%d" % (addr, cast(int, info.port))
+            for addr in info.parsed_scoped_addresses()
+        ]
         print("  Name: %s" % name)
         print("  Addresses: %s" % ", ".join(addresses))
         print("  Weight: %d, priority: %d" % (info.weight, info.priority))
@@ -46,7 +51,7 @@ async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name
             print("  No properties")
     else:
         print("  No info")
-    print('\n')
+    print("\n")
 
 
 class AsyncRunner:
@@ -61,7 +66,9 @@ class AsyncRunner:
         services = ["_http._tcp.local.", "_hap._tcp.local."]
         if self.args.find:
             services = list(
-                await AsyncZeroconfServiceTypes.async_find(aiozc=self.aiozc, ip_version=ip_version)
+                await AsyncZeroconfServiceTypes.async_find(
+                    aiozc=self.aiozc, ip_version=ip_version
+                )
             )
 
         print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
@@ -78,19 +85,21 @@ class AsyncRunner:
         await self.aiozc.async_close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--find', action='store_true', help='Browse all available services')
+    parser.add_argument("--debug", action="store_true")
+    parser.add_argument(
+        "--find", action="store_true", help="Browse all available services"
+    )
     version_group = parser.add_mutually_exclusive_group()
-    version_group.add_argument('--v6', action='store_true')
-    version_group.add_argument('--v6-only', action='store_true')
+    version_group.add_argument("--v6", action="store_true")
+    version_group.add_argument("--v6-only", action="store_true")
     args = parser.parse_args()
 
     if args.debug:
-        logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        logging.getLogger("zeroconf").setLevel(logging.DEBUG)
     if args.v6:
         ip_version = IPVersion.All
     elif args.v6_only:

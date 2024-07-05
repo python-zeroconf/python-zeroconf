@@ -2,6 +2,7 @@
 
 
 """Unit tests for zeroconf._utils.net."""
+
 import errno
 import socket
 import unittest
@@ -37,8 +38,14 @@ def _generate_mock_adapters():
 def test_ip6_to_address_and_index():
     """Test we can extract from mocked adapters."""
     adapters = _generate_mock_adapters()
-    assert netutils.ip6_to_address_and_index(adapters, "2001:db8::") == (('2001:db8::', 1, 1), 1)
-    assert netutils.ip6_to_address_and_index(adapters, "2001:db8::%1") == (('2001:db8::', 1, 1), 1)
+    assert netutils.ip6_to_address_and_index(adapters, "2001:db8::") == (
+        ("2001:db8::", 1, 1),
+        1,
+    )
+    assert netutils.ip6_to_address_and_index(adapters, "2001:db8::%1") == (
+        ("2001:db8::", 1, 1),
+        1,
+    )
     with pytest.raises(RuntimeError):
         assert netutils.ip6_to_address_and_index(adapters, "2005:db8::")
 
@@ -46,7 +53,7 @@ def test_ip6_to_address_and_index():
 def test_interface_index_to_ip6_address():
     """Test we can extract from mocked adapters."""
     adapters = _generate_mock_adapters()
-    assert netutils.interface_index_to_ip6_address(adapters, 1) == ('2001:db8::', 1, 1)
+    assert netutils.interface_index_to_ip6_address(adapters, 1) == ("2001:db8::", 1, 1)
 
     # call with invalid adapter
     with pytest.raises(RuntimeError):
@@ -60,12 +67,22 @@ def test_interface_index_to_ip6_address():
 def test_ip6_addresses_to_indexes():
     """Test we can extract from mocked adapters."""
     interfaces = [1]
-    with patch("zeroconf._utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
-        assert netutils.ip6_addresses_to_indexes(interfaces) == [(('2001:db8::', 1, 1), 1)]
+    with patch(
+        "zeroconf._utils.net.ifaddr.get_adapters",
+        return_value=_generate_mock_adapters(),
+    ):
+        assert netutils.ip6_addresses_to_indexes(interfaces) == [
+            (("2001:db8::", 1, 1), 1)
+        ]
 
-    interfaces_2 = ['2001:db8::']
-    with patch("zeroconf._utils.net.ifaddr.get_adapters", return_value=_generate_mock_adapters()):
-        assert netutils.ip6_addresses_to_indexes(interfaces_2) == [(('2001:db8::', 1, 1), 1)]
+    interfaces_2 = ["2001:db8::"]
+    with patch(
+        "zeroconf._utils.net.ifaddr.get_adapters",
+        return_value=_generate_mock_adapters(),
+    ):
+        assert netutils.ip6_addresses_to_indexes(interfaces_2) == [
+            (("2001:db8::", 1, 1), 1)
+        ]
 
 
 def test_normalize_interface_choice_errors():
@@ -81,12 +98,19 @@ def test_normalize_interface_choice_errors():
 
 @pytest.mark.parametrize(
     "errno,expected_result",
-    [(errno.EADDRINUSE, False), (errno.EADDRNOTAVAIL, False), (errno.EINVAL, False), (0, True)],
+    [
+        (errno.EADDRINUSE, False),
+        (errno.EADDRNOTAVAIL, False),
+        (errno.EINVAL, False),
+        (0, True),
+    ],
 )
 def test_add_multicast_member_socket_errors(errno, expected_result):
     """Test we handle socket errors when adding multicast members."""
     if errno:
-        setsockopt_mock = unittest.mock.Mock(side_effect=OSError(errno, f"Error: {errno}"))
+        setsockopt_mock = unittest.mock.Mock(
+            side_effect=OSError(errno, f"Error: {errno}")
+        )
     else:
         setsockopt_mock = unittest.mock.Mock()
     fileno_mock = unittest.mock.PropertyMock(return_value=10)
@@ -118,22 +142,26 @@ def test_disable_ipv6_only_or_raise():
 
     assert (
         errors_logged[0][0]
-        == 'Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6'
+        == "Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6"
     )
 
 
-@pytest.mark.skipif(not hasattr(socket, 'SO_REUSEPORT'), reason="System does not have SO_REUSEPORT")
+@pytest.mark.skipif(
+    not hasattr(socket, "SO_REUSEPORT"), reason="System does not have SO_REUSEPORT"
+)
 def test_set_so_reuseport_if_available_is_present():
     """Test that setting socket.SO_REUSEPORT only OSError errno.ENOPROTOOPT is trapped."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError):
         netutils.set_so_reuseport_if_available(sock)
 
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
+    with patch(
+        "socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)
+    ):
         netutils.set_so_reuseport_if_available(sock)
 
 
-@pytest.mark.skipif(hasattr(socket, 'SO_REUSEPORT'), reason="System has SO_REUSEPORT")
+@pytest.mark.skipif(hasattr(socket, "SO_REUSEPORT"), reason="System has SO_REUSEPORT")
 def test_set_so_reuseport_if_available_not_present():
     """Test that we do not try to set SO_REUSEPORT if it is not present."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -146,24 +174,36 @@ def test_set_mdns_port_socket_options_for_ip_version():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     # Should raise on EPERM always
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
-        netutils.set_mdns_port_socket_options_for_ip_version(sock, ('',), r.IPVersion.V4Only)
+    with pytest.raises(OSError), patch(
+        "socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)
+    ):
+        netutils.set_mdns_port_socket_options_for_ip_version(
+            sock, ("",), r.IPVersion.V4Only
+        )
 
     # Should raise on EINVAL always when bind address is not ''
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
-        netutils.set_mdns_port_socket_options_for_ip_version(sock, ('127.0.0.1',), r.IPVersion.V4Only)
+    with pytest.raises(OSError), patch(
+        "socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)
+    ):
+        netutils.set_mdns_port_socket_options_for_ip_version(
+            sock, ("127.0.0.1",), r.IPVersion.V4Only
+        )
 
     # Should not raise on EINVAL when bind address is ''
     with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
-        netutils.set_mdns_port_socket_options_for_ip_version(sock, ('',), r.IPVersion.V4Only)
+        netutils.set_mdns_port_socket_options_for_ip_version(
+            sock, ("",), r.IPVersion.V4Only
+        )
 
 
 def test_add_multicast_member():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    interface = '127.0.0.1'
+    interface = "127.0.0.1"
 
     # EPERM should always raise
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
+    with pytest.raises(OSError), patch(
+        "socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)
+    ):
         netutils.add_multicast_member(sock, interface)
 
     # EADDRINUSE should return False
@@ -171,7 +211,9 @@ def test_add_multicast_member():
         assert netutils.add_multicast_member(sock, interface) is False
 
     # EADDRNOTAVAIL should return False
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EADDRNOTAVAIL, None)):
+    with patch(
+        "socket.socket.setsockopt", side_effect=OSError(errno.EADDRNOTAVAIL, None)
+    ):
         assert netutils.add_multicast_member(sock, interface) is False
 
     # EINVAL should return False
@@ -179,20 +221,24 @@ def test_add_multicast_member():
         assert netutils.add_multicast_member(sock, interface) is False
 
     # ENOPROTOOPT should return False
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
+    with patch(
+        "socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)
+    ):
         assert netutils.add_multicast_member(sock, interface) is False
 
     # ENODEV should raise for ipv4
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
+    with pytest.raises(OSError), patch(
+        "socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)
+    ):
         netutils.add_multicast_member(sock, interface) is False
 
     # ENODEV should return False for ipv6
     with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
-        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False  # type: ignore[arg-type]
+        assert netutils.add_multicast_member(sock, ("2001:db8::", 1, 1)) is False  # type: ignore[arg-type]
 
     # No IPv6 support should return False for IPv6
     with patch("socket.inet_pton", side_effect=OSError()):
-        assert netutils.add_multicast_member(sock, ('2001:db8::', 1, 1)) is False  # type: ignore[arg-type]
+        assert netutils.add_multicast_member(sock, ("2001:db8::", 1, 1)) is False  # type: ignore[arg-type]
 
     # No error should return True
     with patch("socket.socket.setsockopt"):

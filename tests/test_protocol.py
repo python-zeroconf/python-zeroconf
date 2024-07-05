@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-""" Unit tests for zeroconf._protocol """
+"""Unit tests for zeroconf._protocol"""
 
 import copy
 import logging
@@ -19,7 +19,7 @@ from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
 
 from . import has_working_ipv6
 
-log = logging.getLogger('zeroconf')
+log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
 
 
@@ -49,16 +49,18 @@ class PacketGeneration(unittest.TestCase):
 
     def test_parse_own_packet_question(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        generated.add_question(r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN))
+        generated.add_question(
+            r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
+        )
         r.DNSIncoming(generated.packets()[0])
 
     def test_parse_own_packet_nsec(self):
         answer = r.DNSNsec(
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             const._TYPE_NSEC,
             const._CLASS_IN | const._CLASS_UNIQUE,
             const._DNS_OTHER_TTL,
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             [const._TYPE_TXT, const._TYPE_SRV],
         )
 
@@ -69,11 +71,11 @@ class PacketGeneration(unittest.TestCase):
 
         # Now with the higher RD type first
         answer = r.DNSNsec(
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             const._TYPE_NSEC,
             const._CLASS_IN | const._CLASS_UNIQUE,
             const._DNS_OTHER_TTL,
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             [const._TYPE_SRV, const._TYPE_TXT],
         )
 
@@ -84,30 +86,30 @@ class PacketGeneration(unittest.TestCase):
 
         # Types > 255 should raise an exception
         answer_invalid_types = r.DNSNsec(
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             const._TYPE_NSEC,
             const._CLASS_IN | const._CLASS_UNIQUE,
             const._DNS_OTHER_TTL,
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             [const._TYPE_TXT, const._TYPE_SRV, 1000],
         )
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(answer_invalid_types, 0)
-        with pytest.raises(ValueError, match='rdtype 1000 is too large for NSEC'):
+        with pytest.raises(ValueError, match="rdtype 1000 is too large for NSEC"):
             generated.packets()
 
         # Empty rdtypes are not allowed
         answer_invalid_types = r.DNSNsec(
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             const._TYPE_NSEC,
             const._CLASS_IN | const._CLASS_UNIQUE,
             const._DNS_OTHER_TTL,
-            'eufy HomeBase2-2464._hap._tcp.local.',
+            "eufy HomeBase2-2464._hap._tcp.local.",
             [],
         )
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         generated.add_answer_at_time(answer_invalid_types, 0)
-        with pytest.raises(ValueError, match='NSEC must have at least one rdtype'):
+        with pytest.raises(ValueError, match="NSEC must have at least one rdtype"):
             generated.packets()
 
     def test_parse_own_packet_response(self):
@@ -250,14 +252,18 @@ class PacketGeneration(unittest.TestCase):
 
     def test_dns_hinfo(self):
         generated = r.DNSOutgoing(0)
-        generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'os'))
+        generated.add_additional_answer(
+            DNSHinfo("irrelevant", const._TYPE_HINFO, 0, 0, "cpu", "os")
+        )
         parsed = r.DNSIncoming(generated.packets()[0])
         answer = cast(r.DNSHinfo, parsed.answers()[0])
-        assert answer.cpu == 'cpu'
-        assert answer.os == 'os'
+        assert answer.cpu == "cpu"
+        assert answer.os == "os"
 
         generated = r.DNSOutgoing(0)
-        generated.add_additional_answer(DNSHinfo('irrelevant', const._TYPE_HINFO, 0, 0, 'cpu', 'x' * 257))
+        generated.add_additional_answer(
+            DNSHinfo("irrelevant", const._TYPE_HINFO, 0, 0, "cpu", "x" * 257)
+        )
         self.assertRaises(r.NamePartTooLongException, generated.packets)
 
     def test_many_questions(self):
@@ -265,7 +271,9 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for i in range(100):
-            question = r.DNSQuestion(f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN)
+            question = r.DNSQuestion(
+                f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN
+            )
             generated.add_question(question)
             questions.append(question)
         assert len(generated.questions) == 100
@@ -285,7 +293,9 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for _ in range(30):
-            question = r.DNSQuestion("_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+            question = r.DNSQuestion(
+                "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN
+            )
             generated.add_question(question)
             questions.append(question)
         assert len(generated.questions) == 30
@@ -296,7 +306,7 @@ class PacketGeneration(unittest.TestCase):
                 const._TYPE_PTR,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
-                '123.local.',
+                "123.local.",
             )
             generated.add_answer_at_time(known_answer, now)
         packets = generated.packets()
@@ -324,7 +334,9 @@ class PacketGeneration(unittest.TestCase):
         questions = []
         for _ in range(30):
             question = r.DNSQuestion(
-                "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN | const._CLASS_UNIQUE
+                "_hap._tcp.local.",
+                const._TYPE_PTR,
+                const._CLASS_IN | const._CLASS_UNIQUE,
             )
             generated.add_question(question)
             questions.append(question)
@@ -335,7 +347,7 @@ class PacketGeneration(unittest.TestCase):
                 const._TYPE_PTR,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
-                '123.local.',
+                "123.local.",
             )
             generated.add_authorative_answer(authorative_answer)
         packets = generated.packets()
@@ -374,7 +386,7 @@ class PacketGeneration(unittest.TestCase):
                     const._TYPE_TXT,
                     const._CLASS_IN | const._CLASS_UNIQUE,
                     1200,
-                    b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==' * 100,
+                    b"\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==" * 100,
                 ),
             )
         generated.add_answer(
@@ -421,7 +433,9 @@ class PacketGeneration(unittest.TestCase):
 
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         for i in range(35):
-            question = r.DNSQuestion(f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN)
+            question = r.DNSQuestion(
+                f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN
+            )
             generated.add_question(question)
             answer = r.DNSService(
                 f"testname{i}.local.",
@@ -480,7 +494,9 @@ class PacketForm(unittest.TestCase):
     def test_numbers(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         bytes = generated.packets()[0]
-        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
+        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack(
+            "!4H", bytes[4:12]
+        )
         assert num_questions == 0
         assert num_answers == 0
         assert num_authorities == 0
@@ -492,7 +508,9 @@ class PacketForm(unittest.TestCase):
         for i in range(10):
             generated.add_question(question)
         bytes = generated.packets()[0]
-        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack('!4H', bytes[4:12])
+        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack(
+            "!4H", bytes[4:12]
+        )
         assert num_questions == 10
         assert num_answers == 0
         assert num_authorities == 0
@@ -503,14 +521,14 @@ class TestDnsIncoming(unittest.TestCase):
     def test_incoming_exception_handling(self):
         generated = r.DNSOutgoing(0)
         packet = generated.packets()[0]
-        packet = packet[:8] + b'deadbeef' + packet[8:]
+        packet = packet[:8] + b"deadbeef" + packet[8:]
         parsed = r.DNSIncoming(packet)
         parsed = r.DNSIncoming(packet)
         assert parsed.valid is False
 
     def test_incoming_unknown_type(self):
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress('a', const._TYPE_SOA, const._CLASS_IN, 1, b'a')
+        answer = r.DNSAddress("a", const._TYPE_SOA, const._CLASS_IN, 1, b"a")
         generated.add_additional_answer(answer)
         packet = generated.packets()[0]
         parsed = r.DNSIncoming(packet)
@@ -520,20 +538,22 @@ class TestDnsIncoming(unittest.TestCase):
     def test_incoming_circular_reference(self):
         assert not r.DNSIncoming(
             bytes.fromhex(
-                '01005e0000fb542a1bf0577608004500006897934000ff11d81bc0a86a31e00000fb'
-                '14e914e90054f9b2000084000000000100000000095f7365727669636573075f646e'
-                '732d7364045f756470056c6f63616c00000c0001000011940018105f73706f746966'
-                '792d636f6e6e656374045f746370c023'
+                "01005e0000fb542a1bf0577608004500006897934000ff11d81bc0a86a31e00000fb"
+                "14e914e90054f9b2000084000000000100000000095f7365727669636573075f646e"
+                "732d7364045f756470056c6f63616c00000c0001000011940018105f73706f746966"
+                "792d636f6e6e656374045f746370c023"
             )
         ).valid
 
-    @unittest.skipIf(not has_working_ipv6(), 'Requires IPv6')
-    @unittest.skipIf(os.environ.get('SKIP_IPV6'), 'IPv6 tests disabled')
+    @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
+    @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
     def test_incoming_ipv6(self):
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
         packed = socket.inet_pton(socket.AF_INET6, addr)
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress('domain', const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 1, packed)
+        answer = r.DNSAddress(
+            "domain", const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 1, packed
+        )
         generated.add_additional_answer(answer)
         packet = generated.packets()[0]
         parsed = r.DNSIncoming(packet)
@@ -650,8 +670,8 @@ def test_dns_compression_rollback_for_corruption():
             const._TYPE_TXT,
             const._CLASS_IN | const._CLASS_UNIQUE,
             const._DNS_OTHER_TTL,
-            b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
-            b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+            b"\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1"
+            b"\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==",
         ),
         0,
     )
@@ -695,7 +715,9 @@ def test_dns_compression_rollback_for_corruption():
         assert incoming.valid is True
         assert (
             len(incoming.answers())
-            == incoming.num_answers + incoming.num_authorities + incoming.num_additionals
+            == incoming.num_answers
+            + incoming.num_authorities
+            + incoming.num_additionals
         )
 
 
@@ -712,8 +734,8 @@ def test_tc_bit_in_query_packet():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
-                b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
-                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+                b"\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1"
+                b"\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==",
             ),
             0,
         )
@@ -744,8 +766,8 @@ def test_tc_bit_not_set_in_answer_packet():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
-                b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
-                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+                b"\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1"
+                b"\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==",
             ),
             0,
         )
@@ -769,9 +791,7 @@ def test_tc_bit_not_set_in_answer_packet():
 # 4003	15.973052	192.168.107.68	224.0.0.251	MDNS	76	Standard query 0xffc4 PTR _raop._tcp.local, "QM" question
 def test_qm_packet_parser():
     """Test we can parse a query packet with the QM bit."""
-    qm_packet = (
-        b'\xff\xc4\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05_raop\x04_tcp\x05local\x00\x00\x0c\x00\x01'
-    )
+    qm_packet = b"\xff\xc4\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05_raop\x04_tcp\x05local\x00\x00\x0c\x00\x01"
     parsed = DNSIncoming(qm_packet)
     assert parsed.questions[0].unicast is False
     assert ",QM," in str(parsed.questions[0])
@@ -781,8 +801,8 @@ def test_qm_packet_parser():
 def test_qu_packet_parser():
     """Test we can parse a query packet with the QU bit."""
     qu_packet = (
-        b'\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x0f_companion-link\x04_tcp\x05local'
-        b'\x00\x00\x0c\x80\x01\x00\x00)\x05\xa0\x00\x00\x11\x94\x00\x12\x00\x04\x00\x0e\x00dz{\x8a6\x9czF\x84,\xcaQ\xff'
+        b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01\x0f_companion-link\x04_tcp\x05local"
+        b"\x00\x00\x0c\x80\x01\x00\x00)\x05\xa0\x00\x00\x11\x94\x00\x12\x00\x04\x00\x0e\x00dz{\x8a6\x9czF\x84,\xcaQ\xff"
     )
     parsed = DNSIncoming(qu_packet)
     assert parsed.questions[0].unicast is True
@@ -818,8 +838,8 @@ def test_records_same_packet_share_fate():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
-                b'\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1'
-                b'\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==',
+                b"\x13md=HASS Bridge W9DN\x06pv=1.0\x14id=11:8E:DB:5B:5C:C5\x05c#=12\x04s#=1"
+                b"\x04ff=0\x04ci=2\x04sf=0\x0bsh=6fLM5A==",
             ),
             0,
         )
@@ -834,19 +854,19 @@ def test_records_same_packet_share_fate():
 def test_dns_compression_invalid_skips_bad_name_compress_in_question():
     """Test our wire parser can skip bad compression in questions."""
     packet = (
-        b'\x00\x00\x00\x00\x00\x04\x00\x00\x00\x07\x00\x00\x11homeassistant1128\x05l'
-        b'ocal\x00\x00\xff\x00\x014homeassistant1128 [534a4794e5ed41879ecf012252d3e02'
-        b'a]\x0c_workstation\x04_tcp\xc0\x1e\x00\xff\x00\x014homeassistant1127 [534a47'
-        b'94e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1123 [534a479'
-        b'4e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1118 [534a4794'
-        b'e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x01\xc0\x0c\x00\x01\x80'
-        b'\x01\x00\x00\x00x\x00\x04\xc0\xa8<\xc3\xc0v\x00\x10\x80\x01\x00\x00\x00'
-        b'x\x00\x01\x00\xc0v\x00!\x80\x01\x00\x00\x00x\x00\x1f\x00\x00\x00\x00'
-        b'\x00\x00\x11homeassistant1127\x05local\x00\xc0\xb1\x00\x10\x80'
-        b'\x01\x00\x00\x00x\x00\x01\x00\xc0\xb1\x00!\x80\x01\x00\x00\x00x\x00\x1f'
-        b'\x00\x00\x00\x00\x00\x00\x11homeassistant1123\x05local\x00\xc0)\x00\x10\x80'
-        b'\x01\x00\x00\x00x\x00\x01\x00\xc0)\x00!\x80\x01\x00\x00\x00x\x00\x1f'
-        b'\x00\x00\x00\x00\x00\x00\x11homeassistant1128\x05local\x00'
+        b"\x00\x00\x00\x00\x00\x04\x00\x00\x00\x07\x00\x00\x11homeassistant1128\x05l"
+        b"ocal\x00\x00\xff\x00\x014homeassistant1128 [534a4794e5ed41879ecf012252d3e02"
+        b"a]\x0c_workstation\x04_tcp\xc0\x1e\x00\xff\x00\x014homeassistant1127 [534a47"
+        b"94e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1123 [534a479"
+        b"4e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x014homeassistant1118 [534a4794"
+        b"e5ed41879ecf012252d3e02a]\xc0^\x00\xff\x00\x01\xc0\x0c\x00\x01\x80"
+        b"\x01\x00\x00\x00x\x00\x04\xc0\xa8<\xc3\xc0v\x00\x10\x80\x01\x00\x00\x00"
+        b"x\x00\x01\x00\xc0v\x00!\x80\x01\x00\x00\x00x\x00\x1f\x00\x00\x00\x00"
+        b"\x00\x00\x11homeassistant1127\x05local\x00\xc0\xb1\x00\x10\x80"
+        b"\x01\x00\x00\x00x\x00\x01\x00\xc0\xb1\x00!\x80\x01\x00\x00\x00x\x00\x1f"
+        b"\x00\x00\x00\x00\x00\x00\x11homeassistant1123\x05local\x00\xc0)\x00\x10\x80"
+        b"\x01\x00\x00\x00x\x00\x01\x00\xc0)\x00!\x80\x01\x00\x00\x00x\x00\x1f"
+        b"\x00\x00\x00\x00\x00\x00\x11homeassistant1128\x05local\x00"
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.questions) == 4
@@ -855,8 +875,8 @@ def test_dns_compression_invalid_skips_bad_name_compress_in_question():
 def test_dns_compression_all_invalid(caplog):
     """Test our wire parser can skip all invalid data."""
     packet = (
-        b'\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00!roborock-vacuum-s5e_miio416'
-        b'112328\x00\x00/\x80\x01\x00\x00\x00x\x00\t\xc0P\x00\x05@\x00\x00\x00\x00'
+        b"\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00!roborock-vacuum-s5e_miio416"
+        b"112328\x00\x00/\x80\x01\x00\x00\x00x\x00\t\xc0P\x00\x05@\x00\x00\x00\x00"
     )
     parsed = r.DNSIncoming(packet, ("2.4.5.4", 5353))
     assert len(parsed.questions) == 0
@@ -871,9 +891,9 @@ def test_invalid_next_name_ignored():
     The RFC states it should be ignored when used with mDNS.
     """
     packet = (
-        b'\x00\x00\x00\x00\x00\x01\x00\x02\x00\x00\x00\x00\x07Android\x05local\x00\x00'
-        b'\xff\x00\x01\xc0\x0c\x00/\x00\x01\x00\x00\x00x\x00\x08\xc02\x00\x04@'
-        b'\x00\x00\x08\xc0\x0c\x00\x01\x00\x01\x00\x00\x00x\x00\x04\xc0\xa8X<'
+        b"\x00\x00\x00\x00\x00\x01\x00\x02\x00\x00\x00\x00\x07Android\x05local\x00\x00"
+        b"\xff\x00\x01\xc0\x0c\x00/\x00\x01\x00\x00\x00x\x00\x08\xc02\x00\x04@"
+        b"\x00\x00\x08\xc0\x0c\x00\x01\x00\x01\x00\x00\x00x\x00\x04\xc0\xa8X<"
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.questions) == 1
@@ -893,11 +913,11 @@ def test_dns_compression_invalid_skips_record():
     )
     parsed = r.DNSIncoming(packet)
     answer = r.DNSNsec(
-        'eufy HomeBase2-2464._hap._tcp.local.',
+        "eufy HomeBase2-2464._hap._tcp.local.",
         const._TYPE_NSEC,
         const._CLASS_IN | const._CLASS_UNIQUE,
         const._DNS_OTHER_TTL,
-        'eufy HomeBase2-2464._hap._tcp.local.',
+        "eufy HomeBase2-2464._hap._tcp.local.",
         [const._TYPE_TXT, const._TYPE_SRV],
     )
     assert answer in parsed.answers()
@@ -918,11 +938,11 @@ def test_dns_compression_points_forward():
     )
     parsed = r.DNSIncoming(packet)
     answer = r.DNSNsec(
-        'TV Beneden (2)._androidtvremote._tcp.local.',
+        "TV Beneden (2)._androidtvremote._tcp.local.",
         const._TYPE_NSEC,
         const._CLASS_IN | const._CLASS_UNIQUE,
         const._DNS_OTHER_TTL,
-        'TV Beneden (2)._androidtvremote._tcp.local.',
+        "TV Beneden (2)._androidtvremote._tcp.local.",
         [const._TYPE_TXT, const._TYPE_SRV],
     )
     assert answer in parsed.answers()
@@ -942,9 +962,9 @@ def test_dns_compression_points_to_itself():
 def test_dns_compression_points_beyond_packet():
     """Test our wire parser does not fail when the compression pointer points beyond the packet."""
     packet = (
-        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01'
-        b'\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\xe7\x0f\x00\x01\x80\x01\x00\x00'
-        b'\x00\x01\x00\x04\xc0\xa8\xd0\x06'
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01"
+        b"\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\xe7\x0f\x00\x01\x80\x01\x00\x00"
+        b"\x00\x01\x00\x04\xc0\xa8\xd0\x06"
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.answers()) == 1
@@ -953,9 +973,9 @@ def test_dns_compression_points_beyond_packet():
 def test_dns_compression_generic_failure(caplog):
     """Test our wire parser does not loop forever when dns compression is corrupt."""
     packet = (
-        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01'
-        b'\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05-\x0c\x00\x01\x80\x01\x00\x00'
-        b'\x00\x01\x00\x04\xc0\xa8\xd0\x06'
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01"
+        b"\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05-\x0c\x00\x01\x80\x01\x00\x00"
+        b"\x00\x01\x00\x04\xc0\xa8\xd0\x06"
     )
     parsed = r.DNSIncoming(packet, ("1.2.3.4", 5353))
     assert len(parsed.answers()) == 1
@@ -965,17 +985,17 @@ def test_dns_compression_generic_failure(caplog):
 def test_label_length_attack():
     """Test our wire parser does not loop forever when the name exceeds 253 chars."""
     packet = (
-        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d'
-        b'\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x00\x00\x01\x80'
-        b'\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\xc0\x0c\x00\x01\x80\x01\x00\x00\x00'
-        b'\x01\x00\x04\xc0\xa8\xd0\x06'
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d"
+        b"\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x01d\x00\x00\x01\x80"
+        b"\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\xc0\x0c\x00\x01\x80\x01\x00\x00\x00"
+        b"\x01\x00\x04\xc0\xa8\xd0\x06"
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.answers()) == 0
@@ -984,28 +1004,28 @@ def test_label_length_attack():
 def test_label_compression_attack():
     """Test our wire parser does not loop forever when exceeding the maximum number of labels."""
     packet = (
-        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x03atk\x00\x00\x01\x80'
-        b'\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03'
-        b'atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\xc0'
-        b'\x0c\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x06'
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x03atk\x00\x00\x01\x80"
+        b"\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03"
+        b"atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\x03atk\xc0"
+        b"\x0c\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x06"
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.answers()) == 1
@@ -1014,15 +1034,15 @@ def test_label_compression_attack():
 def test_dns_compression_loop_attack():
     """Test our wire parser does not loop forever when dns compression is in a loop."""
     packet = (
-        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07\x03atk\x03dns\x05loc'
-        b'al\xc0\x10\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\x04a'
-        b'tk2\x04dns2\xc0\x14\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05'
-        b'\x04atk3\xc0\x10\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0'
-        b'\x05\x04atk4\x04dns5\xc0\x14\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0'
-        b'\xa8\xd0\x05\x04atk5\x04dns2\xc0^\x00\x01\x80\x01\x00\x00\x00\x01\x00'
-        b'\x04\xc0\xa8\xd0\x05\xc0s\x00\x01\x80\x01\x00\x00\x00\x01\x00'
-        b'\x04\xc0\xa8\xd0\x05\xc0s\x00\x01\x80\x01\x00\x00\x00\x01\x00'
-        b'\x04\xc0\xa8\xd0\x05'
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07\x03atk\x03dns\x05loc"
+        b"al\xc0\x10\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05\x04a"
+        b"tk2\x04dns2\xc0\x14\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05"
+        b"\x04atk3\xc0\x10\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0"
+        b"\x05\x04atk4\x04dns5\xc0\x14\x00\x01\x80\x01\x00\x00\x00\x01\x00\x04\xc0"
+        b"\xa8\xd0\x05\x04atk5\x04dns2\xc0^\x00\x01\x80\x01\x00\x00\x00\x01\x00"
+        b"\x04\xc0\xa8\xd0\x05\xc0s\x00\x01\x80\x01\x00\x00\x00\x01\x00"
+        b"\x04\xc0\xa8\xd0\x05\xc0s\x00\x01\x80\x01\x00\x00\x00\x01\x00"
+        b"\x04\xc0\xa8\xd0\x05"
     )
     parsed = r.DNSIncoming(packet)
     assert len(parsed.answers()) == 0
@@ -1031,28 +1051,28 @@ def test_dns_compression_loop_attack():
 def test_txt_after_invalid_nsec_name_still_usable():
     """Test that we can see the txt record after the invalid nsec record."""
     packet = (
-        b'\x00\x00\x84\x00\x00\x00\x00\x06\x00\x00\x00\x00\x06_sonos\x04_tcp\x05loc'
-        b'al\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x15\x12Sonos-542A1BC9220E'
-        b'\xc0\x0c\x12Sonos-542A1BC9220E\xc0\x18\x00/\x80\x01\x00\x00\x00x\x00'
-        b'\x08\xc1t\x00\x04@\x00\x00\x08\xc0)\x00/\x80\x01\x00\x00\x11\x94\x00'
-        b'\t\xc0)\x00\x05\x00\x00\x80\x00@\xc0)\x00!\x80\x01\x00\x00\x00x'
-        b'\x00\x08\x00\x00\x00\x00\x05\xa3\xc0>\xc0>\x00\x01\x80\x01\x00\x00\x00x'
-        b'\x00\x04\xc0\xa8\x02:\xc0)\x00\x10\x80\x01\x00\x00\x11\x94\x01*2info=/api'
-        b'/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers=1.24.1\nbo'
-        b'otseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn9K9DLXJe0f3LP9'
-        b'747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:1400/xml/device_'
-        b'description.xml\x0csslport=1443\x0ehhsslport=1843\tvariant=2\x0emdnssequen'
-        b'ce=0'
+        b"\x00\x00\x84\x00\x00\x00\x00\x06\x00\x00\x00\x00\x06_sonos\x04_tcp\x05loc"
+        b"al\x00\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x15\x12Sonos-542A1BC9220E"
+        b"\xc0\x0c\x12Sonos-542A1BC9220E\xc0\x18\x00/\x80\x01\x00\x00\x00x\x00"
+        b"\x08\xc1t\x00\x04@\x00\x00\x08\xc0)\x00/\x80\x01\x00\x00\x11\x94\x00"
+        b"\t\xc0)\x00\x05\x00\x00\x80\x00@\xc0)\x00!\x80\x01\x00\x00\x00x"
+        b"\x00\x08\x00\x00\x00\x00\x05\xa3\xc0>\xc0>\x00\x01\x80\x01\x00\x00\x00x"
+        b"\x00\x04\xc0\xa8\x02:\xc0)\x00\x10\x80\x01\x00\x00\x11\x94\x01*2info=/api"
+        b"/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers=1.24.1\nbo"
+        b"otseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn9K9DLXJe0f3LP9"
+        b"747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:1400/xml/device_"
+        b"description.xml\x0csslport=1443\x0ehhsslport=1843\tvariant=2\x0emdnssequen"
+        b"ce=0"
     )
     parsed = r.DNSIncoming(packet)
     txt_record = cast(r.DNSText, parsed.answers()[4])
     # The NSEC record with the invalid name compression should be skipped
     assert txt_record.text == (
-        b'2info=/api/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers'
-        b'=1.24.1\nbootseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn'
-        b'9K9DLXJe0f3LP9747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:14'
-        b'00/xml/device_description.xml\x0csslport=1443\x0ehhsslport=1843\tvarian'
-        b't=2\x0emdnssequence=0'
+        b"2info=/api/v1/players/RINCON_542A1BC9220E01400/info\x06vers=3\x10protovers"
+        b"=1.24.1\nbootseq=11%hhid=Sonos_rYn9K9DLXJe0f3LP9747lbvFvh;mhhid=Sonos_rYn"
+        b"9K9DLXJe0f3LP9747lbvFvh.Q45RuMaeC07rfXh7OJGm<location=http://192.168.2.58:14"
+        b"00/xml/device_description.xml\x0csslport=1443\x0ehhsslport=1843\tvarian"
+        b"t=2\x0emdnssequence=0"
     )
     assert len(parsed.answers()) == 5
 

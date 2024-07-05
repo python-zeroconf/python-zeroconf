@@ -1,23 +1,23 @@
-""" Multicast DNS Service Discovery for Python, v0.14-wmcbrine
-    Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
+"""Multicast DNS Service Discovery for Python, v0.14-wmcbrine
+Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
-    This module provides a framework for the use of DNS Service Discovery
-    using IP multicast.
+This module provides a framework for the use of DNS Service Discovery
+using IP multicast.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-    This library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-    Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
-    USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
+USA
 """
 
 from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Union, cast
@@ -42,7 +42,7 @@ class RecordManager:
 
     __slots__ = ("zc", "cache", "listeners")
 
-    def __init__(self, zeroconf: 'Zeroconf') -> None:
+    def __init__(self, zeroconf: "Zeroconf") -> None:
         """Init the record manager."""
         self.zc = zeroconf
         self.cache = zeroconf.cache
@@ -97,7 +97,11 @@ class RecordManager:
             # level of rate limit and safe guards so we use 1/4 of the recommended value.
             record_type = record.type
             record_ttl = record.ttl
-            if record_ttl and record_type == _TYPE_PTR and record_ttl < _DNS_PTR_MIN_TTL:
+            if (
+                record_ttl
+                and record_type == _TYPE_PTR
+                and record_ttl < _DNS_PTR_MIN_TTL
+            ):
                 log.debug(
                     "Increasing effective ttl of %s to minimum of %s to protect against excessive refreshes.",
                     record,
@@ -128,7 +132,9 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now)
+            cache.async_mark_unique_records_older_than_1s_to_expire(
+                unique_types, answers, now
+            )
 
         if updates:
             self.async_updates(now, updates)
@@ -161,7 +167,9 @@ class RecordManager:
             self.async_updates_complete(new)
 
     def async_add_listener(
-        self, listener: RecordUpdateListener, question: Optional[Union[DNSQuestion, List[DNSQuestion]]]
+        self,
+        listener: RecordUpdateListener,
+        question: Optional[Union[DNSQuestion, List[DNSQuestion]]],
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
@@ -212,4 +220,4 @@ class RecordManager:
             self.listeners.remove(listener)
             self.zc.async_notify_all()
         except ValueError as e:
-            log.exception('Failed to remove listener: %r', e)
+            log.exception("Failed to remove listener: %r", e)
