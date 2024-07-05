@@ -811,11 +811,9 @@ def test_multiple_addresses():
             assert info.ip_addresses_by_version(r.IPVersion.All) == [
                 ip_address(address),
                 ip_address(address_v6),
-                (
-                    ip_address(address_v6_ll_scoped_parsed)
-                    if ipaddress_supports_scope_id
-                    else ip_address(address_v6_ll)
-                ),
+                ip_address(address_v6_ll_scoped_parsed)
+                if ipaddress_supports_scope_id
+                else ip_address(address_v6_ll),
             ]
             assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
             assert info.ip_addresses_by_version(r.IPVersion.V4Only) == [
@@ -827,11 +825,9 @@ def test_multiple_addresses():
             ]
             assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [
                 ip_address(address_v6),
-                (
-                    ip_address(address_v6_ll_scoped_parsed)
-                    if ipaddress_supports_scope_id
-                    else ip_address(address_v6_ll)
-                ),
+                ip_address(address_v6_ll_scoped_parsed)
+                if ipaddress_supports_scope_id
+                else ip_address(address_v6_ll),
             ]
             assert info.parsed_addresses() == [
                 address_parsed,
