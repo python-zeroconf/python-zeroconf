@@ -105,7 +105,7 @@ class AsyncEngine:
             sender_sockets.append(s)
 
         for s in reader_sockets:
-            transport, protocol = await loop.create_datagram_endpoint(
+            transport, protocol = await loop.create_datagram_endpoint(  # type: ignore[type-var]
                 lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
                 sock=s,
             )

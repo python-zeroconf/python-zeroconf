@@ -20,8 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
-import sys
-
 from ._cache import DNSCache  # noqa # import needed for backwards compat
 from ._core import Zeroconf
 from ._dns import (  # noqa # import needed for backwards compat
@@ -114,12 +112,3 @@ __all__ = [
     "NotRunningException",
     "ServiceNameAlreadyRegistered",
 ]
-
-if sys.version_info <= (3, 6):  # pragma: no cover
-    raise ImportError(  # pragma: no cover
-        """
-Python version > 3.6 required for python-zeroconf.
-If you need support for Python 2 or Python 3.3-3.4 please use version 19.1
-If you need support for Python 3.5 please use version 0.28.0
-    """
-    )
