@@ -29,7 +29,7 @@ from typing import Any, Awaitable, Coroutine, Optional, Set
 if sys.version_info[:2] < (3, 11):
     from async_timeout import timeout as asyncio_timeout
 else:
-    from asyncio import timeout as asyncio_timeout
+    from asyncio import timeout as asyncio_timeout  # type: ignore[attr-defined]
 
 from .._exceptions import EventLoopBlocked
 from ..const import _LOADED_SYSTEM_TIMEOUT
