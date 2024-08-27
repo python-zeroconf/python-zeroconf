@@ -21,7 +21,7 @@ USA
 """
 
 import sys
-from functools import lru_cache
+from functools import cache, lru_cache, cached_property
 from ipaddress import AddressValueError, IPv4Address, IPv6Address, NetmaskValueError
 from typing import Any, Optional, Union
 
@@ -34,53 +34,57 @@ IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 
 class ZeroconfIPv4Address(IPv4Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified")
-
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv4 address."""
         super().__init__(*args, **kwargs)
         self._str = super().__str__()
-        self._is_link_local = super().is_link_local
-        self._is_unspecified = super().is_unspecified
+        self.__hash__ = cache(lambda: IPv4Address.__hash__(self))  # type: ignore[method-assign]
 
     def __str__(self) -> str:
         """Return the string representation of the IPv4 address."""
         return self._str
 
-    @property
+    @cached_property
     def is_link_local(self) -> bool:
         """Return True if this is a link-local address."""
-        return self._is_link_local
+        return super().is_link_local
 
-    @property
+    @cached_property
     def is_unspecified(self) -> bool:
         """Return True if this is an unspecified address."""
-        return self._is_unspecified
+        return super().is_unspecified
+
+    @cached_property
+    def is_loopback(self) -> bool:
+        """Return True if this is a loopback address."""
+        return super().is_loopback
 
 
 class ZeroconfIPv6Address(IPv6Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified")
-
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv6 address."""
         super().__init__(*args, **kwargs)
         self._str = super().__str__()
-        self._is_link_local = super().is_link_local
-        self._is_unspecified = super().is_unspecified
+        self.__hash__ = cache(lambda: IPv6Address.__hash__(self))  # type: ignore[method-assign]
 
     def __str__(self) -> str:
         """Return the string representation of the IPv6 address."""
         return self._str
 
-    @property
+    @cached_property
     def is_link_local(self) -> bool:
         """Return True if this is a link-local address."""
-        return self._is_link_local
+        return super().is_link_local
 
-    @property
+    @cached_property
     def is_unspecified(self) -> bool:
         """Return True if this is an unspecified address."""
-        return self._is_unspecified
+        return super().is_unspecified
+
+    @cached_property
+    def is_loopback(self) -> bool:
+        """Return True if this is a loopback address."""
+        return super().is_loopback
 
 
 @lru_cache(maxsize=512)
