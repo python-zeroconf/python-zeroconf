@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## v0.133.0 (2024-08-27)
+
+### Feature
+
+* Improve performance of ip address caching ([#1392](https://github.com/python-zeroconf/python-zeroconf/issues/1392)) ([`f7c7708`](https://github.com/python-zeroconf/python-zeroconf/commit/f7c77081b2f8c70b1ed6a9b9751a86cf91f9aae2))
+* Enable building of arm64 macOS builds ([#1384](https://github.com/python-zeroconf/python-zeroconf/issues/1384)) ([`0df2ce0`](https://github.com/python-zeroconf/python-zeroconf/commit/0df2ce0e6f7313831da6a63d477019982d5df55c))
+* Add classifier for python 3.13 ([#1393](https://github.com/python-zeroconf/python-zeroconf/issues/1393)) ([`7fb2bb2`](https://github.com/python-zeroconf/python-zeroconf/commit/7fb2bb21421c70db0eb288fa7e73d955f58b0f5d))
+* Python 3.13 support ([#1390](https://github.com/python-zeroconf/python-zeroconf/issues/1390)) ([`98cfa83`](https://github.com/python-zeroconf/python-zeroconf/commit/98cfa83710e43880698353821bae61108b08cb2f))
+
 ## v0.132.2 (2024-04-13)
 
 ### Fix
