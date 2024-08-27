@@ -160,7 +160,9 @@ def test_set_so_reuseport_if_available_not_present():
 
 
 def test_set_mdns_port_socket_options_for_ip_version():
-    """Test OSError with errno with EINVAL and bind address '' from setsockopt IP_MULTICAST_TTL does not raise."""
+    """Test OSError with errno with EINVAL and bind address ''.
+
+    from setsockopt IP_MULTICAST_TTL does not raise."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     # Should raise on EPERM always
@@ -202,7 +204,7 @@ def test_add_multicast_member():
 
     # ENODEV should raise for ipv4
     with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
-        netutils.add_multicast_member(sock, interface) is False
+        assert netutils.add_multicast_member(sock, interface) is False
 
     # ENODEV should return False for ipv6
     with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
