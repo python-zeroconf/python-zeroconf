@@ -21,12 +21,17 @@ USA
 """
 
 import sys
-from functools import cache, lru_cache, cached_property
+from functools import lru_cache, cached_property
 from ipaddress import AddressValueError, IPv4Address, IPv6Address, NetmaskValueError
 from typing import Any, Optional, Union
 
 from .._dns import DNSAddress
 from ..const import _TYPE_AAAA
+
+if sys.version_info >= (3, 9, 0):
+    from functools import cache
+else:
+    cache = lru_cache(maxsize=None)
 
 bytes_ = bytes
 int_ = int
