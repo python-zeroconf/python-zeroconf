@@ -60,7 +60,7 @@ pytest = ">=7.2,<9.0"
 pytest-cov = "^4.0.0"
 pytest-asyncio = ">=0.20.3,<0.25.0"
 cython = "^3.0.5"
-setuptools = ">=65.6.3,<71.0.0"
+setuptools = ">=65.6.3,<74.0.0"
 pytest-timeout = "^2.1.0"
 
 [tool.ruff]
