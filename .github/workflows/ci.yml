@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
       - uses: pre-commit/action@v2.0.3
@@ -41,6 +41,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
+          - "3.13"
           - "pypy-3.8"
           - "pypy-3.9"
         os:
@@ -69,10 +70,11 @@ jobs:
       - name: Install poetry
         run: pipx install poetry
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
+          allow-prereleases: true
       - name: Install Dependencies no cython
         if: ${{ matrix.extension == 'skip_cython' }}
         env:
@@ -136,7 +138,7 @@ jobs:
 
       # Used to host cibuildwheel
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
 
       - name: Install python-semantic-release
         run: pipx install python-semantic-release==7.34.6
@@ -159,7 +161,7 @@ jobs:
           platforms: arm64
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17.0
+        uses: pypa/cibuildwheel@v2.20.0
         # to supply options, put them in 'env', like:
         env:
           CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* *p38-*_aarch64 *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 *musllinux*_aarch64
