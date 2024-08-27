@@ -19,7 +19,17 @@ def test_cached_ip_addresses_wrapper():
         str(ipaddress.cached_ip_addresses(b"&\x06(\x00\x02 \x00\x01\x02H\x18\x93%\xc8\x19F"))
         == "2606:2800:220:1:248:1893:25c8:1946"
     )
-    assert ipaddress.cached_ip_addresses("::1") == ipaddress.IPv6Address("::1")
+    loop_back_ipv6 = ipaddress.cached_ip_addresses("::1")
+    assert loop_back_ipv6 == ipaddress.IPv6Address("::1")
+    assert loop_back_ipv6.is_loopback is True
+
+    assert hash(loop_back_ipv6) == hash(ipaddress.IPv6Address("::1"))
+
+    loop_back_ipv4 = ipaddress.cached_ip_addresses("127.0.0.1")
+    assert loop_back_ipv4 == ipaddress.IPv4Address("127.0.0.1")
+    assert loop_back_ipv4.is_loopback is True
+
+    assert hash(loop_back_ipv4) == hash(ipaddress.IPv4Address("127.0.0.1"))
 
     ipv4 = ipaddress.cached_ip_addresses("169.254.0.0")
     assert ipv4 is not None

@@ -28,13 +28,24 @@ from typing import Any, Optional, Union
 from .._dns import DNSAddress
 from ..const import _TYPE_AAAA
 
+if sys.version_info >= (3, 9, 0):
+    from functools import cache
+else:
+    cache = lru_cache(maxsize=None)
+
 bytes_ = bytes
 int_ = int
 IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 
 class ZeroconfIPv4Address(IPv4Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified")
+    __slots__ = (
+        "_str",
+        "_is_link_local",
+        "_is_unspecified",
+        "_is_loopback",
+        "__hash__",
+    )
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv4 address."""
@@ -42,6 +53,8 @@ class ZeroconfIPv4Address(IPv4Address):
         self._str = super().__str__()
         self._is_link_local = super().is_link_local
         self._is_unspecified = super().is_unspecified
+        self._is_loopback = super().is_loopback
+        self.__hash__ = cache(lambda: IPv4Address.__hash__(self))  # type: ignore[method-assign]
 
     def __str__(self) -> str:
         """Return the string representation of the IPv4 address."""
@@ -57,9 +70,20 @@ class ZeroconfIPv4Address(IPv4Address):
         """Return True if this is an unspecified address."""
         return self._is_unspecified
 
+    @property
+    def is_loopback(self) -> bool:
+        """Return True if this is a loop back."""
+        return self._is_loopback
+
 
 class ZeroconfIPv6Address(IPv6Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified")
+    __slots__ = (
+        "_str",
+        "_is_link_local",
+        "_is_unspecified",
+        "_is_loopback",
+        "__hash__",
+    )
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv6 address."""
@@ -67,6 +91,8 @@ class ZeroconfIPv6Address(IPv6Address):
         self._str = super().__str__()
         self._is_link_local = super().is_link_local
         self._is_unspecified = super().is_unspecified
+        self._is_loopback = super().is_loopback
+        self.__hash__ = cache(lambda: IPv6Address.__hash__(self))  # type: ignore[method-assign]
 
     def __str__(self) -> str:
         """Return the string representation of the IPv6 address."""
@@ -81,6 +107,11 @@ class ZeroconfIPv6Address(IPv6Address):
     def is_unspecified(self) -> bool:
         """Return True if this is an unspecified address."""
         return self._is_unspecified
+
+    @property
+    def is_loopback(self) -> bool:
+        """Return True if this is a loop back."""
+        return self._is_loopback
 
 
 @lru_cache(maxsize=512)
