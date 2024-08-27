@@ -77,7 +77,7 @@ class TestRegistrar(unittest.TestCase):
             """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
 
-            for answer, time_ in out.answers:
+            for answer, _ in out.answers:
                 nbr_answers += 1
                 assert answer.ttl == get_ttl(answer.type)
             for answer in out.additionals:
@@ -685,7 +685,8 @@ def test_qu_response():
     assert not question_answers.mcast_aggregate
     _validate_complete_response(question_answers.mcast_now)
 
-    # With QU set and an authorative answer (probe) should respond to both unitcast and multicast since the response hasn't been seen since 75% of the ttl
+    # With QU set and an authorative answer (probe) should respond to both unitcast
+    # and multicast since the response hasn't been seen since 75% of the ttl
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
     question.unicast = True  # Set the QU bit
@@ -1217,7 +1218,8 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     assert ptr_record in question_answers.mcast_now
 
     # Ask 2 QU questions, with info the PTR is at 50%, with info2 the PTR is at 100%
-    # We should get back a unicast reply for info2, but info should be multicasted since its within 75% of its TTL
+    # We should get back a unicast reply for info2, but info should be
+    # multicasted since its within 75% of its TTL
     # With QU should respond to only multicast since the has less
     # than 75% of its ttl remaining
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -1494,7 +1496,7 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
 
 @pytest.mark.asyncio
 async def test_guard_against_low_ptr_ttl():
-    """Ensure we enforce a minimum for PTR record ttls to avoid excessive refresh queries from ServiceBrowsers.
+    """Ensure we enforce a min for PTR record ttls to avoid excessive refresh queries from ServiceBrowsers.
 
     Some poorly designed IoT devices can set excessively low PTR
     TTLs would will cause ServiceBrowsers to flood the network
