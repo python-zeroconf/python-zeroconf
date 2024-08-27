@@ -31,10 +31,7 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
         for info in infos:
             print("Info for %s" % (info.name))
             if info:
-                addresses = [
-                    "%s:%d" % (addr, cast(int, info.port))
-                    for addr in info.parsed_addresses()
-                ]
+                addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
                 print("  Addresses: %s" % ", ".join(addresses))
                 print("  Weight: %d, priority: %d" % (info.weight, info.priority))
                 print(f"  Server: {info.server}")

@@ -47,7 +47,7 @@ def test_guard_against_oversized_packets():
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
 
-    for i in range(5000):
+    for _i in range(5000):
         generated.add_answer_at_time(
             r.DNSText(
                 "packet{i}.local.",
@@ -281,9 +281,7 @@ def test_guard_against_duplicate_packets():
         _handle_query_or_defer.reset_mock()
 
         # Now call with garbage
-        listener._process_datagram_at_time(
-            False, len(b"garbage"), new_time, b"garbage", addrs
-        )
+        listener._process_datagram_at_time(False, len(b"garbage"), new_time, b"garbage", addrs)
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 

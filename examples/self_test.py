@@ -34,15 +34,10 @@ if __name__ == "__main__":
     r.register_service(info)
     print("   Registration done.")
     print("2. Testing query of service information...")
-    print(
-        "   Getting ZOE service: %s"
-        % (r.get_service_info("_http._tcp.local.", "ZOE._http._tcp.local."))
-    )
+    print("   Getting ZOE service: %s" % (r.get_service_info("_http._tcp.local.", "ZOE._http._tcp.local.")))
     print("   Query done.")
     print("3. Testing query of own service...")
-    queried_info = r.get_service_info(
-        "_http._tcp.local.", "My Service Name._http._tcp.local."
-    )
+    queried_info = r.get_service_info("_http._tcp.local.", "My Service Name._http._tcp.local.")
     assert queried_info
     assert set(queried_info.parsed_addresses()) == expected
     print(f"   Getting self: {queried_info}")

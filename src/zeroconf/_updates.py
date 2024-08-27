@@ -47,13 +47,9 @@ class RecordUpdateListener:
         This method is deprecated and will be removed in a future version.
         update_records should be implemented instead.
         """
-        raise RuntimeError(
-            "update_record is deprecated and will be removed in a future version."
-        )
+        raise RuntimeError("update_record is deprecated and will be removed in a future version.")
 
-    def async_update_records(
-        self, zc: "Zeroconf", now: float_, records: List[RecordUpdate]
-    ) -> None:
+    def async_update_records(self, zc: "Zeroconf", now: float_, records: List[RecordUpdate]) -> None:
         """Update multiple records in one shot.
 
         All records that are received in a single packet are passed

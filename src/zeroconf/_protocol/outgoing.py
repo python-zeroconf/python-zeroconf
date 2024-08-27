@@ -151,9 +151,7 @@ class DNSOutgoing:
     def add_answer_at_time(self, record: Optional[DNSRecord], now: float_) -> None:
         """Adds an answer if it does not expire by a certain time"""
         now_double = now
-        if record is not None and (
-            now_double == 0 or not record.is_expired(now_double)
-        ):
+        if record is not None and (now_double == 0 or not record.is_expired(now_double)):
             self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
@@ -292,9 +290,7 @@ class DNSOutgoing:
                 return
             if name_length == 0:
                 name_length = len(name.encode("utf-8"))
-            self.names[partial_name] = (
-                start_size + name_length - len(partial_name.encode("utf-8"))
-            )
+            self.names[partial_name] = start_size + name_length - len(partial_name.encode("utf-8"))
             self._write_utf(labels[count])
 
         # this is the end of a name
@@ -349,9 +345,7 @@ class DNSOutgoing:
         self._replace_short(index, length)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-    def _check_data_limit_or_rollback(
-        self, start_data_length: int_, start_size: int_
-    ) -> bool:
+    def _check_data_limit_or_rollback(self, start_data_length: int_, start_size: int_) -> bool:
         """Check data limit, if we go over, then rollback and return False."""
         len_limit = _MAX_MSG_ABSOLUTE if self.allow_long else _MAX_MSG_TYPICAL
         self.allow_long = False
@@ -369,9 +363,7 @@ class DNSOutgoing:
         self.size = start_size
 
         start_size_int = start_size
-        rollback_names = [
-            name for name, idx in self.names.items() if idx >= start_size_int
-        ]
+        rollback_names = [name for name, idx in self.names.items() if idx >= start_size_int]
         for name in rollback_names:
             del self.names[name]
         return False
@@ -392,9 +384,7 @@ class DNSOutgoing:
             answers_written += 1
         return answers_written
 
-    def _write_records_from_offset(
-        self, records: Sequence[DNSRecord], offset: int_
-    ) -> int:
+    def _write_records_from_offset(self, records: Sequence[DNSRecord], offset: int_) -> int:
         records_written = 0
         for record in records[offset:]:
             if not self._write_record(record, 0):
@@ -458,12 +448,8 @@ class DNSOutgoing:
 
             questions_written = self._write_questions_from_offset(questions_offset)
             answers_written = self._write_answers_from_offset(answer_offset)
-            authorities_written = self._write_records_from_offset(
-                self.authorities, authority_offset
-            )
-            additionals_written = self._write_records_from_offset(
-                self.additionals, additional_offset
-            )
+            authorities_written = self._write_records_from_offset(self.authorities, authority_offset)
+            additionals_written = self._write_records_from_offset(self.additionals, additional_offset)
 
             made_progress = bool(self.data)
 

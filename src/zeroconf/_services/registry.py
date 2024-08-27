@@ -79,9 +79,7 @@ class ServiceRegistry:
         """Return all ServiceInfo matching server."""
         return self._async_get_by_index(self.servers, server)
 
-    def _async_get_by_index(
-        self, records: Dict[str, List], key: _str
-    ) -> List[ServiceInfo]:
+    def _async_get_by_index(self, records: Dict[str, List], key: _str) -> List[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
         record_list = records.get(key)
         if record_list is None:

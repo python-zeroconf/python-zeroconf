@@ -143,16 +143,12 @@ def get_ip_address_object_from_record(
     return cached_ip_addresses_wrapper(record.address)
 
 
-def ip_bytes_and_scope_to_address(
-    address: bytes_, scope: int_
-) -> Optional[Union[IPv4Address, IPv6Address]]:
+def ip_bytes_and_scope_to_address(address: bytes_, scope: int_) -> Optional[Union[IPv4Address, IPv6Address]]:
     """Convert the bytes and scope to an IP address object."""
     base_address = cached_ip_addresses_wrapper(address)
     if base_address is not None and base_address.is_link_local:
         # Avoid expensive __format__ call by using PyUnicode_Join
-        return cached_ip_addresses_wrapper(
-            "".join((str(base_address), "%", str(scope)))
-        )
+        return cached_ip_addresses_wrapper("".join((str(base_address), "%", str(scope))))
     return base_address
 
 

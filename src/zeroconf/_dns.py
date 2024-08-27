@@ -33,9 +33,7 @@ _LEN_BYTE = 1
 _LEN_SHORT = 2
 _LEN_INT = 4
 
-_BASE_MAX_SIZE = (
-    _LEN_SHORT + _LEN_SHORT + _LEN_INT + _LEN_SHORT
-)  # type  # class  # ttl  # length
+_BASE_MAX_SIZE = _LEN_SHORT + _LEN_SHORT + _LEN_INT + _LEN_SHORT  # type  # class  # ttl  # length
 _NAME_COMPRESSION_MIN_SIZE = _LEN_BYTE * 2
 
 _EXPIRE_FULL_TIME_MS = 1000
@@ -79,11 +77,7 @@ class DNSEntry:
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
     def _dns_entry_matches(self, other) -> bool:  # type: ignore[no-untyped-def]
-        return (
-            self.key == other.key
-            and self.type == other.type
-            and self.class_ == other.class_
-        )
+        return self.key == other.key and self.type == other.type and self.class_ == other.class_
 
     def __eq__(self, other: Any) -> bool:
         """Equality test on key (lowercase name), type, and class"""
@@ -122,11 +116,7 @@ class DNSQuestion(DNSEntry):
 
     def answered_by(self, rec: "DNSRecord") -> bool:
         """Returns true if the question is answered by the record"""
-        return (
-            self.class_ == rec.class_
-            and self.type in (rec.type, _TYPE_ANY)
-            and self.name == rec.name
-        )
+        return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
 
     def __hash__(self) -> int:
         return self._hash
@@ -138,9 +128,7 @@ class DNSQuestion(DNSEntry):
     @property
     def max_size(self) -> int:
         """Maximum size of the question in the packet."""
-        return (
-            len(self.name.encode("utf-8")) + _LEN_BYTE + _LEN_SHORT + _LEN_SHORT
-        )  # type  # class
+        return len(self.name.encode("utf-8")) + _LEN_BYTE + _LEN_SHORT + _LEN_SHORT  # type  # class
 
     @property
     def unicast(self) -> bool:
@@ -328,11 +316,7 @@ class DNSHinfo(DNSRecord):
 
     def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
         """Tests equality on cpu and os."""
-        return (
-            self.cpu == other.cpu
-            and self.os == other.os
-            and self._dns_entry_matches(other)
-        )
+        return self.cpu == other.cpu and self.os == other.os and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
         """Hash to compare like DNSHinfo."""
@@ -457,9 +441,7 @@ class DNSService(DNSRecord):
         self.port = port
         self.server = server
         self.server_key = server.lower()
-        self._hash = hash(
-            (self.key, type_, self.class_, priority, weight, port, self.server_key)
-        )
+        self._hash = hash((self.key, type_, self.class_, priority, weight, port, self.server_key))
 
     def write(self, out: "DNSOutgoing") -> None:
         """Used in constructing an outgoing packet"""
@@ -550,9 +532,7 @@ class DNSNsec(DNSRecord):
     def __repr__(self) -> str:
         """String representation"""
         return self.to_string(
-            self.next_name
-            + ","
-            + "|".join([self.get_type(type_) for type_ in self.rdtypes])
+            self.next_name + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes])
         )
 
 

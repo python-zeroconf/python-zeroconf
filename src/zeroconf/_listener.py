@@ -119,7 +119,8 @@ class AsyncListener:
             # Guard against duplicate packets
             if debug:
                 log.debug(
-                    "Ignoring duplicate message with no unicast questions received from %s [socket %s] (%d bytes) as [%r]",
+                    "Ignoring duplicate message with no unicast questions"
+                    " received from %s [socket %s] (%d bytes) as [%r]",
                     addrs,
                     self.sock_description,
                     data_len,
@@ -139,9 +140,7 @@ class AsyncListener:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs  # type: ignore
             if debug:  # pragma: no branch
-                log.debug(
-                    "IPv6 scope_id %d associated to the receiving interface", scope
-                )
+                log.debug("IPv6 scope_id %d associated to the receiving interface", scope)
             v6_flow_scope = (flow, scope)
             addr_port = (addr, port)
 
@@ -204,7 +203,7 @@ class AsyncListener:
             if incoming.data == msg.data:
                 return
         deferred.append(msg)
-        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))
+        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))  # noqa: S311
         loop = self.zc.loop
         assert loop is not None
         self._cancel_any_timers_for_addr(addr)
@@ -237,9 +236,7 @@ class AsyncListener:
         if msg:
             packets.append(msg)
 
-        self._query_handler.handle_assembled_query(
-            packets, addr, port, transport, v6_flow_scope
-        )
+        self._query_handler.handle_assembled_query(packets, addr, port, transport, v6_flow_scope)
 
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
@@ -251,13 +248,9 @@ class AsyncListener:
         QuietLogger.log_exception_once(exc, msg_str, exc)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        wrapped_transport = make_wrapped_transport(
-            cast(asyncio.DatagramTransport, transport)
-        )
+        wrapped_transport = make_wrapped_transport(cast(asyncio.DatagramTransport, transport))
         self.transport = wrapped_transport
-        self.sock_description = (
-            f"{wrapped_transport.fileno} ({wrapped_transport.sock_name})"
-        )
+        self.sock_description = f"{wrapped_transport.fileno} ({wrapped_transport.sock_name})"
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""

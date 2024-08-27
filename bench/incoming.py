@@ -178,7 +178,7 @@ packets = generate_packets()
 
 def parse_incoming_message() -> None:
     for packet in packets:
-        DNSIncoming(packet).answers
+        DNSIncoming(packet).answers  # noqa: B018
         break
 
 

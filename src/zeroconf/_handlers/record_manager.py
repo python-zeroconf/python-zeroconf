@@ -97,11 +97,7 @@ class RecordManager:
             # level of rate limit and safe guards so we use 1/4 of the recommended value.
             record_type = record.type
             record_ttl = record.ttl
-            if (
-                record_ttl
-                and record_type == _TYPE_PTR
-                and record_ttl < _DNS_PTR_MIN_TTL
-            ):
+            if record_ttl and record_type == _TYPE_PTR and record_ttl < _DNS_PTR_MIN_TTL:
                 log.debug(
                     "Increasing effective ttl of %s to minimum of %s to protect against excessive refreshes.",
                     record,
@@ -132,9 +128,7 @@ class RecordManager:
                 removes.add(record)
 
         if unique_types:
-            cache.async_mark_unique_records_older_than_1s_to_expire(
-                unique_types, answers, now
-            )
+            cache.async_mark_unique_records_older_than_1s_to_expire(unique_types, answers, now)
 
         if updates:
             self.async_updates(now, updates)

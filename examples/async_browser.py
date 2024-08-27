@@ -18,6 +18,8 @@ from zeroconf.asyncio import (
     AsyncZeroconfServiceTypes,
 )
 
+_PENDING_TASKS: set[asyncio.Task] = set()
+
 
 def async_on_service_state_change(
     zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
@@ -25,20 +27,17 @@ def async_on_service_state_change(
     print(f"Service {name} of type {service_type} state changed: {state_change}")
     if state_change is not ServiceStateChange.Added:
         return
-    asyncio.ensure_future(async_display_service_info(zeroconf, service_type, name))
+    task = asyncio.ensure_future(async_display_service_info(zeroconf, service_type, name))
+    _PENDING_TASKS.add(task)
+    task.add_done_callback(_PENDING_TASKS.discard)
 
 
-async def async_display_service_info(
-    zeroconf: Zeroconf, service_type: str, name: str
-) -> None:
+async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
     info = AsyncServiceInfo(service_type, name)
     await info.async_request(zeroconf, 3000)
     print("Info from zeroconf.get_service_info: %r" % (info))
     if info:
-        addresses = [
-            "%s:%d" % (addr, cast(int, info.port))
-            for addr in info.parsed_scoped_addresses()
-        ]
+        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
         print("  Name: %s" % name)
         print("  Addresses: %s" % ", ".join(addresses))
         print("  Weight: %d, priority: %d" % (info.weight, info.priority))
@@ -66,9 +65,7 @@ class AsyncRunner:
         services = ["_http._tcp.local.", "_hap._tcp.local."]
         if self.args.find:
             services = list(
-                await AsyncZeroconfServiceTypes.async_find(
-                    aiozc=self.aiozc, ip_version=ip_version
-                )
+                await AsyncZeroconfServiceTypes.async_find(aiozc=self.aiozc, ip_version=ip_version)
             )
 
         print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
@@ -90,9 +87,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument(
-        "--find", action="store_true", help="Browse all available services"
-    )
+    parser.add_argument("--find", action="store_true", help="Browse all available services")
     version_group = parser.add_mutually_exclusive_group()
     version_group.add_argument("--v6", action="store_true")
     version_group.add_argument("--v6-only", action="store_true")

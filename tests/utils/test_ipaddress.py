@@ -16,11 +16,7 @@ def test_cached_ip_addresses_wrapper():
     assert ipaddress.cached_ip_addresses("") is None
     assert ipaddress.cached_ip_addresses("foo") is None
     assert (
-        str(
-            ipaddress.cached_ip_addresses(
-                b"&\x06(\x00\x02 \x00\x01\x02H\x18\x93%\xc8\x19F"
-            )
-        )
+        str(ipaddress.cached_ip_addresses(b"&\x06(\x00\x02 \x00\x01\x02H\x18\x93%\xc8\x19F"))
         == "2606:2800:220:1:248:1893:25c8:1946"
     )
     loop_back_ipv6 = ipaddress.cached_ip_addresses("::1")
@@ -85,9 +81,7 @@ def test_get_ip_address_object_from_record():
         scope_id=3,
     )
     assert record.scope_id == 3
-    assert ipaddress.get_ip_address_object_from_record(record) == ipaddress.IPv6Address(
-        "fe80::1%3"
-    )
+    assert ipaddress.get_ip_address_object_from_record(record) == ipaddress.IPv6Address("fe80::1%3")
     record = DNSAddress(
         "domain.local",
         const._TYPE_AAAA,
@@ -96,9 +90,7 @@ def test_get_ip_address_object_from_record():
         packed,
     )
     assert record.scope_id is None
-    assert ipaddress.get_ip_address_object_from_record(record) == ipaddress.IPv6Address(
-        "fe80::1"
-    )
+    assert ipaddress.get_ip_address_object_from_record(record) == ipaddress.IPv6Address("fe80::1")
     record = DNSAddress(
         "domain.local",
         const._TYPE_A,
@@ -109,6 +101,4 @@ def test_get_ip_address_object_from_record():
     )
     assert record.scope_id == 0
     # Ensure scope_id of 0 is not appended to the address
-    assert ipaddress.get_ip_address_object_from_record(record) == ipaddress.IPv6Address(
-        "fe80::1"
-    )
+    assert ipaddress.get_ip_address_object_from_record(record) == ipaddress.IPv6Address("fe80::1")

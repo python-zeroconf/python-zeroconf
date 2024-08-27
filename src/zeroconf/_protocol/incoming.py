@@ -279,12 +279,7 @@ class DNSIncoming:
             # ttl is an unsigned long in network order https://www.rfc-editor.org/errata/eid2130
             type_ = view[offset] << 8 | view[offset + 1]
             class_ = view[offset + 2] << 8 | view[offset + 3]
-            ttl = (
-                view[offset + 4] << 24
-                | view[offset + 5] << 16
-                | view[offset + 6] << 8
-                | view[offset + 7]
-            )
+            ttl = view[offset + 4] << 24 | view[offset + 5] << 16 | view[offset + 6] << 8 | view[offset + 7]
             length = view[offset + 8] << 8 | view[offset + 9]
             end = self.offset + length
             rec = None
@@ -311,15 +306,11 @@ class DNSIncoming:
     ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
-            return DNSAddress(
-                domain, type_, class_, ttl, self._read_string(4), None, self.now
-            )
+            return DNSAddress(domain, type_, class_, ttl, self._read_string(4), None, self.now)
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
             return DNSPointer(domain, type_, class_, ttl, self._read_name(), self.now)
         if type_ == _TYPE_TXT:
-            return DNSText(
-                domain, type_, class_, ttl, self._read_string(length), self.now
-            )
+            return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
         if type_ == _TYPE_SRV:
             view = self.view
             offset = self.offset
@@ -399,9 +390,7 @@ class DNSIncoming:
         labels: List[str] = []
         seen_pointers: Set[int] = set()
         original_offset = self.offset
-        self.offset = self._decode_labels_at_offset(
-            original_offset, labels, seen_pointers
-        )
+        self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers)
         self._name_cache[original_offset] = labels
         name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
@@ -410,9 +399,7 @@ class DNSIncoming:
             )
         return name
 
-    def _decode_labels_at_offset(
-        self, off: _int, labels: List[str], seen_pointers: Set[int]
-    ) -> int:
+    def _decode_labels_at_offset(self, off: _int, labels: List[str], seen_pointers: Set[int]) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
         view = self.view
         while off < self._data_len:
@@ -422,9 +409,7 @@ class DNSIncoming:
 
             if length < 0x40:
                 label_idx = off + DNS_COMPRESSION_HEADER_LEN
-                labels.append(
-                    self.data[label_idx : label_idx + length].decode("utf-8", "replace")
-                )
+                labels.append(self.data[label_idx : label_idx + length].decode("utf-8", "replace"))
                 off += DNS_COMPRESSION_HEADER_LEN + length
                 continue
 
@@ -462,6 +447,4 @@ class DNSIncoming:
                 )
             return off + DNS_COMPRESSION_POINTER_LEN
 
-        raise IncomingDecodeError(
-            f"Corrupt packet received while decoding name from {self.source}"
-        )
+        raise IncomingDecodeError(f"Corrupt packet received while decoding name from {self.source}")
