@@ -40,9 +40,7 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
-InterfacesType = Union[
-    Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice
-]
+InterfacesType = Union[Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
 
 
 @enum.unique
@@ -73,42 +71,25 @@ def _encode_address(address: str) -> bytes:
 
 
 def get_all_addresses() -> List[str]:
-    return list(
-        {
-            addr.ip
-            for iface in ifaddr.get_adapters()
-            for addr in iface.ips
-            if addr.is_IPv4
-        }
-    )
+    return list({addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})
 
 
 def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     # TODO: What about multi-address interfaces?
     return list(
-        {
-            (addr.ip, iface.index)
-            for iface in ifaddr.get_adapters()
-            for addr in iface.ips
-            if addr.is_IPv6
-        }
+        {(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6}
     )
 
 
-def ip6_to_address_and_index(
-    adapters: List[Any], ip: str
-) -> Tuple[Tuple[str, int, int], int]:
+def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, int, int], int]:
     if "%" in ip:
         ip = ip[: ip.index("%")]  # Strip scope_id.
     ipaddr = ipaddress.ip_address(ip)
     for adapter in adapters:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
-            if (
-                isinstance(adapter_ip.ip, tuple)
-                and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr
-            ):
+            if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
                 return (
                     cast(Tuple[str, int, int], adapter_ip.ip),
                     cast(int, adapter.index),
@@ -117,9 +98,7 @@ def ip6_to_address_and_index(
     raise RuntimeError("No adapter found for IP address %s" % ip)
 
 
-def interface_index_to_ip6_address(
-    adapters: List[Any], index: int
-) -> Tuple[str, int, int]:
+def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str, int, int]:
     for adapter in adapters:
         if adapter.index == index:
             for adapter_ip in adapter.ips:
@@ -175,16 +154,11 @@ def normalize_interface_choice(
             result.extend(get_all_addresses())
         if not result:
             raise RuntimeError(
-                "No interfaces to listen on, check that any interfaces have IP version %s"
-                % ip_version
+                "No interfaces to listen on, check that any interfaces have IP version %s" % ip_version
             )
     elif isinstance(choice, list):
         # First, take IPv4 addresses.
-        result = [
-            i
-            for i in choice
-            if isinstance(i, str) and ipaddress.ip_address(i).version == 4
-        ]
+        result = [i for i in choice if isinstance(i, str) and ipaddress.ip_address(i).version == 4]
         # Unlike IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP requires interface indexes.
         result += ip6_addresses_to_indexes(choice)
     else:
@@ -197,9 +171,7 @@ def disable_ipv6_only_or_raise(s: socket.socket) -> None:
     try:
         s.setsockopt(_IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
     except OSError:
-        log.error(
-            "Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6"
-        )
+        log.error("Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6")
         raise
 
 
@@ -237,9 +209,7 @@ def set_mdns_port_socket_options_for_ip_version(
             s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
             s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
         except OSError as e:
-            if (
-                bind_addr[0] != "" or get_errno(e) != errno.EINVAL
-            ):  # Fails to set on MacOS
+            if bind_addr[0] != "" or get_errno(e) != errno.EINVAL:  # Fails to set on MacOS
                 raise
 
     if ip_version != IPVersion.V4Only:
@@ -261,9 +231,7 @@ def new_socket(
         apple_p2p,
         bind_addr,
     )
-    socket_family = (
-        socket.AF_INET if ip_version == IPVersion.V4Only else socket.AF_INET6
-    )
+    socket_family = socket.AF_INET if ip_version == IPVersion.V4Only else socket.AF_INET6
     s = socket.socket(socket_family, socket.SOCK_DGRAM)
 
     if ip_version == IPVersion.All:
@@ -286,8 +254,7 @@ def new_socket(
     except OSError as ex:
         if ex.errno == errno.EADDRNOTAVAIL:
             log.warning(
-                "Address not available when binding to %s, "
-                "it is expected to happen on some systems",
+                "Address not available when binding to %s, " "it is expected to happen on some systems",
                 bind_tup,
             )
             return None
@@ -306,9 +273,7 @@ def add_multicast_member(
     if sys.platform == "win32":
         # No WSAEINVAL definition in typeshed
         err_einval |= {cast(Any, errno).WSAEINVAL}  # pylint: disable=no-member
-    log.debug(
-        "Adding %r (socket %d) to multicast group", interface, listen_socket.fileno()
-    )
+    log.debug("Adding %r (socket %d) to multicast group", interface, listen_socket.fileno())
     try:
         if is_v6:
             try:
@@ -324,12 +289,8 @@ def add_multicast_member(
             _value = mdns_addr6_bytes + iface_bin
             listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, _value)
         else:
-            _value = socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(
-                cast(str, interface)
-            )
-            listen_socket.setsockopt(
-                socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value
-            )
+            _value = socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(cast(str, interface))
+            listen_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, _value)
     except OSError as e:
         _errno = get_errno(e)
         if _errno == errno.EADDRINUSE:
@@ -378,15 +339,11 @@ def new_respond_socket(
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
         apple_p2p=apple_p2p,
-        bind_addr=cast(Tuple[Tuple[str, int, int], int], interface)[0]
-        if is_v6
-        else (cast(str, interface),),
+        bind_addr=cast(Tuple[Tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
     )
     if not respond_socket:
         return None
-    log.debug(
-        "Configuring socket %s with multicast interface %s", respond_socket, interface
-    )
+    log.debug("Configuring socket %s with multicast interface %s", respond_socket, interface)
     if is_v6:
         iface_bin = struct.pack("@I", cast(int, interface[1]))
         respond_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, iface_bin)
@@ -408,9 +365,7 @@ def create_sockets(
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(
-            ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=("",)
-        )
+        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=("",))
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
@@ -461,14 +416,10 @@ def autodetect_ip_version(interfaces: InterfacesType) -> IPVersion:
     """Auto detect the IP version when it is not provided."""
     if isinstance(interfaces, list):
         has_v6 = any(
-            isinstance(i, int)
-            or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
+            isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
             for i in interfaces
         )
-        has_v4 = any(
-            isinstance(i, str) and ipaddress.ip_address(i).version == 4
-            for i in interfaces
-        )
+        has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
         if has_v4 and has_v6:
             return IPVersion.All
         if has_v6:

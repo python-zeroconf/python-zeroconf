@@ -36,9 +36,7 @@ _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
-    def suppresses(
-        self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]
-    ) -> bool:
+    def suppresses(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> bool:
         return False
 
 

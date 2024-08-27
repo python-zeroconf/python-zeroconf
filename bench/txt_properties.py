@@ -14,7 +14,7 @@ info = ServiceInfo(
 
 def process_properties() -> None:
     info._properties = None
-    info.properties
+    info.properties  # noqa: B018
 
 
 count = 100000

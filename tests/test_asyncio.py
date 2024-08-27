@@ -120,12 +120,7 @@ async def test_sync_within_event_loop_executor() -> None:
 
     def sync_code():
         zc = Zeroconf(interfaces=["127.0.0.1"])
-        assert (
-            zc.get_service_info(
-                "_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10
-            )
-            is None
-        )
+        assert zc.get_service_info("_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10) is None
         zc.close()
 
     await asyncio.get_event_loop().run_in_executor(None, sync_code)
@@ -625,13 +620,9 @@ async def test_service_info_async_request() -> None:
 
     # Start a tasks BEFORE the registration that will keep trying
     # and see the registration a bit later
-    get_service_info_task1 = asyncio.ensure_future(
-        aiozc.async_get_service_info(type_, registration_name)
-    )
+    get_service_info_task1 = asyncio.ensure_future(aiozc.async_get_service_info(type_, registration_name))
     await asyncio.sleep(_LISTENER_TIME / 1000 / 2)
-    get_service_info_task2 = asyncio.ensure_future(
-        aiozc.async_get_service_info(type_, registration_name)
-    )
+    get_service_info_task2 = asyncio.ensure_future(aiozc.async_get_service_info(type_, registration_name))
 
     desc = {"path": "/~paulsm/"}
     info = ServiceInfo(
@@ -916,14 +907,10 @@ async def test_async_zeroconf_service_types():
     await asyncio.sleep(0.2)
     _clear_cache(zeroconf_registrar.zeroconf)
     try:
-        service_types = await AsyncZeroconfServiceTypes.async_find(
-            interfaces=["127.0.0.1"], timeout=2
-        )
+        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=["127.0.0.1"], timeout=2)
         assert type_ in service_types
         _clear_cache(zeroconf_registrar.zeroconf)
-        service_types = await AsyncZeroconfServiceTypes.async_find(
-            aiozc=zeroconf_registrar, timeout=2
-        )
+        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=2)
         assert type_ in service_types
 
     finally:
@@ -935,9 +922,7 @@ async def test_guard_against_running_serviceinfo_request_event_loop() -> None:
     """Test that running ServiceInfo.request from the event loop throws."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
 
-    service_info = AsyncServiceInfo(
-        "_hap._tcp.local.", "doesnotmatter._hap._tcp.local."
-    )
+    service_info = AsyncServiceInfo("_hap._tcp.local.", "doesnotmatter._hap._tcp.local.")
     with pytest.raises(RuntimeError):
         service_info.request(aiozc.zeroconf, 3000)
     await aiozc.async_close()
@@ -975,9 +960,7 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
     zc.cache.async_add_records(
         [info.dns_pointer(), info.dns_service(), *info.dns_addresses(), info.dns_text()]
     )
@@ -1053,9 +1036,7 @@ async def test_integration():
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
-        browser = AsyncServiceBrowser(
-            zeroconf_browser, type_, [on_service_state_change]
-        )
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
         info = ServiceInfo(
             type_,
             registration_name,
@@ -1230,9 +1211,7 @@ async def test_service_browser_ignores_unrelated_updates():
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
     zc.cache.async_add_records(
         [
             info.dns_pointer(),
@@ -1303,12 +1282,7 @@ async def test_async_request_timeout():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
     start_time = current_time_millis()
-    assert (
-        await aiozc.async_get_service_info(
-            "_notfound.local.", "notthere._notfound.local."
-        )
-        is None
-    )
+    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.") is None
     end_time = current_time_millis()
     await aiozc.async_close()
     # 3000ms for the default timeout
@@ -1322,9 +1296,7 @@ async def test_async_request_non_running_instance():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.async_close()
     with pytest.raises(NotRunningException):
-        await aiozc.async_get_service_info(
-            "_notfound.local.", "notthere._notfound.local."
-        )
+        await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.")
 
 
 @pytest.mark.asyncio

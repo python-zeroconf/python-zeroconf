@@ -110,13 +110,9 @@ class AsyncEngine:
                 sock=s,
             )
             self.protocols.append(cast(AsyncListener, protocol))
-            self.readers.append(
-                make_wrapped_transport(cast(asyncio.DatagramTransport, transport))
-            )
+            self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
             if s in sender_sockets:
-                self.senders.append(
-                    make_wrapped_transport(cast(asyncio.DatagramTransport, transport))
-                )
+                self.senders.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
 
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
@@ -124,10 +120,7 @@ class AsyncEngine:
         self.zc.question_history.async_expire(now)
         self.zc.record_manager.async_updates(
             now,
-            [
-                RecordUpdate(record, record)
-                for record in self.zc.cache.async_expire(now)
-            ],
+            [RecordUpdate(record, record) for record in self.zc.cache.async_expire(now)],
         )
         self.zc.record_manager.async_updates_complete(False)
         self._async_schedule_next_cache_cleanup()
@@ -136,9 +129,7 @@ class AsyncEngine:
         """Schedule the next cache cleanup."""
         loop = self.loop
         assert loop is not None
-        self._cleanup_timer = loop.call_at(
-            loop.time() + _CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup
-        )
+        self._cleanup_timer = loop.call_at(loop.time() + _CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
 
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""

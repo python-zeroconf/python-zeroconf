@@ -179,9 +179,7 @@ class ServiceInfo(RecordUpdateListener):
     ) -> None:
         # Accept both none, or one, but not both.
         if addresses is not None and parsed_addresses is not None:
-            raise TypeError(
-                "addresses and parsed_addresses cannot be provided together"
-            )
+            raise TypeError("addresses and parsed_addresses cannot be provided together")
         if not type_.endswith(service_type_name(name, strict=False)):
             raise BadTypeInNameException
         self.interface_index = interface_index
@@ -251,11 +249,7 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
-            if (
-                IPADDRESS_SUPPORTS_SCOPE_ID
-                and len(address) == 16
-                and self.interface_index is not None
-            ):
+            if IPADDRESS_SUPPORTS_SCOPE_ID and len(address) == 16 and self.interface_index is not None:
                 addr = ip_bytes_and_scope_to_address(address, self.interface_index)
             else:
                 addr = cached_ip_addresses(address)
@@ -299,9 +293,7 @@ class ServiceInfo(RecordUpdateListener):
         self._dns_text_cache = None
         self._get_address_and_nsec_records_cache = None
 
-    async def async_wait(
-        self, timeout: float, loop: Optional[asyncio.AbstractEventLoop] = None
-    ) -> None:
+    async def async_wait(self, timeout: float, loop: Optional[asyncio.AbstractEventLoop] = None) -> None:
         """Calling task waits for a given number of milliseconds or until notified."""
         if not self._new_records_futures:
             self._new_records_futures = set()
@@ -359,10 +351,7 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        return [
-            str_without_scope_id(addr)
-            for addr in self._ip_addresses_by_version_value(version.value)
-        ]
+        return [str_without_scope_id(addr) for addr in self._ip_addresses_by_version_value(version.value)]
 
     def parsed_scoped_addresses(self, version: IPVersion = IPVersion.All) -> List[str]:
         """Equivalent to parsed_addresses, with the exception that IPv6 Link-Local
@@ -374,13 +363,9 @@ class ServiceInfo(RecordUpdateListener):
         This means the first address will always be the most recently added
         address of the given IP version.
         """
-        return [
-            str(addr) for addr in self._ip_addresses_by_version_value(version.value)
-        ]
+        return [str(addr) for addr in self._ip_addresses_by_version_value(version.value)]
 
-    def _set_properties(
-        self, properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]]
-    ) -> None:
+    def _set_properties(self, properties: Dict[Union[str, bytes], Optional[Union[str, bytes]]]) -> None:
         """Sets properties and text of this info from a dictionary"""
         list_: List[bytes] = []
         properties_contain_str = False
@@ -421,9 +406,7 @@ class ServiceInfo(RecordUpdateListener):
     def _generate_decoded_properties(self) -> None:
         """Generates decoded properties from the properties"""
         self._decoded_properties = {
-            k.decode("ascii", "replace"): None
-            if v is None
-            else v.decode("utf-8", "replace")
+            k.decode("ascii", "replace"): None if v is None else v.decode("utf-8", "replace")
             for k, v in self.properties.items()
         }
 
@@ -477,9 +460,7 @@ class ServiceInfo(RecordUpdateListener):
                 self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA),
             )
         else:
-            self._ipv6_addresses = self._get_ip_addresses_from_cache_lifo(
-                zc, now, _TYPE_AAAA
-            )
+            self._ipv6_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA)
 
     def _set_ipv4_addresses_from_cache(self, zc: "Zeroconf", now: float_) -> None:
         """Set IPv4 addresses from the cache."""
@@ -489,13 +470,9 @@ class ServiceInfo(RecordUpdateListener):
                 self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A),
             )
         else:
-            self._ipv4_addresses = self._get_ip_addresses_from_cache_lifo(
-                zc, now, _TYPE_A
-            )
+            self._ipv4_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
 
-    def async_update_records(
-        self, zc: "Zeroconf", now: float_, records: List[RecordUpdate]
-    ) -> None:
+    def async_update_records(self, zc: "Zeroconf", now: float_, records: List[RecordUpdate]) -> None:
         """Updates service information from a DNS record.
 
         This method will be run in the event loop.
@@ -507,9 +484,7 @@ class ServiceInfo(RecordUpdateListener):
         if updated and new_records_futures:
             _resolve_all_futures_to_none(new_records_futures)
 
-    def _process_record_threadsafe(
-        self, zc: "Zeroconf", record: DNSRecord, now: float_
-    ) -> bool:
+    def _process_record_threadsafe(self, zc: "Zeroconf", record: DNSRecord, now: float_) -> bool:
         """Thread safe record updating.
 
         Returns True if a new record was added.
@@ -691,15 +666,11 @@ class ServiceInfo(RecordUpdateListener):
             self._dns_text_cache = record
         return record
 
-    def dns_nsec(
-        self, missing_types: List[int], override_ttl: Optional[int] = None
-    ) -> DNSNsec:
+    def dns_nsec(self, missing_types: List[int], override_ttl: Optional[int] = None) -> DNSNsec:
         """Return DNSNsec from ServiceInfo."""
         return self._dns_nsec(missing_types, override_ttl)
 
-    def _dns_nsec(
-        self, missing_types: List[int], override_ttl: Optional[int]
-    ) -> DNSNsec:
+    def _dns_nsec(self, missing_types: List[int], override_ttl: Optional[int]) -> DNSNsec:
         """Return DNSNsec from ServiceInfo."""
         return DNSNsec(
             self._name,
@@ -711,15 +682,11 @@ class ServiceInfo(RecordUpdateListener):
             0.0,
         )
 
-    def get_address_and_nsec_records(
-        self, override_ttl: Optional[int] = None
-    ) -> Set[DNSRecord]:
+    def get_address_and_nsec_records(self, override_ttl: Optional[int] = None) -> Set[DNSRecord]:
         """Build a set of address records and NSEC records for non-present record types."""
         return self._get_address_and_nsec_records(override_ttl)
 
-    def _get_address_and_nsec_records(
-        self, override_ttl: Optional[int]
-    ) -> Set[DNSRecord]:
+    def _get_address_and_nsec_records(self, override_ttl: Optional[int]) -> Set[DNSRecord]:
         """Build a set of address records and NSEC records for non-present record types."""
         cacheable = override_ttl is None
         if self._get_address_and_nsec_records_cache is not None and cacheable:
@@ -730,17 +697,13 @@ class ServiceInfo(RecordUpdateListener):
             missing_types.discard(dns_address.type)
             records.add(dns_address)
         if missing_types:
-            assert (
-                self.server is not None
-            ), "Service server must be set for NSEC record."
+            assert self.server is not None, "Service server must be set for NSEC record."
             records.add(self._dns_nsec(list(missing_types), override_ttl))
         if cacheable:
             self._get_address_and_nsec_records_cache = records
         return records
 
-    def _get_address_records_from_cache_by_type(
-        self, zc: "Zeroconf", _type: int_
-    ) -> List[DNSAddress]:
+    def _get_address_records_from_cache_by_type(self, zc: "Zeroconf", _type: int_) -> List[DNSAddress]:
         """Get the addresses from the cache."""
         if self.server_key is None:
             return []
@@ -796,9 +759,7 @@ class ServiceInfo(RecordUpdateListener):
     @property
     def _is_complete(self) -> bool:
         """The ServiceInfo has all expected properties."""
-        return bool(
-            self.text is not None and (self._ipv4_addresses or self._ipv6_addresses)
-        )
+        return bool(self.text is not None and (self._ipv4_addresses or self._ipv6_addresses))
 
     def request(
         self,
@@ -883,9 +844,7 @@ class ServiceInfo(RecordUpdateListener):
                 if last <= now:
                     return False
                 if next_ <= now:
-                    this_question_type = (
-                        question_type or QU_QUESTION if first_request else QM_QUESTION
-                    )
+                    this_question_type = question_type or QU_QUESTION if first_request else QM_QUESTION
                     out = self._generate_request_query(zc, now, this_question_type)
                     first_request = False
                     if out.questions:
@@ -897,10 +856,7 @@ class ServiceInfo(RecordUpdateListener):
                         zc.async_send(out, addr, port)
                     next_ = now + delay
                     next_ += self._get_random_delay()
-                    if (
-                        this_question_type is QM_QUESTION
-                        and delay < _DUPLICATE_QUESTION_INTERVAL
-                    ):
+                    if this_question_type is QM_QUESTION and delay < _DUPLICATE_QUESTION_INTERVAL:
                         # If we just asked a QM question, we need to
                         # wait at least the duplicate question interval
                         # before asking another QM question otherwise
@@ -929,9 +885,7 @@ class ServiceInfo(RecordUpdateListener):
     ) -> None:
         """Add a question with known answers if its not suppressed."""
         known_answers = {
-            answer
-            for answer in cache.get_all_by_details(name, type_, class_)
-            if not answer.is_stale(now)
+            answer for answer in cache.get_all_by_details(name, type_, class_) if not answer.is_stale(now)
         }
         if skip_if_known_answers and known_answers:
             return

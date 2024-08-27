@@ -112,9 +112,7 @@ def test_integration_with_listener_ipv6(disable_duplicate_packet_suppression):
     )
     zeroconf_registrar.registry.async_add(info)
     try:
-        service_types = ZeroconfServiceTypes.find(
-            ip_version=r.IPVersion.V6Only, timeout=2
-        )
+        service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=2)
         assert type_ in service_types
         _clear_cache(zeroconf_registrar)
         service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=2)

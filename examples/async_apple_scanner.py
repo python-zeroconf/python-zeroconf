@@ -32,6 +32,8 @@ ALL_SERVICES = [
 
 log = logging.getLogger(__name__)
 
+_PENDING_TASKS: set[asyncio.Task] = set()
+
 
 def async_on_service_state_change(
     zeroconf: Zeroconf, service_type: str, name: str, state_change: ServiceStateChange
@@ -41,23 +43,21 @@ def async_on_service_state_change(
         return
     base_name = name[: -len(service_type) - 1]
     device_name = f"{base_name}.{DEVICE_INFO_SERVICE}"
-    asyncio.ensure_future(_async_show_service_info(zeroconf, service_type, name))
+    task = asyncio.ensure_future(_async_show_service_info(zeroconf, service_type, name))
+    _PENDING_TASKS.add(task)
+    task.add_done_callback(_PENDING_TASKS.discard)
     # Also probe for device info
-    asyncio.ensure_future(
-        _async_show_service_info(zeroconf, DEVICE_INFO_SERVICE, device_name)
-    )
+    task = asyncio.ensure_future(_async_show_service_info(zeroconf, DEVICE_INFO_SERVICE, device_name))
+    _PENDING_TASKS.add(task)
+    task.add_done_callback(_PENDING_TASKS.discard)
 
 
-async def _async_show_service_info(
-    zeroconf: Zeroconf, service_type: str, name: str
-) -> None:
+async def _async_show_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
     info = AsyncServiceInfo(service_type, name)
     await info.async_request(zeroconf, 3000, question_type=DNSQuestionType.QU)
     print("Info from zeroconf.get_service_info: %r" % (info))
     if info:
-        addresses = [
-            "%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()
-        ]
+        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
         print("  Name: %s" % name)
         print("  Addresses: %s" % ", ".join(addresses))
         print("  Weight: %d, priority: %d" % (info.weight, info.priority))

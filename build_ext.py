@@ -1,8 +1,11 @@
 """Build optional cython modules."""
 
+import logging
 import os
 from distutils.command.build_ext import build_ext
 from typing import Any
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class BuildExt(build_ext):
@@ -10,7 +13,7 @@ class BuildExt(build_ext):
         try:
             super().build_extensions()
         except Exception:
-            pass
+            _LOGGER.info("Failed to build cython extensions")
 
 
 def build(setup_kwargs: Any) -> None:
@@ -20,8 +23,8 @@ def build(setup_kwargs: Any) -> None:
         from Cython.Build import cythonize
 
         setup_kwargs.update(
-            dict(
-                ext_modules=cythonize(
+            {
+                "ext_modules": cythonize(
                     [
                         "src/zeroconf/_dns.py",
                         "src/zeroconf/_cache.py",
@@ -44,12 +47,10 @@ def build(setup_kwargs: Any) -> None:
                     ],
                     compiler_directives={"language_level": "3"},  # Python 3
                 ),
-                cmdclass=dict(build_ext=BuildExt),
-            )
+                "cmdclass": {"build_ext": BuildExt},
+            }
         )
-        setup_kwargs["exclude_package_data"] = {
-            pkg: ["*.c"] for pkg in setup_kwargs["packages"]
-        }
+        setup_kwargs["exclude_package_data"] = {pkg: ["*.c"] for pkg in setup_kwargs["packages"]}
     except Exception:
         if os.environ.get("REQUIRE_CYTHON"):
             raise

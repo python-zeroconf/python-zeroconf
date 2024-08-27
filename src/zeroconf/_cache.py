@@ -119,12 +119,7 @@ class DNSCache:
 
         This function must be run in from event loop.
         """
-        expired = [
-            record
-            for records in self.cache.values()
-            for record in records
-            if record.is_expired(now)
-        ]
+        expired = [record for records in self.cache.values() for record in records if record.is_expired(now)]
         self.async_remove_records(expired)
         return expired
 
@@ -140,9 +135,7 @@ class DNSCache:
             return None
         return store.get(entry)
 
-    def async_all_by_details(
-        self, name: _str, type_: _int, class_: _int
-    ) -> List[DNSRecord]:
+    def async_all_by_details(self, name: _str, type_: _int, class_: _int) -> List[DNSRecord]:
         """Gets all matching entries by details.
 
         This function is not thread-safe and must be called from
@@ -188,9 +181,7 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_by_details(
-        self, name: str, type_: _int, class_: _int
-    ) -> Optional[DNSRecord]:
+    def get_by_details(self, name: str, type_: _int, class_: _int) -> Optional[DNSRecord]:
         """Gets the first matching entry by details. Returns None if no entries match.
 
         Calling this function is not recommended as it will only
@@ -211,19 +202,13 @@ class DNSCache:
                 return cached_entry
         return None
 
-    def get_all_by_details(
-        self, name: str, type_: _int, class_: _int
-    ) -> List[DNSRecord]:
+    def get_all_by_details(self, name: str, type_: _int, class_: _int) -> List[DNSRecord]:
         """Gets all matching entries by details."""
         key = name.lower()
         records = self.cache.get(key)
         if records is None:
             return []
-        return [
-            entry
-            for entry in list(records)
-            if type_ == entry.type and class_ == entry.class_
-        ]
+        return [entry for entry in list(records) if type_ == entry.type and class_ == entry.class_]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
@@ -233,9 +218,7 @@ class DNSCache:
         """Returns a list of entries whose key matches the name."""
         return list(self.cache.get(name.lower(), []))
 
-    def current_entry_with_name_and_alias(
-        self, name: str, alias: str
-    ) -> Optional[DNSRecord]:
+    def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
         for record in reversed(self.entries_with_name(name)):
             if (

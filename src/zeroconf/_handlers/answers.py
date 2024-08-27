@@ -109,9 +109,7 @@ def construct_outgoing_unicast_answers(
     return out
 
 
-def _add_answers_additionals(
-    out: DNSOutgoing, answers: _AnswerWithAdditionalsType
-) -> None:
+def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
     sending: Set[DNSRecord] = set(answers)
     # Answers are sorted to group names together to increase the chance

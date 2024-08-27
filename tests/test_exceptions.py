@@ -38,9 +38,7 @@ class Exceptions(unittest.TestCase):
         del cls.browser
 
     def test_bad_service_info_name(self):
-        self.assertRaises(
-            r.BadTypeInNameException, self.browser.get_service_info, "type", "type_not"
-        )
+        self.assertRaises(r.BadTypeInNameException, self.browser.get_service_info, "type", "type_not")
 
     def test_bad_service_names(self):
         bad_names_to_try = (
@@ -85,9 +83,7 @@ class Exceptions(unittest.TestCase):
         assert r.service_type_name("1.2.3._mqtt._tcp.local.") == "_mqtt._tcp.local."
         assert r.service_type_name("x.sub._http._tcp.local.") == "_http._tcp.local."
         assert (
-            r.service_type_name(
-                "6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local."
-            )
+            r.service_type_name("6d86f882b90facee9170ad3439d72a4d6ee9f511._zget._http._tcp.local.")
             == "_http._tcp.local."
         )
 
@@ -143,10 +139,7 @@ class Exceptions(unittest.TestCase):
         for name, result in good_names_to_try:
             assert r.service_type_name(name) == result
 
-        assert (
-            r.service_type_name("_one_two._tcp.local.", strict=False)
-            == "_one_two._tcp.local."
-        )
+        assert r.service_type_name("_one_two._tcp.local.", strict=False) == "_one_two._tcp.local."
 
     def test_invalid_addresses(self):
         type_ = "_test-srvc-type._tcp.local."

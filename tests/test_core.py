@@ -93,9 +93,7 @@ class Framework(unittest.TestCase):
     def test_launch_and_close_v4_v6(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
         rv.close()
-        rv = r.Zeroconf(
-            interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All
-        )
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
         rv.close()
 
     @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
@@ -103,21 +101,15 @@ class Framework(unittest.TestCase):
     def test_launch_and_close_v6_only(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
         rv.close()
-        rv = r.Zeroconf(
-            interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only
-        )
+        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
         rv.close()
 
-    @unittest.skipIf(
-        sys.platform == "darwin", reason="apple_p2p failure path not testable on mac"
-    )
+    @unittest.skipIf(sys.platform == "darwin", reason="apple_p2p failure path not testable on mac")
     def test_launch_and_close_apple_p2p_not_mac(self):
         with pytest.raises(RuntimeError):
             r.Zeroconf(apple_p2p=True)
 
-    @unittest.skipIf(
-        sys.platform != "darwin", reason="apple_p2p happy path only testable on mac"
-    )
+    @unittest.skipIf(sys.platform != "darwin", reason="apple_p2p happy path only testable on mac")
     def test_launch_and_close_apple_p2p_on_mac(self):
         rv = r.Zeroconf(apple_p2p=True)
         rv.close()
@@ -146,9 +138,7 @@ class Framework(unittest.TestCase):
                 ttl = 0
 
             generated.add_answer_at_time(
-                r.DNSPointer(
-                    service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name
-                ),
+                r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name),
                 0,
             )
             generated.add_answer_at_time(
@@ -229,16 +219,10 @@ class Framework(unittest.TestCase):
         try:
             # service added
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Added))
-            dns_text = zeroconf.cache.get_by_details(
-                service_name, const._TYPE_TXT, const._CLASS_IN
-            )
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
-            assert (
-                cast(r.DNSText, dns_text).text == service_text
-            )  # service_text is b'path=/~paulsm/'
-            all_dns_text = zeroconf.cache.get_all_by_details(
-                service_name, const._TYPE_TXT, const._CLASS_IN
-            )
+            assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
+            all_dns_text = zeroconf.cache.get_all_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert [dns_text] == all_dns_text
 
             # https://tools.ietf.org/html/rfc6762#section-10.2
@@ -252,35 +236,23 @@ class Framework(unittest.TestCase):
             # service updated. currently only text record can be updated
             service_text = b"path=/~humingchun/"
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Updated))
-            dns_text = zeroconf.cache.get_by_details(
-                service_name, const._TYPE_TXT, const._CLASS_IN
-            )
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
-            assert (
-                cast(r.DNSText, dns_text).text == service_text
-            )  # service_text is b'path=/~humingchun/'
+            assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
             time.sleep(1.1)
 
             # The split message only has a SRV and A record.
             # This should not evict TXT records from the cache
-            _inject_response(
-                zeroconf, mock_split_incoming_msg(r.ServiceStateChange.Updated)
-            )
+            _inject_response(zeroconf, mock_split_incoming_msg(r.ServiceStateChange.Updated))
             time.sleep(1.1)
-            dns_text = zeroconf.cache.get_by_details(
-                service_name, const._TYPE_TXT, const._CLASS_IN
-            )
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
-            assert (
-                cast(r.DNSText, dns_text).text == service_text
-            )  # service_text is b'path=/~humingchun/'
+            assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
             # service removed
             _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Removed))
-            dns_text = zeroconf.cache.get_by_details(
-                service_name, const._TYPE_TXT, const._CLASS_IN
-            )
+            dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
             assert dns_text.is_expired(current_time_millis() + 1000)
 
@@ -450,12 +422,7 @@ def test_logging_packets(caplog):
 def test_get_service_info_failure_path():
     """Verify get_service_info return None when the underlying call returns False."""
     zc = Zeroconf(interfaces=["127.0.0.1"])
-    assert (
-        zc.get_service_info(
-            "_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10
-        )
-        is None
-    )
+    assert zc.get_service_info("_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10) is None
     zc.close()
 
 
@@ -471,9 +438,7 @@ def test_sending_unicast():
         b"path=/~paulsm/",
     )
     generated.add_answer_at_time(entry, 0)
-    zc.send(
-        generated, "2001:db8::1", const._MDNS_PORT
-    )  # https://www.iana.org/go/rfc3849
+    zc.send(generated, "2001:db8::1", const._MDNS_PORT)  # https://www.iana.org/go/rfc3849
     time.sleep(0.2)
     assert zc.cache.get(entry) is None
 
@@ -783,9 +748,7 @@ def test_shutdown_while_register_in_process():
 
 
 @pytest.mark.asyncio
-@unittest.skipIf(
-    sys.version_info[:3][1] < 8, "Requires Python 3.8 or later to patch _async_setup"
-)
+@unittest.skipIf(sys.version_info[:3][1] < 8, "Requires Python 3.8 or later to patch _async_setup")
 @patch("zeroconf._core._STARTUP_TIMEOUT", 0)
 @patch("zeroconf._core.AsyncEngine._async_setup", new_callable=AsyncMock)
 async def test_event_loop_blocked(mock_start):

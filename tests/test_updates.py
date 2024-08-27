@@ -40,9 +40,7 @@ def test_legacy_record_update_listener():
         r.RecordUpdateListener().update_record(
             zc,
             0,
-            r.DNSRecord(
-                "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL
-            ),
+            r.DNSRecord("irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL),
         )
 
     updates = []
@@ -50,9 +48,7 @@ def test_legacy_record_update_listener():
     class LegacyRecordUpdateListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def update_record(
-            self, zc: "Zeroconf", now: float, record: r.DNSRecord
-        ) -> None:
+        def update_record(self, zc: "Zeroconf", now: float, record: r.DNSRecord) -> None:
             nonlocal updates
             updates.append(record)
 
@@ -87,15 +83,7 @@ def test_legacy_record_update_listener():
     browser.cancel()
 
     assert len(updates)
-    assert (
-        len(
-            [
-                isinstance(update, r.DNSPointer) and update.name == type_
-                for update in updates
-            ]
-        )
-        >= 1
-    )
+    assert len([isinstance(update, r.DNSPointer) and update.name == type_ for update in updates]) >= 1
 
     zc.remove_listener(listener)
     # Removing a second time should not throw
@@ -106,12 +94,8 @@ def test_legacy_record_update_listener():
 
 def test_record_update_compat():
     """Test a RecordUpdate can fetch by index."""
-    new = r.DNSPointer(
-        "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, "new"
-    )
-    old = r.DNSPointer(
-        "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, "old"
-    )
+    new = r.DNSPointer("irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, "new")
+    old = r.DNSPointer("irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, "old")
     update = RecordUpdate(new, old)
     assert update[0] == new
     assert update[1] == old
