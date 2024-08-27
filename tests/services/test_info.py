@@ -306,22 +306,10 @@ class TestServiceInfo(unittest.TestCase):
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 4
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN)
-                    in last_sent.questions
-                )
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
                 # Expect query for SRV, A, AAAA
@@ -344,18 +332,9 @@ class TestServiceInfo(unittest.TestCase):
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 3  # type: ignore[unreachable]
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN)
-                    in last_sent.questions
-                )
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
                 # Expect query for A, AAAA
@@ -381,14 +360,8 @@ class TestServiceInfo(unittest.TestCase):
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 2
-                assert (
-                    r.DNSQuestion(service_server, const._TYPE_A, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_server, const._TYPE_AAAA, const._CLASS_IN)
-                    in last_sent.questions
-                )
+                assert r.DNSQuestion(service_server, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_server, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 last_sent = None
                 assert service_info is None
 
@@ -411,9 +384,7 @@ class TestServiceInfo(unittest.TestCase):
                                 const._TYPE_AAAA,
                                 const._CLASS_IN | const._CLASS_UNIQUE,
                                 ttl,
-                                socket.inet_pton(
-                                    socket.AF_INET6, service_address_v6_ll
-                                ),
+                                socket.inet_pton(socket.AF_INET6, service_address_v6_ll),
                                 scope_id=service_scope_id,
                             ),
                         ]
@@ -471,30 +442,16 @@ class TestServiceInfo(unittest.TestCase):
                     args=(zc, service_type, service_name),
                 )
                 helper_thread.start()
-                wait_time = (
-                    const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5
-                ) / 1000
+                wait_time = (const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5) / 1000
 
                 # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 4
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN)
-                    in last_sent.questions
-                )
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
                 # Expect query for SRV only as A, AAAA, and TXT are suppressed
@@ -524,16 +481,11 @@ class TestServiceInfo(unittest.TestCase):
                 send_event.wait(wait_time * 0.25)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 1  # type: ignore[unreachable]
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN)
-                    in last_sent.questions
-                )
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
                 wait_time = (
-                    const._DUPLICATE_QUESTION_INTERVAL
-                    + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1]
-                    + 5
+                    const._DUPLICATE_QUESTION_INTERVAL + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5
                 ) / 1000
                 # Expect no queries as all are suppressed by the question history
                 last_sent = None
@@ -624,22 +576,10 @@ class TestServiceInfo(unittest.TestCase):
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 4
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN)
-                    in last_sent.questions
-                )
-                assert (
-                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN)
-                    in last_sent.questions
-                )
+                assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN) in last_sent.questions
+                assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
                 # Expext no further queries
@@ -816,9 +756,7 @@ def test_multiple_addresses():
                 else ip_address(address_v6_ll),
             ]
             assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
-            assert info.ip_addresses_by_version(r.IPVersion.V4Only) == [
-                ip_address(address)
-            ]
+            assert info.ip_addresses_by_version(r.IPVersion.V4Only) == [ip_address(address)]
             assert info.addresses_by_version(r.IPVersion.V6Only) == [
                 address_v6,
                 address_v6_ll,
@@ -842,16 +780,12 @@ def test_multiple_addresses():
             assert info.parsed_scoped_addresses() == [
                 address_parsed,
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed
-                if ipaddress_supports_scope_id
-                else address_v6_ll_parsed,
+                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
             ]
             assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed
-                if ipaddress_supports_scope_id
-                else address_v6_ll_parsed,
+                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
             ]
 
 
@@ -896,9 +830,7 @@ def test_scoped_addresses_from_cache():
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(zeroconf)
     assert info.parsed_scoped_addresses() == ["fe80::52e:c2f2:bc5f:e9c6%12"]
-    assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [
-        ip_address("fe80::52e:c2f2:bc5f:e9c6%12")
-    ]
+    assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [ip_address("fe80::52e:c2f2:bc5f:e9c6%12")]
     zeroconf.close()
 
 
@@ -913,12 +845,8 @@ async def test_multiple_a_addresses_newest_address_first():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     cache = aiozc.zeroconf.cache
     host = "multahost.local."
-    record1 = r.DNSAddress(
-        host, const._TYPE_A, const._CLASS_IN, 1000, b"\x7f\x00\x00\x01"
-    )
-    record2 = r.DNSAddress(
-        host, const._TYPE_A, const._CLASS_IN, 1000, b"\x7f\x00\x00\x02"
-    )
+    record1 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b"\x7f\x00\x00\x01")
+    record2 = r.DNSAddress(host, const._TYPE_A, const._CLASS_IN, 1000, b"\x7f\x00\x00\x02")
     cache.async_add_records([record1, record2])
 
     # New kwarg way
@@ -959,9 +887,7 @@ def test_filter_address_by_type_from_service_info():
     registration_name = f"{name}.{type_}"
     ipv4 = socket.inet_aton("10.0.1.2")
     ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6])
 
     def dns_addresses_to_addresses(dns_address: List[DNSAddress]) -> List[bytes]:
         return [address.address for address in dns_address]
@@ -971,12 +897,8 @@ def test_filter_address_by_type_from_service_info():
         ipv4,
         ipv6,
     ]
-    assert dns_addresses_to_addresses(
-        info.dns_addresses(version=r.IPVersion.V4Only)
-    ) == [ipv4]
-    assert dns_addresses_to_addresses(
-        info.dns_addresses(version=r.IPVersion.V6Only)
-    ) == [ipv6]
+    assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.V4Only)) == [ipv4]
+    assert dns_addresses_to_addresses(info.dns_addresses(version=r.IPVersion.V6Only)) == [ipv6]
 
 
 def test_changing_name_updates_serviceinfo_key():
@@ -1102,9 +1024,7 @@ def test_asking_qu_questions():
 
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
-        zeroconf.get_service_info(
-            f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QU
-        )
+        zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QU)
         assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         zeroconf.close()
 
@@ -1128,9 +1048,7 @@ def test_asking_qm_questions():
 
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
-        zeroconf.get_service_info(
-            f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QM
-        )
+        zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QM)
         assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         zeroconf.close()
 
@@ -1139,10 +1057,7 @@ def test_request_timeout():
     """Test that the timeout does not throw an exception and finishes close to the actual timeout."""
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
     start_time = r.current_time_millis()
-    assert (
-        zeroconf.get_service_info("_notfound.local.", "notthere._notfound.local.")
-        is None
-    )
+    assert zeroconf.get_service_info("_notfound.local.", "notthere._notfound.local.") is None
     end_time = r.current_time_millis()
     zeroconf.close()
     # 3000ms for the default timeout
@@ -1232,9 +1147,7 @@ async def test_release_wait_when_new_recorded_added():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     assert await asyncio.wait_for(task, timeout=2)
     assert info.addresses == [b"\x7f\x00\x00\x01"]
     await aiozc.async_close()
@@ -1297,9 +1210,7 @@ async def test_port_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     generated.add_answer_at_time(
@@ -1315,9 +1226,7 @@ async def test_port_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1384,9 +1293,7 @@ async def test_port_changes_are_seen_with_directed_request():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     generated.add_answer_at_time(
@@ -1402,9 +1309,7 @@ async def test_port_changes_are_seen_with_directed_request():
         ),
         0,
     )
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name, 80, 10, 10, desc, host)
     await info.async_request(aiozc.zeroconf, timeout=200, addr="127.0.0.1", port=5353)
@@ -1470,9 +1375,7 @@ async def test_ipv4_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b"\x7f\x00\x00\x01"]
@@ -1488,9 +1391,7 @@ async def test_ipv4_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
@@ -1562,9 +1463,7 @@ async def test_ipv6_changes_are_seen():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V6Only) == [
@@ -1582,9 +1481,7 @@ async def test_ipv6_changes_are_seen():
         ),
         0,
     )
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
@@ -1644,15 +1541,11 @@ async def test_bad_ip_addresses_ignored_in_cache():
         0,
     )
     # Manually add a bad record to the cache
-    aiozc.zeroconf.cache.async_add_records(
-        [DNSAddress(host, const._TYPE_A, const._CLASS_IN, 10000, b"\x00")]
-    )
+    aiozc.zeroconf.cache.async_add_records([DNSAddress(host, const._TYPE_A, const._CLASS_IN, 10000, b"\x00")])
 
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b"\x7f\x00\x00\x01"]
@@ -1711,9 +1604,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1733,9 +1624,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
         ),
         0,
     )
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1787,9 +1676,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
     )
     await aiozc.zeroconf.async_wait_for_start()
     await asyncio.sleep(0)
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1819,9 +1706,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
         ),
         0,
     )
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
 
     info = ServiceInfo(type_, registration_name)
     await info.async_request(aiozc.zeroconf, timeout=200)
@@ -1843,10 +1728,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
 
     # New kwarg way
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
-    tasks = [
-        asyncio.create_task(info.async_request(aiozc.zeroconf, timeout=200000))
-        for _ in range(10)
-    ]
+    tasks = [asyncio.create_task(info.async_request(aiozc.zeroconf, timeout=200000)) for _ in range(10)]
     await asyncio.sleep(0.1)
     for task in tasks:
         assert not task.done()
@@ -1898,9 +1780,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
     await asyncio.sleep(0)
     for task in tasks:
         assert not task.done()
-    aiozc.zeroconf.record_manager.async_updates_from_response(
-        r.DNSIncoming(generated.packets()[0])
-    )
+    aiozc.zeroconf.record_manager.async_updates_from_response(r.DNSIncoming(generated.packets()[0]))
     _, pending = await asyncio.wait(tasks, timeout=2)
     assert not pending
     assert info.addresses == [b"\x7f\x00\x00\x01"]

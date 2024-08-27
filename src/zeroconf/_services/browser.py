@@ -28,7 +28,7 @@ import threading
 import time
 import warnings
 from functools import partial
-from types import TracebackType  # noqa # used in type hints
+from types import TracebackType  # used in type hints
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -197,9 +197,7 @@ class _DNSPointerOutgoingBucket:
         self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast)
         self.bytes = 0
 
-    def add(
-        self, max_compressed_size: int_, question: DNSQuestion, answers: Set[DNSPointer]
-    ) -> None:
+    def add(self, max_compressed_size: int_, question: DNSQuestion, answers: Set[DNSPointer]) -> None:
         """Add a new set of questions and known answers to the outgoing."""
         self.out.add_question(question)
         for answer in answers:
@@ -220,9 +218,7 @@ def group_ptr_queries_with_known_answers(
     so we try to keep all the known answers in the same packet as the
     questions.
     """
-    return _group_ptr_queries_with_known_answers(
-        now, multicast, question_with_known_answers
-    )
+    return _group_ptr_queries_with_known_answers(now, multicast, question_with_known_answers)
 
 
 def _group_ptr_queries_with_known_answers(
@@ -237,10 +233,7 @@ def _group_ptr_queries_with_known_answers(
     # goal of this algorithm is to quickly bucket the query + known answers without
     # the overhead of actually constructing the packets.
     query_by_size: Dict[DNSQuestion, int] = {
-        question: (
-            question.max_size
-            + sum(answer.max_size_compressed for answer in known_answers)
-        )
+        question: (question.max_size + sum(answer.max_size_compressed for answer in known_answers))
         for question, known_answers in question_with_known_answers.items()
     }
     max_bucket_size = _MAX_MSG_TYPICAL - _DNS_PACKET_HEADER_LEN
@@ -276,9 +269,7 @@ def generate_service_query(
 ) -> List[DNSOutgoing]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
-    qu_question = (
-        not multicast if question_type is None else question_type is QU_QUESTION
-    )
+    qu_question = not multicast if question_type is None else question_type is QU_QUESTION
     question_history = zc.question_history
     cache = zc.cache
     for type_ in types_:
@@ -289,9 +280,7 @@ def generate_service_query(
             for record in cache.get_all_by_details(type_, _TYPE_PTR, _CLASS_IN)
             if not record.is_stale(now_millis)
         }
-        if not qu_question and question_history.suppresses(
-            question, now_millis, known_answers
-        ):
+        if not qu_question and question_history.suppresses(question, now_millis, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
         if TYPE_CHECKING:
@@ -302,9 +291,7 @@ def generate_service_query(
         if not qu_question:
             question_history.add_question_at_time(question, now_millis, known_answers)
 
-    return _group_ptr_queries_with_known_answers(
-        now_millis, multicast, questions_with_known_answers
-    )
+    return _group_ptr_queries_with_known_answers(now_millis, multicast, questions_with_known_answers)
 
 
 def _on_change_dispatcher(
@@ -325,9 +312,10 @@ def _service_state_changed_from_listener(
     assert listener is not None
     if not hasattr(listener, "update_service"):
         warnings.warn(
-            "%r has no update_service method. Provide one (it can be empty if you "
-            "don't care about the updates), it'll become mandatory." % (listener,),
+            f"{listener!r} has no update_service method. Provide one (it can be empty if you "
+            "don't care about the updates), it'll become mandatory.",
             FutureWarning,
+            stacklevel=1,
         )
     return partial(_on_change_dispatcher, listener)
 
@@ -379,9 +367,7 @@ class QueryScheduler:
         self._next_scheduled_for_alias: Dict[str, _ScheduledPTRQuery] = {}
         self._query_heap: list[_ScheduledPTRQuery] = []
         self._next_run: Optional[asyncio.TimerHandle] = None
-        self._clock_resolution_millis = (
-            time.get_clock_info("monotonic").resolution * 1000
-        )
+        self._clock_resolution_millis = time.get_clock_info("monotonic").resolution * 1000
         self._question_type = question_type
 
     def start(self, loop: asyncio.AbstractEventLoop) -> None:
@@ -394,9 +380,7 @@ class QueryScheduler:
         also delay the first query of the series by a randomly chosen amount
         in the range 20-120 ms.
         """
-        start_delay = millis_to_seconds(
-            random.randint(*self._first_random_delay_interval)
-        )
+        start_delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))  # noqa: S311
         self._loop = loop
         self._next_run = loop.call_later(start_delay, self._process_startup_queries)
 
@@ -485,9 +469,7 @@ class QueryScheduler:
         now_millis = current_time_millis()
 
         # At first we will send STARTUP_QUERIES queries to get the cache populated
-        self.async_send_ready_queries(
-            self._startup_queries_sent == 0, now_millis, self._types
-        )
+        self.async_send_ready_queries(self._startup_queries_sent == 0, now_millis, self._types)
         self._startup_queries_sent += 1
 
         # Once we finish sending the initial queries we will
@@ -500,9 +482,7 @@ class QueryScheduler:
             )
             return
 
-        self._next_run = self._loop.call_later(
-            self._startup_queries_sent**2, self._process_startup_queries
-        )
+        self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_startup_queries)
 
     def _process_ready_types(self) -> None:
         """Generate a list of ready types that is due and schedule the next time."""
@@ -543,9 +523,7 @@ class QueryScheduler:
             schedule_rescue.append(query)
 
         for query in schedule_rescue:
-            self.schedule_rescue_query(
-                query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE
-            )
+            self.schedule_rescue_query(query, now_millis, RESCUE_RECORD_RETRY_TTL_PERCENTAGE)
 
         if ready_types:
             self.async_send_ready_queries(False, now_millis, ready_types)
@@ -557,9 +535,7 @@ class QueryScheduler:
         else:
             next_when_millis = next_time_millis
 
-        self._next_run = self._loop.call_at(
-            millis_to_seconds(next_when_millis), self._process_ready_types
-        )
+        self._next_run = self._loop.call_at(millis_to_seconds(next_when_millis), self._process_ready_types)
 
     def async_send_ready_queries(
         self, first_request: bool, now_millis: float_, ready_types: Set[str]
@@ -569,14 +545,8 @@ class QueryScheduler:
         # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
         # just starting up and we know our cache is likely empty. This ensures
         # the next outgoing will be sent with the known answers list.
-        question_type = (
-            QU_QUESTION
-            if self._question_type is None and first_request
-            else self._question_type
-        )
-        outs = generate_service_query(
-            self._zc, now_millis, ready_types, self._multicast, question_type
-        )
+        question_type = QU_QUESTION if self._question_type is None and first_request else self._question_type
+        outs = generate_service_query(self._zc, now_millis, ready_types, self._multicast, question_type)
         if outs:
             for out in outs:
                 self._zc.async_send(out, self._addr, self._port)
@@ -667,13 +637,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
         Must be called by uses of this base class after they
         have finished setting their properties.
         """
-        self.zc.async_add_listener(
-            self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types]
-        )
+        self.zc.async_add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
         # Only start queries after the listener is installed
-        self._query_sender_task = asyncio.ensure_future(
-            self._async_start_query_sender()
-        )
+        self._query_sender_task = asyncio.ensure_future(self._async_start_query_sender())
 
     @property
     def service_state_changed(self) -> SignalRegistrationInterface:
@@ -682,9 +648,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
     def _names_matching_types(self, names: Iterable[str]) -> List[Tuple[str, str]]:
         """Return the type and name for records matching the types we are browsing."""
         return [
-            (type_, name)
-            for name in names
-            for type_ in self.types.intersection(cached_possible_types(name))
+            (type_, name) for name in names for type_ in self.types.intersection(cached_possible_types(name))
         ]
 
     def _enqueue_callback(
@@ -702,16 +666,11 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 state_change is SERVICE_STATE_CHANGE_REMOVED
                 and self._pending_handlers.get(key) is not SERVICE_STATE_CHANGE_ADDED
             )
-            or (
-                state_change is SERVICE_STATE_CHANGE_UPDATED
-                and key not in self._pending_handlers
-            )
+            or (state_change is SERVICE_STATE_CHANGE_UPDATED and key not in self._pending_handlers)
         ):
             self._pending_handlers[key] = state_change
 
-    def async_update_records(
-        self, zc: "Zeroconf", now: float_, records: List[RecordUpdate]
-    ) -> None:
+    def async_update_records(self, zc: "Zeroconf", now: float_, records: List[RecordUpdate]) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache.
@@ -729,18 +688,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
                 if TYPE_CHECKING:
                     record = cast(DNSPointer, record)
                 pointer = record
-                for type_ in self.types.intersection(
-                    cached_possible_types(pointer.name)
-                ):
+                for type_ in self.types.intersection(cached_possible_types(pointer.name)):
                     if old_record is None:
-                        self._enqueue_callback(
-                            SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias
-                        )
+                        self._enqueue_callback(SERVICE_STATE_CHANGE_ADDED, type_, pointer.alias)
                         self.query_scheduler.reschedule_ptr_first_refresh(pointer)
                     elif pointer.is_expired(now):
-                        self._enqueue_callback(
-                            SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias
-                        )
+                        self._enqueue_callback(SERVICE_STATE_CHANGE_REMOVED, type_, pointer.alias)
                         self.query_scheduler.cancel_ptr_refresh(pointer)
                     else:
                         self.query_scheduler.reschedule_ptr_first_refresh(pointer)
@@ -752,10 +705,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
             if record_type in _ADDRESS_RECORD_TYPES:
                 cache = self._cache
-                names = {
-                    service.name
-                    for service in cache.async_entries_with_server(record.name)
-                }
+                names = {service.name for service in cache.async_entries_with_server(record.name)}
                 # Iterate through the DNSCache and callback any services that use this address
                 for type_, name in self._names_matching_types(names):
                     self._enqueue_callback(SERVICE_STATE_CHANGE_UPDATED, type_, name)
@@ -777,9 +727,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._fire_service_state_changed_event(pending)
         self._pending_handlers.clear()
 
-    def _fire_service_state_changed_event(
-        self, event: Tuple[Tuple[str, str], ServiceStateChange]
-    ) -> None:
+    def _fire_service_state_changed_event(self, event: Tuple[Tuple[str, str], ServiceStateChange]) -> None:
         """Fire a service state changed event.
 
         When running with ServiceBrowser, this will happen in the dedicated
@@ -801,9 +749,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self.done = True
         self.query_scheduler.stop()
         self.zc.async_remove_listener(self)
-        assert (
-            self._query_sender_task is not None
-        ), "Attempted to cancel a browser that was not started"
+        assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
         self._query_sender_task.cancel()
         self._query_sender_task = None
 
@@ -836,9 +782,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         if not zc.loop.is_running():
             raise RuntimeError("The event loop is not running")
         threading.Thread.__init__(self)
-        super().__init__(
-            zc, type_, handlers, listener, addr, port, delay, question_type
-        )
+        super().__init__(zc, type_, handlers, listener, addr, port, delay, question_type)
         # Add the queue before the listener is installed in _setup
         # to ensure that events run in the dedicated thread and do
         # not block the event loop

@@ -69,9 +69,7 @@ class ZeroconfServiceTypes(ServiceListener):
         """
         local_zc = zc or Zeroconf(interfaces=interfaces, ip_version=ip_version)
         listener = cls()
-        browser = ServiceBrowser(
-            local_zc, _SERVICE_TYPE_ENUMERATION_NAME, listener=listener
-        )
+        browser = ServiceBrowser(local_zc, _SERVICE_TYPE_ENUMERATION_NAME, listener=listener)
 
         # wait for responses
         time.sleep(timeout)

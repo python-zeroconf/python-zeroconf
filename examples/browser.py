@@ -29,10 +29,7 @@ def on_service_state_change(
         print("Info from zeroconf.get_service_info: %r" % (info))
 
         if info:
-            addresses = [
-                "%s:%d" % (addr, cast(int, info.port))
-                for addr in info.parsed_scoped_addresses()
-            ]
+            addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
             print("  Addresses: %s" % ", ".join(addresses))
             print("  Weight: %d, priority: %d" % (info.weight, info.priority))
             print(f"  Server: {info.server}")
@@ -52,9 +49,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument(
-        "--find", action="store_true", help="Browse all available services"
-    )
+    parser.add_argument("--find", action="store_true", help="Browse all available services")
     version_group = parser.add_mutually_exclusive_group()
     version_group.add_argument("--v6-only", action="store_true")
     version_group.add_argument("--v4-only", action="store_true")

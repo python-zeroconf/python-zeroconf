@@ -48,9 +48,7 @@ class TestDunder(unittest.TestCase):
         repr(hinfo)
 
     def test_dns_pointer_repr(self):
-        pointer = r.DNSPointer(
-            "irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "123"
-        )
+        pointer = r.DNSPointer("irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "123")
         repr(pointer)
 
     @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
@@ -78,9 +76,7 @@ class TestDunder(unittest.TestCase):
         assert repr(address_ipv6).endswith("::1")
 
     def test_dns_question_repr(self):
-        question = r.DNSQuestion(
-            "irrelevant", const._TYPE_SRV, const._CLASS_IN | const._CLASS_UNIQUE
-        )
+        question = r.DNSQuestion("irrelevant", const._TYPE_SRV, const._CLASS_IN | const._CLASS_UNIQUE)
         repr(question)
         assert not question != question
 
@@ -98,9 +94,7 @@ class TestDunder(unittest.TestCase):
         repr(service)
 
     def test_dns_record_abc(self):
-        record = r.DNSRecord(
-            "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL
-        )
+        record = r.DNSRecord("irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL)
         self.assertRaises(r.AbstractMethodException, record.__eq__, record)
         with pytest.raises((r.AbstractMethodException, TypeError)):
             record.write(None)  # type: ignore[arg-type]
@@ -225,12 +219,8 @@ def test_dns_record_hashablity_does_not_consider_ttl():
     """Test DNSRecord are hashable."""
 
     # Verify the TTL is not considered in the hash
-    record1 = r.DNSAddress(
-        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_OTHER_TTL, b"same"
-    )
-    record2 = r.DNSAddress(
-        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same"
-    )
+    record1 = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_OTHER_TTL, b"same")
+    record2 = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same")
 
     record_set = {record1, record2}
     assert len(record_set) == 1
@@ -238,9 +228,7 @@ def test_dns_record_hashablity_does_not_consider_ttl():
     record_set.add(record1)
     assert len(record_set) == 1
 
-    record3_dupe = r.DNSAddress(
-        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same"
-    )
+    record3_dupe = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same")
     assert record2 == record3_dupe
     assert record2.__hash__() == record3_dupe.__hash__()
 
@@ -259,9 +247,7 @@ def test_dns_record_hashablity_does_not_consider_unique():
         const._DNS_OTHER_TTL,
         b"same",
     )
-    record2 = r.DNSAddress(
-        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_OTHER_TTL, b"same"
-    )
+    record2 = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_OTHER_TTL, b"same")
 
     assert record1.class_ == record2.class_
     assert record1.__hash__() == record2.__hash__()
@@ -314,12 +300,8 @@ def test_dns_hinfo_record_hashablity():
 
 def test_dns_pointer_record_hashablity():
     """Test DNSPointer are hashable."""
-    ptr1 = r.DNSPointer(
-        "irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "123"
-    )
-    ptr2 = r.DNSPointer(
-        "irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "456"
-    )
+    ptr1 = r.DNSPointer("irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "123")
+    ptr2 = r.DNSPointer("irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "456")
 
     record_set = {ptr1, ptr2}
     assert len(record_set) == 2
@@ -327,9 +309,7 @@ def test_dns_pointer_record_hashablity():
     record_set.add(ptr1)
     assert len(record_set) == 2
 
-    ptr2_dupe = r.DNSPointer(
-        "irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "456"
-    )
+    ptr2_dupe = r.DNSPointer("irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "456")
     assert ptr2 == ptr2
     assert ptr2.__hash__() == ptr2_dupe.__hash__()
 
@@ -339,9 +319,7 @@ def test_dns_pointer_record_hashablity():
 
 def test_dns_pointer_comparison_is_case_insensitive():
     """Test DNSPointer comparison is case insensitive."""
-    ptr1 = r.DNSPointer(
-        "irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "123"
-    )
+    ptr1 = r.DNSPointer("irrelevant", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "123")
     ptr2 = r.DNSPointer(
         "irrelevant".upper(),
         const._TYPE_PTR,
@@ -530,12 +508,8 @@ def test_rrset_does_not_consider_ttl():
 
     longarec = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, 100, b"same")
     shortarec = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, 10, b"same")
-    longaaaarec = r.DNSAddress(
-        "irrelevant", const._TYPE_AAAA, const._CLASS_IN, 100, b"same"
-    )
-    shortaaaarec = r.DNSAddress(
-        "irrelevant", const._TYPE_AAAA, const._CLASS_IN, 10, b"same"
-    )
+    longaaaarec = r.DNSAddress("irrelevant", const._TYPE_AAAA, const._CLASS_IN, 100, b"same")
+    shortaaaarec = r.DNSAddress("irrelevant", const._TYPE_AAAA, const._CLASS_IN, 10, b"same")
 
     rrset = DNSRRSet([longarec, shortaaaarec])
 
@@ -544,9 +518,7 @@ def test_rrset_does_not_consider_ttl():
     assert not rrset.suppresses(longaaaarec)
     assert rrset.suppresses(shortaaaarec)
 
-    verylongarec = r.DNSAddress(
-        "irrelevant", const._TYPE_A, const._CLASS_IN, 1000, b"same"
-    )
+    verylongarec = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, 1000, b"same")
     longarec = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, 100, b"same")
     mediumarec = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, 60, b"same")
     shortarec = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, 10, b"same")

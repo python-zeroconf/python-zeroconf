@@ -281,9 +281,7 @@ def test_guard_against_duplicate_packets():
         _handle_query_or_defer.reset_mock()
 
         # Now call with garbage
-        listener._process_datagram_at_time(
-            False, len(b"garbage"), new_time, b"garbage", addrs
-        )
+        listener._process_datagram_at_time(False, len(b"garbage"), new_time, b"garbage", addrs)
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 

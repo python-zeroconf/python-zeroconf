@@ -53,9 +53,7 @@ class MulticastOutgoingQueue:
         "_aggregation_delay",
     )
 
-    def __init__(
-        self, zeroconf: "Zeroconf", additional_delay: _int, max_aggregation_delay: _int
-    ) -> None:
+    def __init__(self, zeroconf: "Zeroconf", additional_delay: _int, max_aggregation_delay: _int) -> None:
         self.zc = zeroconf
         self.queue: deque[AnswerGroup] = deque()
         # Additional delay is used to implement
@@ -71,9 +69,7 @@ class MulticastOutgoingQueue:
         loop = self.zc.loop
         if TYPE_CHECKING:
             assert loop is not None
-        random_int = RAND_INT(
-            self._multicast_delay_random_min, self._multicast_delay_random_max
-        )
+        random_int = RAND_INT(self._multicast_delay_random_min, self._multicast_delay_random_max)
         random_delay = random_int + self._additional_delay
         send_after = now + random_delay
         send_before = now + self._aggregation_delay + self._additional_delay
@@ -87,9 +83,7 @@ class MulticastOutgoingQueue:
                 last_group.answers.update(answers)
                 return
         else:
-            loop.call_at(
-                loop.time() + millis_to_seconds(random_delay), self.async_ready
-            )
+            loop.call_at(loop.time() + millis_to_seconds(random_delay), self.async_ready)
         self.queue.append(AnswerGroup(send_after, send_before, answers))
 
     def _remove_answers_from_queue(self, answers: _AnswerWithAdditionalsType) -> None:

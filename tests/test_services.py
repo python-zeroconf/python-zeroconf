@@ -9,7 +9,8 @@ import socket
 import time
 import unittest
 from threading import Event
-from typing import Dict, Any
+from typing import Any, Dict
+
 import pytest
 
 import zeroconf as r
@@ -141,9 +142,7 @@ class ListenerTest(unittest.TestCase):
             assert info.decoded_properties["prop_none"] is None
             assert info.decoded_properties["prop_string"] == b"a_prop".decode("utf-8")
             assert info.decoded_properties["prop_float"] == "1.0"
-            assert info.decoded_properties["prop_blank"] == b"a blanked string".decode(
-                "utf-8"
-            )
+            assert info.decoded_properties["prop_blank"] == b"a blanked string".decode("utf-8")
             assert info.decoded_properties["prop_true"] == "1"
             assert info.decoded_properties["prop_false"] == "0"
 
@@ -207,17 +206,13 @@ class ListenerTest(unittest.TestCase):
             info = zeroconf_browser.get_service_info(type_, registration_name)
             assert info is not None
             assert info.properties[b"prop_blank"] == properties["prop_blank"]
-            assert info.decoded_properties["prop_blank"] == b"an updated string".decode(
-                "utf-8"
-            )
+            assert info.decoded_properties["prop_blank"] == b"an updated string".decode("utf-8")
 
             cached_info = ServiceInfo(subtype, registration_name)
             cached_info.load_from_cache(zeroconf_browser)
             assert cached_info.properties is not None
             assert cached_info.properties[b"prop_blank"] == properties["prop_blank"]
-            assert cached_info.decoded_properties[
-                "prop_blank"
-            ] == b"an updated string".decode("utf-8")
+            assert cached_info.decoded_properties["prop_blank"] == b"an updated string".decode("utf-8")
 
             zeroconf_registrar.unregister_service(info_service)
             service_removed.wait(1)

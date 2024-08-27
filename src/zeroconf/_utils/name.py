@@ -80,7 +80,7 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
     """
     if len(type_) > 256:
         # https://datatracker.ietf.org/doc/html/rfc6763#section-7.2
-        raise BadTypeInNameException("Full name (%s) must be > 256 bytes" % type_)
+        raise BadTypeInNameException(f"Full name ({type_}) must be > 256 bytes")
 
     if type_.endswith((_TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)):
         remaining = type_[: -len(_TCP_PROTOCOL_LOCAL_TRAILER)].split(".")
@@ -88,8 +88,8 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
         has_protocol = True
     elif strict:
         raise BadTypeInNameException(
-            "Type '%s' must end with '%s' or '%s'"
-            % (type_, _TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)
+            f"Type '{type_}' must end with "
+            f"'{_TCP_PROTOCOL_LOCAL_TRAILER}' or '{_NONTCP_PROTOCOL_LOCAL_TRAILER}'"
         )
     elif type_.endswith(_LOCAL_TRAILER):
         remaining = type_[: -len(_LOCAL_TRAILER)].split(".")
@@ -104,48 +104,39 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
             raise BadTypeInNameException("No Service name found")
 
         if len(remaining) == 1 and len(remaining[0]) == 0:
-            raise BadTypeInNameException("Type '%s' must not start with '.'" % type_)
+            raise BadTypeInNameException(f"Type '{type_}' must not start with '.'")
 
         if service_name[0] != "_":
-            raise BadTypeInNameException(
-                "Service name (%s) must start with '_'" % service_name
-            )
+            raise BadTypeInNameException(f"Service name ({service_name}) must start with '_'")
 
         test_service_name = service_name[1:]
 
         if strict and len(test_service_name) > 15:
             # https://datatracker.ietf.org/doc/html/rfc6763#section-7.2
-            raise BadTypeInNameException(
-                "Service name (%s) must be <= 15 bytes" % test_service_name
-            )
+            raise BadTypeInNameException(f"Service name ({test_service_name}) must be <= 15 bytes")
 
         if "--" in test_service_name:
-            raise BadTypeInNameException(
-                "Service name (%s) must not contain '--'" % test_service_name
-            )
+            raise BadTypeInNameException(f"Service name ({test_service_name}) must not contain '--'")
 
         if "-" in (test_service_name[0], test_service_name[-1]):
-            raise BadTypeInNameException(
-                "Service name (%s) may not start or end with '-'" % test_service_name
-            )
+            raise BadTypeInNameException(f"Service name ({test_service_name}) may not start or end with '-'")
 
         if not _HAS_A_TO_Z.search(test_service_name):
             raise BadTypeInNameException(
-                "Service name (%s) must contain at least one letter (eg: 'A-Z')"
-                % test_service_name
+                f"Service name ({test_service_name}) must contain at least one letter (eg: 'A-Z')"
             )
 
         allowed_characters_re = (
-            _HAS_ONLY_A_TO_Z_NUM_HYPHEN
-            if strict
-            else _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE
+            _HAS_ONLY_A_TO_Z_NUM_HYPHEN if strict else _HAS_ONLY_A_TO_Z_NUM_HYPHEN_UNDERSCORE
         )
 
         if not allowed_characters_re.search(test_service_name):
             raise BadTypeInNameException(
-                "Service name (%s) must contain only these characters: "
-                "A-Z, a-z, 0-9, hyphen ('-')%s"
-                % (test_service_name, "" if strict else ", underscore ('_')")
+                f"Service name ({test_service_name if strict else ''}) "
+                "must contain only these characters: "
+                "A-Z, a-z, 0-9, hyphen ('-')" + ", underscore ('_')"
+                if strict
+                else ""
             )
     else:
         service_name = ""
@@ -161,12 +152,11 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
     if remaining:
         length = len(remaining[0].encode("utf-8"))
         if length > 63:
-            raise BadTypeInNameException("Too long: '%s'" % remaining[0])
+            raise BadTypeInNameException(f"Too long: '{remaining[0]}'")
 
         if _HAS_ASCII_CONTROL_CHARS.search(remaining[0]):
             raise BadTypeInNameException(
-                "Ascii control character 0x00-0x1F and 0x7F illegal in '%s'"
-                % remaining[0]
+                f"Ascii control character 0x00-0x1F and 0x7F illegal in '{remaining[0]}'"
             )
 
     return service_name + trailer

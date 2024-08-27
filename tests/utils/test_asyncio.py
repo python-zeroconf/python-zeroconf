@@ -115,9 +115,7 @@ def test_cumulative_timeouts_less_than_close_plus_buffer():
     raised if something goes wrong.
     """
     assert (
-        aioutils._TASK_AWAIT_TIMEOUT
-        + aioutils._GET_ALL_TASKS_TIMEOUT
-        + aioutils._WAIT_FOR_LOOP_TASKS_TIMEOUT
+        aioutils._TASK_AWAIT_TIMEOUT + aioutils._GET_ALL_TASKS_TIMEOUT + aioutils._WAIT_FOR_LOOP_TASKS_TIMEOUT
     ) < 1 + _CLOSE_TIMEOUT + _LOADED_SYSTEM_TIMEOUT
 
 
@@ -136,9 +134,7 @@ async def test_run_coro_with_timeout() -> None:
     def _run_in_loop():
         aioutils.run_coro_with_timeout(_saved_sleep_task(), loop, 0.1)
 
-    with pytest.raises(EventLoopBlocked), patch.object(
-        aioutils, "_LOADED_SYSTEM_TIMEOUT", 0.0
-    ):
+    with pytest.raises(EventLoopBlocked), patch.object(aioutils, "_LOADED_SYSTEM_TIMEOUT", 0.0):
         await loop.run_in_executor(None, _run_in_loop)
 
     assert task is not None

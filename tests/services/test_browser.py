@@ -293,26 +293,20 @@ class TestServiceBrowser(unittest.TestCase):
             )
 
             generated.add_answer_at_time(
-                r.DNSPointer(
-                    service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name
-                ),
+                r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name),
                 0,
             )
 
             return r.DNSIncoming(generated.packets()[0])
 
         zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
-        service_browser = r.ServiceBrowser(
-            zeroconf, service_type, listener=MyServiceListener()
-        )
+        service_browser = r.ServiceBrowser(zeroconf, service_type, listener=MyServiceListener())
 
         try:
             wait_time = 3
 
             # service added
-            _inject_response(
-                zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Added)
-            )
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Added))
             service_add_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 0
@@ -321,9 +315,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service SRV updated
             service_updated_event.clear()
             service_server = "ash-2.local."
-            _inject_response(
-                zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated)
-            )
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 1
@@ -332,9 +324,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service TXT updated
             service_updated_event.clear()
             service_text = b"path=/~matt2/"
-            _inject_response(
-                zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated)
-            )
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 2
@@ -343,9 +333,7 @@ class TestServiceBrowser(unittest.TestCase):
             # service TXT updated - duplicate update should not trigger another service_updated
             service_updated_event.clear()
             service_text = b"path=/~matt2/"
-            _inject_response(
-                zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated)
-            )
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 2
@@ -356,9 +344,7 @@ class TestServiceBrowser(unittest.TestCase):
             service_address = "10.0.1.3"
             # Verify we match on uppercase
             service_server = service_server.upper()
-            _inject_response(
-                zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated)
-            )
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 3
@@ -369,18 +355,14 @@ class TestServiceBrowser(unittest.TestCase):
             service_server = "ash-3.local."
             service_text = b"path=/~matt3/"
             service_address = "10.0.1.3"
-            _inject_response(
-                zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated)
-            )
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
             service_updated_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 4
             assert service_removed_count == 0
 
             # service removed
-            _inject_response(
-                zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Removed)
-            )
+            _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Removed))
             service_removed_event.wait(wait_time)
             assert service_added_count == 1
             assert service_updated_count == 4
@@ -430,17 +412,13 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
         ) -> r.DNSIncoming:
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             generated.add_answer_at_time(
-                r.DNSPointer(
-                    service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name
-                ),
+                r.DNSPointer(service_type, const._TYPE_PTR, const._CLASS_IN, ttl, service_name),
                 0,
             )
             return r.DNSIncoming(generated.packets()[0])
 
         zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
-        service_browser = r.ServiceBrowser(
-            zeroconf, service_types, listener=MyServiceListener()
-        )
+        service_browser = r.ServiceBrowser(zeroconf, service_types, listener=MyServiceListener())
 
         try:
             wait_time = 3
@@ -470,9 +448,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                 return self.created + (percent * self.ttl * 10)
 
             # Set an expire time that will force a refresh
-            with patch(
-                "zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time
-            ):
+            with patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
                 _inject_response(
                     zeroconf,
                     mock_record_update_incoming_msg(
@@ -570,15 +546,10 @@ def test_first_query_delay():
 
         start_time = current_time_millis()
         browser = ServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-        time.sleep(
-            millis_to_seconds(
-                _services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5
-            )
-        )
+        time.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
             assert (
-                current_time_millis() - start_time
-                > _services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[0]
+                current_time_millis() - start_time > _services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[0]
             )
         finally:
             browser.cancel()
@@ -633,9 +604,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
-        browser = AsyncServiceBrowser(
-            zeroconf_browser, type_, [on_service_state_change]
-        )
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
         info = ServiceInfo(
             type_,
             registration_name,
@@ -737,9 +706,7 @@ async def test_ttl_refresh_cancelled_rescue_query():
         service_added = asyncio.Event()
         service_removed = asyncio.Event()
 
-        browser = AsyncServiceBrowser(
-            zeroconf_browser, type_, [on_service_state_change]
-        )
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
         info = ServiceInfo(
             type_,
             registration_name,
@@ -832,11 +799,7 @@ async def test_asking_qm_questions():
             [on_service_state_change],
             question_type=r.DNSQuestionType.QM,
         )
-        await asyncio.sleep(
-            millis_to_seconds(
-                _services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5
-            )
-        )
+        await asyncio.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
             assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         finally:
@@ -876,11 +839,7 @@ async def test_asking_qu_questions():
             [on_service_state_change],
             question_type=r.DNSQuestionType.QU,
         )
-        await asyncio.sleep(
-            millis_to_seconds(
-                _services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5
-            )
-        )
+        await asyncio.sleep(millis_to_seconds(_services_browser._FIRST_QUERY_DELAY_RANDOM_INTERVAL[1] + 5))
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         finally:
@@ -898,9 +857,7 @@ def test_legacy_record_update_listener():
         r.RecordUpdateListener().update_record(
             zc,
             0,
-            r.DNSRecord(
-                "irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL
-            ),
+            r.DNSRecord("irrelevant", const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL),
         )
 
     updates = []
@@ -908,9 +865,7 @@ def test_legacy_record_update_listener():
     class LegacyRecordUpdateListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def update_record(
-            self, zc: "Zeroconf", now: float, record: r.DNSRecord
-        ) -> None:
+        def update_record(self, zc: "Zeroconf", now: float, record: r.DNSRecord) -> None:
             nonlocal updates
             updates.append(record)
 
@@ -945,15 +900,7 @@ def test_legacy_record_update_listener():
     browser.cancel()
 
     assert len(updates)
-    assert (
-        len(
-            [
-                isinstance(update, r.DNSPointer) and update.name == type_
-                for update in updates
-            ]
-        )
-        >= 1
-    )
+    assert len([isinstance(update, r.DNSPointer) and update.name == type_ for update in updates]) >= 1
 
     zc.remove_listener(listener)
     # Removing a second time should not throw
@@ -985,9 +932,7 @@ def test_service_browser_is_aware_of_port_changes():
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
     _inject_response(
         zc,
@@ -1002,9 +947,7 @@ def test_service_browser_is_aware_of_port_changes():
     )
     time.sleep(0.1)
 
-    assert callbacks == [
-        ("_hap._tcp.local.", ServiceStateChange.Added, "xxxyyy._hap._tcp.local.")
-    ]
+    assert callbacks == [("_hap._tcp.local.", ServiceStateChange.Added, "xxxyyy._hap._tcp.local.")]
     service_info = zc.get_service_info(type_, registration_name)
     assert service_info is not None
     assert service_info.port == 80
@@ -1063,9 +1006,7 @@ def test_service_browser_listeners_update_service():
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
     _inject_response(
         zc,
@@ -1125,9 +1066,7 @@ def test_service_browser_listeners_no_update_service():
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
     _inject_response(
         zc,
@@ -1166,16 +1105,12 @@ def test_service_browser_uses_non_strict_names():
         pass
 
     zc = r.Zeroconf(interfaces=["127.0.0.1"])
-    browser = ServiceBrowser(
-        zc, ["_tivo-videostream._tcp.local."], [on_service_state_change]
-    )
+    browser = ServiceBrowser(zc, ["_tivo-videostream._tcp.local."], [on_service_state_change])
     browser.cancel()
 
     # Still fail on completely invalid
     with pytest.raises(r.BadTypeInNameException):
-        browser = ServiceBrowser(
-            zc, ["tivo-videostream._tcp.local."], [on_service_state_change]
-        )
+        browser = ServiceBrowser(zc, ["tivo-videostream._tcp.local."], [on_service_state_change])
     zc.close()
 
 
@@ -1184,9 +1119,7 @@ def test_group_ptr_queries_with_known_answers():
     now = current_time_millis()
     for i in range(120):
         name = f"_hap{i}._tcp._local."
-        questions_with_known_answers[
-            DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)
-        ] = {
+        questions_with_known_answers[DNSQuestion(name, const._TYPE_PTR, const._CLASS_IN)] = {
             DNSPointer(
                 name,
                 const._TYPE_PTR,
@@ -1196,9 +1129,7 @@ def test_group_ptr_queries_with_known_answers():
             )
             for counter in range(i)
         }
-    outs = _services_browser.group_ptr_queries_with_known_answers(
-        now, True, questions_with_known_answers
-    )
+    outs = _services_browser.group_ptr_queries_with_known_answers(now, True, questions_with_known_answers)
     for out in outs:
         packets = out.packets()
         # If we generate multiple packets there must
@@ -1228,18 +1159,14 @@ async def test_generate_service_query_suppress_duplicate_questions():
     assert zc.question_history.suppresses(question, now, other_known_answers)
 
     # The known answer list is different, do not suppress
-    outs = _services_browser.generate_service_query(
-        zc, now, {name}, multicast=True, question_type=None
-    )
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert outs
 
     zc.cache.async_add_records([answer])
     # The known answer list contains all the asked questions in the history
     # we should suppress
 
-    outs = _services_browser.generate_service_query(
-        zc, now, {name}, multicast=True, question_type=None
-    )
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert not outs
 
     # We do not suppress once the question history expires
@@ -1249,23 +1176,17 @@ async def test_generate_service_query_suppress_duplicate_questions():
     assert outs
 
     # We do not suppress QU queries ever
-    outs = _services_browser.generate_service_query(
-        zc, now, {name}, multicast=False, question_type=None
-    )
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=False, question_type=None)
     assert outs
 
     zc.question_history.async_expire(now + 2000)
     # No suppression after clearing the history
-    outs = _services_browser.generate_service_query(
-        zc, now, {name}, multicast=True, question_type=None
-    )
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert outs
 
     # The previous query we just sent is still remembered and
     # the next one is suppressed
-    outs = _services_browser.generate_service_query(
-        zc, now, {name}, multicast=True, question_type=None
-    )
+    outs = _services_browser.generate_service_query(zc, now, {name}, multicast=True, question_type=None)
     assert not outs
 
     await aiozc.async_close()
@@ -1285,9 +1206,7 @@ async def test_query_scheduler():
         pout = r.DNSIncoming(out.packets()[0])
         sends.append(pout)
 
-    query_scheduler = _services_browser.QueryScheduler(
-        zc, types_, None, 0, True, delay, (0, 0), None
-    )
+    query_scheduler = _services_browser.QueryScheduler(zc, types_, None, 0, True, delay, (0, 0), None)
     loop = asyncio.get_running_loop()
 
     # patch the zeroconf send so we can capture what is being sent
@@ -1316,9 +1235,7 @@ async def test_query_scheduler():
         )
 
         query_scheduler.reschedule_ptr_first_refresh(ptr_record)
-        expected_when_time = ptr_record.get_expiration_time(
-            const._EXPIRE_REFRESH_TIME_PERCENT
-        )
+        expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
         expected_expire_time = ptr_record.get_expiration_time(100)
         ptr_query = _ScheduledPTRQuery(
             ptr_record.alias,
@@ -1330,9 +1247,7 @@ async def test_query_scheduler():
         assert query_scheduler._query_heap == [ptr_query]
 
         query_scheduler.reschedule_ptr_first_refresh(ptr2_record)
-        expected_when_time = ptr2_record.get_expiration_time(
-            const._EXPIRE_REFRESH_TIME_PERCENT
-        )
+        expected_when_time = ptr2_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
         expected_expire_time = ptr2_record.get_expiration_time(100)
         ptr2_query = _ScheduledPTRQuery(
             ptr2_record.alias,
@@ -1384,9 +1299,7 @@ async def test_query_scheduler_rescue_records():
         pout = r.DNSIncoming(out.packets()[0])
         sends.append(pout)
 
-    query_scheduler = _services_browser.QueryScheduler(
-        zc, types_, None, 0, True, delay, (0, 0), None
-    )
+    query_scheduler = _services_browser.QueryScheduler(zc, types_, None, 0, True, delay, (0, 0), None)
     loop = asyncio.get_running_loop()
 
     # patch the zeroconf send so we can capture what is being sent
@@ -1408,9 +1321,7 @@ async def test_query_scheduler_rescue_records():
         )
 
         query_scheduler.reschedule_ptr_first_refresh(ptr_record)
-        expected_when_time = ptr_record.get_expiration_time(
-            const._EXPIRE_REFRESH_TIME_PERCENT
-        )
+        expected_when_time = ptr_record.get_expiration_time(const._EXPIRE_REFRESH_TIME_PERCENT)
         expected_expire_time = ptr_record.get_expiration_time(100)
         ptr_query = _ScheduledPTRQuery(
             ptr_record.alias,
@@ -1484,9 +1395,7 @@ def test_service_browser_matching():
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address]
-    )
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
     should_not_match = ServiceInfo(
         not_match_type_,
         not_match_registration_name,
@@ -1642,15 +1551,9 @@ def test_service_browser_expire_callbacks():
 
 
 def test_scheduled_ptr_query_dunder_methods():
-    query75 = _ScheduledPTRQuery(
-        "zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 75
-    )
-    query80 = _ScheduledPTRQuery(
-        "zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 80
-    )
-    query75_2 = _ScheduledPTRQuery(
-        "zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 140, 75
-    )
+    query75 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 75)
+    query80 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 120, 80)
+    query75_2 = _ScheduledPTRQuery("zoomy._hap._tcp.local.", "_hap._tcp.local.", 120, 140, 75)
     other = object()
     stringified = str(query75)
     assert "zoomy._hap._tcp.local." in stringified
@@ -1712,9 +1615,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries():
     with patch.object(zeroconf_browser, "async_send", send):
         service_added = asyncio.Event()
 
-        browser = AsyncServiceBrowser(
-            zeroconf_browser, type_, [on_service_state_change]
-        )
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
         info = ServiceInfo(
             type_,
             registration_name,
@@ -1782,9 +1683,7 @@ async def test_close_zeroconf_without_browser_after_start_up_queries():
     # patch the zeroconf send so we can capture what is being sent
     with patch.object(zeroconf_browser, "async_send", send):
         service_added = asyncio.Event()
-        browser = AsyncServiceBrowser(
-            zeroconf_browser, type_, [on_service_state_change]
-        )
+        browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
         expected_ttl = const._DNS_OTHER_TTL
         info = ServiceInfo(
             type_,

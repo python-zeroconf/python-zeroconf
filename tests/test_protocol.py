@@ -49,9 +49,7 @@ class PacketGeneration(unittest.TestCase):
 
     def test_parse_own_packet_question(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        generated.add_question(
-            r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
-        )
+        generated.add_question(r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN))
         r.DNSIncoming(generated.packets()[0])
 
     def test_parse_own_packet_nsec(self):
@@ -252,18 +250,14 @@ class PacketGeneration(unittest.TestCase):
 
     def test_dns_hinfo(self):
         generated = r.DNSOutgoing(0)
-        generated.add_additional_answer(
-            DNSHinfo("irrelevant", const._TYPE_HINFO, 0, 0, "cpu", "os")
-        )
+        generated.add_additional_answer(DNSHinfo("irrelevant", const._TYPE_HINFO, 0, 0, "cpu", "os"))
         parsed = r.DNSIncoming(generated.packets()[0])
         answer = cast(r.DNSHinfo, parsed.answers()[0])
         assert answer.cpu == "cpu"
         assert answer.os == "os"
 
         generated = r.DNSOutgoing(0)
-        generated.add_additional_answer(
-            DNSHinfo("irrelevant", const._TYPE_HINFO, 0, 0, "cpu", "x" * 257)
-        )
+        generated.add_additional_answer(DNSHinfo("irrelevant", const._TYPE_HINFO, 0, 0, "cpu", "x" * 257))
         self.assertRaises(r.NamePartTooLongException, generated.packets)
 
     def test_many_questions(self):
@@ -271,9 +265,7 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for i in range(100):
-            question = r.DNSQuestion(
-                f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN
-            )
+            question = r.DNSQuestion(f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN)
             generated.add_question(question)
             questions.append(question)
         assert len(generated.questions) == 100
@@ -293,9 +285,7 @@ class PacketGeneration(unittest.TestCase):
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for _ in range(30):
-            question = r.DNSQuestion(
-                "_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN
-            )
+            question = r.DNSQuestion("_hap._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
             generated.add_question(question)
             questions.append(question)
         assert len(generated.questions) == 30
@@ -433,9 +423,7 @@ class PacketGeneration(unittest.TestCase):
 
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         for i in range(35):
-            question = r.DNSQuestion(
-                f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN
-            )
+            question = r.DNSQuestion(f"testname{i}.local.", const._TYPE_SRV, const._CLASS_IN)
             generated.add_question(question)
             answer = r.DNSService(
                 f"testname{i}.local.",
@@ -494,9 +482,7 @@ class PacketForm(unittest.TestCase):
     def test_numbers(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         bytes = generated.packets()[0]
-        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack(
-            "!4H", bytes[4:12]
-        )
+        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack("!4H", bytes[4:12])
         assert num_questions == 0
         assert num_answers == 0
         assert num_authorities == 0
@@ -508,9 +494,7 @@ class PacketForm(unittest.TestCase):
         for i in range(10):
             generated.add_question(question)
         bytes = generated.packets()[0]
-        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack(
-            "!4H", bytes[4:12]
-        )
+        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack("!4H", bytes[4:12])
         assert num_questions == 10
         assert num_answers == 0
         assert num_authorities == 0
@@ -551,9 +535,7 @@ class TestDnsIncoming(unittest.TestCase):
         addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
         packed = socket.inet_pton(socket.AF_INET6, addr)
         generated = r.DNSOutgoing(0)
-        answer = r.DNSAddress(
-            "domain", const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 1, packed
-        )
+        answer = r.DNSAddress("domain", const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 1, packed)
         generated.add_additional_answer(answer)
         packet = generated.packets()[0]
         parsed = r.DNSIncoming(packet)
@@ -715,9 +697,7 @@ def test_dns_compression_rollback_for_corruption():
         assert incoming.valid is True
         assert (
             len(incoming.answers())
-            == incoming.num_answers
-            + incoming.num_authorities
-            + incoming.num_additionals
+            == incoming.num_answers + incoming.num_authorities + incoming.num_additionals
         )
 
 
@@ -791,7 +771,9 @@ def test_tc_bit_not_set_in_answer_packet():
 # 4003	15.973052	192.168.107.68	224.0.0.251	MDNS	76	Standard query 0xffc4 PTR _raop._tcp.local, "QM" question
 def test_qm_packet_parser():
     """Test we can parse a query packet with the QM bit."""
-    qm_packet = b"\xff\xc4\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05_raop\x04_tcp\x05local\x00\x00\x0c\x00\x01"
+    qm_packet = (
+        b"\xff\xc4\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05_raop\x04_tcp\x05local\x00\x00\x0c\x00\x01"
+    )
     parsed = DNSIncoming(qm_packet)
     assert parsed.questions[0].unicast is False
     assert ",QM," in str(parsed.questions[0])

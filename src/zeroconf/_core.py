@@ -173,17 +173,11 @@ class Zeroconf(QuietLogger):
         self.done = False
 
         if apple_p2p and sys.platform != "darwin":
-            raise RuntimeError(
-                "Option `apple_p2p` is not supported on non-Apple platforms."
-            )
+            raise RuntimeError("Option `apple_p2p` is not supported on non-Apple platforms.")
 
         self.unicast = unicast
-        listen_socket, respond_sockets = create_sockets(
-            interfaces, unicast, ip_version, apple_p2p=apple_p2p
-        )
-        log.debug(
-            "Listen socket %s, respond sockets %s", listen_socket, respond_sockets
-        )
+        listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
+        log.debug("Listen socket %s, respond sockets %s", listen_socket, respond_sockets)
 
         self.engine = AsyncEngine(self, listen_socket, respond_sockets)
 
@@ -193,9 +187,7 @@ class Zeroconf(QuietLogger):
         self.question_history = QuestionHistory()
 
         self.out_queue = MulticastOutgoingQueue(self, 0, _AGGREGATION_DELAY)
-        self.out_delay_queue = MulticastOutgoingQueue(
-            self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY
-        )
+        self.out_delay_queue = MulticastOutgoingQueue(self, _ONE_SECOND, _PROTECTED_AGGREGATION_DELAY)
 
         self.query_handler = QueryHandler(self)
         self.record_manager = RecordManager(self)
@@ -209,11 +201,7 @@ class Zeroconf(QuietLogger):
     @property
     def started(self) -> bool:
         """Check if the instance has started."""
-        return bool(
-            not self.done
-            and self.engine.running_event
-            and self.engine.running_event.is_set()
-        )
+        return bool(not self.done and self.engine.running_event and self.engine.running_event.is_set())
 
     def start(self) -> None:
         """Start Zeroconf."""
@@ -332,9 +320,7 @@ class Zeroconf(QuietLogger):
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(
-                self.async_register_service(
-                    info, ttl, allow_name_change, cooperating_responders, strict
-                )
+                self.async_register_service(info, ttl, allow_name_change, cooperating_responders, strict)
             ),
             self.loop,
             _REGISTER_TIME * _REGISTER_BROADCASTS,
@@ -362,13 +348,9 @@ class Zeroconf(QuietLogger):
 
         info.set_server_if_missing()
         await self.async_wait_for_start()
-        await self.async_check_service(
-            info, allow_name_change, cooperating_responders, strict
-        )
+        await self.async_check_service(info, allow_name_change, cooperating_responders, strict)
         self.registry.async_add(info)
-        return asyncio.ensure_future(
-            self._async_broadcast_service(info, _REGISTER_TIME, None)
-        )
+        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     def update_service(self, info: ServiceInfo) -> None:
         """Registers service information to the network with a default TTL.
@@ -391,9 +373,7 @@ class Zeroconf(QuietLogger):
         Zeroconf will then respond to requests for information for that
         service."""
         self.registry.async_update(info)
-        return asyncio.ensure_future(
-            self._async_broadcast_service(info, _REGISTER_TIME, None)
-        )
+        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_get_service_info(
         self,
@@ -427,9 +407,7 @@ class Zeroconf(QuietLogger):
         for i in range(_REGISTER_BROADCASTS):
             if i != 0:
                 await asyncio.sleep(millis_to_seconds(interval))
-            self.async_send(
-                self.generate_service_broadcast(info, ttl, broadcast_addresses)
-            )
+            self.async_send(self.generate_service_broadcast(info, ttl, broadcast_addresses))
 
     def generate_service_broadcast(
         self,
@@ -500,9 +478,7 @@ class Zeroconf(QuietLogger):
         entries = self.registry.async_get_infos_server(info.server_key)
         broadcast_addresses = not bool(entries)
         return asyncio.ensure_future(
-            self._async_broadcast_service(
-                info, _UNREGISTER_TIME, 0, broadcast_addresses
-            )
+            self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
         )
 
     def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
@@ -595,9 +571,7 @@ class Zeroconf(QuietLogger):
         This function is threadsafe
         """
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(
-            self.record_manager.async_add_listener, listener, question
-        )
+        self.loop.call_soon_threadsafe(self.record_manager.async_add_listener, listener, question)
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
         """Removes a listener.
@@ -605,9 +579,7 @@ class Zeroconf(QuietLogger):
         This function is threadsafe
         """
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(
-            self.record_manager.async_remove_listener, listener
-        )
+        self.loop.call_soon_threadsafe(self.record_manager.async_remove_listener, listener)
 
     def async_add_listener(
         self,
@@ -639,9 +611,7 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(
-            self.async_send, out, addr, port, v6_flow_scope, transport
-        )
+        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
 
     def async_send(
         self,

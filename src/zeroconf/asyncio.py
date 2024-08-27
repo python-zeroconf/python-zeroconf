@@ -22,7 +22,7 @@ USA
 
 import asyncio
 import contextlib
-from types import TracebackType  # noqa # used in type hints
+from types import TracebackType  # used in type hints
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from ._core import Zeroconf
@@ -72,9 +72,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         delay: int = _BROWSER_TIME,
         question_type: Optional[DNSQuestionType] = None,
     ) -> None:
-        super().__init__(
-            zeroconf, type_, handlers, listener, addr, port, delay, question_type
-        )
+        super().__init__(zeroconf, type_, handlers, listener, addr, port, delay, question_type)
         self._async_start()
 
     async def async_cancel(self) -> None:
@@ -249,20 +247,14 @@ class AsyncZeroconf:
         :param timeout: milliseconds to wait for a response
         :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
         """
-        return await self.zeroconf.async_get_service_info(
-            type_, name, timeout, question_type
-        )
+        return await self.zeroconf.async_get_service_info(type_, name, timeout, question_type)
 
-    async def async_add_service_listener(
-        self, type_: str, listener: ServiceListener
-    ) -> None:
+    async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Adds a listener for a particular service type.  This object
         will then have its add_service and remove_service methods called when
         services of that type become available and unavailable."""
         await self.async_remove_service_listener(listener)
-        self.async_browsers[listener] = AsyncServiceBrowser(
-            self.zeroconf, type_, listener
-        )
+        self.async_browsers[listener] = AsyncServiceBrowser(self.zeroconf, type_, listener)
 
     async def async_remove_service_listener(self, listener: ServiceListener) -> None:
         """Removes a listener from the set that is currently listening."""
@@ -273,10 +265,7 @@ class AsyncZeroconf:
     async def async_remove_all_service_listeners(self) -> None:
         """Removes a listener from the set that is currently listening."""
         await asyncio.gather(
-            *(
-                self.async_remove_service_listener(listener)
-                for listener in list(self.async_browsers)
-            )
+            *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
         )
 
     async def __aenter__(self) -> "AsyncZeroconf":

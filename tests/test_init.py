@@ -173,9 +173,7 @@ class Names(unittest.TestCase):
     def generate_host(out, host_name, type_):
         name = ".".join((host_name, type_))
         out.add_answer_at_time(
-            r.DNSPointer(
-                type_, const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, name
-            ),
+            r.DNSPointer(type_, const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, name),
             0,
         )
         out.add_answer_at_time(

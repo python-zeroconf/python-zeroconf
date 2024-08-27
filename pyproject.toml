@@ -63,10 +63,27 @@ cython = "^3.0.5"
 setuptools = "^65.6.3"
 pytest-timeout = "^2.1.0"
 
-[tool.black]
+[tool.ruff]
+target-version = "py38"
 line-length = 110
-target_version = ['py37', 'py38', 'py39', 'py310', 'py311']
-skip_string_normalization = true
+
+[tool.ruff.lint]
+ignore = [
+    "S101", # use of assert
+    "S104",  # S104 Possible binding to all interfaces
+]
+select = [
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "S",   # flake8-bandit
+    "F",   # pyflake
+    "E",   # pycodestyle
+    "W",   # pycodestyle
+    "UP",  # pyupgrade
+    "I",   # isort
+    "RUF", # ruff specific
+]
+
 
 [tool.pylint.BASIC]
 class-const-naming-style = "any"

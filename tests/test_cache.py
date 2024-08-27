@@ -256,10 +256,7 @@ class TestDNSCacheAPI(unittest.TestCase):
         )
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
-        assert (
-            cache.current_entry_with_name_and_alias("irrelevant", "x.irrelevant")
-            == record1
-        )
+        assert cache.current_entry_with_name_and_alias("irrelevant", "x.irrelevant") == record1
 
     def test_name(self):
         record1 = r.DNSService(

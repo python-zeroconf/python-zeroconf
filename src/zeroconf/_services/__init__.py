@@ -66,14 +66,10 @@ class SignalRegistrationInterface:
     def __init__(self, handlers: List[Callable[..., None]]) -> None:
         self._handlers = handlers
 
-    def register_handler(
-        self, handler: Callable[..., None]
-    ) -> "SignalRegistrationInterface":
+    def register_handler(self, handler: Callable[..., None]) -> "SignalRegistrationInterface":
         self._handlers.append(handler)
         return self
 
-    def unregister_handler(
-        self, handler: Callable[..., None]
-    ) -> "SignalRegistrationInterface":
+    def unregister_handler(self, handler: Callable[..., None]) -> "SignalRegistrationInterface":
         self._handlers.remove(handler)
         return self
