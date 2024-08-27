@@ -84,14 +84,14 @@ class ListenerTest(unittest.TestCase):
         zeroconf_browser = Zeroconf(interfaces=["127.0.0.1"])
         zeroconf_browser.add_service_listener(type_, listener)
 
-        properties = dict(
-            prop_none=None,
-            prop_string=b"a_prop",
-            prop_float=1.0,
-            prop_blank=b"a blanked string",
-            prop_true=1,
-            prop_false=0,
-        )
+        properties = {
+            "prop_none": None,
+            "prop_string": b"a_prop",
+            "prop_float": 1.0,
+            "prop_blank": b"a blanked string",
+            "prop_true": 1,
+            "prop_false": 0,
+        }
 
         zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
         desc: Dict[str, Any] = {"path": "/~paulsm/"}

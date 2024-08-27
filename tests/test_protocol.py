@@ -368,7 +368,7 @@ class PacketGeneration(unittest.TestCase):
         """
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         query = r.DNSIncoming(r.DNSOutgoing(const._FLAGS_QR_QUERY).packets()[0])
-        for i in range(3):
+        for _i in range(3):
             generated.add_answer(
                 query,
                 r.DNSText(
@@ -491,7 +491,7 @@ class PacketForm(unittest.TestCase):
     def test_numbers_questions(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
-        for i in range(10):
+        for _i in range(10):
             generated.add_question(question)
         bytes = generated.packets()[0]
         (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack("!4H", bytes[4:12])

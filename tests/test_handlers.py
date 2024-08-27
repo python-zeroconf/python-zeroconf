@@ -802,7 +802,7 @@ def test_known_answer_supression():
     question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
     assert question_answers
     assert not question_answers.ucast
-    expected_nsec_record = cast(r.DNSNsec, list(question_answers.mcast_now)[0])
+    expected_nsec_record = cast(r.DNSNsec, next(iter(question_answers.mcast_now)))
     assert const._TYPE_A not in expected_nsec_record.rdtypes
     assert const._TYPE_AAAA in expected_nsec_record.rdtypes
     assert not question_answers.mcast_aggregate
