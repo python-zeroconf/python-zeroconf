@@ -768,7 +768,7 @@ def test_tc_bit_not_set_in_answer_packet():
     assert third_packet.valid is True
 
 
-# 4003	15.973052	192.168.107.68	224.0.0.251	MDNS	76	Standard query 0xffc4 PTR _raop._tcp.local, "QM" question
+# MDNS	76	Standard query 0xffc4 PTR _raop._tcp.local, "QM" question
 def test_qm_packet_parser():
     """Test we can parse a query packet with the QM bit."""
     qm_packet = (
@@ -779,7 +779,7 @@ def test_qm_packet_parser():
     assert ",QM," in str(parsed.questions[0])
 
 
-# 389951	1450.577370	192.168.107.111	224.0.0.251	MDNS	115	Standard query 0x0000 PTR _companion-link._tcp.local, "QU" question OPT
+# MDNS	115	Standard query 0x0000 PTR _companion-link._tcp.local, "QU" question OPT
 def test_qu_packet_parser():
     """Test we can parse a query packet with the QU bit."""
     qu_packet = (
