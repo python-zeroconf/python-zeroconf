@@ -1571,13 +1571,13 @@ def test_scheduled_ptr_query_dunder_methods():
 
     assert query75 != other
     with pytest.raises(TypeError):
-        query75 < other  # type: ignore[operator]
+        assert query75 < other  # type: ignore[operator]
     with pytest.raises(TypeError):
-        query75 <= other  # type: ignore[operator]
+        assert query75 <= other  # type: ignore[operator]
     with pytest.raises(TypeError):
-        query75 > other  # type: ignore[operator]
+        assert query75 > other  # type: ignore[operator]
     with pytest.raises(TypeError):
-        query75 >= other  # type: ignore[operator]
+        assert query75 >= other  # type: ignore[operator]
 
 
 @pytest.mark.asyncio
