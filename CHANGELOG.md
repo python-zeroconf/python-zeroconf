@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.134.0 (2024-09-08)
+
+### Feature
+
+* Improve performance when IP addresses change frequently ([#1407](https://github.com/python-zeroconf/python-zeroconf/issues/1407)) ([`111c91a`](https://github.com/python-zeroconf/python-zeroconf/commit/111c91ab395a7520e477eb0e75d5924fba3c64c7))
+
+### Fix
+
+* Improve helpfulness of ServiceInfo.request assertions ([#1408](https://github.com/python-zeroconf/python-zeroconf/issues/1408)) ([`9262626`](https://github.com/python-zeroconf/python-zeroconf/commit/9262626895d354ed7376aa567043b793c37a985e))
+
 ## v0.133.0 (2024-08-27)
 
 ### Feature
