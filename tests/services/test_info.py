@@ -1469,6 +1469,10 @@ async def test_ipv6_changes_are_seen():
     assert info.addresses_by_version(IPVersion.V6Only) == [
         b"\xde\xad\xbe\xef\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
     ]
+    info.load_from_cache(aiozc.zeroconf)
+    assert info.addresses_by_version(IPVersion.V6Only) == [
+        b"\xde\xad\xbe\xef\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    ]
 
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     generated.add_answer_at_time(
@@ -1494,6 +1498,7 @@ async def test_ipv6_changes_are_seen():
         b"\x00\xad\xbe\xef\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
         b"\xde\xad\xbe\xef\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
     ]
+
     await aiozc.async_close()
 
 
