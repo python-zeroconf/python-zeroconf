@@ -782,7 +782,7 @@ class ServiceInfo(RecordUpdateListener):
         :param addr: address to send the request to
         :param port: port to send the request to
         """
-        assert zc.loop is not None, "Zeroconf instance must have a loop"
+        assert zc.loop is not None, "Zeroconf instance must have a loop, was it not started?"
         assert zc.loop.is_running(), "Zeroconf instance loop must be running, was it already stopped?"
         if zc.loop == get_running_loop():
             raise RuntimeError("Use AsyncServiceInfo.async_request from the event loop")
