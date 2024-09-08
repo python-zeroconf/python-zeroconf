@@ -23,7 +23,6 @@ USA
 import asyncio
 import random
 import sys
-from ipaddress import IPv4Address, IPv6Address, _BaseAddress
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
 from .._cache import DNSCache
@@ -50,6 +49,8 @@ from .._utils.asyncio import (
     wait_for_future_set_or_timeout,
 )
 from .._utils.ipaddress import (
+    ZeroconfIPv4Address,
+    ZeroconfIPv6Address,
     cached_ip_addresses,
     get_ip_address_object_from_record,
     ip_bytes_and_scope_to_address,
@@ -187,8 +188,8 @@ class ServiceInfo(RecordUpdateListener):
         self.type = type_
         self._name = name
         self.key = name.lower()
-        self._ipv4_addresses: List[IPv4Address] = []
-        self._ipv6_addresses: List[IPv6Address] = []
+        self._ipv4_addresses: List[ZeroconfIPv4Address] = []
+        self._ipv6_addresses: List[ZeroconfIPv6Address] = []
         if addresses is not None:
             self.addresses = addresses
         elif parsed_addresses is not None:
@@ -260,11 +261,11 @@ class ServiceInfo(RecordUpdateListener):
                 )
             if addr.version == 4:
                 if TYPE_CHECKING:
-                    assert isinstance(addr, IPv4Address)
+                    assert isinstance(addr, ZeroconfIPv4Address)
                 self._ipv4_addresses.append(addr)
             else:
                 if TYPE_CHECKING:
-                    assert isinstance(addr, IPv6Address)
+                    assert isinstance(addr, ZeroconfIPv6Address)
                 self._ipv6_addresses.append(addr)
 
     @property
@@ -321,7 +322,7 @@ class ServiceInfo(RecordUpdateListener):
 
     def ip_addresses_by_version(
         self, version: IPVersion
-    ) -> Union[List[IPv4Address], List[IPv6Address], List[_BaseAddress]]:
+    ) -> Union[List[ZeroconfIPv4Address], List[ZeroconfIPv6Address]]:
         """List ip_address objects matching IP version.
 
         Addresses are guaranteed to be returned in LIFO (last in, first out)
@@ -334,7 +335,7 @@ class ServiceInfo(RecordUpdateListener):
 
     def _ip_addresses_by_version_value(
         self, version_value: int_
-    ) -> Union[List[IPv4Address], List[IPv6Address]]:
+    ) -> Union[List[ZeroconfIPv4Address], List[ZeroconfIPv6Address]]:
         """Backend for addresses_by_version that uses the raw value."""
         if version_value == _IPVersion_All_value:
             return [*self._ipv4_addresses, *self._ipv6_addresses]  # type: ignore[return-value]
@@ -440,9 +441,9 @@ class ServiceInfo(RecordUpdateListener):
 
     def _get_ip_addresses_from_cache_lifo(
         self, zc: "Zeroconf", now: float_, type: int_
-    ) -> List[Union[IPv4Address, IPv6Address]]:
+    ) -> List[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
         """Set IPv6 addresses from the cache."""
-        address_list: List[Union[IPv4Address, IPv6Address]] = []
+        address_list: List[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]] = []
         for record in self._get_address_records_from_cache_by_type(zc, type):
             if record.is_expired(now):
                 continue
@@ -456,7 +457,7 @@ class ServiceInfo(RecordUpdateListener):
         """Set IPv6 addresses from the cache."""
         if TYPE_CHECKING:
             self._ipv6_addresses = cast(
-                "List[IPv6Address]",
+                "List[ZeroconfIPv6Address]",
                 self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA),
             )
         else:
@@ -466,7 +467,7 @@ class ServiceInfo(RecordUpdateListener):
         """Set IPv4 addresses from the cache."""
         if TYPE_CHECKING:
             self._ipv4_addresses = cast(
-                "List[IPv4Address]",
+                "List[ZeroconfIPv4Address]",
                 self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A),
             )
         else:
@@ -509,24 +510,32 @@ class ServiceInfo(RecordUpdateListener):
 
             if ip_addr.version == 4:
                 if TYPE_CHECKING:
-                    assert isinstance(ip_addr, IPv4Address)
+                    assert isinstance(ip_addr, ZeroconfIPv4Address)
                 ipv4_addresses = self._ipv4_addresses
                 if ip_addr not in ipv4_addresses:
                     ipv4_addresses.insert(0, ip_addr)
                     return True
-                elif ip_addr != ipv4_addresses[0]:
+                # Use int() to compare the addresses as integers
+                # since by default IPv4Address.__eq__ compares the
+                # the addresses on version and int which more than
+                # we need here since we know the version is 4.
+                elif ip_addr.zc_integer != ipv4_addresses[0].zc_integer:
                     ipv4_addresses.remove(ip_addr)
                     ipv4_addresses.insert(0, ip_addr)
 
                 return False
 
             if TYPE_CHECKING:
-                assert isinstance(ip_addr, IPv6Address)
+                assert isinstance(ip_addr, ZeroconfIPv6Address)
             ipv6_addresses = self._ipv6_addresses
             if ip_addr not in self._ipv6_addresses:
                 ipv6_addresses.insert(0, ip_addr)
                 return True
-            elif ip_addr != self._ipv6_addresses[0]:
+            # Use int() to compare the addresses as integers
+            # since by default IPv6Address.__eq__ compares the
+            # the addresses on version and int which more than
+            # we need here since we know the version is 6.
+            elif ip_addr.zc_integer != self._ipv6_addresses[0].zc_integer:
                 ipv6_addresses.remove(ip_addr)
                 ipv6_addresses.insert(0, ip_addr)
 

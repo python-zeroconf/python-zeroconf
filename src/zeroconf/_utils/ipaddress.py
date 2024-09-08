@@ -39,13 +39,7 @@ IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 
 class ZeroconfIPv4Address(IPv4Address):
-    __slots__ = (
-        "_str",
-        "_is_link_local",
-        "_is_unspecified",
-        "_is_loopback",
-        "__hash__",
-    )
+    __slots__ = ("_str", "_is_link_local", "_is_unspecified", "_is_loopback", "__hash__", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv4 address."""
@@ -55,6 +49,7 @@ class ZeroconfIPv4Address(IPv4Address):
         self._is_unspecified = super().is_unspecified
         self._is_loopback = super().is_loopback
         self.__hash__ = cache(lambda: IPv4Address.__hash__(self))  # type: ignore[method-assign]
+        self.zc_integer = int(self)
 
     def __str__(self) -> str:
         """Return the string representation of the IPv4 address."""
@@ -77,13 +72,7 @@ class ZeroconfIPv4Address(IPv4Address):
 
 
 class ZeroconfIPv6Address(IPv6Address):
-    __slots__ = (
-        "_str",
-        "_is_link_local",
-        "_is_unspecified",
-        "_is_loopback",
-        "__hash__",
-    )
+    __slots__ = ("_str", "_is_link_local", "_is_unspecified", "_is_loopback", "__hash__", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv6 address."""
@@ -93,6 +82,7 @@ class ZeroconfIPv6Address(IPv6Address):
         self._is_unspecified = super().is_unspecified
         self._is_loopback = super().is_loopback
         self.__hash__ = cache(lambda: IPv6Address.__hash__(self))  # type: ignore[method-assign]
+        self.zc_integer = int(self)
 
     def __str__(self) -> str:
         """Return the string representation of the IPv6 address."""
@@ -117,7 +107,7 @@ class ZeroconfIPv6Address(IPv6Address):
 @lru_cache(maxsize=512)
 def _cached_ip_addresses(
     address: Union[str, bytes, int],
-) -> Optional[Union[IPv4Address, IPv6Address]]:
+) -> Optional[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
     """Cache IP addresses."""
     try:
         return ZeroconfIPv4Address(address)
@@ -136,14 +126,16 @@ cached_ip_addresses = cached_ip_addresses_wrapper
 
 def get_ip_address_object_from_record(
     record: DNSAddress,
-) -> Optional[Union[IPv4Address, IPv6Address]]:
+) -> Optional[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
     """Get the IP address object from the record."""
     if IPADDRESS_SUPPORTS_SCOPE_ID and record.type == _TYPE_AAAA and record.scope_id:
         return ip_bytes_and_scope_to_address(record.address, record.scope_id)
     return cached_ip_addresses_wrapper(record.address)
 
 
-def ip_bytes_and_scope_to_address(address: bytes_, scope: int_) -> Optional[Union[IPv4Address, IPv6Address]]:
+def ip_bytes_and_scope_to_address(
+    address: bytes_, scope: int_
+) -> Optional[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
     """Convert the bytes and scope to an IP address object."""
     base_address = cached_ip_addresses_wrapper(address)
     if base_address is not None and base_address.is_link_local:
@@ -152,7 +144,7 @@ def ip_bytes_and_scope_to_address(address: bytes_, scope: int_) -> Optional[Unio
     return base_address
 
 
-def str_without_scope_id(addr: Union[IPv4Address, IPv6Address]) -> str:
+def str_without_scope_id(addr: Union[ZeroconfIPv4Address, ZeroconfIPv6Address]) -> str:
     """Return the string representation of the address without the scope id."""
     if IPADDRESS_SUPPORTS_SCOPE_ID and addr.version == 6:
         address_str = str(addr)
