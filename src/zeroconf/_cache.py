@@ -49,8 +49,9 @@ def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> No
 
     This function must be run in from event loop.
     """
-    del cache[key][record]
-    if not cache[key]:
+    record_cache = cache[key]
+    del record_cache[record]
+    if not record_cache:
         del cache[key]
 
 
@@ -81,7 +82,8 @@ class DNSCache:
         new = record not in store and not isinstance(record, DNSNsec)
         store[record] = record
         if isinstance(record, DNSService):
-            self.service_cache.setdefault(record.server_key, {})[record] = record
+            service_record = record
+            self.service_cache.setdefault(record.server_key, {})[service_record] = service_record
         return new
 
     def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
@@ -103,7 +105,8 @@ class DNSCache:
         This function must be run in from event loop.
         """
         if isinstance(record, DNSService):
-            _remove_key(self.service_cache, record.server_key, record)
+            service_record = record
+            _remove_key(self.service_cache, service_record.server_key, service_record)
         _remove_key(self.cache, record.key, record)
 
     def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
