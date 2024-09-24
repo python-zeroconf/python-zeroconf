@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.135.0 (2024-09-24)
+
+### Feature
+
+* Improve performance of DNSCache backend ([#1415](https://github.com/python-zeroconf/python-zeroconf/issues/1415)) ([`1df2e69`](https://github.com/python-zeroconf/python-zeroconf/commit/1df2e691ff11c9592e1cdad5599fb6601eb1aa3f))
+
 ## v0.134.0 (2024-09-08)
 
 ### Feature
