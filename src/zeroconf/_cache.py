@@ -49,8 +49,9 @@ def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> No
 
     This function must be run in from event loop.
     """
-    del cache[key][record]
-    if not cache[key]:
+    record_cache = cache[key]
+    del record_cache[record]
+    if not record_cache:
         del cache[key]
 
 
