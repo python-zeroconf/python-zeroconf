@@ -59,6 +59,7 @@ class AsyncListener:
 
     __slots__ = (
         "zc",
+        "loop",
         "_registry",
         "_record_manager",
         "_query_handler",
@@ -73,6 +74,8 @@ class AsyncListener:
 
     def __init__(self, zc: "Zeroconf") -> None:
         self.zc = zc
+        assert zc.loop is not None
+        self.loop = zc.loop
         self._registry = zc.registry
         self._record_manager = zc.record_manager
         self._query_handler = zc.query_handler
@@ -207,11 +210,9 @@ class AsyncListener:
                 return
         deferred.append(msg)
         delay = millis_to_seconds(randint(*_TC_DELAY_RANDOM_INTERVAL))
-        loop = self.zc.loop
-        assert loop is not None
         self._cancel_any_timers_for_addr(addr)
-        self._timers[addr] = loop.call_at(
-            loop.time() + delay,
+        self._timers[addr] = self.loop.call_at(
+            self.loop.time() + delay,
             self._respond_query,
             None,
             addr,
