@@ -5,11 +5,13 @@ from ._handlers.query_handler cimport QueryHandler
 from ._handlers.record_manager cimport RecordManager
 from ._protocol.incoming cimport DNSIncoming
 from ._services.registry cimport ServiceRegistry
+from ._transport cimport _WrappedTransport
 from ._utils.time cimport current_time_millis, millis_to_seconds
 
 
 cdef object log
 cdef object DEBUG_ENABLED
+cdef object randint
 cdef bint TYPE_CHECKING
 
 cdef cython.uint _MAX_MSG_ABSOLUTE
@@ -26,7 +28,7 @@ cdef class AsyncListener:
     cdef public cython.bytes data
     cdef public double last_time
     cdef public DNSIncoming last_message
-    cdef public object transport
+    cdef public _WrappedTransport transport
     cdef public object sock_description
     cdef public cython.dict _deferred
     cdef public cython.dict _timers
@@ -45,15 +47,15 @@ cdef class AsyncListener:
         DNSIncoming msg,
         object addr,
         object port,
-        object transport,
+        _WrappedTransport transport,
         tuple v6_flow_scope
     )
 
-    cpdef _respond_query(
+    cpdef void _respond_query(
         self,
         object msg,
         object addr,
         object port,
-        object transport,
+        _WrappedTransport transport,
         tuple v6_flow_scope
     )

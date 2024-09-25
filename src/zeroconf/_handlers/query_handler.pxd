@@ -7,6 +7,7 @@ from .._history cimport QuestionHistory
 from .._protocol.incoming cimport DNSIncoming
 from .._services.info cimport ServiceInfo
 from .._services.registry cimport ServiceRegistry
+from .._transport cimport _WrappedTransport
 from .answers cimport (
     QuestionAnswers,
     construct_outgoing_multicast_answers,
@@ -115,6 +116,6 @@ cdef class QueryHandler:
         list packets,
         object addr,
         object port,
-        object transport,
+        _WrappedTransport transport,
         tuple v6_flow_scope
     )

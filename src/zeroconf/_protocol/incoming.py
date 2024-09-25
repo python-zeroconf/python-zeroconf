@@ -136,6 +136,10 @@ class DNSIncoming:
         """Returns true if this is a response."""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
+    def is_truncated(self) -> bool:
+        """Returns true if this is truncated."""
+        return (self.flags & _FLAGS_TC) == _FLAGS_TC
+
     def has_qu_question(self) -> bool:
         """Returns true if any question is a QU question."""
         return self._has_qu_question
@@ -143,7 +147,7 @@ class DNSIncoming:
     @property
     def truncated(self) -> bool:
         """Returns true if this is a truncated."""
-        return (self.flags & _FLAGS_TC) == _FLAGS_TC
+        return self.is_truncated()
 
     @property
     def questions(self) -> List[DNSQuestion]:

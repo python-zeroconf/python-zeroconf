@@ -46,6 +46,9 @@ _float = float
 DEBUG_ENABLED = partial(log.isEnabledFor, logging.DEBUG)
 
 
+randint = random.randint
+
+
 class AsyncListener:
     """A Listener is used by this module to listen on the multicast
     group to which DNS messages are sent, allowing the implementation
@@ -193,7 +196,7 @@ class AsyncListener:
     ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
-        if not msg.truncated:
+        if not msg.is_truncated():
             self._respond_query(msg, addr, port, transport, v6_flow_scope)
             return
 
@@ -203,7 +206,7 @@ class AsyncListener:
             if incoming.data == msg.data:
                 return
         deferred.append(msg)
-        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))  # noqa: S311
+        delay = millis_to_seconds(randint(*_TC_DELAY_RANDOM_INTERVAL))
         loop = self.zc.loop
         assert loop is not None
         self._cancel_any_timers_for_addr(addr)

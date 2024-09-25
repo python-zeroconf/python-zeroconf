@@ -74,6 +74,8 @@ cdef class DNSIncoming:
 
     cpdef bint is_response(self)
 
+    cpdef bint is_truncated(self)
+
     @cython.locals(
         off="unsigned int",
         label_idx="unsigned int",
