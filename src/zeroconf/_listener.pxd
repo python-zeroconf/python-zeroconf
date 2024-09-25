@@ -39,10 +39,10 @@ cdef class AsyncListener:
     @cython.locals(msg=DNSIncoming)
     cpdef void _process_datagram_at_time(self, bint debug, cython.uint data_len, double now, bytes data, cython.tuple addrs)
 
-    cdef _cancel_any_timers_for_addr(self, object addr)
+    cdef void _cancel_any_timers_for_addr(self, object addr)
 
     @cython.locals(incoming=DNSIncoming, deferred=list)
-    cpdef handle_query_or_defer(
+    cpdef void handle_query_or_defer(
         self,
         DNSIncoming msg,
         object addr,
