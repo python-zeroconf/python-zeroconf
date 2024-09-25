@@ -52,6 +52,7 @@ cdef class AsyncListener:
         tuple v6_flow_scope
     )
 
+    @cython.locals(packets=list)
     cpdef void _respond_query(
         self,
         object msg,

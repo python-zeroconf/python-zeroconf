@@ -237,7 +237,7 @@ class AsyncListener:
         """Respond to a query and reassemble any truncated deferred packets."""
         self._cancel_any_timers_for_addr(addr)
         packets = self._deferred.pop(addr, [])
-        if msg:
+        if msg is not None:
             packets.append(msg)
 
         self._query_handler.handle_assembled_query(packets, addr, port, transport, v6_flow_scope)
