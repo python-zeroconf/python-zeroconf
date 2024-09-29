@@ -21,7 +21,6 @@ USA
 """
 
 import asyncio
-import logging
 import sys
 import threading
 from types import TracebackType
@@ -37,6 +36,7 @@ from ._handlers.record_manager import RecordManager
 from ._history import QuestionHistory
 from ._logger import QuietLogger, log
 from ._protocol.outgoing import DNSOutgoing
+from ._sender import _ZeroconfSender
 from ._services import ServiceListener
 from ._services.browser import ServiceBrowser
 from ._services.info import (
@@ -62,7 +62,6 @@ from ._utils.net import (
     InterfacesType,
     IPVersion,
     autodetect_ip_version,
-    can_send_to,
     create_sockets,
 )
 from ._utils.time import current_time_millis, millis_to_seconds
@@ -73,9 +72,6 @@ from .const import (
     _FLAGS_AA,
     _FLAGS_QR_QUERY,
     _FLAGS_QR_RESPONSE,
-    _MAX_MSG_ABSOLUTE,
-    _MDNS_ADDR,
-    _MDNS_ADDR6,
     _MDNS_PORT,
     _ONE_SECOND,
     _REGISTER_TIME,
@@ -100,43 +96,6 @@ _AGGREGATION_DELAY = 500  # ms
 _PROTECTED_AGGREGATION_DELAY = 200  # ms
 
 _REGISTER_BROADCASTS = 3
-
-
-def async_send_with_transport(
-    log_debug: bool,
-    transport: _WrappedTransport,
-    packet: bytes,
-    packet_num: int,
-    out: DNSOutgoing,
-    addr: Optional[str],
-    port: int,
-    v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-) -> None:
-    ipv6_socket = transport.is_ipv6
-    if addr is None:
-        real_addr = _MDNS_ADDR6 if ipv6_socket else _MDNS_ADDR
-    else:
-        real_addr = addr
-        if not can_send_to(ipv6_socket, real_addr):
-            return
-    if log_debug:
-        log.debug(
-            "Sending to (%s, %d) via [socket %s (%s)] (%d bytes #%d) %r as %r...",
-            real_addr,
-            port or _MDNS_PORT,
-            transport.fileno,
-            transport.sock_name,
-            len(packet),
-            packet_num + 1,
-            out,
-            packet,
-        )
-    # Get flowinfo and scopeid for the IPV6 socket to create a complete IPv6
-    # address tuple: https://docs.python.org/3.6/library/socket.html#socket-families
-    if ipv6_socket and not v6_flow_scope:
-        _, _, sock_flowinfo, sock_scopeid = transport.sock_name
-        v6_flow_scope = (sock_flowinfo, sock_scopeid)
-    transport.transport.sendto(packet, (real_addr, port or _MDNS_PORT, *v6_flow_scope))
 
 
 class Zeroconf(QuietLogger):
@@ -195,6 +154,7 @@ class Zeroconf(QuietLogger):
         self._notify_futures: Set[asyncio.Future] = set()
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self._loop_thread: Optional[threading.Thread] = None
+        self.sender = _ZeroconfSender(self)
 
         self.start()
 
@@ -208,6 +168,7 @@ class Zeroconf(QuietLogger):
         self.loop = get_running_loop()
         if self.loop:
             self.engine.setup(self.loop, None)
+            self.sender.loop = self.loop
             return
         self._start_thread()
 
@@ -217,6 +178,7 @@ class Zeroconf(QuietLogger):
 
         def _run_loop() -> None:
             self.loop = asyncio.new_event_loop()
+            self.sender.loop = self.loop
             asyncio.set_event_loop(self.loop)
             self.engine.setup(self.loop, loop_thread_ready)
             self.loop.run_forever()
@@ -611,7 +573,7 @@ class Zeroconf(QuietLogger):
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
+        self.loop.call_soon_threadsafe(self.sender.async_send, out, addr, port, v6_flow_scope, transport)
 
     def async_send(
         self,
@@ -622,34 +584,7 @@ class Zeroconf(QuietLogger):
         transport: Optional[_WrappedTransport] = None,
     ) -> None:
         """Sends an outgoing packet."""
-        if self.done:
-            return
-
-        # If no transport is specified, we send to all the ones
-        # with the same address family
-        transports = [transport] if transport else self.engine.senders
-        log_debug = log.isEnabledFor(logging.DEBUG)
-
-        for packet_num, packet in enumerate(out.packets()):
-            if len(packet) > _MAX_MSG_ABSOLUTE:
-                self.log_warning_once(
-                    "Dropping %r over-sized packet (%d bytes) %r",
-                    out,
-                    len(packet),
-                    packet,
-                )
-                return
-            for send_transport in transports:
-                async_send_with_transport(
-                    log_debug,
-                    send_transport,
-                    packet,
-                    packet_num,
-                    out,
-                    addr,
-                    port,
-                    v6_flow_scope,
-                )
+        self.sender.async_send(out, addr, port, v6_flow_scope, transport)
 
     def _close(self) -> None:
         """Set global done and remove all service listeners."""
@@ -657,6 +592,7 @@ class Zeroconf(QuietLogger):
             return
         self.remove_all_service_listeners()
         self.done = True
+        self.sender.done = True
 
     def _shutdown_threads(self) -> None:
         """Shutdown any threads."""

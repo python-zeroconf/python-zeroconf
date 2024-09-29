@@ -41,6 +41,7 @@ def build(setup_kwargs: Any) -> None:
                         "src/zeroconf/_services/browser.py",
                         "src/zeroconf/_services/info.py",
                         "src/zeroconf/_services/registry.py",
+                        "src/zeroconf/_sender.py",
                         "src/zeroconf/_transport.py",
                         "src/zeroconf/_updates.py",
                         "src/zeroconf/_utils/ipaddress.py",
