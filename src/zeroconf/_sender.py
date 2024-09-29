@@ -39,16 +39,19 @@ from .const import (
 if TYPE_CHECKING:
     from ._core import Zeroconf
 
+_bytes = bytes
+_int = int
+
 
 def async_send_with_transport(
     log_debug: bool,
     transport: _WrappedTransport,
-    packet: bytes,
-    packet_num: int,
+    packet: _bytes,
+    packet_num: _int,
     out: DNSOutgoing,
     addr: Optional[str],
-    port: int,
-    v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    port: _int,
+    v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
 ) -> None:
     ipv6_socket = transport.is_ipv6
     if addr is None:
