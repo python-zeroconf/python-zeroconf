@@ -221,7 +221,7 @@ class ServiceInfo(RecordUpdateListener):
 
     @name.setter
     def name(self, name: str) -> None:
-        """Replace the the name and reset the key."""
+        """Replace the name and reset the key."""
         self._name = name
         self.key = name.lower()
         self._dns_service_cache = None

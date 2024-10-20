@@ -441,7 +441,7 @@ class QueryHandler:
     ) -> None:
         """Respond to a (re)assembled query.
 
-        If the protocol recieved packets with the TC bit set, it will
+        If the protocol received packets with the TC bit set, it will
         wait a bit for the rest of the packets and only call
         handle_assembled_query once it has a complete set of packets
         or the timer expires. If the TC bit is not set, a single
@@ -457,7 +457,7 @@ class QueryHandler:
             id_ = first_packet.id
             out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
             # When sending unicast, only send back the reply
-            # via the same socket that it was recieved from
+            # via the same socket that it was received from
             # as we know its reachable from that socket
             self.zc.async_send(out, addr, port, v6_flow_scope, transport)
         if question_answers.mcast_now:

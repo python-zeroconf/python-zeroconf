@@ -146,7 +146,7 @@ class RecordManager:
         # that any ServiceBrowser that is going to call
         # zc.get_service_info will see the cached value
         # but ONLY after all the record updates have been
-        # processsed.
+        # processed.
         new = False
         if other_adds or address_adds:
             new = cache.async_add_records(address_adds)

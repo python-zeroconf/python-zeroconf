@@ -241,7 +241,7 @@ class AsyncListener:
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
         # We preformat the message string with the socket as we want
-        # log_exception_once to log a warrning message once PER EACH
+        # log_exception_once to log a warning message once PER EACH
         # different socket in case there are problems with multiple
         # sockets
         msg_str = f"Error with socket {self.sock_description}): %s"
