@@ -3,7 +3,7 @@ name = "zeroconf"
 version = "0.135.0"
 description = "A pure python implementation of multicast DNS service discovery"
 authors = ["Paul Scott-Murphy", "William McBrine", "Jakub Stasiak", "J. Nick Koston"]
-license = "LGPL"
+license = "LGPL-2.1-or-later"
 readme = "README.rst"
 repository = "https://github.com/python-zeroconf/python-zeroconf"
 documentation = "https://python-zeroconf.readthedocs.io"
@@ -11,7 +11,6 @@ classifiers=[
 	'Development Status :: 5 - Production/Stable',
 	'Intended Audience :: Developers',
 	'Intended Audience :: System Administrators',
-	'License :: OSI Approved :: GNU Lesser General Public License v2 (LGPLv2)',
 	'Operating System :: POSIX',
 	'Operating System :: POSIX :: Linux',
 	'Operating System :: MacOS :: MacOS X',
