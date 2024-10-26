@@ -115,14 +115,14 @@ jobs:
 
       # Do a dry run of PSR
       - name: Test release
-        uses: python-semantic-release/python-semantic-release@v9.3.0
+        uses: python-semantic-release/python-semantic-release@v9.12.0
         if: github.ref_name != 'master'
         with:
           root_options: --noop
 
       # On main branch: actual PSR + upload to PyPI & GitHub
       - name: Release
-        uses: bluetooth-devices/python-semantic-release@311
+        uses: python-semantic-release/python-semantic-release@v9.12.0
         id: release
         if: github.ref_name == 'master'
         with:
