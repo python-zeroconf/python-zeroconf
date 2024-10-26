@@ -93,36 +93,54 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   release:
-    runs-on: ubuntu-latest
-    environment: release
-    if: github.ref == 'refs/heads/master'
     needs:
       - test
       - lint
       - commitlint
 
+    runs-on: ubuntu-latest
+    environment: release
+    concurrency: release
+    permissions:
+      id-token: write
+      contents: write
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
 
-      # Run semantic release:
-      # - Update CHANGELOG.md
-      # - Update version in code
-      # - Create git tag
-      # - Create GitHub release
-      # - Publish to PyPI
-      - name: Python Semantic Release
-        uses: relekang/python-semantic-release@v7.34.6
-        #        env:
-        #          REPOSITORY_URL: https://test.pypi.org/legacy/
-        #          TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
+      # Do a dry run of PSR
+      - name: Test release
+        uses: python-semantic-release/python-semantic-release@v9.3.0
+        if: github.ref_name != 'master'
+        with:
+          root_options: --noop
+
+      # On main branch: actual PSR + upload to PyPI & GitHub
+      - name: Release
+        uses: bluetooth-devices/python-semantic-release@311
+        id: release
+        if: github.ref_name == 'master'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          pypi_token: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: steps.release.outputs.released == 'true'
+
+      - name: Publish package distributions to GitHub Releases
+        uses: python-semantic-release/upload-to-gh-release@main
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   build_wheels:
     needs: [release]
+    if: needs.release.outputs.released == 'true'
 
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -139,6 +157,8 @@ jobs:
       # Used to host cibuildwheel
       - name: Set up Python
         uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install python-semantic-release
         run: pipx install python-semantic-release==7.34.6
@@ -161,7 +181,7 @@ jobs:
           platforms: arm64
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.20.0
+        uses: pypa/cibuildwheel@v2.21.3
         # to supply options, put them in 'env', like:
         env:
           CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* *p38-*_aarch64 cp38-*_arm64 *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 *musllinux*_aarch64

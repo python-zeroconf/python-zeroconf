@@ -46,10 +46,28 @@ script = "build_ext.py"
 
 [tool.semantic_release]
 branch = "master"
-version_toml = "pyproject.toml:tool.poetry.version"
-version_variable = "src/zeroconf/__init__.py:__version__"
+version_toml = ["pyproject.toml:tool.poetry.version"]
+version_variables = [
+    "src/zeroconf/__init__.py:__version__"
+]
 build_command = "pip install poetry && poetry build"
 tag_format = "{version}"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = [
+    "chore*",
+    "ci*",
+]
+
+[tool.semantic_release.changelog.environment]
+keep_trailing_newline = true
+
+[tool.semantic_release.branches.master]
+match = "master"
+
+[tool.semantic_release.branches.noop]
+match = "(?!master$)"
+prerelease = true
 
 [tool.poetry.dependencies]
 python = "^3.8"
