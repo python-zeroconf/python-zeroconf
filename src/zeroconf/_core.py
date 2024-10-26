@@ -84,10 +84,10 @@ from .const import (
     _UNREGISTER_TIME,
 )
 
-# The maximum amont of time to delay a multicast
+# The maximum amount of time to delay a multicast
 # response in order to aggregate answers
 _AGGREGATION_DELAY = 500  # ms
-# The maximum amont of time to delay a multicast
+# The maximum amount of time to delay a multicast
 # response in order to aggregate answers after
 # it has already been delayed to protect the network
 # from excessive traffic. We use a shorter time

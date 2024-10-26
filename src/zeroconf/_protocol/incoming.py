@@ -171,7 +171,7 @@ class DNSIncoming:
         return self._num_additionals
 
     def _initial_parse(self) -> None:
-        """Parse the data needed to initalize the packet object."""
+        """Parse the data needed to initialize the packet object."""
         self._read_header()
         self._read_questions()
         if not self._num_questions:

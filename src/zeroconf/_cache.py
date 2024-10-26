@@ -172,7 +172,7 @@ class DNSCache:
 
     # The below functions are threadsafe and do not need to be run in the
     # event loop, however they all make copies so they significantly
-    # inefficent
+    # inefficient.
 
     def get(self, entry: DNSEntry) -> Optional[DNSRecord]:
         """Gets an entry by key.  Will return None if there is no
