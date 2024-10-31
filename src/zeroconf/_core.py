@@ -219,7 +219,10 @@ class Zeroconf(QuietLogger):
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
             self.engine.setup(self.loop, loop_thread_ready)
-            self.loop.run_forever()
+            try:
+                self.loop.run_forever()
+            finally:
+                self.loop.close()
 
         self._loop_thread = threading.Thread(target=_run_loop, daemon=True)
         self._loop_thread.start()
