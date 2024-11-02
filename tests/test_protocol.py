@@ -261,7 +261,7 @@ class PacketGeneration(unittest.TestCase):
         self.assertRaises(r.NamePartTooLongException, generated.packets)
 
     def test_many_questions(self):
-        """Test many questions get seperated into multiple packets."""
+        """Test many questions get separated into multiple packets."""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for i in range(100):
@@ -281,7 +281,7 @@ class PacketGeneration(unittest.TestCase):
         assert len(parsed2.questions) == 15
 
     def test_many_questions_with_many_known_answers(self):
-        """Test many questions and known answers get seperated into multiple packets."""
+        """Test many questions and known answers get separated into multiple packets."""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for _ in range(30):
@@ -319,7 +319,7 @@ class PacketGeneration(unittest.TestCase):
         assert not parsed3.truncated
 
     def test_massive_probe_packet_split(self):
-        """Test probe with many authorative answers."""
+        """Test probe with many authoritative answers."""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
         questions = []
         for _ in range(30):

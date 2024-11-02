@@ -1331,7 +1331,7 @@ async def test_legacy_unicast_response(run_isolated):
         protocol.datagram_received(query.packets()[0], ("127.0.0.1", 6503))
 
     calls = send_mock.mock_calls
-    # Verify the response is sent back on the socket it was recieved from
+    # Verify the response is sent back on the socket it was received from
     assert calls == [call(ANY, "127.0.0.1", 6503, (), protocol.transport)]
     outgoing = send_mock.call_args[0][0]
     assert isinstance(outgoing, DNSOutgoing)

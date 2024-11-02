@@ -110,7 +110,7 @@ class TestRegistrar(unittest.TestCase):
         assert question_answers
         _process_outgoing_packet(construct_outgoing_multicast_answers(question_answers.mcast_aggregate))
 
-        # The additonals should all be suppresed since they are all in the answers section
+        # The additonals should all be suppressed since they are all in the answers section
         # There will be one NSEC additional to indicate the lack of AAAA record
         #
         assert nbr_answers == 4 and nbr_additionals == 1 and nbr_authorities == 0
@@ -685,7 +685,7 @@ def test_qu_response():
     assert not question_answers.mcast_aggregate
     _validate_complete_response(question_answers.mcast_now)
 
-    # With QU set and an authorative answer (probe) should respond to both unitcast
+    # With QU set and an authoritative answer (probe) should respond to both unitcast
     # and multicast since the response hasn't been seen since 75% of the ttl
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
@@ -744,7 +744,7 @@ def test_known_answer_supression():
 
     now = current_time_millis()
     _clear_cache(zc)
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -768,7 +768,7 @@ def test_known_answer_supression():
     assert not question_answers.mcast_aggregate
     assert not question_answers.mcast_aggregate_last_second
 
-    # Test A supression
+    # Test A suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
     generated.add_question(question)
@@ -809,7 +809,7 @@ def test_known_answer_supression():
     assert not question_answers.mcast_aggregate
     assert not question_answers.mcast_aggregate_last_second
 
-    # Test SRV supression
+    # Test SRV suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_SRV, const._CLASS_IN)
     generated.add_question(question)
@@ -833,7 +833,7 @@ def test_known_answer_supression():
     assert not question_answers.mcast_aggregate
     assert not question_answers.mcast_aggregate_last_second
 
-    # Test TXT supression
+    # Test TXT suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_TXT, const._CLASS_IN)
     generated.add_question(question)
@@ -914,7 +914,7 @@ def test_multi_packet_known_answer_supression():
 
     now = current_time_millis()
     _clear_cache(zc)
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -976,7 +976,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     now = current_time_millis()
     _clear_cache(zc)
 
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -1062,7 +1062,7 @@ def test_upper_case_enumeration_query():
     zc.registry.async_add(info2)
     _clear_cache(zc)
 
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME.upper(), const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -1579,7 +1579,7 @@ async def test_duplicate_goodbye_answers_in_packet():
 
 @pytest.mark.asyncio
 async def test_response_aggregation_timings(run_isolated):
-    """Verify multicast respones are aggregated."""
+    """Verify multicast responses are aggregated."""
     type_ = "_mservice._tcp.local."
     type_2 = "_mservice2._tcp.local."
     type_3 = "_mservice3._tcp.local."
@@ -1949,7 +1949,7 @@ async def test_future_answers_are_removed_on_send():
     # The answer should get removed because we just sent it
     assert info.dns_pointer() not in outgoing_queue.queue[0].answers
 
-    # But the one we have not sent yet shoudl still go out later
+    # But the one we have not sent yet should still go out later
     assert info2.dns_pointer() in outgoing_queue.queue[0].answers
 
 
