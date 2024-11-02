@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+
 """Example of perodic dump of homekit services.
 
 This example is useful when a user wants an ondemand

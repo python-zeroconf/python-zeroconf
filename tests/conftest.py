@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 """conftest for zeroconf tests."""
 
 import threading

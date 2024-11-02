@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._engine"""
 
 import asyncio
