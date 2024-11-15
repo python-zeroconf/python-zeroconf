@@ -348,7 +348,7 @@ def test_goodbye_all_services():
     second_packet = out.packets()
     assert second_packet == first_packet
 
-    # Verify the registery is empty
+    # Verify the registry is empty
     out3 = zc.generate_unregister_all_services()
     assert out3 is None
     assert zc.registry.async_get_service_infos() == []
@@ -676,7 +676,7 @@ async def test_open_close_twice_from_async() -> None:
     """Test we can close twice from a coroutine when using Zeroconf.
 
     Ideally callers switch to using AsyncZeroconf, however there will
-    be a peroid where they still call the sync wrapper that we want
+    be a period where they still call the sync wrapper that we want
     to ensure will not deadlock on shutdown.
 
     This test is expected to throw warnings about tasks being destroyed

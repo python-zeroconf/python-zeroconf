@@ -770,7 +770,7 @@ async def test_ttl_refresh_cancelled_rescue_query():
 
 @pytest.mark.asyncio
 async def test_asking_qm_questions():
-    """Verify explictly asking QM questions."""
+    """Verify explicitly asking QM questions."""
     type_ = "_quservice._tcp.local."
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zeroconf_browser = aiozc.zeroconf

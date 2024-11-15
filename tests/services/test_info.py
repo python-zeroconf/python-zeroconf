@@ -82,7 +82,7 @@ class TestServiceInfo(unittest.TestCase):
             service_server,
             addresses=[service_address],
         )
-        # Verify backwards compatiblity with calling with None
+        # Verify backwards compatibility with calling with None
         info.async_update_records(zc, now, [])
         # Matching updates
         info.async_update_records(
@@ -572,7 +572,7 @@ class TestServiceInfo(unittest.TestCase):
                 helper_thread.start()
                 wait_time = 1
 
-                # Expext query for SRV, TXT, A, AAAA
+                # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 4
@@ -582,7 +582,7 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
-                # Expext no further queries
+                # Expect no further queries
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -1006,7 +1006,7 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
 
 
 def test_asking_qu_questions():
-    """Verify explictly asking QU questions."""
+    """Verify explicitly asking QU questions."""
     type_ = "_quservice._tcp.local."
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
 
@@ -1030,7 +1030,7 @@ def test_asking_qu_questions():
 
 
 def test_asking_qm_questions():
-    """Verify explictly asking QM questions."""
+    """Verify explicitly asking QM questions."""
     type_ = "_quservice._tcp.local."
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
 
