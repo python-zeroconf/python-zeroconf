@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.136.2 (2024-11-21)
+
+### Bug Fixes
+
+* fix: retrigger release from failed github workflow (#1443) ([`2ea705d`](https://github.com/python-zeroconf/python-zeroconf/commit/2ea705d850c1cb096c87372d5ec855f684603d01))
+
+
 ## v0.136.1 (2024-11-21)
 
 ### Bug Fixes
