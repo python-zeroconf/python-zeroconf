@@ -35,7 +35,7 @@ class ServiceRegistry:
     the event loop as it is not thread safe.
     """
 
-    __slots__ = ("_services", "types", "servers", "has_entries")
+    __slots__ = ("_services", "has_entries", "servers", "types")
 
     def __init__(
         self,

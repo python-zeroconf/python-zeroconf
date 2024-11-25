@@ -64,7 +64,7 @@ class DNSQuestionType(enum.Enum):
 class DNSEntry:
     """A DNS entry"""
 
-    __slots__ = ("key", "name", "type", "class_", "unique")
+    __slots__ = ("class_", "key", "name", "type", "unique")
 
     def __init__(self, name: str, type_: int, class_: int) -> None:
         self.name = name
@@ -157,7 +157,7 @@ class DNSQuestion(DNSEntry):
 class DNSRecord(DNSEntry):
     """A DNS record - like a DNS entry, but has a TTL"""
 
-    __slots__ = ("ttl", "created")
+    __slots__ = ("created", "ttl")
 
     # TODO: Switch to just int ttl
     def __init__(
@@ -421,7 +421,7 @@ class DNSText(DNSRecord):
 class DNSService(DNSRecord):
     """A DNS service record"""
 
-    __slots__ = ("_hash", "priority", "weight", "port", "server", "server_key")
+    __slots__ = ("_hash", "port", "priority", "server", "server_key", "weight")
 
     def __init__(
         self,
@@ -542,7 +542,7 @@ _DNSRecord = DNSRecord
 class DNSRRSet:
     """A set of dns records with a lookup to get the ttl."""
 
-    __slots__ = ("_records", "_lookup")
+    __slots__ = ("_lookup", "_records")
 
     def __init__(self, records: List[DNSRecord]) -> None:
         """Create an RRset from records sets."""

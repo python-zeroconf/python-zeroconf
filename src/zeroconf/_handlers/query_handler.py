@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 
 
 class _AnswerStrategy:
-    __slots__ = ("question", "strategy_type", "types", "services")
+    __slots__ = ("question", "services", "strategy_type", "types")
 
     def __init__(
         self,
@@ -91,15 +91,15 @@ class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
 
     __slots__ = (
-        "_is_probe",
-        "_questions",
-        "_now",
-        "_cache",
         "_additionals",
-        "_ucast",
-        "_mcast_now",
+        "_cache",
+        "_is_probe",
         "_mcast_aggregate",
         "_mcast_aggregate_last_second",
+        "_mcast_now",
+        "_now",
+        "_questions",
+        "_ucast",
     )
 
     def __init__(self, cache: DNSCache, questions: List[DNSQuestion], is_probe: bool, now: float) -> None:
@@ -191,12 +191,12 @@ class QueryHandler:
     """Query the ServiceRegistry."""
 
     __slots__ = (
-        "zc",
-        "registry",
         "cache",
-        "question_history",
-        "out_queue",
         "out_delay_queue",
+        "out_queue",
+        "question_history",
+        "registry",
+        "zc",
     )
 
     def __init__(self, zc: "Zeroconf") -> None:

@@ -70,25 +70,25 @@ class DNSIncoming:
     """Object representation of an incoming DNS packet"""
 
     __slots__ = (
-        "_did_read_others",
-        "flags",
-        "offset",
-        "data",
-        "view",
-        "_data_len",
-        "_name_cache",
-        "_questions",
         "_answers",
-        "id",
-        "_num_questions",
+        "_data_len",
+        "_did_read_others",
+        "_has_qu_question",
+        "_name_cache",
+        "_num_additionals",
         "_num_answers",
         "_num_authorities",
-        "_num_additionals",
-        "valid",
+        "_num_questions",
+        "_questions",
+        "data",
+        "flags",
+        "id",
         "now",
+        "offset",
         "scope_id",
         "source",
-        "_has_qu_question",
+        "valid",
+        "view",
     )
 
     def __init__(

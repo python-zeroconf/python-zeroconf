@@ -77,20 +77,20 @@ class DNSOutgoing:
     """Object representation of an outgoing packet"""
 
     __slots__ = (
-        "flags",
-        "finished",
-        "id",
-        "multicast",
-        "packets_data",
-        "names",
-        "data",
-        "size",
+        "additionals",
         "allow_long",
-        "state",
-        "questions",
         "answers",
         "authorities",
-        "additionals",
+        "data",
+        "finished",
+        "flags",
+        "id",
+        "multicast",
+        "names",
+        "packets_data",
+        "questions",
+        "size",
+        "state",
     )
 
     def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:

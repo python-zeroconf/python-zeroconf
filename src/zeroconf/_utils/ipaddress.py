@@ -39,7 +39,7 @@ IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 
 class ZeroconfIPv4Address(IPv4Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified", "_is_loopback", "__hash__", "zc_integer")
+    __slots__ = ("__hash__", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv4 address."""
@@ -72,7 +72,7 @@ class ZeroconfIPv4Address(IPv4Address):
 
 
 class ZeroconfIPv6Address(IPv6Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified", "_is_loopback", "__hash__", "zc_integer")
+    __slots__ = ("__hash__", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv6 address."""

@@ -44,7 +44,7 @@ float_ = float
 class QuestionAnswers:
     """A group of answers to a question."""
 
-    __slots__ = ("ucast", "mcast_now", "mcast_aggregate", "mcast_aggregate_last_second")
+    __slots__ = ("mcast_aggregate", "mcast_aggregate_last_second", "mcast_now", "ucast")
 
     def __init__(
         self,
@@ -71,7 +71,7 @@ class QuestionAnswers:
 class AnswerGroup:
     """A group of answers scheduled to be sent at the same time."""
 
-    __slots__ = ("send_after", "send_before", "answers")
+    __slots__ = ("answers", "send_after", "send_before")
 
     def __init__(
         self,

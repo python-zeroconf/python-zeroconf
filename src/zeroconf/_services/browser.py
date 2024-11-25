@@ -107,10 +107,10 @@ heappush = heapq.heappush
 class _ScheduledPTRQuery:
     __slots__ = (
         "alias",
-        "name",
-        "ttl",
         "cancelled",
         "expire_time_millis",
+        "name",
+        "ttl",
         "when_millis",
     )
 
@@ -189,7 +189,7 @@ class _ScheduledPTRQuery:
 class _DNSPointerOutgoingBucket:
     """A DNSOutgoing bucket."""
 
-    __slots__ = ("now_millis", "out", "bytes")
+    __slots__ = ("bytes", "now_millis", "out")
 
     def __init__(self, now_millis: float, multicast: bool) -> None:
         """Create a bucket to wrap a DNSOutgoing."""
@@ -328,20 +328,20 @@ class QueryScheduler:
     """
 
     __slots__ = (
-        "_zc",
-        "_types",
         "_addr",
-        "_port",
-        "_multicast",
-        "_first_random_delay_interval",
-        "_min_time_between_queries_millis",
-        "_loop",
-        "_startup_queries_sent",
-        "_next_scheduled_for_alias",
-        "_query_heap",
-        "_next_run",
         "_clock_resolution_millis",
+        "_first_random_delay_interval",
+        "_loop",
+        "_min_time_between_queries_millis",
+        "_multicast",
+        "_next_run",
+        "_next_scheduled_for_alias",
+        "_port",
+        "_query_heap",
         "_question_type",
+        "_startup_queries_sent",
+        "_types",
+        "_zc",
     )
 
     def __init__(
@@ -556,15 +556,15 @@ class _ServiceBrowserBase(RecordUpdateListener):
     """Base class for ServiceBrowser."""
 
     __slots__ = (
-        "types",
-        "zc",
         "_cache",
         "_loop",
         "_pending_handlers",
-        "_service_state_changed",
-        "query_scheduler",
-        "done",
         "_query_sender_task",
+        "_service_state_changed",
+        "done",
+        "query_scheduler",
+        "types",
+        "zc",
     )
 
     def __init__(
