@@ -45,12 +45,12 @@ class MulticastOutgoingQueue:
     """An outgoing queue used to aggregate multicast responses."""
 
     __slots__ = (
-        "zc",
-        "queue",
-        "_multicast_delay_random_min",
-        "_multicast_delay_random_max",
         "_additional_delay",
         "_aggregation_delay",
+        "_multicast_delay_random_max",
+        "_multicast_delay_random_min",
+        "queue",
+        "zc",
     )
 
     def __init__(self, zeroconf: "Zeroconf", additional_delay: _int, max_aggregation_delay: _int) -> None:

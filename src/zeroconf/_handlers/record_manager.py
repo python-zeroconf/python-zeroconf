@@ -40,7 +40,7 @@ _float = float
 class RecordManager:
     """Process records into the cache and notify listeners."""
 
-    __slots__ = ("zc", "cache", "listeners")
+    __slots__ = ("cache", "listeners", "zc")
 
     def __init__(self, zeroconf: "Zeroconf") -> None:
         """Init the record manager."""

@@ -55,17 +55,17 @@ class AsyncListener:
     the read() method called when a socket is available for reading."""
 
     __slots__ = (
-        "zc",
-        "_registry",
-        "_record_manager",
-        "_query_handler",
-        "data",
-        "last_time",
-        "last_message",
-        "transport",
-        "sock_description",
         "_deferred",
+        "_query_handler",
+        "_record_manager",
+        "_registry",
         "_timers",
+        "data",
+        "last_message",
+        "last_time",
+        "sock_description",
+        "transport",
+        "zc",
     )
 
     def __init__(self, zc: "Zeroconf") -> None:
