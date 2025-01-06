@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.137.0 (2025-01-06)
+
+### Features
+
+* feat: speed up parsing incoming records (#1458) ([`783c1b3`](https://github.com/python-zeroconf/python-zeroconf/commit/783c1b37d1372c90dfce658c66d03aa753afbf49))
+
+
 ## v0.136.2 (2024-11-21)
 
 ### Bug Fixes
