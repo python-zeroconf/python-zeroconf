@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.137.1 (2025-01-06)
+
+### Bug Fixes
+
+* fix: move wheel builds to macos-13 (#1459) ([`4ff48a0`](https://github.com/python-zeroconf/python-zeroconf/commit/4ff48a01bc76c82e5710aafaf6cf6e79c069cd85))
+
+
 ## v0.137.0 (2025-01-06)
 
 ### Features
