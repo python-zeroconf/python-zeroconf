@@ -246,7 +246,8 @@ class DNSIncoming:
             # The question has 2 unsigned shorts in network order
             type_ = view[offset] << 8 | view[offset + 1]
             class_ = view[offset + 2] << 8 | view[offset + 3]
-            question = DNSQuestion(name, type_, class_)
+            question = DNSQuestion.__new__(DNSQuestion)
+            question._fast_init(name, type_, class_)
             if question.unique:  # QU questions use the same bit as unique
                 self._has_qu_question = True
             questions.append(question)

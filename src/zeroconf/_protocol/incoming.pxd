@@ -97,7 +97,7 @@ cdef class DNSIncoming:
     )
     cdef void _read_others(self)
 
-    @cython.locals(offset="unsigned int")
+    @cython.locals(offset="unsigned int", question=DNSQuestion)
     cdef _read_questions(self)
 
     @cython.locals(
