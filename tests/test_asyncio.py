@@ -54,6 +54,10 @@ log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
 
 
+class PatchableAsyncServiceInfo(AsyncServiceInfo):
+    """A patchable version of AsyncServiceInfo."""
+
+
 def setup_module():
     global original_logging_level
     original_logging_level = log.level
@@ -696,11 +700,11 @@ async def test_service_info_async_request() -> None:
     assert aiosinfos[1] is not None
     assert aiosinfos[1].addresses == [socket.inet_aton("10.0.1.5")]
 
-    aiosinfo = AsyncServiceInfo(type_, registration_name)
+    aiosinfo = PatchableAsyncServiceInfo(type_, registration_name)
     _clear_cache(aiozc.zeroconf)
     # Generating the race condition is almost impossible
     # without patching since its a TOCTOU race
-    with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
+    with patch.object(aiosinfo, "_is_complete", False):
         await aiosinfo.async_request(aiozc.zeroconf, 3000)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
@@ -1168,9 +1172,9 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
 
     # patch the zeroconf send
     with patch.object(zeroconf_info, "async_send", send):
-        aiosinfo = AsyncServiceInfo(type_, registration_name)
+        aiosinfo = PatchableAsyncServiceInfo(type_, registration_name)
         # Patch _is_complete so we send multiple times
-        with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
+        with patch.object(aiosinfo, "_is_complete", False):
             await aiosinfo.async_request(aiozc.zeroconf, 1200)
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
