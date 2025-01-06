@@ -69,7 +69,7 @@ class DNSEntry:
     def __init__(self, name: str, type_: int, class_: int) -> None:
         self._fast_init_entry(name, type_, class_)
 
-    def _fast_init_entry(self, name: str, type_: int, class_: int) -> None:
+    def _fast_init_entry(self, name: str, type_: _int, class_: _int) -> None:
         """Fast init for reuse."""
         self.name = name
         self.key = name.lower()
@@ -114,7 +114,7 @@ class DNSQuestion(DNSEntry):
     def __init__(self, name: str, type_: int, class_: int) -> None:
         self._fast_init(name, type_, class_)
 
-    def _fast_init(self, name: str, type_: int, class_: int) -> None:
+    def _fast_init(self, name: str, type_: _int, class_: _int) -> None:
         """Fast init for reuse."""
         super()._fast_init_entry(name, type_, class_)
         self._hash = hash((self.key, type_, self.class_))
@@ -175,7 +175,7 @@ class DNSRecord(DNSEntry):
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created or current_time_millis())
 
-    def _fast_init_record(self, name: str, type_: int, class_: int, ttl: float, created: _float) -> None:
+    def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _float, created: _float) -> None:
         """Fast init for reuse."""
         super()._fast_init_entry(name, type_, class_)
         self.ttl = ttl
@@ -262,9 +262,9 @@ class DNSAddress(DNSRecord):
     def _fast_init(
         self,
         name: str,
-        type_: int,
-        class_: int,
-        ttl: float,
+        type_: _int,
+        class_: _int,
+        ttl: _float,
         address: bytes,
         scope_id: Optional[_int],
         created: _float,
@@ -325,7 +325,7 @@ class DNSHinfo(DNSRecord):
         self._fast_init(name, type_, class_, ttl, cpu, os, created or current_time_millis())
 
     def _fast_init(
-        self, name: str, type_: int, class_: int, ttl: float, cpu: str, os: str, created: _float
+        self, name: str, type_: _int, class_: _int, ttl: _float, cpu: str, os: str, created: _float
     ) -> None:
         """Fast init for reuse."""
         super()._fast_init_record(name, type_, class_, ttl, created)
@@ -371,7 +371,9 @@ class DNSPointer(DNSRecord):
     ) -> None:
         self._fast_init(name, type_, class_, ttl, alias, created or current_time_millis())
 
-    def _fast_init(self, name: str, type_: int, class_: int, ttl: float, alias: str, created: _float) -> None:
+    def _fast_init(
+        self, name: str, type_: _int, class_: _int, ttl: _float, alias: str, created: _float
+    ) -> None:
         super()._fast_init_record(name, type_, class_, ttl, created)
         self.alias = alias
         self.alias_key = alias.lower()
@@ -425,7 +427,7 @@ class DNSText(DNSRecord):
         self._fast_init(name, type_, class_, ttl, text, created or current_time_millis())
 
     def _fast_init(
-        self, name: str, type_: int, class_: int, ttl: float, text: bytes, created: _float
+        self, name: str, type_: _int, class_: _int, ttl: _float, text: bytes, created: _float
     ) -> None:
         super()._fast_init_record(name, type_, class_, ttl, created)
         self.text = text
@@ -478,12 +480,12 @@ class DNSService(DNSRecord):
     def _fast_init(
         self,
         name: str,
-        type_: int,
-        class_: int,
-        ttl: float,
-        priority: int,
-        weight: int,
-        port: int,
+        type_: _int,
+        class_: _int,
+        ttl: _float,
+        priority: _int,
+        weight: _int,
+        port: _int,
         server: str,
         created: _float,
     ) -> None:
@@ -535,7 +537,7 @@ class DNSNsec(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: int,
+        ttl: Union[int, float],
         next_name: str,
         rdtypes: List[int],
         created: Optional[float] = None,
@@ -545,11 +547,11 @@ class DNSNsec(DNSRecord):
     def _fast_init(
         self,
         name: str,
-        type_: int,
-        class_: int,
-        ttl: float,
+        type_: _int,
+        class_: _int,
+        ttl: _float,
         next_name: str,
-        rdtypes: List[int],
+        rdtypes: List[_int],
         created: _float,
     ) -> None:
         super()._fast_init_record(name, type_, class_, ttl, created)
