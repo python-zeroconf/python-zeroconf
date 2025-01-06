@@ -116,7 +116,7 @@ class DNSQuestion(DNSEntry):
 
     def _fast_init(self, name: str, type_: _int, class_: _int) -> None:
         """Fast init for reuse."""
-        super()._fast_init_entry(name, type_, class_)
+        self._fast_init_entry(name, type_, class_)
         self._hash = hash((self.key, type_, self.class_))
 
     def answered_by(self, rec: "DNSRecord") -> bool:
@@ -177,7 +177,7 @@ class DNSRecord(DNSEntry):
 
     def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _float, created: _float) -> None:
         """Fast init for reuse."""
-        super()._fast_init_entry(name, type_, class_)
+        self._fast_init_entry(name, type_, class_)
         self.ttl = ttl
         self.created = created
 
