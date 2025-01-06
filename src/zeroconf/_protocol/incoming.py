@@ -306,11 +306,17 @@ class DNSIncoming:
     ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
-            return DNSAddress(domain, type_, class_, ttl, self._read_string(4), None, self.now)
+            address_rec = object.__new__(DNSAddress)
+            address_rec._fast_init(domain, type_, class_, ttl, self._read_string(4), None, self.now)
+            return address_rec
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
-            return DNSPointer(domain, type_, class_, ttl, self._read_name(), self.now)
+            pointer_rec = object.__new__(DNSPointer)
+            pointer_rec._fast_init(domain, type_, class_, ttl, self._read_name(), self.now)
+            return pointer_rec
         if type_ == _TYPE_TXT:
-            return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
+            text_rec = object.__new__(DNSText)
+            text_rec._fast_init(domain, type_, class_, ttl, self._read_string(length), self.now)
+            return text_rec
         if type_ == _TYPE_SRV:
             view = self.view
             offset = self.offset
@@ -319,7 +325,8 @@ class DNSIncoming:
             priority = view[offset] << 8 | view[offset + 1]
             weight = view[offset + 2] << 8 | view[offset + 3]
             port = view[offset + 4] << 8 | view[offset + 5]
-            return DNSService(
+            srv_rec = object.__new__(DNSService)
+            srv_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -330,8 +337,10 @@ class DNSIncoming:
                 self._read_name(),
                 self.now,
             )
+            return srv_rec
         if type_ == _TYPE_HINFO:
-            return DNSHinfo(
+            hinfo_rec = object.__new__(DNSHinfo)
+            hinfo_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -340,8 +349,10 @@ class DNSIncoming:
                 self._read_character_string(),
                 self.now,
             )
+            return hinfo_rec
         if type_ == _TYPE_AAAA:
-            return DNSAddress(
+            address_rec = object.__new__(DNSAddress)
+            address_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -350,9 +361,11 @@ class DNSIncoming:
                 self.scope_id,
                 self.now,
             )
+            return address_rec
         if type_ == _TYPE_NSEC:
             name_start = self.offset
-            return DNSNsec(
+            nsec_rec = object.__new__(DNSNsec)
+            nsec_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -361,6 +374,7 @@ class DNSIncoming:
                 self._read_bitmap(name_start + length),
                 self.now,
             )
+            return nsec_rec
         # Try to ignore types we don't know about
         # Skip the payload for the resource record so the next
         # records can be parsed correctly
