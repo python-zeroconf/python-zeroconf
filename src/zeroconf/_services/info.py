@@ -955,5 +955,7 @@ class ServiceInfo(RecordUpdateListener):
         )
 
 
-class AsyncServiceInfo(ServiceInfo):
-    """An async version of ServiceInfo."""
+# Alias for backwards compatibility since
+# all async methods are now available on the
+# ServiceInfo object itself.
+AsyncServiceInfo = ServiceInfo
