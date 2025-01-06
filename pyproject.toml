@@ -160,7 +160,7 @@ known_first_party = ["zeroconf", "tests"]
 
 [tool.mypy]
 check_untyped_defs = true
-disallow_any_generics = true
+disallow_any_generics = false  # turn this on when we drop 3.7/3.8 support
 disallow_incomplete_defs = true
 disallow_untyped_defs = true
 mypy_path = "src/"
