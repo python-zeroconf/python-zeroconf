@@ -15,7 +15,6 @@ classifiers=[
 	'Operating System :: POSIX :: Linux',
 	'Operating System :: MacOS :: MacOS X',
 	'Topic :: Software Development :: Libraries',
-	'Programming Language :: Python :: 3.8',
 	'Programming Language :: Python :: 3.9',
 	'Programming Language :: Python :: 3.10',
 	'Programming Language :: Python :: 3.11',
@@ -70,7 +69,7 @@ match = "(?!master$)"
 prerelease = true
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 async-timeout = {version = ">=3.0.0", python = "<3.11"}
 ifaddr = ">=0.1.7"
 

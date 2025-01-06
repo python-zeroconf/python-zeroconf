@@ -36,7 +36,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
@@ -185,7 +184,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.21.3
         # to supply options, put them in 'env', like:
         env:
-          CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* *p38-*_aarch64 cp38-*_arm64 *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 *musllinux*_aarch64
+          CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 *musllinux*_aarch64
           CIBW_BEFORE_ALL_LINUX: apt install -y gcc || yum install -y gcc || apk add gcc
           CIBW_ARCHS_LINUX: auto aarch64
           CIBW_BUILD_VERBOSITY: 3
