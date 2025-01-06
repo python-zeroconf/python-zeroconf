@@ -270,7 +270,7 @@ class DNSAddress(DNSRecord):
         created: _float,
     ) -> None:
         """Fast init for reuse."""
-        super()._fast_init_record(name, type_, class_, ttl, created)
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.address = address
         self.scope_id = scope_id
         self._hash = hash((self.key, type_, self.class_, address, scope_id))
@@ -328,7 +328,7 @@ class DNSHinfo(DNSRecord):
         self, name: str, type_: _int, class_: _int, ttl: _float, cpu: str, os: str, created: _float
     ) -> None:
         """Fast init for reuse."""
-        super()._fast_init_record(name, type_, class_, ttl, created)
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.cpu = cpu
         self.os = os
         self._hash = hash((self.key, type_, self.class_, cpu, os))
@@ -374,7 +374,7 @@ class DNSPointer(DNSRecord):
     def _fast_init(
         self, name: str, type_: _int, class_: _int, ttl: _float, alias: str, created: _float
     ) -> None:
-        super()._fast_init_record(name, type_, class_, ttl, created)
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.alias = alias
         self.alias_key = alias.lower()
         self._hash = hash((self.key, type_, self.class_, self.alias_key))
@@ -429,7 +429,7 @@ class DNSText(DNSRecord):
     def _fast_init(
         self, name: str, type_: _int, class_: _int, ttl: _float, text: bytes, created: _float
     ) -> None:
-        super()._fast_init_record(name, type_, class_, ttl, created)
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.text = text
         self._hash = hash((self.key, type_, self.class_, text))
 
@@ -489,7 +489,7 @@ class DNSService(DNSRecord):
         server: str,
         created: _float,
     ) -> None:
-        super()._fast_init_record(name, type_, class_, ttl, created)
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.priority = priority
         self.weight = weight
         self.port = port
@@ -554,7 +554,7 @@ class DNSNsec(DNSRecord):
         rdtypes: List[_int],
         created: _float,
     ) -> None:
-        super()._fast_init_record(name, type_, class_, ttl, created)
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.next_name = next_name
         self.rdtypes = sorted(rdtypes)
         self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
