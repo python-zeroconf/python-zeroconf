@@ -306,15 +306,15 @@ class DNSIncoming:
     ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
-            address_rec = object.__new__(DNSAddress)
+            address_rec = DNSAddress.__new__(DNSAddress)
             address_rec._fast_init(domain, type_, class_, ttl, self._read_string(4), None, self.now)
             return address_rec
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
-            pointer_rec = object.__new__(DNSPointer)
+            pointer_rec = DNSPointer.__new__(DNSPointer)
             pointer_rec._fast_init(domain, type_, class_, ttl, self._read_name(), self.now)
             return pointer_rec
         if type_ == _TYPE_TXT:
-            text_rec = object.__new__(DNSText)
+            text_rec = DNSText.__new__(DNSText)
             text_rec._fast_init(domain, type_, class_, ttl, self._read_string(length), self.now)
             return text_rec
         if type_ == _TYPE_SRV:
@@ -325,7 +325,7 @@ class DNSIncoming:
             priority = view[offset] << 8 | view[offset + 1]
             weight = view[offset + 2] << 8 | view[offset + 3]
             port = view[offset + 4] << 8 | view[offset + 5]
-            srv_rec = object.__new__(DNSService)
+            srv_rec = DNSService.__new__(DNSService)
             srv_rec._fast_init(
                 domain,
                 type_,
@@ -339,7 +339,7 @@ class DNSIncoming:
             )
             return srv_rec
         if type_ == _TYPE_HINFO:
-            hinfo_rec = object.__new__(DNSHinfo)
+            hinfo_rec = DNSHinfo.__new__(DNSHinfo)
             hinfo_rec._fast_init(
                 domain,
                 type_,
@@ -351,7 +351,7 @@ class DNSIncoming:
             )
             return hinfo_rec
         if type_ == _TYPE_AAAA:
-            address_rec = object.__new__(DNSAddress)
+            address_rec = DNSAddress.__new__(DNSAddress)
             address_rec._fast_init(
                 domain,
                 type_,
@@ -364,7 +364,7 @@ class DNSIncoming:
             return address_rec
         if type_ == _TYPE_NSEC:
             name_start = self.offset
-            nsec_rec = object.__new__(DNSNsec)
+            nsec_rec = DNSNsec.__new__(DNSNsec)
             nsec_rec._fast_init(
                 domain,
                 type_,
