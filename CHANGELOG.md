@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.137.2 (2025-01-06)
+
+### Bug Fixes
+
+* fix: split wheel builds to avoid timeout (#1461) ([`be05f0d`](https://github.com/python-zeroconf/python-zeroconf/commit/be05f0dc4f6b2431606031a7bb24585728d15f01))
+
+
 ## v0.137.1 (2025-01-06)
 
 ### Bug Fixes
