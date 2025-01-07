@@ -10,6 +10,10 @@ python-zeroconf
 .. image:: https://codecov.io/gh/python-zeroconf/python-zeroconf/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/python-zeroconf/python-zeroconf
 
+.. image:: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+   :target: https://codspeed.io/python-zeroconf/python-zeroconf
+   :alt: Codspeed.io status for python-zeroconf
+
 `Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
 
 This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
