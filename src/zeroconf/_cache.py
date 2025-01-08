@@ -160,9 +160,7 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        if entries := self.cache.get(name.lower()):
-            return list(entries.values())
-        return []
+        return self.entries_with_name(name)
 
     def async_entries_with_server(self, name: str) -> List[DNSRecord]:
         """Returns a dict of entries whose key matches the server.
@@ -170,9 +168,7 @@ class DNSCache:
         This function is not threadsafe and must be called from
         the event loop.
         """
-        if entries := self.service_cache.get(name.lower()):
-            return list(entries.values())
-        return []
+        return self.entries_with_server(name)
 
     # The below functions are threadsafe and do not need to be run in the
     # event loop, however they all make copies so they significantly
@@ -219,11 +215,15 @@ class DNSCache:
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
-        return self.async_entries_with_server(server)
+        if entries := self.service_cache.get(server.lower()):
+            return list(entries.values())
+        return []
 
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        return self.async_entries_with_name(name)
+        if entries := self.cache.get(name.lower()):
+            return list(entries.values())
+        return []
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
