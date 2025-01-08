@@ -142,6 +142,20 @@ class DNSCache:
         if not (expire_heap_len := len(self._expire_heap)):
             return []
 
+        expired: List[DNSRecord] = []
+        # Find any expired records and add them to the to-delete list
+        while self._expire_heap:
+            when, record = self._expire_heap[0]
+            if when > now:
+                break
+            heappop(self._expire_heap)
+            # Check if the record hasn't been re-added to the heap
+            # with a different expiration time as it will be removed
+            # later when it reaches the top of the heap and its
+            # expiration time is met.
+            if self._expirations.get(record) == when:
+                expired.append(record)
+
         # If the expiration heap grows larger than the number expirations
         # times two, we clean it up to avoid keeping expired entries in
         # the heap and consuming memory. We guard this with a minimum
@@ -158,20 +172,6 @@ class DNSCache:
             self._expire_heap = [
                 entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
             ]
-
-        expired: List[DNSRecord] = []
-        # Find any expired records and add them to the to-delete list
-        while self._expire_heap:
-            when, record = self._expire_heap[0]
-            if when > now:
-                break
-            heappop(self._expire_heap)
-            # Check if the record hasn't been re-added to the heap
-            # with a different expiration time as it will be removed
-            # later when it reaches the top of the heap and its
-            # expiration time is met.
-            if self._expirations.get(record) == when:
-                expired.append(record)
 
         self.async_remove_records(expired)
         return expired
