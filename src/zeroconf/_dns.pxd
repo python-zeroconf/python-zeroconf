@@ -66,7 +66,7 @@ cdef class DNSRecord(DNSEntry):
 
     cpdef bint is_recent(self, double now)
 
-    cdef _reset_ttl(self, DNSRecord other)
+    cpdef _reset_ttl(self, DNSRecord other)
 
     cdef _set_created_ttl(self, double now, cython.float ttl)
 

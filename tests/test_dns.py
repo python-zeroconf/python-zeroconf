@@ -236,6 +236,33 @@ def test_dns_record_hashablity_does_not_consider_ttl():
     assert len(record_set) == 1
 
 
+def test_dns_record_hashablity_does_not_consider_created():
+    """Test DNSRecord are hashable and created is not considered."""
+
+    # Verify the TTL is not considered in the hash
+    record1 = r.DNSAddress(
+        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same", created=1.0
+    )
+    record2 = r.DNSAddress(
+        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same", created=2.0
+    )
+
+    record_set = {record1, record2}
+    assert len(record_set) == 1
+
+    record_set.add(record1)
+    assert len(record_set) == 1
+
+    record3_dupe = r.DNSAddress(
+        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same", created=3.0
+    )
+    assert record2 == record3_dupe
+    assert record2.__hash__() == record3_dupe.__hash__()
+
+    record_set.add(record3_dupe)
+    assert len(record_set) == 1
+
+
 def test_dns_record_hashablity_does_not_consider_unique():
     """Test DNSRecord are hashable and unique is ignored."""
 
