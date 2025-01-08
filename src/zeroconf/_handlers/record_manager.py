@@ -115,7 +115,7 @@ class RecordManager:
             maybe_entry = cache.async_get_unique(record)
             if not record.is_expired(now):
                 if maybe_entry is not None:
-                    cache._async_reset_ttl(maybe_entry, record)
+                    cache._async_set_created_ttl(maybe_entry, record.created, record.ttl)
                 else:
                     if record_type in _ADDRESS_RECORD_TYPES:
                         address_adds.append(record)

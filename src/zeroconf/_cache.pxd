@@ -99,9 +99,3 @@ cdef class DNSCache:
         double now,
         cython.float ttl
     )
-
-    cpdef _async_reset_ttl(
-        self,
-        DNSRecord record,
-        DNSRecord source_record
-    )

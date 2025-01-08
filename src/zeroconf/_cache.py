@@ -308,8 +308,3 @@ class DNSCache:
         """Set the created time and ttl of a record."""
         record._set_created_ttl(now, ttl)
         self._async_add(record)
-
-    def _async_reset_ttl(self, record: DNSRecord, source_record: DNSRecord) -> None:
-        """Reset the ttl of a record."""
-        record._reset_ttl(source_record)
-        self._async_add(record)

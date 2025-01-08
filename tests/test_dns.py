@@ -99,34 +99,6 @@ class TestDunder(unittest.TestCase):
         with pytest.raises((r.AbstractMethodException, TypeError)):
             record.write(None)  # type: ignore[arg-type]
 
-    def test_dns_record__reset_ttl(self):
-        start = r.current_time_millis()
-        record = r.DNSRecord(
-            "irrelevant",
-            const._TYPE_SRV,
-            const._CLASS_IN,
-            const._DNS_HOST_TTL,
-            created=start,
-        )
-        later = start + 1000
-        record2 = r.DNSRecord(
-            "irrelevant",
-            const._TYPE_SRV,
-            const._CLASS_IN,
-            const._DNS_HOST_TTL,
-            created=later,
-        )
-        now = r.current_time_millis()
-
-        assert record.created != record2.created
-        assert record.get_remaining_ttl(now) != record2.get_remaining_ttl(now)
-
-        record._reset_ttl(record2)
-
-        assert record.ttl == record2.ttl
-        assert record.created == record2.created
-        assert record.get_remaining_ttl(now) == record2.get_remaining_ttl(now)
-
     def test_service_info_dunder(self):
         type_ = "_test-srvc-type._tcp.local."
         name = "xxxyyy"

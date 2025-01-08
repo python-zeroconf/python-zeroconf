@@ -225,11 +225,6 @@ class DNSRecord(DNSEntry):
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
-    def _reset_ttl(self, other) -> None:  # type: ignore[no-untyped-def]
-        """Sets this record's TTL and created time to that of
-        another record."""
-        self._set_created_ttl(other.created, other.ttl)
-
     def _set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
         """Set the created and ttl of a record."""
         self.created = created
