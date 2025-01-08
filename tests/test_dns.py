@@ -99,7 +99,7 @@ class TestDunder(unittest.TestCase):
         with pytest.raises((r.AbstractMethodException, TypeError)):
             record.write(None)  # type: ignore[arg-type]
 
-    def test_dns_record_reset_ttl(self):
+    def test_dns_record__reset_ttl(self):
         start = r.current_time_millis()
         record = r.DNSRecord(
             "irrelevant",
@@ -121,7 +121,7 @@ class TestDunder(unittest.TestCase):
         assert record.created != record2.created
         assert record.get_remaining_ttl(now) != record2.get_remaining_ttl(now)
 
-        record.reset_ttl(record2)
+        record._reset_ttl(record2)
 
         assert record.ttl == record2.ttl
         assert record.created == record2.created

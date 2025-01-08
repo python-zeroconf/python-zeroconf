@@ -302,5 +302,5 @@ class DNSCache:
                 created_double = record.created
                 if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
                     # Expire in 1s
-                    record.set_created_ttl(now, 1)
+                    record._set_created_ttl(now, 1)
                     self.async_add_record(record)
