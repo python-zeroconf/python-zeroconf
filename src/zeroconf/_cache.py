@@ -89,7 +89,6 @@ class DNSCache:
         store = self.cache.setdefault(record.key, {})
         new = record not in store and not isinstance(record, DNSNsec)
         store[record] = record
-        assert store[record] is record
         when = record.created + (record.ttl * 1000)
         if self._expirations.get(record) != when:
             # Avoid adding duplicates to the heap
