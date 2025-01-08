@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.138.1 (2025-01-08)
+
+### Bug Fixes
+
+* fix: ensure cache does not return stale created and ttl values (#1469) ([`e05055c`](https://github.com/python-zeroconf/python-zeroconf/commit/e05055c584ca46080990437b2b385a187bc48458))
+
+
 ## v0.138.0 (2025-01-08)
 
 ### Features
