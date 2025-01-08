@@ -90,3 +90,10 @@ cdef class DNSCache:
         now=double
     )
     cpdef current_entry_with_name_and_alias(self, str name, str alias)
+
+    cpdef void async_set_created_ttl(
+        self,
+        DNSRecord record,
+        double now,
+        cython.float ttl
+    )
