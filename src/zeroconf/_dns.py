@@ -185,6 +185,9 @@ class DNSRecord(DNSEntry):
         """Abstract method"""
         raise AbstractMethodException
 
+    def __lt__(self, other: "DNSRecord") -> bool:
+        return self.ttl < other.ttl
+
     def suppressed_by(self, msg: "DNSIncoming") -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
