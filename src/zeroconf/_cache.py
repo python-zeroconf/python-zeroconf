@@ -302,14 +302,14 @@ class DNSCache:
                 created_double = record.created
                 if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
                     # Expire in 1s
-                    self.async_set_created_ttl(record, now, 1)
+                    self._async_set_created_ttl(record, now, 1)
 
-    def async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _float) -> None:
+    def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _float) -> None:
         """Set the created time and ttl of a record."""
         record._set_created_ttl(now, ttl)
         self.async_add_record(record)
 
-    def async_reset_ttl(self, record: DNSRecord, source_record: DNSRecord) -> None:
+    def _async_reset_ttl(self, record: DNSRecord, source_record: DNSRecord) -> None:
         """Reset the ttl of a record."""
         record._reset_ttl(source_record)
         self.async_add_record(record)

@@ -93,14 +93,14 @@ cdef class DNSCache:
     )
     cpdef current_entry_with_name_and_alias(self, str name, str alias)
 
-    cpdef void async_set_created_ttl(
+    cpdef void _async_set_created_ttl(
         self,
         DNSRecord record,
         double now,
         cython.float ttl
     )
 
-    cpdef async_reset_ttl(
+    cpdef _async_reset_ttl(
         self,
         DNSRecord record,
         DNSRecord source_record

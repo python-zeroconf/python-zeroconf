@@ -1142,7 +1142,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Add the A record to the cache with 50% ttl remaining
     a_record = info.dns_addresses()[0]
-    zc.cache.async_set_created_ttl(a_record, current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
+    zc.cache._async_set_created_ttl(a_record, current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
     assert not a_record.is_recent(current_time_millis())
     info._dns_address_cache = None  # we are mutating the record so clear the cache
 
@@ -1192,7 +1192,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Remove the 100% PTR record and add a 50% PTR record
     zc.cache.async_remove_records([ptr_record])
-    zc.cache.async_set_created_ttl(
+    zc.cache._async_set_created_ttl(
         ptr_record, current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl
     )
     assert not ptr_record.is_recent(current_time_millis())

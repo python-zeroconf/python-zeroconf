@@ -1514,7 +1514,7 @@ def test_service_browser_expire_callbacks():
     now = current_time_millis()
     for cache_record in list(zc.cache.cache.values()):
         for record in cache_record:
-            zc.cache.async_set_created_ttl(record, now, 1)
+            zc.cache._async_set_created_ttl(record, now, 1)
 
     time.sleep(0.3)
     info.port = 400
