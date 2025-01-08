@@ -120,11 +120,15 @@ class RecordManager:
                         address_adds.append(record)
                     else:
                         other_adds.append(record)
-                updates.append(RecordUpdate(record, maybe_entry))
+                rec_update = RecordUpdate.__new__(RecordUpdate)
+                rec_update._fast_init(record, maybe_entry)
+                updates.append(rec_update)
             # This is likely a goodbye since the record is
             # expired and exists in the cache
             elif maybe_entry is not None:
-                updates.append(RecordUpdate(record, maybe_entry))
+                rec_update = RecordUpdate.__new__(RecordUpdate)
+                rec_update._fast_init(maybe_entry, record)
+                updates.append(rec_update)
                 removes.add(record)
 
         if unique_types:
