@@ -114,13 +114,10 @@ class RecordManager:
 
             maybe_entry = cache.async_get_unique(record)
             if not record.is_expired(now):
-                if maybe_entry is not None:
-                    cache._async_set_created_ttl(maybe_entry, record.created, record.ttl)
+                if record_type in _ADDRESS_RECORD_TYPES:
+                    address_adds.append(record)
                 else:
-                    if record_type in _ADDRESS_RECORD_TYPES:
-                        address_adds.append(record)
-                    else:
-                        other_adds.append(record)
+                    other_adds.append(record)
                 updates.append(RecordUpdate(record, maybe_entry))
             # This is likely a goodbye since the record is
             # expired and exists in the cache
@@ -153,6 +150,7 @@ class RecordManager:
             new = cache.async_add_records(address_adds)
             if cache.async_add_records(other_adds):
                 new = True
+
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.

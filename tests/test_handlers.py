@@ -1315,10 +1315,13 @@ async def test_cache_flush_bit():
     for record in new_records:
         assert zc.cache.async_get_unique(record) is not None
 
-    cached_records = [zc.cache.async_get_unique(record) for record in new_records]
-    for cached_record in cached_records:
-        assert cached_record is not None
-        cached_record.created = current_time_millis() - 1500
+    cached_record_group = [
+        zc.cache.async_all_by_details(record.name, record.type, record.class_) for record in new_records
+    ]
+    for cached_records in cached_record_group:
+        for cached_record in cached_records:
+            assert cached_record is not None
+            cached_record.created = current_time_millis() - 1500
 
     fresh_address = socket.inet_aton("4.4.4.4")
     info.addresses = [fresh_address]
@@ -1328,9 +1331,18 @@ async def test_cache_flush_bit():
         out.add_answer_at_time(answer, 0)
     for packet in out.packets():
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
-    for cached_record in cached_records:
-        assert cached_record is not None
-        assert cached_record.ttl == 1
+
+    cached_record_group = [
+        zc.cache.async_all_by_details(record.name, record.type, record.class_) for record in new_records
+    ]
+    for cached_records in cached_record_group:
+        for cached_record in cached_records:
+            # the new record should not be set to 1
+            if cached_record == answer:
+                assert cached_record.ttl != 1
+                continue
+            assert cached_record is not None
+            assert cached_record.ttl == 1
 
     for entry in zc.cache.async_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
         assert isinstance(entry, r.DNSAddress)
