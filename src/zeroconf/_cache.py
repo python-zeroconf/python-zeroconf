@@ -204,7 +204,7 @@ class DNSCache:
         records = self.cache.get(key)
         if records is None:
             return None
-        for cached_entry in reversed(list(records)):
+        for cached_entry in reversed(list(records.values())):
             if type_ == cached_entry.type and class_ == cached_entry.class_:
                 return cached_entry
         return None
