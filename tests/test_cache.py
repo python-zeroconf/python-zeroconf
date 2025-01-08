@@ -279,3 +279,82 @@ class TestDNSCacheAPI(unittest.TestCase):
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
         assert cache.names() == ["irrelevant"]
+
+
+def test_async_entries_with_name_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert next(iter(cache.async_entries_with_name("a"))) is record2
+
+
+def test_async_entries_with_server_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSService("a", const._TYPE_SRV, const._CLASS_IN, 1, 1, 1, 1, "a", created=1.0)
+    record2 = r.DNSService("a", const._TYPE_SRV, const._CLASS_IN, 1, 1, 1, 1, "a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert next(iter(cache.async_entries_with_server("a"))) is record2
+
+
+def test_async_get_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert cache.get(record2) is record2
+
+
+def test_async_get_returns_newest_nsec_record():
+    cache = r.DNSCache()
+    record1 = r.DNSNsec("a", const._TYPE_NSEC, const._CLASS_IN, 1, "a", [], created=1.0)
+    record2 = r.DNSNsec("a", const._TYPE_NSEC, const._CLASS_IN, 1, "a", [], created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert cache.get(record2) is record2
+
+
+def test_get_by_details_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert cache.get_by_details("a", const._TYPE_A, const._CLASS_IN) is record2
+
+
+def test_get_all_by_details_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    records = cache.get_all_by_details("a", const._TYPE_A, const._CLASS_IN)
+    assert len(records) == 1
+    assert records[0] is record2
+
+
+def test_async_get_all_by_details_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    records = cache.async_all_by_details("a", const._TYPE_A, const._CLASS_IN)
+    assert len(records) == 1
+    assert records[0] is record2
+
+
+def test_async_get_unique_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSPointer("a", const._TYPE_PTR, const._CLASS_IN, 1, "a", created=1.0)
+    record2 = r.DNSPointer("a", const._TYPE_PTR, const._CLASS_IN, 1, "a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    record = cache.async_get_unique(record1)
+    assert record is record2
+    record = cache.async_get_unique(record2)
+    assert record is record2
