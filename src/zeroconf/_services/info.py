@@ -22,7 +22,6 @@ USA
 
 import asyncio
 import random
-import sys
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
 from .._cache import DNSCache
@@ -76,8 +75,6 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-
-IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 _IPVersion_All_value = IPVersion.All.value
 _IPVersion_V4Only_value = IPVersion.V4Only.value
@@ -250,7 +247,7 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
-            if IPADDRESS_SUPPORTS_SCOPE_ID and len(address) == 16 and self.interface_index is not None:
+            if len(address) == 16 and self.interface_index is not None:
                 addr = ip_bytes_and_scope_to_address(address, self.interface_index)
             else:
                 addr = cached_ip_addresses(address)
