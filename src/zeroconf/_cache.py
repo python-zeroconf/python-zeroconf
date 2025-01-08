@@ -183,7 +183,7 @@ class DNSCache:
         matching entry."""
         if isinstance(entry, _UNIQUE_RECORD_TYPES):
             return self.cache.get(entry.key, {}).get(entry)
-        for cached_entry in reversed(self.cache.get(entry.key, {}).values()):
+        for cached_entry in reversed(list(self.cache.get(entry.key, {}).values())):
             if entry.__eq__(cached_entry):
                 return cached_entry
         return None
@@ -215,7 +215,7 @@ class DNSCache:
         records = self.cache.get(key)
         if records is None:
             return []
-        return [entry for entry in records.values() if type_ == entry.type and class_ == entry.class_]
+        return [entry for entry in list(records.values()) if type_ == entry.type and class_ == entry.class_]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
