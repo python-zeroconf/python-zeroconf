@@ -73,7 +73,7 @@ class DNSCache:
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
-    def async_add_record(self, record: _DNSRecord) -> bool:
+    def _async_add(self, record: _DNSRecord) -> bool:
         """Adds an entry.
 
         Returns true if the entry was not already in the cache.
@@ -109,7 +109,7 @@ class DNSCache:
         """
         new = False
         for entry in entries:
-            if self.async_add_record(entry):
+            if self._async_add(entry):
                 new = True
         return new
 
@@ -307,9 +307,9 @@ class DNSCache:
     def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _float) -> None:
         """Set the created time and ttl of a record."""
         record._set_created_ttl(now, ttl)
-        self.async_add_record(record)
+        self._async_add(record)
 
     def _async_reset_ttl(self, record: DNSRecord, source_record: DNSRecord) -> None:
         """Reset the ttl of a record."""
         record._reset_ttl(source_record)
-        self.async_add_record(record)
+        self._async_add(record)
