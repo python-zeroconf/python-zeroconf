@@ -7,6 +7,8 @@ import logging
 import unittest
 import unittest.mock
 
+import pytest
+
 import zeroconf as r
 from zeroconf import const
 
@@ -282,3 +284,32 @@ class TestDNSCacheAPI(unittest.TestCase):
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
         assert cache.names() == ["irrelevant"]
+
+
+@pytest.mark.asyncio
+async def test_cache_heap_cleanup() -> None:
+    """Test that the heap gets cleaned up when there are many old expirations."""
+    cache = r.DNSCache()
+    # The heap should not be cleaned up when there are less than 100 expiration changes
+    min_records_to_cleanup = 100
+    now = r.current_time_millis()
+
+    for i in range(min_records_to_cleanup):
+        record = r.DNSAddress("a", const._TYPE_SOA, const._CLASS_IN, 100, b"1", created=now + i)
+        cache.async_add_records([record])
+
+    assert len(cache._expire_heap) == min_records_to_cleanup
+
+    # Now that we reached the minimum number of cookies to cleanup,
+    # add one more cookie to trigger the cleanup
+    record = r.DNSAddress(
+        "a", const._TYPE_SOA, const._CLASS_IN, 100, b"1", created=now + min_records_to_cleanup + 1
+    )
+    cache.async_add_records([record])
+
+    # Verify that the heap has been cleaned up
+    assert len(cache.async_entries_with_name("a")) == 1
+    cache.async_expire(now)
+    # The heap should have been cleaned up
+    assert len(cache._expire_heap) == 1
+    assert len(cache.async_entries_with_name("a")) == 1

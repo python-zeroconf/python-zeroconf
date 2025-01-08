@@ -29,8 +29,8 @@ cdef class DNSCache:
 
     cdef public cython.dict cache
     cdef public cython.dict service_cache
-    cdef list _expire_heap
-    cdef dict _expirations
+    cdef public list _expire_heap
+    cdef public dict _expirations
 
     cpdef bint async_add_records(self, object entries)
 
