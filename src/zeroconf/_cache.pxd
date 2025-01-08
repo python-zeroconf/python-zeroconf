@@ -17,6 +17,7 @@ cdef object heappush
 cdef object _UNIQUE_RECORD_TYPES
 cdef unsigned int _TYPE_PTR
 cdef cython.uint _ONE_SECOND
+cdef unsigned int _MIN_SCHEDULED_RECORD_EXPIRATION
 
 @cython.locals(
     record_cache=dict,
@@ -96,4 +97,10 @@ cdef class DNSCache:
         DNSRecord record,
         double now,
         cython.float ttl
+    )
+
+    cpdef async_reset_ttl(
+        self,
+        DNSRecord record,
+        DNSRecord source_record
     )
