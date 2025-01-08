@@ -66,9 +66,9 @@ cdef class DNSRecord(DNSEntry):
 
     cpdef bint is_recent(self, double now)
 
-    cpdef reset_ttl(self, DNSRecord other)
+    cdef _reset_ttl(self, DNSRecord other)
 
-    cpdef set_created_ttl(self, double now, cython.float ttl)
+    cdef _set_created_ttl(self, double now, cython.float ttl)
 
 cdef class DNSAddress(DNSRecord):
 
