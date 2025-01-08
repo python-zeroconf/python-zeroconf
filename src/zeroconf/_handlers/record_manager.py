@@ -150,7 +150,6 @@ class RecordManager:
             new = cache.async_add_records(address_adds)
             if cache.async_add_records(other_adds):
                 new = True
-
         # Removes are processed last since
         # ServiceInfo could generate an un-needed query
         # because the data was not yet populated.
