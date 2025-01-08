@@ -183,7 +183,7 @@ class DNSCache:
         matching entry."""
         if isinstance(entry, _UNIQUE_RECORD_TYPES):
             return self.cache.get(entry.key, {}).get(entry)
-        for cached_entry in reversed(list(self.cache.get(entry.key, []))):
+        for cached_entry in reversed(self.cache.get(entry.key, {}).values()):
             if entry.__eq__(cached_entry):
                 return cached_entry
         return None
