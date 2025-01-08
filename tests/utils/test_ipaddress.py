@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Unit tests for zeroconf._utils.ipaddress."""
 
 from zeroconf import const

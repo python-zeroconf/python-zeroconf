@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 """Unit tests for _history.py."""
 
 from typing import Set
