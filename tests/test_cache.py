@@ -290,23 +290,40 @@ async def test_cache_heap_cleanup() -> None:
     # The heap should not be cleaned up when there are less than 100 expiration changes
     min_records_to_cleanup = 100
     now = r.current_time_millis()
+    name = "heap.local."
+    ttl_seconds = 100
+    ttl_millis = ttl_seconds * 1000
 
     for i in range(min_records_to_cleanup):
-        record = r.DNSAddress("a", const._TYPE_SOA, const._CLASS_IN, 100, b"1", created=now + i)
+        record = r.DNSAddress(name, const._TYPE_A, const._CLASS_IN, ttl_seconds, b"1", created=now + i)
         cache.async_add_records([record])
 
     assert len(cache._expire_heap) == min_records_to_cleanup
+    assert len(cache.async_entries_with_name(name)) == 1
 
     # Now that we reached the minimum number of cookies to cleanup,
     # add one more cookie to trigger the cleanup
     record = r.DNSAddress(
-        "a", const._TYPE_SOA, const._CLASS_IN, 100, b"1", created=now + min_records_to_cleanup + 1
+        name, const._TYPE_A, const._CLASS_IN, ttl_seconds, b"1", created=now + min_records_to_cleanup
     )
+    expected_expire_time = record.created + ttl_millis
     cache.async_add_records([record])
+    assert len(cache.async_entries_with_name(name)) == 1
+    entry = next(iter(cache.async_entries_with_name(name)))
+    assert (entry.created + ttl_millis) == expected_expire_time
+    assert entry is record
 
     # Verify that the heap has been cleaned up
-    assert len(cache.async_entries_with_name("a")) == 1
+    assert len(cache.async_entries_with_name(name)) == 1
     cache.async_expire(now)
     # The heap should have been cleaned up
     assert len(cache._expire_heap) == 1
-    assert len(cache.async_entries_with_name("a")) == 1
+    assert len(cache.async_entries_with_name(name)) == 1
+
+    entry = next(iter(cache.async_entries_with_name(name)))
+    assert entry is record
+
+    assert (entry.created + ttl_millis) == expected_expire_time
+
+    cache.async_expire(expected_expire_time)
+    assert len(cache.async_entries_with_name(name)) == 0, cache._expire_heap

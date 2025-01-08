@@ -89,6 +89,7 @@ class DNSCache:
         store = self.cache.setdefault(record.key, {})
         new = record not in store and not isinstance(record, DNSNsec)
         store[record] = record
+        assert store[record] is record
         when = record.created + (record.ttl * 1000)
         if self._expirations.get(record) != when:
             # Avoid adding duplicates to the heap
@@ -204,21 +205,25 @@ class DNSCache:
                 matches.append(record)
         return matches
 
-    def async_entries_with_name(self, name: str) -> Dict[DNSRecord, DNSRecord]:
+    def async_entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a dict of entries whose key matches the name.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self.cache.get(name.lower()) or {}
+        if entries := self.cache.get(name.lower()):
+            return list(entries.values())
+        return []
 
-    def async_entries_with_server(self, name: str) -> Dict[DNSRecord, DNSRecord]:
+    def async_entries_with_server(self, name: str) -> List[DNSRecord]:
         """Returns a dict of entries whose key matches the server.
 
         This function is not threadsafe and must be called from
         the event loop.
         """
-        return self.service_cache.get(name.lower()) or {}
+        if entries := self.service_cache.get(name.lower()):
+            return list(entries.values())
+        return []
 
     # The below functions are threadsafe and do not need to be run in the
     # event loop, however they all make copies so they significantly
@@ -265,11 +270,11 @@ class DNSCache:
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
-        return list(self.service_cache.get(server.lower(), []))
+        return self.async_entries_with_server(server)
 
     def entries_with_name(self, name: str) -> List[DNSRecord]:
         """Returns a list of entries whose key matches the name."""
-        return list(self.cache.get(name.lower(), []))
+        return self.async_entries_with_name(name)
 
     def current_entry_with_name_and_alias(self, name: str, alias: str) -> Optional[DNSRecord]:
         now = current_time_millis()
