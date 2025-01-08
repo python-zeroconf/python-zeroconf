@@ -326,3 +326,14 @@ def test_get_all_by_details_returns_newest_record():
     records = cache.get_all_by_details("a", const._TYPE_A, const._CLASS_IN)
     assert len(records) == 1
     assert records[0] is record2
+
+
+def test_async_get_all_by_details_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    records = cache.async_all_by_details("a", const._TYPE_A, const._CLASS_IN)
+    assert len(records) == 1
+    assert records[0] is record2

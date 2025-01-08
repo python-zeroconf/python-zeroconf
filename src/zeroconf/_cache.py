@@ -149,7 +149,7 @@ class DNSCache:
         matches: List[DNSRecord] = []
         if records is None:
             return matches
-        for record in records:
+        for record in records.values():
             if type_ == record.type and class_ == record.class_:
                 matches.append(record)
         return matches
