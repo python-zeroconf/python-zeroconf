@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
-from heapq import heapify, heappop, heappush
+from heapq import heappop, heappush
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from ._dns import (
@@ -73,7 +73,7 @@ class DNSCache:
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
-    def _async_add(self, record: _DNSRecord) -> bool:
+    def async_add_record(self, record: _DNSRecord) -> bool:
         """Adds an entry.
 
         Returns true if the entry was not already in the cache.
@@ -109,7 +109,7 @@ class DNSCache:
         """
         new = False
         for entry in entries:
-            if self._async_add(entry):
+            if self.async_add_record(entry):
                 new = True
         return new
 
@@ -158,7 +158,6 @@ class DNSCache:
             self._expire_heap = [
                 entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
             ]
-            heapify(self._expire_heap)
 
         expired: List[DNSRecord] = []
         # Find any expired records and add them to the to-delete list
@@ -304,3 +303,4 @@ class DNSCache:
                 if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
                     # Expire in 1s
                     record.set_created_ttl(now, 1)
+                    self.async_add_record(record)

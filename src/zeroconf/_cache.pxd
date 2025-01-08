@@ -11,6 +11,8 @@ from ._dns cimport (
     DNSText,
 )
 
+cdef object heappop
+cdef object heappush
 
 cdef object _UNIQUE_RECORD_TYPES
 cdef unsigned int _TYPE_PTR
@@ -68,7 +70,7 @@ cdef class DNSCache:
         store=cython.dict,
         service_record=DNSService
     )
-    cdef bint _async_add(self, DNSRecord record)
+    cpdef bint async_add_record(self, DNSRecord record)
 
     @cython.locals(
         service_record=DNSService

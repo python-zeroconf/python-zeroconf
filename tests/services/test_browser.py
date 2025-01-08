@@ -1512,9 +1512,10 @@ def test_service_browser_expire_callbacks():
     )
     # Force the ttl to be 1 second
     now = current_time_millis()
-    for cache_record in zc.cache.cache.values():
+    for cache_record in list(zc.cache.cache.values()):
         for record in cache_record:
             record.set_created_ttl(now, 1)
+            zc.cache.async_add_records([record])
 
     time.sleep(0.3)
     info.port = 400
