@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
-from heapq import heappop, heappush
+from heapq import heapify, heappop, heappush
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from ._dns import (
@@ -173,6 +173,7 @@ class DNSCache:
             self._expire_heap = [
                 entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
             ]
+            heapify(self._expire_heap)
 
         self.async_remove_records(expired)
         return expired

@@ -13,6 +13,7 @@ from ._dns cimport (
 
 cdef object heappop
 cdef object heappush
+cdef object heapify
 
 cdef object _UNIQUE_RECORD_TYPES
 cdef unsigned int _TYPE_PTR
