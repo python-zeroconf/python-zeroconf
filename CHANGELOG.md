@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.138.0 (2025-01-08)
+
+### Features
+
+* feat: improve performance of processing incoming records (#1467)
+
+Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com> ([`ebbb2af`](https://github.com/python-zeroconf/python-zeroconf/commit/ebbb2afccabd3841a3cb0a39824b49773cc6258a))
+
+
 ## v0.137.2 (2025-01-06)
 
 ### Bug Fixes
