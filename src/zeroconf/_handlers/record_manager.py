@@ -127,7 +127,7 @@ class RecordManager:
             # expired and exists in the cache
             elif maybe_entry is not None:
                 rec_update = RecordUpdate.__new__(RecordUpdate)
-                rec_update._fast_init(record , maybe_entry)
+                rec_update._fast_init(record, maybe_entry)
                 updates.append(rec_update)
                 removes.add(record)
 
