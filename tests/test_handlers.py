@@ -1146,7 +1146,6 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     zc.cache.async_add_record(a_record)
     assert not a_record.is_recent(current_time_millis())
     info._dns_address_cache = None  # we are mutating the record so clear the cache
-    zc.cache.async_add_records([a_record])
 
     # With QU should respond to only unicast when the answer has been recently multicast
     # even if the additional has not been recently multicast
