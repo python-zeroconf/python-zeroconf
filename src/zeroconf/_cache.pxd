@@ -69,7 +69,8 @@ cdef class DNSCache:
 
     @cython.locals(
         store=cython.dict,
-        service_record=DNSService
+        service_record=DNSService,
+        when=object
     )
     cpdef bint async_add_record(self, DNSRecord record)
 
