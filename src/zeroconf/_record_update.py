@@ -34,7 +34,7 @@ class RecordUpdate:
         """RecordUpdate represents a change in a DNS record."""
         self._fast_init(new, old)
 
-    def _fast_init(self, new: _DNSRecord, old: Optional[_DNSRecord] = None) -> None:
+    def _fast_init(self, new: _DNSRecord, old: Optional[_DNSRecord]) -> None:
         """Fast init for RecordUpdate."""
         self.new = new
         self.old = old
