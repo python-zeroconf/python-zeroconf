@@ -24,12 +24,18 @@ from typing import Optional
 
 from ._dns import DNSRecord
 
+_DNSRecord = DNSRecord
+
 
 class RecordUpdate:
     __slots__ = ("new", "old")
 
-    def __init__(self, new: DNSRecord, old: Optional[DNSRecord] = None):
+    def __init__(self, new: DNSRecord, old: Optional[DNSRecord] = None) -> None:
         """RecordUpdate represents a change in a DNS record."""
+        self._fast_init(new, old)
+
+    def _fast_init(self, new: _DNSRecord, old: Optional[_DNSRecord]) -> None:
+        """Fast init for RecordUpdate."""
         self.new = new
         self.old = old
 
