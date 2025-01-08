@@ -215,7 +215,7 @@ class DNSCache:
         records = self.cache.get(key)
         if records is None:
             return []
-        return [entry for entry in list(records) if type_ == entry.type and class_ == entry.class_]
+        return [entry for entry in records.values() if type_ == entry.type and class_ == entry.class_]
 
     def entries_with_server(self, server: str) -> List[DNSRecord]:
         """Returns a list of entries whose server matches the name."""
