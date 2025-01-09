@@ -227,6 +227,8 @@ class DNSRecord(DNSEntry):
 
     def _set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
         """Set the created and ttl of a record."""
+        # It would be better if we made a copy instead of mutating the record
+        # in place, but records currently don't have a copy method.
         self.created = created
         self.ttl = ttl
 
