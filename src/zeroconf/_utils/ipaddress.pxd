@@ -1,5 +1,4 @@
 cdef bint TYPE_CHECKING
-cdef bint IPADDRESS_SUPPORTS_SCOPE_ID
 
 from .._dns cimport DNSAddress
 
