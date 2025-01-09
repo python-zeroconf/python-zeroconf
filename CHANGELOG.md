@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.139.0 (2025-01-09)
+
+### Features
+
+* feat: implement heapq for tracking cache expire times (#1465) ([`09db184`](https://github.com/python-zeroconf/python-zeroconf/commit/09db1848957b34415f364b7338e4adce99b57abc))
+
+
 ## v0.138.1 (2025-01-08)
 
 ### Bug Fixes
