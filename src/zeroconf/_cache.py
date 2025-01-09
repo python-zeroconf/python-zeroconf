@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from heapq import heapify, heappop, heappush
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from ._dns import (
@@ -43,6 +44,11 @@ _str = str
 _float = float
 _int = int
 
+# The minimum number of scheduled record expirations before we start cleaning up
+# the expiration heap. This is a performance optimization to avoid cleaning up the
+# heap too often when there are only a few scheduled expirations.
+_MIN_SCHEDULED_RECORD_EXPIRATION = 100
+
 
 def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> None:
     """Remove a key from a DNSRecord cache
@@ -60,6 +66,8 @@ class DNSCache:
 
     def __init__(self) -> None:
         self.cache: _DNSRecordCacheType = {}
+        self._expire_heap: List[Tuple[float, DNSRecord]] = []
+        self._expirations: Dict[DNSRecord, float] = {}
         self.service_cache: _DNSRecordCacheType = {}
 
     # Functions prefixed with async_ are NOT threadsafe and must
@@ -81,6 +89,12 @@ class DNSCache:
         store = self.cache.setdefault(record.key, {})
         new = record not in store and not isinstance(record, DNSNsec)
         store[record] = record
+        when = record.created + (record.ttl * 1000)
+        if self._expirations.get(record) != when:
+            # Avoid adding duplicates to the heap
+            heappush(self._expire_heap, (when, record))
+            self._expirations[record] = when
+
         if isinstance(record, DNSService):
             service_record = record
             self.service_cache.setdefault(record.server_key, {})[service_record] = service_record
@@ -108,6 +122,7 @@ class DNSCache:
             service_record = record
             _remove_key(self.service_cache, service_record.server_key, service_record)
         _remove_key(self.cache, record.key, record)
+        self._expirations.pop(record, None)
 
     def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
         """Remove multiple records.
@@ -121,8 +136,44 @@ class DNSCache:
         """Purge expired entries from the cache.
 
         This function must be run in from event loop.
+
+        :param now: The current time in milliseconds.
         """
-        expired = [record for records in self.cache.values() for record in records if record.is_expired(now)]
+        if not (expire_heap_len := len(self._expire_heap)):
+            return []
+
+        expired: List[DNSRecord] = []
+        # Find any expired records and add them to the to-delete list
+        while self._expire_heap:
+            when, record = self._expire_heap[0]
+            if when > now:
+                break
+            heappop(self._expire_heap)
+            # Check if the record hasn't been re-added to the heap
+            # with a different expiration time as it will be removed
+            # later when it reaches the top of the heap and its
+            # expiration time is met.
+            if self._expirations.get(record) == when:
+                expired.append(record)
+
+        # If the expiration heap grows larger than the number expirations
+        # times two, we clean it up to avoid keeping expired entries in
+        # the heap and consuming memory. We guard this with a minimum
+        # threshold to avoid cleaning up the heap too often when there are
+        # only a few scheduled expirations.
+        if (
+            expire_heap_len > _MIN_SCHEDULED_RECORD_EXPIRATION
+            and expire_heap_len > len(self._expirations) * 2
+        ):
+            # Remove any expired entries from the expiration heap
+            # that do not match the expiration time in the expirations
+            # as it means the record has been re-added to the heap
+            # with a different expiration time.
+            self._expire_heap = [
+                entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
+            ]
+            heapify(self._expire_heap)
+
         self.async_remove_records(expired)
         return expired
 
@@ -256,4 +307,11 @@ class DNSCache:
                 created_double = record.created
                 if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
                     # Expire in 1s
-                    record.set_created_ttl(now, 1)
+                    self._async_set_created_ttl(record, now, 1)
+
+    def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _float) -> None:
+        """Set the created time and ttl of a record."""
+        # It would be better if we made a copy instead of mutating the record
+        # in place, but records currently don't have a copy method.
+        record._set_created_ttl(now, ttl)
+        self._async_add(record)

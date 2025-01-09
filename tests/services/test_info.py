@@ -242,7 +242,7 @@ class TestServiceInfo(unittest.TestCase):
             ttl,
             b"\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==",
         )
-        expired_record.set_created_ttl(1000, 1)
+        zc.cache._async_set_created_ttl(expired_record, 1000, 1)
         info.async_update_records(zc, now, [RecordUpdate(expired_record, None)])
         assert info.properties[b"ci"] == b"2"
         zc.close()

@@ -103,7 +103,8 @@ class RecordManager:
                     record,
                     _DNS_PTR_MIN_TTL,
                 )
-                record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
+                # Safe because the record is never in the cache yet
+                record._set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
 
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record_type, record.class_))
@@ -113,13 +114,10 @@ class RecordManager:
 
             maybe_entry = cache.async_get_unique(record)
             if not record.is_expired(now):
-                if maybe_entry is not None:
-                    maybe_entry.reset_ttl(record)
+                if record_type in _ADDRESS_RECORD_TYPES:
+                    address_adds.append(record)
                 else:
-                    if record_type in _ADDRESS_RECORD_TYPES:
-                        address_adds.append(record)
-                    else:
-                        other_adds.append(record)
+                    other_adds.append(record)
                 rec_update = RecordUpdate.__new__(RecordUpdate)
                 rec_update._fast_init(record, maybe_entry)
                 updates.append(rec_update)

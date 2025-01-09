@@ -1139,10 +1139,9 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Add the A record to the cache with 50% ttl remaining
     a_record = info.dns_addresses()[0]
-    a_record.set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
+    zc.cache._async_set_created_ttl(a_record, current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
     assert not a_record.is_recent(current_time_millis())
     info._dns_address_cache = None  # we are mutating the record so clear the cache
-    zc.cache.async_add_records([a_record])
 
     # With QU should respond to only unicast when the answer has been recently multicast
     # even if the additional has not been recently multicast
@@ -1190,9 +1189,10 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Remove the 100% PTR record and add a 50% PTR record
     zc.cache.async_remove_records([ptr_record])
-    ptr_record.set_created_ttl(current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl)
+    zc.cache._async_set_created_ttl(
+        ptr_record, current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl
+    )
     assert not ptr_record.is_recent(current_time_millis())
-    zc.cache.async_add_records([ptr_record])
     # With QU should respond to only multicast since the has less
     # than 75% of its ttl remaining
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -1312,10 +1312,13 @@ async def test_cache_flush_bit():
     for record in new_records:
         assert zc.cache.async_get_unique(record) is not None
 
-    cached_records = [zc.cache.async_get_unique(record) for record in new_records]
-    for cached_record in cached_records:
-        assert cached_record is not None
-        cached_record.created = current_time_millis() - 1500
+    cached_record_group = [
+        zc.cache.async_all_by_details(record.name, record.type, record.class_) for record in new_records
+    ]
+    for cached_records in cached_record_group:
+        for cached_record in cached_records:
+            assert cached_record is not None
+            cached_record.created = current_time_millis() - 1500
 
     fresh_address = socket.inet_aton("4.4.4.4")
     info.addresses = [fresh_address]
@@ -1325,9 +1328,18 @@ async def test_cache_flush_bit():
         out.add_answer_at_time(answer, 0)
     for packet in out.packets():
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
-    for cached_record in cached_records:
-        assert cached_record is not None
-        assert cached_record.ttl == 1
+
+    cached_record_group = [
+        zc.cache.async_all_by_details(record.name, record.type, record.class_) for record in new_records
+    ]
+    for cached_records in cached_record_group:
+        for cached_record in cached_records:
+            # the new record should not be set to 1
+            if cached_record == answer:
+                assert cached_record.ttl != 1
+                continue
+            assert cached_record is not None
+            assert cached_record.ttl == 1
 
     for entry in zc.cache.async_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
         assert isinstance(entry, r.DNSAddress)

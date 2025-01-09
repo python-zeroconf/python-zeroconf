@@ -185,6 +185,9 @@ class DNSRecord(DNSEntry):
         """Abstract method"""
         raise AbstractMethodException
 
+    def __lt__(self, other: "DNSRecord") -> bool:
+        return self.ttl < other.ttl
+
     def suppressed_by(self, msg: "DNSIncoming") -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
@@ -222,13 +225,10 @@ class DNSRecord(DNSEntry):
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
-    def reset_ttl(self, other) -> None:  # type: ignore[no-untyped-def]
-        """Sets this record's TTL and created time to that of
-        another record."""
-        self.set_created_ttl(other.created, other.ttl)
-
-    def set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
+    def _set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
         """Set the created and ttl of a record."""
+        # It would be better if we made a copy instead of mutating the record
+        # in place, but records currently don't have a copy method.
         self.created = created
         self.ttl = ttl
 
