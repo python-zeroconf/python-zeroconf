@@ -16,3 +16,5 @@ async def test_sending_packets(benchmark: BenchmarkFixture) -> None:
     @benchmark
     def _send_packets() -> None:
         aiozc.zeroconf.async_send(out)
+
+    await aiozc.async_close()
