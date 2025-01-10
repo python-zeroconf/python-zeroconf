@@ -1,4 +1,4 @@
-"""Benchmark for DNSOutgoing."""
+"""Benchmark helpers."""
 
 import socket
 
