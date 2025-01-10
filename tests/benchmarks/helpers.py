@@ -2,10 +2,7 @@
 
 import socket
 
-from pytest_codspeed import BenchmarkFixture
-
 from zeroconf import DNSAddress, DNSOutgoing, DNSService, DNSText, const
-from zeroconf._protocol.outgoing import State
 
 
 def generate_packets() -> DNSOutgoing:
@@ -154,15 +151,3 @@ def generate_packets() -> DNSOutgoing:
         )
 
     return out
-
-
-out = generate_packets()
-
-
-def test_parse_outgoing_message(benchmark: BenchmarkFixture) -> None:
-    @benchmark
-    def make_outgoing_message() -> None:
-        out.packets()
-        out.state = State.init.value
-        out.finished = False
-        out._reset_for_next_packet()
