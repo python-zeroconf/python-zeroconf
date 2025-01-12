@@ -1,7 +1,5 @@
 """Unit tests for _history.py."""
 
-from typing import Set
-
 import zeroconf as r
 import zeroconf.const as const
 from zeroconf._history import QuestionHistory
@@ -12,7 +10,7 @@ def test_question_suppression():
 
     question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
     now = r.current_time_millis()
-    other_known_answers: Set[r.DNSRecord] = {
+    other_known_answers: set[r.DNSRecord] = {
         r.DNSPointer(
             "_hap._tcp.local.",
             const._TYPE_PTR,
@@ -21,7 +19,7 @@ def test_question_suppression():
             "known-to-other._hap._tcp.local.",
         )
     }
-    our_known_answers: Set[r.DNSRecord] = {
+    our_known_answers: set[r.DNSRecord] = {
         r.DNSPointer(
             "_hap._tcp.local.",
             const._TYPE_PTR,
@@ -54,7 +52,7 @@ def test_question_expire():
 
     now = r.current_time_millis()
     question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
-    other_known_answers: Set[r.DNSRecord] = {
+    other_known_answers: set[r.DNSRecord] = {
         r.DNSPointer(
             "_hap._tcp.local.",
             const._TYPE_PTR,

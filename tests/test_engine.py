@@ -3,7 +3,6 @@
 import asyncio
 import itertools
 import logging
-from typing import Set
 from unittest.mock import patch
 
 import pytest
@@ -41,7 +40,7 @@ async def test_reaper():
         zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
         question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
         now = r.current_time_millis()
-        other_known_answers: Set[r.DNSRecord] = {
+        other_known_answers: set[r.DNSRecord] = {
             r.DNSPointer(
                 "_hap._tcp.local.",
                 const._TYPE_PTR,

@@ -1,9 +1,10 @@
 """Unit tests for zeroconf._listener"""
 
+from __future__ import annotations
+
 import logging
 import unittest
 import unittest.mock
-from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
 
 import zeroconf as r
@@ -146,7 +147,7 @@ def test_guard_against_duplicate_packets():
             addr: str,
             port: int,
             transport: _engine._WrappedTransport,
-            v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+            v6_flow_scope: tuple[()] | tuple[int, int] = (),
         ) -> None:
             """Handle a query or defer it for later processing."""
             super().handle_query_or_defer(msg, addr, port, transport, v6_flow_scope)

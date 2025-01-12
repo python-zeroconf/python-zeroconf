@@ -5,10 +5,12 @@
 The default is HTTP and HAP; use --find to search for all available services in the network
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import (
@@ -56,8 +58,8 @@ async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name
 class AsyncRunner:
     def __init__(self, args: Any) -> None:
         self.args = args
-        self.aiobrowser: Optional[AsyncServiceBrowser] = None
-        self.aiozc: Optional[AsyncZeroconf] = None
+        self.aiobrowser: AsyncServiceBrowser | None = None
+        self.aiozc: AsyncZeroconf | None = None
 
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)

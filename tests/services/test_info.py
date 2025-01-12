@@ -1,14 +1,16 @@
 """Unit tests for zeroconf._services.info."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
 import socket
 import threading
 import unittest
+from collections.abc import Iterable
 from ipaddress import ip_address
 from threading import Event
-from typing import Iterable, List, Optional
 from unittest.mock import patch
 
 import pytest
@@ -264,7 +266,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent: Optional[r.DNSOutgoing] = None
+        last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -407,7 +409,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent: Optional[r.DNSOutgoing] = None
+        last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -534,7 +536,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent = None  # type: Optional[r.DNSOutgoing]
+        last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -879,7 +881,7 @@ def test_filter_address_by_type_from_service_info():
     ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6])
 
-    def dns_addresses_to_addresses(dns_address: List[DNSAddress]) -> List[bytes]:
+    def dns_addresses_to_addresses(dns_address: list[DNSAddress]) -> list[bytes]:
         return [address.address for address in dns_address]
 
     assert dns_addresses_to_addresses(info.dns_addresses()) == [ipv4, ipv6]

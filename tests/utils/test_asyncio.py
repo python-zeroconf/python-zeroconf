@@ -1,11 +1,12 @@
 """Unit tests for zeroconf._utils.asyncio."""
 
+from __future__ import annotations
+
 import asyncio
 import concurrent.futures
 import contextlib
 import threading
 import time
-from typing import Optional
 from unittest.mock import patch
 
 import pytest
@@ -120,7 +121,7 @@ def test_cumulative_timeouts_less_than_close_plus_buffer():
 async def test_run_coro_with_timeout() -> None:
     """Test running a coroutine with a timeout raises EventLoopBlocked."""
     loop = asyncio.get_event_loop()
-    task: Optional[asyncio.Task] = None
+    task: asyncio.Task | None = None
 
     async def _saved_sleep_task():
         nonlocal task

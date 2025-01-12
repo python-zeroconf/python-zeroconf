@@ -6,7 +6,7 @@ import socket
 import time
 import unittest
 from threading import Event
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -91,7 +91,7 @@ class ListenerTest(unittest.TestCase):
         }
 
         zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
-        desc: Dict[str, Any] = {"path": "/~paulsm/"}
+        desc: dict[str, Any] = {"path": "/~paulsm/"}
         desc.update(properties)
         addresses = [socket.inet_aton("10.0.1.2")]
         if has_working_ipv6() and not os.environ.get("SKIP_IPV6"):
