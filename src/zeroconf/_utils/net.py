@@ -254,7 +254,7 @@ def new_socket(
     except OSError as ex:
         if ex.errno == errno.EADDRNOTAVAIL:
             log.warning(
-                "Address not available when binding to %s, " "it is expected to happen on some systems",
+                "Address not available when binding to %s, it is expected to happen on some systems",
                 bind_tup,
             )
             return None
@@ -295,8 +295,7 @@ def add_multicast_member(
         _errno = get_errno(e)
         if _errno == errno.EADDRINUSE:
             log.info(
-                "Address in use when adding %s to multicast group, "
-                "it is expected to happen on some systems",
+                "Address in use when adding %s to multicast group, it is expected to happen on some systems",
                 interface,
             )
             return False
@@ -309,7 +308,7 @@ def add_multicast_member(
             return False
         if _errno in err_einval:
             log.info(
-                "Interface of %s does not support multicast, " "it is expected in WSL",
+                "Interface of %s does not support multicast, it is expected in WSL",
                 interface,
             )
             return False
