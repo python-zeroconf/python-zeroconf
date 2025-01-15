@@ -666,7 +666,7 @@ class TestServiceInfo(unittest.TestCase):
 
 def test_multiple_addresses():
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
@@ -830,7 +830,7 @@ def test_scoped_addresses_from_cache():
 async def test_multiple_a_addresses_newest_address_first():
     """Test that info.addresses returns the newest seen address first."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     cache = aiozc.zeroconf.cache
@@ -849,7 +849,7 @@ async def test_multiple_a_addresses_newest_address_first():
 @pytest.mark.asyncio
 async def test_invalid_a_addresses(caplog):
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     cache = aiozc.zeroconf.cache
@@ -1082,7 +1082,7 @@ async def test_we_try_four_times_with_random_delay():
 async def test_release_wait_when_new_recorded_added():
     """Test that async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
@@ -1147,7 +1147,7 @@ async def test_release_wait_when_new_recorded_added():
 async def test_port_changes_are_seen():
     """Test that port changes are seen by async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
@@ -1230,7 +1230,7 @@ async def test_port_changes_are_seen():
 async def test_port_changes_are_seen_with_directed_request():
     """Test that port changes are seen by async_request with a directed request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
@@ -1313,7 +1313,7 @@ async def test_port_changes_are_seen_with_directed_request():
 async def test_ipv4_changes_are_seen():
     """Test that ipv4 changes are seen by async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiaipv4rec.%s" % type_
+    registration_name = f"multiaipv4rec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1401,7 +1401,7 @@ async def test_ipv4_changes_are_seen():
 async def test_ipv6_changes_are_seen():
     """Test that ipv6 changes are seen by async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiaipv6rec.%s" % type_
+    registration_name = f"multiaipv6rec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1496,7 +1496,7 @@ async def test_ipv6_changes_are_seen():
 async def test_bad_ip_addresses_ignored_in_cache():
     """Test that bad ip address in the cache are ignored async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1550,7 +1550,7 @@ async def test_bad_ip_addresses_ignored_in_cache():
 async def test_service_name_change_as_seen_has_ip_in_cache():
     """Test that service name changes are seen by async_request when the ip is in the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1632,7 +1632,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
 async def test_service_name_change_as_seen_ip_not_in_cache():
     """Test that service name changes are seen by async_request when the ip is not in the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1715,7 +1715,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
 async def test_release_wait_when_new_recorded_added_concurrency():
     """Test that concurrent async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiareccon.%s" % type_
+    registration_name = f"multiareccon.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahostcon.local."
@@ -1786,7 +1786,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
 async def test_service_info_nsec_records():
     """Test we can generate nsec records from ServiceInfo."""
     type_ = "_http._tcp.local."
-    registration_name = "multiareccon.%s" % type_
+    registration_name = f"multiareccon.{type_}"
     desc = {"path": "/~paulsm/"}
     host = "multahostcon.local."
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)

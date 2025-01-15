@@ -128,15 +128,17 @@ class DNSOutgoing:
         self.allow_long = True
 
     def __repr__(self) -> str:
-        return "<DNSOutgoing:{%s}>" % ", ".join(
-            [
-                "multicast=%s" % self.multicast,
-                "flags=%s" % self.flags,
-                "questions=%s" % self.questions,
-                "answers=%s" % self.answers,
-                "authorities=%s" % self.authorities,
-                "additionals=%s" % self.additionals,
-            ]
+        return "<DNSOutgoing:{}>".format(
+            ", ".join(
+                [
+                    f"multicast={self.multicast}",
+                    f"flags={self.flags}",
+                    f"questions={self.questions}",
+                    f"answers={self.answers}",
+                    f"authorities={self.authorities}",
+                    f"additionals={self.additionals}",
+                ]
+            )
         )
 
     def add_question(self, record: DNSQuestion) -> None:
