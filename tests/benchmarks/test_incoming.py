@@ -1,7 +1,6 @@
 """Benchmark for DNSIncoming."""
 
 import socket
-from typing import List
 
 from pytest_codspeed import BenchmarkFixture
 
@@ -16,7 +15,7 @@ from zeroconf import (
 )
 
 
-def generate_packets() -> List[bytes]:
+def generate_packets() -> list[bytes]:
     out = DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
     address = socket.inet_pton(socket.AF_INET, "192.168.208.5")
 

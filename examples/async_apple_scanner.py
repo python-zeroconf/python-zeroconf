@@ -2,10 +2,12 @@
 
 """Scan for apple devices."""
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from zeroconf import DNSQuestionType, IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
@@ -76,8 +78,8 @@ async def _async_show_service_info(zeroconf: Zeroconf, service_type: str, name: 
 class AsyncAppleScanner:
     def __init__(self, args: Any) -> None:
         self.args = args
-        self.aiobrowser: Optional[AsyncServiceBrowser] = None
-        self.aiozc: Optional[AsyncZeroconf] = None
+        self.aiobrowser: AsyncServiceBrowser | None = None
+        self.aiozc: AsyncZeroconf | None = None
 
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)

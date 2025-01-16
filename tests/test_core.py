@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._core"""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -9,7 +11,7 @@ import threading
 import time
 import unittest
 import unittest.mock
-from typing import Tuple, Union, cast
+from typing import cast
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -38,13 +40,13 @@ def teardown_module():
 
 
 def threadsafe_query(
-    zc: "Zeroconf",
-    protocol: "AsyncListener",
+    zc: Zeroconf,
+    protocol: AsyncListener,
     msg: DNSIncoming,
     addr: str,
     port: int,
     transport: _WrappedTransport,
-    v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
+    v6_flow_scope: tuple[()] | tuple[int, int],
 ) -> None:
     async def make_query():
         protocol.handle_query_or_defer(msg, addr, port, transport, v6_flow_scope)

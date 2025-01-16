@@ -3,7 +3,6 @@
 import logging
 import os
 import socket
-import unittest
 import unittest.mock
 
 import pytest

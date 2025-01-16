@@ -2,11 +2,12 @@
 
 """Example of announcing 250 services (in this case, a fake HTTP server)."""
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
 import socket
-from typing import List, Optional
 
 from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
@@ -15,9 +16,9 @@ from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 class AsyncRunner:
     def __init__(self, ip_version: IPVersion) -> None:
         self.ip_version = ip_version
-        self.aiozc: Optional[AsyncZeroconf] = None
+        self.aiozc: AsyncZeroconf | None = None
 
-    async def register_services(self, infos: List[AsyncServiceInfo]) -> None:
+    async def register_services(self, infos: list[AsyncServiceInfo]) -> None:
         self.aiozc = AsyncZeroconf(ip_version=self.ip_version)
         tasks = [self.aiozc.async_register_service(info) for info in infos]
         background_tasks = await asyncio.gather(*tasks)
@@ -26,7 +27,7 @@ class AsyncRunner:
         while True:
             await asyncio.sleep(1)
 
-    async def unregister_services(self, infos: List[AsyncServiceInfo]) -> None:
+    async def unregister_services(self, infos: list[AsyncServiceInfo]) -> None:
         assert self.aiozc is not None
         tasks = [self.aiozc.async_unregister_service(info) for info in infos]
         background_tasks = await asyncio.gather(*tasks)

@@ -6,8 +6,9 @@ import os
 import socket
 import time
 import unittest
+from collections.abc import Iterable
 from threading import Event
-from typing import Iterable, List, Set, cast
+from typing import cast
 from unittest.mock import patch
 
 import pytest
@@ -580,7 +581,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
     old_send = zeroconf_browser.async_send
 
     expected_ttl = const._DNS_OTHER_TTL
-    questions: List[List[DNSQuestion]] = []
+    questions: list[list[DNSQuestion]] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
@@ -1151,7 +1152,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
         10000,
         f"known-to-other.{name}",
     )
-    other_known_answers: Set[r.DNSRecord] = {answer}
+    other_known_answers: set[r.DNSRecord] = {answer}
     zc.question_history.add_question_at_time(question, now, other_known_answers)
     assert zc.question_history.suppresses(question, now, other_known_answers)
 
@@ -1196,7 +1197,7 @@ async def test_query_scheduler():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
     zc = aiozc.zeroconf
-    sends: List[r.DNSIncoming] = []
+    sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
@@ -1289,7 +1290,7 @@ async def test_query_scheduler_rescue_records():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
     zc = aiozc.zeroconf
-    sends: List[r.DNSIncoming] = []
+    sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""

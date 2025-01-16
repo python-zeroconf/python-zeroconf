@@ -3,7 +3,6 @@
 import logging
 import socket
 import time
-import unittest
 import unittest.mock
 from unittest.mock import patch
 

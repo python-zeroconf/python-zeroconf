@@ -1,7 +1,6 @@
 """Unit tests for zeroconf._cache."""
 
 import logging
-import unittest
 import unittest.mock
 from heapq import heapify, heappop
 

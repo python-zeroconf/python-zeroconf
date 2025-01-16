@@ -5,7 +5,6 @@ import logging
 import os
 import socket
 import struct
-import unittest
 import unittest.mock
 from typing import cast
 
