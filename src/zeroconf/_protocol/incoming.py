@@ -451,8 +451,7 @@ class DNSIncoming:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} was seen again from {self.source}"
                 )
-            linked_labels = self._name_cache.get(link_py_int)
-            if not linked_labels:
+            if (linked_labels := self._name_cache.get(link_py_int)) is None:
                 linked_labels = []
                 seen_pointers.add(link_py_int)
                 self._decode_labels_at_offset(link, linked_labels, seen_pointers)
