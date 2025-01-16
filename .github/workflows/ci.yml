@@ -165,7 +165,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-2019, macos-13, macos-latest]
+        os:
+          [
+            ubuntu-24.04-arm,
+            ubuntu-latest,
+            windows-2019,
+            macos-13,
+            macos-latest,
+          ]
         musl: ["", "musllinux"]
         exclude:
           - os: windows-2019
@@ -201,12 +208,6 @@ jobs:
           ref: "${{ steps.release_tag.outputs.newest_release_tag }}"
           fetch-depth: 0
 
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Build wheels (non-musl)
         uses: pypa/cibuildwheel@v2.22.0
         if: matrix.musl == ''
@@ -214,7 +215,7 @@ jobs:
         env:
           CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 *musllinux*
           CIBW_BEFORE_ALL_LINUX: apt install -y gcc || yum install -y gcc || apk add gcc
-          CIBW_ARCHS_LINUX: auto aarch64
+          CIBW_ARCHS_LINUX: ${matrix.os == ubuntu-24.04-arm && 'aarch64' || 'auto'}
           CIBW_BUILD_VERBOSITY: 3
           REQUIRE_CYTHON: 1
 
@@ -225,7 +226,7 @@ jobs:
         env:
           CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 *manylinux*
           CIBW_BEFORE_ALL_LINUX: apt install -y gcc || yum install -y gcc || apk add gcc
-          CIBW_ARCHS_LINUX: auto aarch64
+          CIBW_ARCHS_LINUX: ${matrix.os == ubuntu-24.04-arm && 'aarch64' || 'auto'}
           CIBW_BUILD_VERBOSITY: 3
           REQUIRE_CYTHON: 1
 
