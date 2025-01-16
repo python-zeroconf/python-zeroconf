@@ -95,7 +95,7 @@ def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, i
                     cast(int, adapter.index),
                 )
 
-    raise RuntimeError("No adapter found for IP address %s" % ip)
+    raise RuntimeError(f"No adapter found for IP address {ip}")
 
 
 def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str, int, int]:
@@ -106,7 +106,7 @@ def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str
                 if isinstance(adapter_ip.ip, tuple):
                     return cast(Tuple[str, int, int], adapter_ip.ip)
 
-    raise RuntimeError("No adapter found for index %s" % index)
+    raise RuntimeError(f"No adapter found for index {index}")
 
 
 def ip6_addresses_to_indexes(
@@ -154,7 +154,7 @@ def normalize_interface_choice(
             result.extend(get_all_addresses())
         if not result:
             raise RuntimeError(
-                "No interfaces to listen on, check that any interfaces have IP version %s" % ip_version
+                f"No interfaces to listen on, check that any interfaces have IP version {ip_version}"
             )
     elif isinstance(choice, list):
         # First, take IPv4 addresses.
@@ -162,7 +162,7 @@ def normalize_interface_choice(
         # Unlike IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP requires interface indexes.
         result += ip6_addresses_to_indexes(choice)
     else:
-        raise TypeError("choice must be a list or InterfaceChoice, got %r" % choice)
+        raise TypeError(f"choice must be a list or InterfaceChoice, got {choice!r}")
     return result
 
 
@@ -254,7 +254,7 @@ def new_socket(
     except OSError as ex:
         if ex.errno == errno.EADDRNOTAVAIL:
             log.warning(
-                "Address not available when binding to %s, " "it is expected to happen on some systems",
+                "Address not available when binding to %s, it is expected to happen on some systems",
                 bind_tup,
             )
             return None
@@ -295,8 +295,7 @@ def add_multicast_member(
         _errno = get_errno(e)
         if _errno == errno.EADDRINUSE:
             log.info(
-                "Address in use when adding %s to multicast group, "
-                "it is expected to happen on some systems",
+                "Address in use when adding %s to multicast group, it is expected to happen on some systems",
                 interface,
             )
             return False
@@ -309,7 +308,7 @@ def add_multicast_member(
             return False
         if _errno in err_einval:
             log.info(
-                "Interface of %s does not support multicast, " "it is expected in WSL",
+                "Interface of %s does not support multicast, it is expected in WSL",
                 interface,
             )
             return False

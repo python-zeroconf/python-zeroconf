@@ -563,7 +563,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
     got_query = asyncio.Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:
@@ -665,7 +665,7 @@ async def test_ttl_refresh_cancelled_rescue_query():
     got_query = asyncio.Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:
@@ -914,7 +914,7 @@ def test_service_browser_is_aware_of_port_changes():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     callbacks = []
 
@@ -978,7 +978,7 @@ def test_service_browser_listeners_update_service():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1043,7 +1043,7 @@ def test_service_browser_listeners_no_update_service():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1365,9 +1365,9 @@ def test_service_browser_matching():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     not_match_type_ = "_asustor-looksgood_http._tcp.local."
-    not_match_registration_name = "xxxyyy.%s" % not_match_type_
+    not_match_registration_name = f"xxxyyy.{not_match_type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1458,7 +1458,7 @@ def test_service_browser_expire_callbacks():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_old._tcp.local."
-    registration_name = "uniquezip323.%s" % type_
+    registration_name = f"uniquezip323.{type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1583,7 +1583,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries():
     """Test that we stop sending startup queries if zeroconf is closed out from under the browser."""
     service_added = asyncio.Event()
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:
@@ -1652,7 +1652,7 @@ async def test_close_zeroconf_without_browser_after_start_up_queries():
     service_added = asyncio.Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:

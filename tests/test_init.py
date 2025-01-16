@@ -39,20 +39,20 @@ class Names(unittest.TestCase):
 
     def test_exceedingly_long_name(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        name = "%slocal." % ("part." * 1000)
+        name = f"{'part.' * 1000}local."
         question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         r.DNSIncoming(generated.packets()[0])
 
     def test_extra_exceedingly_long_name(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        name = "%slocal." % ("part." * 4000)
+        name = f"{'part.' * 4000}local."
         question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
         r.DNSIncoming(generated.packets()[0])
 
     def test_exceedingly_long_name_part(self):
-        name = "%s.local." % ("a" * 1000)
+        name = f"{'a' * 1000}.local."
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
         generated.add_question(question)
@@ -153,14 +153,14 @@ class Names(unittest.TestCase):
             addresses=[socket.inet_aton("10.0.1.2")],
         )
         zc.register_service(info_service2, allow_name_change=True)
-        assert info_service2.name.split(".")[0] == "%s-%d" % (name, number_hosts + 1)
+        assert info_service2.name.split(".")[0] == f"{name}-{number_hosts + 1}"
 
     def generate_many_hosts(self, zc, type_, name, number_hosts):
         block_size = 25
         number_hosts = int((number_hosts - 1) / block_size + 1) * block_size
         out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
         for i in range(1, number_hosts + 1):
-            next_name = name if i == 1 else "%s-%d" % (name, i)
+            next_name = name if i == 1 else f"{name}-{i}"
             self.generate_host(out, next_name, type_)
 
         _inject_responses(zc, [r.DNSIncoming(packet) for packet in out.packets()])

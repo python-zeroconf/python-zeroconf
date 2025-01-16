@@ -57,12 +57,12 @@ def async_on_service_state_change(
 async def _async_show_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
     info = AsyncServiceInfo(service_type, name)
     await info.async_request(zeroconf, 3000, question_type=DNSQuestionType.QU)
-    print("Info from zeroconf.get_service_info: %r" % (info))
+    print(f"Info from zeroconf.get_service_info: {info!r}")
     if info:
-        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
-        print("  Name: %s" % name)
-        print("  Addresses: %s" % ", ".join(addresses))
-        print("  Weight: %d, priority: %d" % (info.weight, info.priority))
+        addresses = [f"{addr}:{cast(int, info.port)}" for addr in info.parsed_addresses()]
+        print(f"  Name: {name}")
+        print(f"  Addresses: {', '.join(addresses)}")
+        print(f"  Weight: {info.weight}, priority: {info.priority}")
         print(f"  Server: {info.server}")
         if info.properties:
             print("  Properties are:")
@@ -84,7 +84,7 @@ class AsyncAppleScanner:
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)
         await self.aiozc.zeroconf.async_wait_for_start()
-        print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % ALL_SERVICES)
+        print(f"\nBrowsing {ALL_SERVICES} service(s), press Ctrl-C to exit...\n")
         kwargs = {
             "handlers": [async_on_service_state_change],
             "question_type": DNSQuestionType.QU,

@@ -26,6 +26,8 @@ import asyncio
 import socket
 import time
 from functools import lru_cache
+from functools import cache
+from typing import List, Optional, Set
 from unittest import mock
 
 import ifaddr
@@ -63,7 +65,7 @@ def _wait_for_start(zc: Zeroconf) -> None:
     asyncio.run_coroutine_threadsafe(zc.async_wait_for_start(), zc.loop).result()
 
 
-@lru_cache(maxsize=None)
+@cache
 def has_working_ipv6():
     """Return True if if the system can bind an IPv6 address."""
     if not socket.has_ipv6:

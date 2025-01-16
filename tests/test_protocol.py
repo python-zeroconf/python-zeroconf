@@ -706,7 +706,7 @@ def test_tc_bit_in_query_packet():
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
-                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                f"HASS Bridge W9DN {i}._hap._tcp.local.",
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
@@ -738,7 +738,7 @@ def test_tc_bit_not_set_in_answer_packet():
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
-                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                f"HASS Bridge W9DN {i}._hap._tcp.local.",
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
@@ -812,7 +812,7 @@ def test_records_same_packet_share_fate():
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
-                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                f"HASS Bridge W9DN {i}._hap._tcp.local.",
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
