@@ -193,3 +193,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.codespell]
 ignore-words-list = ["additionals", "HASS"]
+
+[tool.cython-lint]
+max-line-length = 88
+ignore = ['E501'] # too many to fix right now
