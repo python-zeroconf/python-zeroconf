@@ -35,12 +35,12 @@ def async_on_service_state_change(
 async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
     info = AsyncServiceInfo(service_type, name)
     await info.async_request(zeroconf, 3000)
-    print("Info from zeroconf.get_service_info: %r" % (info))
+    print(f"Info from zeroconf.get_service_info: {info!r}")
     if info:
-        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
-        print("  Name: %s" % name)
-        print("  Addresses: %s" % ", ".join(addresses))
-        print("  Weight: %d, priority: %d" % (info.weight, info.priority))
+        addresses = [f"{addr}:{cast(int, info.port)}" for addr in info.parsed_scoped_addresses()]
+        print(f"  Name: {name}")
+        print(f"  Addresses: {', '.join(addresses)}")
+        print(f"  Weight: {info.weight}, priority: {info.priority}")
         print(f"  Server: {info.server}")
         if info.properties:
             print("  Properties are:")
@@ -68,7 +68,7 @@ class AsyncRunner:
                 await AsyncZeroconfServiceTypes.async_find(aiozc=self.aiozc, ip_version=ip_version)
             )
 
-        print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
+        print(f"\nBrowsing {services} service(s), press Ctrl-C to exit...\n")
         self.aiobrowser = AsyncServiceBrowser(
             self.aiozc.zeroconf, services, handlers=[async_on_service_state_change]
         )

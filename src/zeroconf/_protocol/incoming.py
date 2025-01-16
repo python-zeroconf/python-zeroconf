@@ -208,18 +208,20 @@ class DNSIncoming:
         return self._num_authorities > 0
 
     def __repr__(self) -> str:
-        return "<DNSIncoming:{%s}>" % ", ".join(
-            [
-                "id=%s" % self.id,
-                "flags=%s" % self.flags,
-                "truncated=%s" % self.truncated,
-                "n_q=%s" % self._num_questions,
-                "n_ans=%s" % self._num_answers,
-                "n_auth=%s" % self._num_authorities,
-                "n_add=%s" % self._num_additionals,
-                "questions=%s" % self._questions,
-                "answers=%s" % self.answers(),
-            ]
+        return "<DNSIncoming:{}>".format(
+            ", ".join(
+                [
+                    f"id={self.id}",
+                    f"flags={self.flags}",
+                    f"truncated={self.truncated}",
+                    f"n_q={self._num_questions}",
+                    f"n_ans={self._num_answers}",
+                    f"n_auth={self._num_authorities}",
+                    f"n_add={self._num_additionals}",
+                    f"questions={self._questions}",
+                    f"answers={self.answers()}",
+                ]
+            )
         )
 
     def _read_header(self) -> None:

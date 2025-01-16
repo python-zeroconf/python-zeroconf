@@ -102,7 +102,7 @@ class DNSEntry:
             self.get_class_(self.class_),
             "-unique" if self.unique else "",
             self.name,
-            "=%s" % cast(Any, other) if other is not None else "",
+            f"={cast(Any, other)}" if other is not None else "",
         )
 
 

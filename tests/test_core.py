@@ -318,7 +318,7 @@ def test_goodbye_all_services():
     out = zc.generate_unregister_all_services()
     assert out is None
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     desc = {"path": "/~paulsm/"}
     info = r.ServiceInfo(
         type_,
