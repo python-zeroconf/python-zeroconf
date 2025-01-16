@@ -108,6 +108,8 @@ cdef class DNSOutgoing:
 
     cpdef void write_string(self, cython.bytes value)
 
+    cpdef void write_character_string(self, cython.bytes value)
+
     @cython.locals(utfstr=bytes)
     cdef void _write_utf(self, cython.str value)
 
