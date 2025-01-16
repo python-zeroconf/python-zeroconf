@@ -64,7 +64,7 @@ def _wait_for_start(zc: Zeroconf) -> None:
 
 @cache
 def has_working_ipv6():
-    """Return True if if the system can bind an IPv6 address."""
+    """Return True if the system can bind an IPv6 address."""
     if not socket.has_ipv6:
         return False
 
