@@ -134,7 +134,7 @@ cdef class DNSService(DNSRecord):
 cdef class DNSNsec(DNSRecord):
 
     cdef public cython.int _hash
-    cdef public object next_name
+    cdef public str next_name
     cdef public cython.list rdtypes
 
     cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, str next_name, cython.list rdtypes, double created)
