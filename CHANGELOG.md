@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v0.140.0 (2025-01-16)
+
+### Bug Fixes
+
+* fix(docs): remove repetition of words (#1479)
+
+Co-authored-by: J. Nick Koston <nick@koston.org> ([`dde26c6`](https://github.com/python-zeroconf/python-zeroconf/commit/dde26c655a49811c11071b0531e408a188687009))
+
+### Features
+
+* feat: small performance improvement to writing outgoing packets (#1482) ([`d9be715`](https://github.com/python-zeroconf/python-zeroconf/commit/d9be7155a0ef1ac521e5bbedd3884ddeb9f0b99d))
+
+* feat: migrate to native types (#1472)
+
+Co-authored-by: J. Nick Koston <nick@koston.org>
+Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com> ([`22a0fb4`](https://github.com/python-zeroconf/python-zeroconf/commit/22a0fb487db27bc2c6448a9167742f3040e910ba))
+
+
 ## v0.139.0 (2025-01-09)
 
 ### Features
