@@ -409,7 +409,7 @@ class DNSIncoming:
         original_offset = self.offset
         self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers)
         self._name_cache[original_offset] = labels
-        name = ".".join(labels) + "."
+        name = f"{'.'.join(labels)}."
         if len(name) > MAX_NAME_LENGTH:
             raise IncomingDecodeError(
                 f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH} from {self.source}"
