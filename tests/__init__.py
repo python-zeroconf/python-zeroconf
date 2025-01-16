@@ -26,7 +26,6 @@ import asyncio
 import socket
 import time
 from functools import cache, lru_cache
-from typing import List, Optional, Set
 from unittest import mock
 
 import ifaddr
