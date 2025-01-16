@@ -90,7 +90,6 @@ line-length = 110
 ignore = [
     "S101", # use of assert
     "S104",  # S104 Possible binding to all interfaces
-    "UP031", # UP031 use f-strings -- too many to fix right now
 ]
 select = [
     "B",   # flake8-bugbear

@@ -95,7 +95,7 @@ def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, i
                     cast(int, adapter.index),
                 )
 
-    raise RuntimeError("No adapter found for IP address %s" % ip)
+    raise RuntimeError(f"No adapter found for IP address {ip}")
 
 
 def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str, int, int]:
@@ -106,7 +106,7 @@ def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str
                 if isinstance(adapter_ip.ip, tuple):
                     return cast(Tuple[str, int, int], adapter_ip.ip)
 
-    raise RuntimeError("No adapter found for index %s" % index)
+    raise RuntimeError(f"No adapter found for index {index}")
 
 
 def ip6_addresses_to_indexes(
@@ -154,7 +154,7 @@ def normalize_interface_choice(
             result.extend(get_all_addresses())
         if not result:
             raise RuntimeError(
-                "No interfaces to listen on, check that any interfaces have IP version %s" % ip_version
+                f"No interfaces to listen on, check that any interfaces have IP version {ip_version}"
             )
     elif isinstance(choice, list):
         # First, take IPv4 addresses.
@@ -162,7 +162,7 @@ def normalize_interface_choice(
         # Unlike IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP requires interface indexes.
         result += ip6_addresses_to_indexes(choice)
     else:
-        raise TypeError("choice must be a list or InterfaceChoice, got %r" % choice)
+        raise TypeError(f"choice must be a list or InterfaceChoice, got {choice!r}")
     return result
 
 
