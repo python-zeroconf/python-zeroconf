@@ -16,7 +16,6 @@ cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 
 
-
 cdef class AsyncListener:
 
     cdef public object zc
