@@ -77,20 +77,20 @@ class DNSOutgoing:
     """Object representation of an outgoing packet"""
 
     __slots__ = (
-        "flags",
-        "finished",
-        "id",
-        "multicast",
-        "packets_data",
-        "names",
-        "data",
-        "size",
+        "additionals",
         "allow_long",
-        "state",
-        "questions",
         "answers",
         "authorities",
-        "additionals",
+        "data",
+        "finished",
+        "flags",
+        "id",
+        "multicast",
+        "names",
+        "packets_data",
+        "questions",
+        "size",
+        "state",
     )
 
     def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:
@@ -128,15 +128,17 @@ class DNSOutgoing:
         self.allow_long = True
 
     def __repr__(self) -> str:
-        return "<DNSOutgoing:{%s}>" % ", ".join(
-            [
-                "multicast=%s" % self.multicast,
-                "flags=%s" % self.flags,
-                "questions=%s" % self.questions,
-                "answers=%s" % self.answers,
-                "authorities=%s" % self.authorities,
-                "additionals=%s" % self.additionals,
-            ]
+        return "<DNSOutgoing:{}>".format(
+            ", ".join(
+                [
+                    f"multicast={self.multicast}",
+                    f"flags={self.flags}",
+                    f"questions={self.questions}",
+                    f"answers={self.answers}",
+                    f"authorities={self.authorities}",
+                    f"additionals={self.additionals}",
+                ]
+            )
         )
 
     def add_question(self, record: DNSQuestion) -> None:

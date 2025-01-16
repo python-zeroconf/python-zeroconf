@@ -64,15 +64,16 @@ class DNSQuestionType(enum.Enum):
 class DNSEntry:
     """A DNS entry"""
 
-    __slots__ = ("key", "name", "type", "class_", "unique")
+    __slots__ = ("class_", "key", "name", "type", "unique")
 
     def __init__(self, name: str, type_: int, class_: int) -> None:
+        self._fast_init_entry(name, type_, class_)
+
+    def _fast_init_entry(self, name: str, type_: _int, class_: _int) -> None:
+        """Fast init for reuse."""
         self.name = name
         self.key = name.lower()
         self.type = type_
-        self._set_class(class_)
-
-    def _set_class(self, class_: _int) -> None:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
@@ -101,7 +102,7 @@ class DNSEntry:
             self.get_class_(self.class_),
             "-unique" if self.unique else "",
             self.name,
-            "=%s" % cast(Any, other) if other is not None else "",
+            f"={cast(Any, other)}" if other is not None else "",
         )
 
 
@@ -111,7 +112,11 @@ class DNSQuestion(DNSEntry):
     __slots__ = ("_hash",)
 
     def __init__(self, name: str, type_: int, class_: int) -> None:
-        super().__init__(name, type_, class_)
+        self._fast_init(name, type_, class_)
+
+    def _fast_init(self, name: str, type_: _int, class_: _int) -> None:
+        """Fast init for reuse."""
+        self._fast_init_entry(name, type_, class_)
         self._hash = hash((self.key, type_, self.class_))
 
     def answered_by(self, rec: "DNSRecord") -> bool:
@@ -157,7 +162,7 @@ class DNSQuestion(DNSEntry):
 class DNSRecord(DNSEntry):
     """A DNS record - like a DNS entry, but has a TTL"""
 
-    __slots__ = ("ttl", "created")
+    __slots__ = ("created", "ttl")
 
     # TODO: Switch to just int ttl
     def __init__(
@@ -168,13 +173,20 @@ class DNSRecord(DNSEntry):
         ttl: Union[float, int],
         created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_)
+        self._fast_init_record(name, type_, class_, ttl, created or current_time_millis())
+
+    def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _float, created: _float) -> None:
+        """Fast init for reuse."""
+        self._fast_init_entry(name, type_, class_)
         self.ttl = ttl
-        self.created = created or current_time_millis()
+        self.created = created
 
     def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
         """Abstract method"""
         raise AbstractMethodException
+
+    def __lt__(self, other: "DNSRecord") -> bool:
+        return self.ttl < other.ttl
 
     def suppressed_by(self, msg: "DNSIncoming") -> bool:
         """Returns true if any answer in a message can suffice for the
@@ -213,13 +225,10 @@ class DNSRecord(DNSEntry):
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
-    def reset_ttl(self, other) -> None:  # type: ignore[no-untyped-def]
-        """Sets this record's TTL and created time to that of
-        another record."""
-        self.set_created_ttl(other.created, other.ttl)
-
-    def set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
+    def _set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
         """Set the created and ttl of a record."""
+        # It would be better if we made a copy instead of mutating the record
+        # in place, but records currently don't have a copy method.
         self.created = created
         self.ttl = ttl
 
@@ -248,7 +257,20 @@ class DNSAddress(DNSRecord):
         scope_id: Optional[int] = None,
         created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_, ttl, created)
+        self._fast_init(name, type_, class_, ttl, address, scope_id, created or current_time_millis())
+
+    def _fast_init(
+        self,
+        name: str,
+        type_: _int,
+        class_: _int,
+        ttl: _float,
+        address: bytes,
+        scope_id: Optional[_int],
+        created: _float,
+    ) -> None:
+        """Fast init for reuse."""
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.address = address
         self.scope_id = scope_id
         self._hash = hash((self.key, type_, self.class_, address, scope_id))
@@ -300,7 +322,13 @@ class DNSHinfo(DNSRecord):
         os: str,
         created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_, ttl, created)
+        self._fast_init(name, type_, class_, ttl, cpu, os, created or current_time_millis())
+
+    def _fast_init(
+        self, name: str, type_: _int, class_: _int, ttl: _float, cpu: str, os: str, created: _float
+    ) -> None:
+        """Fast init for reuse."""
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.cpu = cpu
         self.os = os
         self._hash = hash((self.key, type_, self.class_, cpu, os))
@@ -341,7 +369,12 @@ class DNSPointer(DNSRecord):
         alias: str,
         created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_, ttl, created)
+        self._fast_init(name, type_, class_, ttl, alias, created or current_time_millis())
+
+    def _fast_init(
+        self, name: str, type_: _int, class_: _int, ttl: _float, alias: str, created: _float
+    ) -> None:
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.alias = alias
         self.alias_key = alias.lower()
         self._hash = hash((self.key, type_, self.class_, self.alias_key))
@@ -391,7 +424,12 @@ class DNSText(DNSRecord):
         text: bytes,
         created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_, ttl, created)
+        self._fast_init(name, type_, class_, ttl, text, created or current_time_millis())
+
+    def _fast_init(
+        self, name: str, type_: _int, class_: _int, ttl: _float, text: bytes, created: _float
+    ) -> None:
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.text = text
         self._hash = hash((self.key, type_, self.class_, text))
 
@@ -421,7 +459,7 @@ class DNSText(DNSRecord):
 class DNSService(DNSRecord):
     """A DNS service record"""
 
-    __slots__ = ("_hash", "priority", "weight", "port", "server", "server_key")
+    __slots__ = ("_hash", "port", "priority", "server", "server_key", "weight")
 
     def __init__(
         self,
@@ -435,7 +473,23 @@ class DNSService(DNSRecord):
         server: str,
         created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_, ttl, created)
+        self._fast_init(
+            name, type_, class_, ttl, priority, weight, port, server, created or current_time_millis()
+        )
+
+    def _fast_init(
+        self,
+        name: str,
+        type_: _int,
+        class_: _int,
+        ttl: _float,
+        priority: _int,
+        weight: _int,
+        port: _int,
+        server: str,
+        created: _float,
+    ) -> None:
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.priority = priority
         self.weight = weight
         self.port = port
@@ -483,12 +537,24 @@ class DNSNsec(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: int,
+        ttl: Union[int, float],
         next_name: str,
         rdtypes: List[int],
         created: Optional[float] = None,
     ) -> None:
-        super().__init__(name, type_, class_, ttl, created)
+        self._fast_init(name, type_, class_, ttl, next_name, rdtypes, created or current_time_millis())
+
+    def _fast_init(
+        self,
+        name: str,
+        type_: _int,
+        class_: _int,
+        ttl: _float,
+        next_name: str,
+        rdtypes: List[_int],
+        created: _float,
+    ) -> None:
+        self._fast_init_record(name, type_, class_, ttl, created)
         self.next_name = next_name
         self.rdtypes = sorted(rdtypes)
         self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
@@ -542,7 +608,7 @@ _DNSRecord = DNSRecord
 class DNSRRSet:
     """A set of dns records with a lookup to get the ttl."""
 
-    __slots__ = ("_records", "_lookup")
+    __slots__ = ("_lookup", "_records")
 
     def __init__(self, records: List[DNSRecord]) -> None:
         """Create an RRset from records sets."""

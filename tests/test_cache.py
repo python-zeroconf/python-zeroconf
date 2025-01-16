@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._cache."""
 
 import logging
-import unittest
 import unittest.mock
+from heapq import heapify, heappop
+
+import pytest
 
 import zeroconf as r
 from zeroconf import const
@@ -282,3 +281,202 @@ class TestDNSCacheAPI(unittest.TestCase):
         cache = r.DNSCache()
         cache.async_add_records([record1, record2])
         assert cache.names() == ["irrelevant"]
+
+
+def test_async_entries_with_name_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert next(iter(cache.async_entries_with_name("a"))) is record2
+
+
+def test_async_entries_with_server_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSService("a", const._TYPE_SRV, const._CLASS_IN, 1, 1, 1, 1, "a", created=1.0)
+    record2 = r.DNSService("a", const._TYPE_SRV, const._CLASS_IN, 1, 1, 1, 1, "a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert next(iter(cache.async_entries_with_server("a"))) is record2
+
+
+def test_async_get_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert cache.get(record2) is record2
+
+
+def test_async_get_returns_newest_nsec_record():
+    cache = r.DNSCache()
+    record1 = r.DNSNsec("a", const._TYPE_NSEC, const._CLASS_IN, 1, "a", [], created=1.0)
+    record2 = r.DNSNsec("a", const._TYPE_NSEC, const._CLASS_IN, 1, "a", [], created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert cache.get(record2) is record2
+
+
+def test_get_by_details_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    assert cache.get_by_details("a", const._TYPE_A, const._CLASS_IN) is record2
+
+
+def test_get_all_by_details_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    records = cache.get_all_by_details("a", const._TYPE_A, const._CLASS_IN)
+    assert len(records) == 1
+    assert records[0] is record2
+
+
+def test_async_get_all_by_details_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=1.0)
+    record2 = r.DNSAddress("a", const._TYPE_A, const._CLASS_IN, 1, b"a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    records = cache.async_all_by_details("a", const._TYPE_A, const._CLASS_IN)
+    assert len(records) == 1
+    assert records[0] is record2
+
+
+def test_async_get_unique_returns_newest_record():
+    cache = r.DNSCache()
+    record1 = r.DNSPointer("a", const._TYPE_PTR, const._CLASS_IN, 1, "a", created=1.0)
+    record2 = r.DNSPointer("a", const._TYPE_PTR, const._CLASS_IN, 1, "a", created=2.0)
+    cache.async_add_records([record1])
+    cache.async_add_records([record2])
+    record = cache.async_get_unique(record1)
+    assert record is record2
+    record = cache.async_get_unique(record2)
+    assert record is record2
+
+
+@pytest.mark.asyncio
+async def test_cache_heap_cleanup() -> None:
+    """Test that the heap gets cleaned up when there are many old expirations."""
+    cache = r.DNSCache()
+    # The heap should not be cleaned up when there are less than 100 expiration changes
+    min_records_to_cleanup = 100
+    now = r.current_time_millis()
+    name = "heap.local."
+    ttl_seconds = 100
+    ttl_millis = ttl_seconds * 1000
+
+    for i in range(min_records_to_cleanup):
+        record = r.DNSAddress(name, const._TYPE_A, const._CLASS_IN, ttl_seconds, b"1", created=now + i)
+        cache.async_add_records([record])
+
+    assert len(cache._expire_heap) == min_records_to_cleanup
+    assert len(cache.async_entries_with_name(name)) == 1
+
+    # Now that we reached the minimum number of cookies to cleanup,
+    # add one more cookie to trigger the cleanup
+    record = r.DNSAddress(
+        name, const._TYPE_A, const._CLASS_IN, ttl_seconds, b"1", created=now + min_records_to_cleanup
+    )
+    expected_expire_time = record.created + ttl_millis
+    cache.async_add_records([record])
+    assert len(cache.async_entries_with_name(name)) == 1
+    entry = next(iter(cache.async_entries_with_name(name)))
+    assert (entry.created + ttl_millis) == expected_expire_time
+    assert entry is record
+
+    # Verify that the heap has been cleaned up
+    assert len(cache.async_entries_with_name(name)) == 1
+    cache.async_expire(now)
+
+    heap_copy = cache._expire_heap.copy()
+    heapify(heap_copy)
+    # Ensure heap order is maintained
+    assert cache._expire_heap == heap_copy
+
+    # The heap should have been cleaned up
+    assert len(cache._expire_heap) == 1
+    assert len(cache.async_entries_with_name(name)) == 1
+
+    entry = next(iter(cache.async_entries_with_name(name)))
+    assert entry is record
+
+    assert (entry.created + ttl_millis) == expected_expire_time
+
+    cache.async_expire(expected_expire_time)
+    assert not cache.async_entries_with_name(name), cache._expire_heap
+
+
+@pytest.mark.asyncio
+async def test_cache_heap_multi_name_cleanup() -> None:
+    """Test cleanup with multiple names."""
+    cache = r.DNSCache()
+    # The heap should not be cleaned up when there are less than 100 expiration changes
+    min_records_to_cleanup = 100
+    now = r.current_time_millis()
+    name = "heap.local."
+    name2 = "heap2.local."
+    ttl_seconds = 100
+    ttl_millis = ttl_seconds * 1000
+
+    for i in range(min_records_to_cleanup):
+        record = r.DNSAddress(name, const._TYPE_A, const._CLASS_IN, ttl_seconds, b"1", created=now + i)
+        cache.async_add_records([record])
+    expected_expire_time = record.created + ttl_millis
+
+    for i in range(5):
+        record = r.DNSAddress(
+            name2, const._TYPE_A, const._CLASS_IN, ttl_seconds, bytes((i,)), created=now + i
+        )
+        cache.async_add_records([record])
+
+    assert len(cache._expire_heap) == min_records_to_cleanup + 5
+    assert len(cache.async_entries_with_name(name)) == 1
+    assert len(cache.async_entries_with_name(name2)) == 5
+
+    cache.async_expire(now)
+    # The heap and expirations should have been cleaned up
+    assert len(cache._expire_heap) == 1 + 5
+    assert len(cache._expirations) == 1 + 5
+
+    cache.async_expire(expected_expire_time)
+    assert not cache.async_entries_with_name(name), cache._expire_heap
+
+
+@pytest.mark.asyncio
+async def test_cache_heap_pops_order() -> None:
+    """Test cache heap is popped in order."""
+    cache = r.DNSCache()
+    # The heap should not be cleaned up when there are less than 100 expiration changes
+    min_records_to_cleanup = 100
+    now = r.current_time_millis()
+    name = "heap.local."
+    name2 = "heap2.local."
+    ttl_seconds = 100
+
+    for i in range(min_records_to_cleanup):
+        record = r.DNSAddress(name, const._TYPE_A, const._CLASS_IN, ttl_seconds, b"1", created=now + i)
+        cache.async_add_records([record])
+
+    for i in range(5):
+        record = r.DNSAddress(
+            name2, const._TYPE_A, const._CLASS_IN, ttl_seconds, bytes((i,)), created=now + i
+        )
+        cache.async_add_records([record])
+
+    assert len(cache._expire_heap) == min_records_to_cleanup + 5
+    assert len(cache.async_entries_with_name(name)) == 1
+    assert len(cache.async_entries_with_name(name2)) == 5
+
+    start_ts = 0.0
+    while cache._expire_heap:
+        ts, _ = heappop(cache._expire_heap)
+        assert ts >= start_ts
+        start_ts = ts

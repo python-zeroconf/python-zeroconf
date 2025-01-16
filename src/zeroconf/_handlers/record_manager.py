@@ -40,7 +40,7 @@ _float = float
 class RecordManager:
     """Process records into the cache and notify listeners."""
 
-    __slots__ = ("zc", "cache", "listeners")
+    __slots__ = ("cache", "listeners", "zc")
 
     def __init__(self, zeroconf: "Zeroconf") -> None:
         """Init the record manager."""
@@ -103,7 +103,8 @@ class RecordManager:
                     record,
                     _DNS_PTR_MIN_TTL,
                 )
-                record.set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
+                # Safe because the record is never in the cache yet
+                record._set_created_ttl(record.created, _DNS_PTR_MIN_TTL)
 
             if record.unique:  # https://tools.ietf.org/html/rfc6762#section-10.2
                 unique_types.add((record.name, record_type, record.class_))
@@ -113,18 +114,19 @@ class RecordManager:
 
             maybe_entry = cache.async_get_unique(record)
             if not record.is_expired(now):
-                if maybe_entry is not None:
-                    maybe_entry.reset_ttl(record)
+                if record_type in _ADDRESS_RECORD_TYPES:
+                    address_adds.append(record)
                 else:
-                    if record_type in _ADDRESS_RECORD_TYPES:
-                        address_adds.append(record)
-                    else:
-                        other_adds.append(record)
-                updates.append(RecordUpdate(record, maybe_entry))
+                    other_adds.append(record)
+                rec_update = RecordUpdate.__new__(RecordUpdate)
+                rec_update._fast_init(record, maybe_entry)
+                updates.append(rec_update)
             # This is likely a goodbye since the record is
             # expired and exists in the cache
             elif maybe_entry is not None:
-                updates.append(RecordUpdate(record, maybe_entry))
+                rec_update = RecordUpdate.__new__(RecordUpdate)
+                rec_update._fast_init(record, maybe_entry)
+                updates.append(rec_update)
                 removes.add(record)
 
         if unique_types:
@@ -146,7 +148,7 @@ class RecordManager:
         # that any ServiceBrowser that is going to call
         # zc.get_service_info will see the cached value
         # but ONLY after all the record updates have been
-        # processsed.
+        # processed.
         new = False
         if other_adds or address_adds:
             new = cache.async_add_records(address_adds)

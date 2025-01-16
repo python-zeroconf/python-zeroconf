@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._handlers"""
 
 import asyncio
@@ -10,7 +7,7 @@ import socket
 import time
 import unittest
 import unittest.mock
-from typing import List, cast
+from typing import cast
 from unittest.mock import patch
 
 import pytest
@@ -110,7 +107,7 @@ class TestRegistrar(unittest.TestCase):
         assert question_answers
         _process_outgoing_packet(construct_outgoing_multicast_answers(question_answers.mcast_aggregate))
 
-        # The additonals should all be suppresed since they are all in the answers section
+        # The additonals should all be suppressed since they are all in the answers section
         # There will be one NSEC additional to indicate the lack of AAAA record
         #
         assert nbr_answers == 4 and nbr_additionals == 1 and nbr_authorities == 0
@@ -685,7 +682,7 @@ def test_qu_response():
     assert not question_answers.mcast_aggregate
     _validate_complete_response(question_answers.mcast_now)
 
-    # With QU set and an authorative answer (probe) should respond to both unitcast
+    # With QU set and an authoritative answer (probe) should respond to both unitcast
     # and multicast since the response hasn't been seen since 75% of the ttl
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(info.type, const._TYPE_PTR, const._CLASS_IN)
@@ -744,7 +741,7 @@ def test_known_answer_supression():
 
     now = current_time_millis()
     _clear_cache(zc)
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -768,7 +765,7 @@ def test_known_answer_supression():
     assert not question_answers.mcast_aggregate
     assert not question_answers.mcast_aggregate_last_second
 
-    # Test A supression
+    # Test A suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(server_name, const._TYPE_A, const._CLASS_IN)
     generated.add_question(question)
@@ -809,7 +806,7 @@ def test_known_answer_supression():
     assert not question_answers.mcast_aggregate
     assert not question_answers.mcast_aggregate_last_second
 
-    # Test SRV supression
+    # Test SRV suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_SRV, const._CLASS_IN)
     generated.add_question(question)
@@ -833,7 +830,7 @@ def test_known_answer_supression():
     assert not question_answers.mcast_aggregate
     assert not question_answers.mcast_aggregate_last_second
 
-    # Test TXT supression
+    # Test TXT suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(registration_name, const._TYPE_TXT, const._CLASS_IN)
     generated.add_question(question)
@@ -914,7 +911,7 @@ def test_multi_packet_known_answer_supression():
 
     now = current_time_millis()
     _clear_cache(zc)
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -976,7 +973,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     now = current_time_millis()
     _clear_cache(zc)
 
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME, const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -1062,7 +1059,7 @@ def test_upper_case_enumeration_query():
     zc.registry.async_add(info2)
     _clear_cache(zc)
 
-    # Test PTR supression
+    # Test PTR suppression
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
     question = r.DNSQuestion(const._SERVICE_TYPE_ENUMERATION_NAME.upper(), const._TYPE_PTR, const._CLASS_IN)
     generated.add_question(question)
@@ -1142,10 +1139,9 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Add the A record to the cache with 50% ttl remaining
     a_record = info.dns_addresses()[0]
-    a_record.set_created_ttl(current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
+    zc.cache._async_set_created_ttl(a_record, current_time_millis() - (a_record.ttl * 1000 / 2), a_record.ttl)
     assert not a_record.is_recent(current_time_millis())
     info._dns_address_cache = None  # we are mutating the record so clear the cache
-    zc.cache.async_add_records([a_record])
 
     # With QU should respond to only unicast when the answer has been recently multicast
     # even if the additional has not been recently multicast
@@ -1193,9 +1189,10 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
     # Remove the 100% PTR record and add a 50% PTR record
     zc.cache.async_remove_records([ptr_record])
-    ptr_record.set_created_ttl(current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl)
+    zc.cache._async_set_created_ttl(
+        ptr_record, current_time_millis() - (ptr_record.ttl * 1000 / 2), ptr_record.ttl
+    )
     assert not ptr_record.is_recent(current_time_millis())
-    zc.cache.async_add_records([ptr_record])
     # With QU should respond to only multicast since the has less
     # than 75% of its ttl remaining
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -1315,10 +1312,13 @@ async def test_cache_flush_bit():
     for record in new_records:
         assert zc.cache.async_get_unique(record) is not None
 
-    cached_records = [zc.cache.async_get_unique(record) for record in new_records]
-    for cached_record in cached_records:
-        assert cached_record is not None
-        cached_record.created = current_time_millis() - 1500
+    cached_record_group = [
+        zc.cache.async_all_by_details(record.name, record.type, record.class_) for record in new_records
+    ]
+    for cached_records in cached_record_group:
+        for cached_record in cached_records:
+            assert cached_record is not None
+            cached_record.created = current_time_millis() - 1500
 
     fresh_address = socket.inet_aton("4.4.4.4")
     info.addresses = [fresh_address]
@@ -1328,9 +1328,18 @@ async def test_cache_flush_bit():
         out.add_answer_at_time(answer, 0)
     for packet in out.packets():
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet))
-    for cached_record in cached_records:
-        assert cached_record is not None
-        assert cached_record.ttl == 1
+
+    cached_record_group = [
+        zc.cache.async_all_by_details(record.name, record.type, record.class_) for record in new_records
+    ]
+    for cached_records in cached_record_group:
+        for cached_record in cached_records:
+            # the new record should not be set to 1
+            if cached_record == answer:
+                assert cached_record.ttl != 1
+                continue
+            assert cached_record is not None
+            assert cached_record.ttl == 1
 
     for entry in zc.cache.async_all_by_details(server_name, const._TYPE_A, const._CLASS_IN):
         assert isinstance(entry, r.DNSAddress)
@@ -1362,7 +1371,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     class MyListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: List[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
@@ -1579,7 +1588,7 @@ async def test_duplicate_goodbye_answers_in_packet():
 
 @pytest.mark.asyncio
 async def test_response_aggregation_timings(run_isolated):
-    """Verify multicast respones are aggregated."""
+    """Verify multicast responses are aggregated."""
     type_ = "_mservice._tcp.local."
     type_2 = "_mservice2._tcp.local."
     type_3 = "_mservice3._tcp.local."
@@ -1949,7 +1958,7 @@ async def test_future_answers_are_removed_on_send():
     # The answer should get removed because we just sent it
     assert info.dns_pointer() not in outgoing_queue.queue[0].answers
 
-    # But the one we have not sent yet shoudl still go out later
+    # But the one we have not sent yet should still go out later
     assert info2.dns_pointer() in outgoing_queue.queue[0].answers
 
 
@@ -1964,7 +1973,7 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
     class MyListener:
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: List[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
@@ -1996,7 +2005,7 @@ async def test_async_updates_iteration_safe():
     class OtherListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: List[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
@@ -2005,7 +2014,7 @@ async def test_async_updates_iteration_safe():
     class ListenerThatAddsListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: List[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
             zc.async_add_listener(other, None)

@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+
 """Example of perodic dump of homekit services.
 
 This example is useful when a user wants an ondemand
@@ -6,10 +7,12 @@ list of HomeKit devices on the network.
 
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
-from typing import Any, List, Optional, cast
+from typing import Any, cast
 
 from zeroconf import IPVersion, ServiceBrowser, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
@@ -21,7 +24,7 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
     zeroconf = aiozc.zeroconf
     while True:
         await asyncio.sleep(5)
-        infos: List[AsyncServiceInfo] = []
+        infos: list[AsyncServiceInfo] = []
         for name in zeroconf.cache.names():
             if not name.endswith(HAP_TYPE):
                 continue
@@ -29,11 +32,11 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
         tasks = [info.async_request(aiozc.zeroconf, 3000) for info in infos]
         await asyncio.gather(*tasks)
         for info in infos:
-            print("Info for %s" % (info.name))
+            print(f"Info for {info.name}")
             if info:
-                addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_addresses()]
-                print("  Addresses: %s" % ", ".join(addresses))
-                print("  Weight: %d, priority: %d" % (info.weight, info.priority))
+                addresses = [f"{addr}:{cast(int, info.port)}" for addr in info.parsed_addresses()]
+                print(f"  Addresses: {', '.join(addresses)}")
+                print(f"  Weight: {info.weight}, priority: {info.priority}")
                 print(f"  Server: {info.server}")
                 if info.properties:
                     print("  Properties are:")
@@ -49,8 +52,8 @@ async def async_watch_services(aiozc: AsyncZeroconf) -> None:
 class AsyncRunner:
     def __init__(self, args: Any) -> None:
         self.args = args
-        self.threaded_browser: Optional[ServiceBrowser] = None
-        self.aiozc: Optional[AsyncZeroconf] = None
+        self.threaded_browser: ServiceBrowser | None = None
+        self.aiozc: AsyncZeroconf | None = None
 
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)

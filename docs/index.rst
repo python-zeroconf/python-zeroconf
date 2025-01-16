@@ -16,7 +16,7 @@ PyPI (installable, stable distributions): https://pypi.org/project/zeroconf. You
 
     pip install zeroconf
 
-python-zeroconf works with CPython 3.6+ and PyPy 3 implementing Python 3.6+.
+python-zeroconf works with CPython 3.8+ and PyPy 3 implementing Python 3.8+.
 
 Contents
 --------

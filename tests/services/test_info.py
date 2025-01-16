@@ -1,18 +1,16 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._services.info."""
+
+from __future__ import annotations
 
 import asyncio
 import logging
 import os
 import socket
-import sys
 import threading
 import unittest
+from collections.abc import Iterable
 from ipaddress import ip_address
 from threading import Event
-from typing import Iterable, List, Optional
 from unittest.mock import patch
 
 import pytest
@@ -82,7 +80,7 @@ class TestServiceInfo(unittest.TestCase):
             service_server,
             addresses=[service_address],
         )
-        # Verify backwards compatiblity with calling with None
+        # Verify backwards compatibility with calling with None
         info.async_update_records(zc, now, [])
         # Matching updates
         info.async_update_records(
@@ -246,7 +244,7 @@ class TestServiceInfo(unittest.TestCase):
             ttl,
             b"\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==",
         )
-        expired_record.set_created_ttl(1000, 1)
+        zc.cache._async_set_created_ttl(expired_record, 1000, 1)
         info.async_update_records(zc, now, [RecordUpdate(expired_record, None)])
         assert info.properties[b"ci"] == b"2"
         zc.close()
@@ -268,7 +266,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent: Optional[r.DNSOutgoing] = None
+        last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -411,7 +409,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent: Optional[r.DNSOutgoing] = None
+        last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -538,7 +536,7 @@ class TestServiceInfo(unittest.TestCase):
         send_event = Event()
         service_info_event = Event()
 
-        last_sent = None  # type: Optional[r.DNSOutgoing]
+        last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
             """Sends an outgoing packet."""
@@ -572,7 +570,7 @@ class TestServiceInfo(unittest.TestCase):
                 helper_thread.start()
                 wait_time = 1
 
-                # Expext query for SRV, TXT, A, AAAA
+                # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 4
@@ -582,7 +580,7 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
-                # Expext no further queries
+                # Expect no further queries
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -670,7 +668,7 @@ class TestServiceInfo(unittest.TestCase):
 
 def test_multiple_addresses():
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     desc = {"path": "/~paulsm/"}
     address_parsed = "10.0.1.2"
     address = socket.inet_aton(address_parsed)
@@ -704,7 +702,6 @@ def test_multiple_addresses():
     assert info.addresses == [address, address]
     assert info.parsed_addresses() == [address_parsed, address_parsed]
     assert info.parsed_scoped_addresses() == [address_parsed, address_parsed]
-    ipaddress_supports_scope_id = sys.version_info >= (3, 9, 0)
 
     if has_working_ipv6() and not os.environ.get("SKIP_IPV6"):
         address_v6_parsed = "2001:db8::1"
@@ -751,9 +748,7 @@ def test_multiple_addresses():
             assert info.ip_addresses_by_version(r.IPVersion.All) == [
                 ip_address(address),
                 ip_address(address_v6),
-                ip_address(address_v6_ll_scoped_parsed)
-                if ipaddress_supports_scope_id
-                else ip_address(address_v6_ll),
+                ip_address(address_v6_ll_scoped_parsed),
             ]
             assert info.addresses_by_version(r.IPVersion.V4Only) == [address]
             assert info.ip_addresses_by_version(r.IPVersion.V4Only) == [ip_address(address)]
@@ -763,9 +758,7 @@ def test_multiple_addresses():
             ]
             assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [
                 ip_address(address_v6),
-                ip_address(address_v6_ll_scoped_parsed)
-                if ipaddress_supports_scope_id
-                else ip_address(address_v6_ll),
+                ip_address(address_v6_ll_scoped_parsed),
             ]
             assert info.parsed_addresses() == [
                 address_parsed,
@@ -780,16 +773,15 @@ def test_multiple_addresses():
             assert info.parsed_scoped_addresses() == [
                 address_parsed,
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
+                address_v6_ll_scoped_parsed,
             ]
             assert info.parsed_scoped_addresses(r.IPVersion.V4Only) == [address_parsed]
             assert info.parsed_scoped_addresses(r.IPVersion.V6Only) == [
                 address_v6_parsed,
-                address_v6_ll_scoped_parsed if ipaddress_supports_scope_id else address_v6_ll_parsed,
+                address_v6_ll_scoped_parsed,
             ]
 
 
-@unittest.skipIf(sys.version_info < (3, 9, 0), "Requires newer python")
 def test_scoped_addresses_from_cache():
     type_ = "_http._tcp.local."
     registration_name = f"scoped.{type_}"
@@ -840,7 +832,7 @@ def test_scoped_addresses_from_cache():
 async def test_multiple_a_addresses_newest_address_first():
     """Test that info.addresses returns the newest seen address first."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     cache = aiozc.zeroconf.cache
@@ -859,7 +851,7 @@ async def test_multiple_a_addresses_newest_address_first():
 @pytest.mark.asyncio
 async def test_invalid_a_addresses(caplog):
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     cache = aiozc.zeroconf.cache
@@ -889,7 +881,7 @@ def test_filter_address_by_type_from_service_info():
     ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6])
 
-    def dns_addresses_to_addresses(dns_address: List[DNSAddress]) -> List[bytes]:
+    def dns_addresses_to_addresses(dns_address: list[DNSAddress]) -> list[bytes]:
         return [address.address for address in dns_address]
 
     assert dns_addresses_to_addresses(info.dns_addresses()) == [ipv4, ipv6]
@@ -1006,7 +998,7 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
 
 
 def test_asking_qu_questions():
-    """Verify explictly asking QU questions."""
+    """Verify explicitly asking QU questions."""
     type_ = "_quservice._tcp.local."
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
 
@@ -1030,7 +1022,7 @@ def test_asking_qu_questions():
 
 
 def test_asking_qm_questions():
-    """Verify explictly asking QM questions."""
+    """Verify explicitly asking QM questions."""
     type_ = "_quservice._tcp.local."
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
 
@@ -1092,7 +1084,7 @@ async def test_we_try_four_times_with_random_delay():
 async def test_release_wait_when_new_recorded_added():
     """Test that async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
@@ -1157,7 +1149,7 @@ async def test_release_wait_when_new_recorded_added():
 async def test_port_changes_are_seen():
     """Test that port changes are seen by async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
@@ -1240,7 +1232,7 @@ async def test_port_changes_are_seen():
 async def test_port_changes_are_seen_with_directed_request():
     """Test that port changes are seen by async_request with a directed request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
@@ -1323,7 +1315,7 @@ async def test_port_changes_are_seen_with_directed_request():
 async def test_ipv4_changes_are_seen():
     """Test that ipv4 changes are seen by async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiaipv4rec.%s" % type_
+    registration_name = f"multiaipv4rec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1411,7 +1403,7 @@ async def test_ipv4_changes_are_seen():
 async def test_ipv6_changes_are_seen():
     """Test that ipv6 changes are seen by async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiaipv6rec.%s" % type_
+    registration_name = f"multiaipv6rec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1506,7 +1498,7 @@ async def test_ipv6_changes_are_seen():
 async def test_bad_ip_addresses_ignored_in_cache():
     """Test that bad ip address in the cache are ignored async_request."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1560,7 +1552,7 @@ async def test_bad_ip_addresses_ignored_in_cache():
 async def test_service_name_change_as_seen_has_ip_in_cache():
     """Test that service name changes are seen by async_request when the ip is in the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1642,7 +1634,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
 async def test_service_name_change_as_seen_ip_not_in_cache():
     """Test that service name changes are seen by async_request when the ip is not in the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiarec.%s" % type_
+    registration_name = f"multiarec.{type_}"
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1725,7 +1717,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
 async def test_release_wait_when_new_recorded_added_concurrency():
     """Test that concurrent async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
-    registration_name = "multiareccon.%s" % type_
+    registration_name = f"multiareccon.{type_}"
     desc = {"path": "/~paulsm/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahostcon.local."
@@ -1796,7 +1788,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
 async def test_service_info_nsec_records():
     """Test we can generate nsec records from ServiceInfo."""
     type_ = "_http._tcp.local."
-    registration_name = "multiareccon.%s" % type_
+    registration_name = f"multiareccon.{type_}"
     desc = {"path": "/~paulsm/"}
     host = "multahostcon.local."
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)

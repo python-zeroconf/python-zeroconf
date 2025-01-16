@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 """Unit tests for aio.py."""
 
 import asyncio
@@ -936,7 +933,7 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_hap._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     callbacks = []
 
     class MyServiceListener(ServiceListener):
@@ -985,7 +982,7 @@ async def test_integration():
     got_query = asyncio.Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:
@@ -1187,7 +1184,7 @@ async def test_service_browser_ignores_unrelated_updates():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_veryuniqueone._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     callbacks = []
 
     class MyServiceListener(ServiceListener):
@@ -1331,7 +1328,7 @@ async def test_legacy_unicast_response(run_isolated):
         protocol.datagram_received(query.packets()[0], ("127.0.0.1", 6503))
 
     calls = send_mock.mock_calls
-    # Verify the response is sent back on the socket it was recieved from
+    # Verify the response is sent back on the socket it was received from
     assert calls == [call(ANY, "127.0.0.1", 6503, (), protocol.transport)]
     outgoing = send_mock.call_args[0][0]
     assert isinstance(outgoing, DNSOutgoing)

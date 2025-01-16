@@ -1,12 +1,8 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._dns."""
 
 import logging
 import os
 import socket
-import unittest
 import unittest.mock
 
 import pytest
@@ -98,34 +94,6 @@ class TestDunder(unittest.TestCase):
         self.assertRaises(r.AbstractMethodException, record.__eq__, record)
         with pytest.raises((r.AbstractMethodException, TypeError)):
             record.write(None)  # type: ignore[arg-type]
-
-    def test_dns_record_reset_ttl(self):
-        start = r.current_time_millis()
-        record = r.DNSRecord(
-            "irrelevant",
-            const._TYPE_SRV,
-            const._CLASS_IN,
-            const._DNS_HOST_TTL,
-            created=start,
-        )
-        later = start + 1000
-        record2 = r.DNSRecord(
-            "irrelevant",
-            const._TYPE_SRV,
-            const._CLASS_IN,
-            const._DNS_HOST_TTL,
-            created=later,
-        )
-        now = r.current_time_millis()
-
-        assert record.created != record2.created
-        assert record.get_remaining_ttl(now) != record2.get_remaining_ttl(now)
-
-        record.reset_ttl(record2)
-
-        assert record.ttl == record2.ttl
-        assert record.created == record2.created
-        assert record.get_remaining_ttl(now) == record2.get_remaining_ttl(now)
 
     def test_service_info_dunder(self):
         type_ = "_test-srvc-type._tcp.local."
@@ -229,6 +197,33 @@ def test_dns_record_hashablity_does_not_consider_ttl():
     assert len(record_set) == 1
 
     record3_dupe = r.DNSAddress("irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same")
+    assert record2 == record3_dupe
+    assert record2.__hash__() == record3_dupe.__hash__()
+
+    record_set.add(record3_dupe)
+    assert len(record_set) == 1
+
+
+def test_dns_record_hashablity_does_not_consider_created():
+    """Test DNSRecord are hashable and created is not considered."""
+
+    # Verify the TTL is not considered in the hash
+    record1 = r.DNSAddress(
+        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same", created=1.0
+    )
+    record2 = r.DNSAddress(
+        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same", created=2.0
+    )
+
+    record_set = {record1, record2}
+    assert len(record_set) == 1
+
+    record_set.add(record1)
+    assert len(record_set) == 1
+
+    record3_dupe = r.DNSAddress(
+        "irrelevant", const._TYPE_A, const._CLASS_IN, const._DNS_HOST_TTL, b"same", created=3.0
+    )
     assert record2 == record3_dupe
     assert record2.__hash__() == record3_dupe.__hash__()
 

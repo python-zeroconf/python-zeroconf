@@ -20,11 +20,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import asyncio
 import socket
 import time
-from functools import lru_cache
-from typing import List, Optional, Set
+from functools import cache
 from unittest import mock
 
 import ifaddr
@@ -36,11 +37,11 @@ _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
-    def suppresses(self, question: DNSQuestion, now: float, known_answers: Set[DNSRecord]) -> bool:
+    def suppresses(self, question: DNSQuestion, now: float, known_answers: set[DNSRecord]) -> bool:
         return False
 
 
-def _inject_responses(zc: Zeroconf, msgs: List[DNSIncoming]) -> None:
+def _inject_responses(zc: Zeroconf, msgs: list[DNSIncoming]) -> None:
     """Inject a DNSIncoming response."""
     assert zc.loop is not None
 
@@ -62,9 +63,9 @@ def _wait_for_start(zc: Zeroconf) -> None:
     asyncio.run_coroutine_threadsafe(zc.async_wait_for_start(), zc.loop).result()
 
 
-@lru_cache(maxsize=None)
+@cache
 def has_working_ipv6():
-    """Return True if if the system can bind an IPv6 address."""
+    """Return True if the system can bind an IPv6 address."""
     if not socket.has_ipv6:
         return False
 
@@ -90,7 +91,7 @@ def _clear_cache(zc: Zeroconf) -> None:
     zc.question_history.clear()
 
 
-def time_changed_millis(millis: Optional[float] = None) -> None:
+def time_changed_millis(millis: float | None = None) -> None:
     """Call all scheduled events for a time."""
     loop = asyncio.get_running_loop()
     loop_time = loop.time()

@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 
 
 class _AnswerStrategy:
-    __slots__ = ("question", "strategy_type", "types", "services")
+    __slots__ = ("question", "services", "strategy_type", "types")
 
     def __init__(
         self,
@@ -91,15 +91,15 @@ class _QueryResponse:
     """A pair for unicast and multicast DNSOutgoing responses."""
 
     __slots__ = (
-        "_is_probe",
-        "_questions",
-        "_now",
-        "_cache",
         "_additionals",
-        "_ucast",
-        "_mcast_now",
+        "_cache",
+        "_is_probe",
         "_mcast_aggregate",
         "_mcast_aggregate_last_second",
+        "_mcast_now",
+        "_now",
+        "_questions",
+        "_ucast",
     )
 
     def __init__(self, cache: DNSCache, questions: List[DNSQuestion], is_probe: bool, now: float) -> None:
@@ -191,12 +191,12 @@ class QueryHandler:
     """Query the ServiceRegistry."""
 
     __slots__ = (
-        "zc",
-        "registry",
         "cache",
-        "question_history",
-        "out_queue",
         "out_delay_queue",
+        "out_queue",
+        "question_history",
+        "registry",
+        "zc",
     )
 
     def __init__(self, zc: "Zeroconf") -> None:
@@ -441,7 +441,7 @@ class QueryHandler:
     ) -> None:
         """Respond to a (re)assembled query.
 
-        If the protocol recieved packets with the TC bit set, it will
+        If the protocol received packets with the TC bit set, it will
         wait a bit for the rest of the packets and only call
         handle_assembled_query once it has a complete set of packets
         or the timer expires. If the TC bit is not set, a single
@@ -457,7 +457,7 @@ class QueryHandler:
             id_ = first_packet.id
             out = construct_outgoing_unicast_answers(question_answers.ucast, ucast_source, questions, id_)
             # When sending unicast, only send back the reply
-            # via the same socket that it was recieved from
+            # via the same socket that it was received from
             # as we know its reachable from that socket
             self.zc.async_send(out, addr, port, v6_flow_scope, transport)
         if question_answers.mcast_now:

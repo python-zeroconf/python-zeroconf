@@ -29,11 +29,11 @@ class _WrappedTransport:
     """A wrapper for transports."""
 
     __slots__ = (
-        "transport",
+        "fileno",
         "is_ipv6",
         "sock",
-        "fileno",
         "sock_name",
+        "transport",
     )
 
     def __init__(

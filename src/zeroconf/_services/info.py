@@ -22,7 +22,6 @@ USA
 
 import asyncio
 import random
-import sys
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union, cast
 
 from .._cache import DNSCache
@@ -76,8 +75,6 @@ from ..const import (
     _TYPE_SRV,
     _TYPE_TXT,
 )
-
-IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 _IPVersion_All_value = IPVersion.All.value
 _IPVersion_V4Only_value = IPVersion.V4Only.value
@@ -138,28 +135,28 @@ class ServiceInfo(RecordUpdateListener):
     """
 
     __slots__ = (
-        "text",
-        "type",
-        "_name",
-        "key",
-        "_ipv4_addresses",
-        "_ipv6_addresses",
-        "port",
-        "weight",
-        "priority",
-        "server",
-        "server_key",
-        "_properties",
         "_decoded_properties",
-        "host_ttl",
-        "other_ttl",
-        "interface_index",
-        "_new_records_futures",
+        "_dns_address_cache",
         "_dns_pointer_cache",
         "_dns_service_cache",
         "_dns_text_cache",
-        "_dns_address_cache",
         "_get_address_and_nsec_records_cache",
+        "_ipv4_addresses",
+        "_ipv6_addresses",
+        "_name",
+        "_new_records_futures",
+        "_properties",
+        "host_ttl",
+        "interface_index",
+        "key",
+        "other_ttl",
+        "port",
+        "priority",
+        "server",
+        "server_key",
+        "text",
+        "type",
+        "weight",
     )
 
     def __init__(
@@ -221,7 +218,7 @@ class ServiceInfo(RecordUpdateListener):
 
     @name.setter
     def name(self, name: str) -> None:
-        """Replace the the name and reset the key."""
+        """Replace the name and reset the key."""
         self._name = name
         self.key = name.lower()
         self._dns_service_cache = None
@@ -250,7 +247,7 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
-            if IPADDRESS_SUPPORTS_SCOPE_ID and len(address) == 16 and self.interface_index is not None:
+            if len(address) == 16 and self.interface_index is not None:
                 addr = ip_bytes_and_scope_to_address(address, self.interface_index)
             else:
                 addr = cached_ip_addresses(address)

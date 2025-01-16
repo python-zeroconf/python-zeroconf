@@ -1,7 +1,8 @@
 """Benchmark for DNSIncoming."""
 
 import socket
-import timeit
+
+from pytest_codspeed import BenchmarkFixture
 
 from zeroconf import (
     DNSAddress,
@@ -175,12 +176,9 @@ def generate_packets() -> list[bytes]:
 packets = generate_packets()
 
 
-def parse_incoming_message() -> None:
-    for packet in packets:
-        DNSIncoming(packet).answers  # noqa: B018
-        break
-
-
-count = 100000
-time = timeit.Timer(parse_incoming_message).timeit(count)
-print(f"Parsing {count} incoming messages took {time} seconds")
+def test_parse_incoming_message(benchmark: BenchmarkFixture) -> None:
+    @benchmark
+    def parse_incoming_message() -> None:
+        for packet in packets:
+            DNSIncoming(packet).answers  # noqa: B018
+            break

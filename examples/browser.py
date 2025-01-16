@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """Example of browsing for a service.
 
@@ -26,12 +26,12 @@ def on_service_state_change(
 
     if state_change is ServiceStateChange.Added:
         info = zeroconf.get_service_info(service_type, name)
-        print("Info from zeroconf.get_service_info: %r" % (info))
+        print(f"Info from zeroconf.get_service_info: {info!r}")
 
         if info:
-            addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
-            print("  Addresses: %s" % ", ".join(addresses))
-            print("  Weight: %d, priority: %d" % (info.weight, info.priority))
+            addresses = [f"{addr}:{cast(int, info.port)}" for addr in info.parsed_scoped_addresses()]
+            print(f"  Addresses: {', '.join(addresses)}")
+            print(f"  Weight: {info.weight}, priority: {info.priority}")
             print(f"  Server: {info.server}")
             if info.properties:
                 print("  Properties are:")
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     if args.find:
         services = list(ZeroconfServiceTypes.find(zc=zeroconf))
 
-    print("\nBrowsing %d service(s), press Ctrl-C to exit...\n" % len(services))
+    print(f"\nBrowsing {len(services)} service(s), press Ctrl-C to exit...\n")
     browser = ServiceBrowser(zeroconf, services, handlers=[on_service_state_change])
 
     try:

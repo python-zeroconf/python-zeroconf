@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._core"""
+
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -12,13 +11,8 @@ import threading
 import time
 import unittest
 import unittest.mock
-from typing import Tuple, Union, cast
-from unittest.mock import Mock, patch
-
-if sys.version_info[:3][1] < 8:
-    AsyncMock = Mock
-else:
-    from unittest.mock import AsyncMock
+from typing import cast
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -46,13 +40,13 @@ def teardown_module():
 
 
 def threadsafe_query(
-    zc: "Zeroconf",
-    protocol: "AsyncListener",
+    zc: Zeroconf,
+    protocol: AsyncListener,
     msg: DNSIncoming,
     addr: str,
     port: int,
     transport: _WrappedTransport,
-    v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
+    v6_flow_scope: tuple[()] | tuple[int, int],
 ) -> None:
     async def make_query():
         protocol.handle_query_or_defer(msg, addr, port, transport, v6_flow_scope)
@@ -326,7 +320,7 @@ def test_goodbye_all_services():
     out = zc.generate_unregister_all_services()
     assert out is None
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     desc = {"path": "/~paulsm/"}
     info = r.ServiceInfo(
         type_,
@@ -348,7 +342,7 @@ def test_goodbye_all_services():
     second_packet = out.packets()
     assert second_packet == first_packet
 
-    # Verify the registery is empty
+    # Verify the registry is empty
     out3 = zc.generate_unregister_all_services()
     assert out3 is None
     assert zc.registry.async_get_service_infos() == []
@@ -676,7 +670,7 @@ async def test_open_close_twice_from_async() -> None:
     """Test we can close twice from a coroutine when using Zeroconf.
 
     Ideally callers switch to using AsyncZeroconf, however there will
-    be a peroid where they still call the sync wrapper that we want
+    be a period where they still call the sync wrapper that we want
     to ensure will not deadlock on shutdown.
 
     This test is expected to throw warnings about tasks being destroyed
@@ -748,7 +742,6 @@ def test_shutdown_while_register_in_process():
 
 
 @pytest.mark.asyncio
-@unittest.skipIf(sys.version_info[:3][1] < 8, "Requires Python 3.8 or later to patch _async_setup")
 @patch("zeroconf._core._STARTUP_TIMEOUT", 0)
 @patch("zeroconf._core.AsyncEngine._async_setup", new_callable=AsyncMock)
 async def test_event_loop_blocked(mock_start):

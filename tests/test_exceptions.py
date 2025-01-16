@@ -1,10 +1,6 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._exceptions"""
 
 import logging
-import unittest
 import unittest.mock
 
 import zeroconf as r

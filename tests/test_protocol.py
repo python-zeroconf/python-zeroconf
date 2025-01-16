@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._protocol"""
 
 import copy
@@ -8,7 +5,6 @@ import logging
 import os
 import socket
 import struct
-import unittest
 import unittest.mock
 from typing import cast
 
@@ -261,7 +257,7 @@ class PacketGeneration(unittest.TestCase):
         self.assertRaises(r.NamePartTooLongException, generated.packets)
 
     def test_many_questions(self):
-        """Test many questions get seperated into multiple packets."""
+        """Test many questions get separated into multiple packets."""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for i in range(100):
@@ -281,7 +277,7 @@ class PacketGeneration(unittest.TestCase):
         assert len(parsed2.questions) == 15
 
     def test_many_questions_with_many_known_answers(self):
-        """Test many questions and known answers get seperated into multiple packets."""
+        """Test many questions and known answers get separated into multiple packets."""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         questions = []
         for _ in range(30):
@@ -319,7 +315,7 @@ class PacketGeneration(unittest.TestCase):
         assert not parsed3.truncated
 
     def test_massive_probe_packet_split(self):
-        """Test probe with many authorative answers."""
+        """Test probe with many authoritative answers."""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
         questions = []
         for _ in range(30):
@@ -710,7 +706,7 @@ def test_tc_bit_in_query_packet():
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
-                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                f"HASS Bridge W9DN {i}._hap._tcp.local.",
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
@@ -742,7 +738,7 @@ def test_tc_bit_not_set_in_answer_packet():
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
-                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                f"HASS Bridge W9DN {i}._hap._tcp.local.",
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,
@@ -816,7 +812,7 @@ def test_records_same_packet_share_fate():
     for i in range(30):
         out.add_answer_at_time(
             DNSText(
-                ("HASS Bridge W9DN %s._hap._tcp.local." % i),
+                f"HASS Bridge W9DN {i}._hap._tcp.local.",
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 const._DNS_OTHER_TTL,

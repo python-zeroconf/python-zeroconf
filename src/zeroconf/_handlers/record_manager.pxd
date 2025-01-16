@@ -6,12 +6,11 @@ from .._dns cimport DNSQuestion, DNSRecord
 from .._protocol.incoming cimport DNSIncoming
 from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis
-
+from .._record_update cimport RecordUpdate
 
 cdef cython.float _DNS_PTR_MIN_TTL
 cdef cython.uint _TYPE_PTR
 cdef object _ADDRESS_RECORD_TYPES
-cdef object RecordUpdate
 cdef bint TYPE_CHECKING
 cdef object _TYPE_PTR
 
@@ -31,6 +30,7 @@ cdef class RecordManager:
         record=DNSRecord,
         answers=cython.list,
         maybe_entry=DNSRecord,
+        rec_update=RecordUpdate
     )
     cpdef void async_updates_from_response(self, DNSIncoming msg)
 

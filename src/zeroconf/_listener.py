@@ -55,17 +55,17 @@ class AsyncListener:
     the read() method called when a socket is available for reading."""
 
     __slots__ = (
-        "zc",
-        "_registry",
-        "_record_manager",
-        "_query_handler",
-        "data",
-        "last_time",
-        "last_message",
-        "transport",
-        "sock_description",
         "_deferred",
+        "_query_handler",
+        "_record_manager",
+        "_registry",
         "_timers",
+        "data",
+        "last_message",
+        "last_time",
+        "sock_description",
+        "transport",
+        "zc",
     )
 
     def __init__(self, zc: "Zeroconf") -> None:
@@ -241,7 +241,7 @@ class AsyncListener:
     def error_received(self, exc: Exception) -> None:
         """Likely socket closed or IPv6."""
         # We preformat the message string with the socket as we want
-        # log_exception_once to log a warrning message once PER EACH
+        # log_exception_once to log a warning message once PER EACH
         # different socket in case there are problems with multiple
         # sockets
         msg_str = f"Error with socket {self.sock_description}): %s"

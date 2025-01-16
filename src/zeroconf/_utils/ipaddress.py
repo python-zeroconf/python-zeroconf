@@ -20,26 +20,19 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
-import sys
-from functools import lru_cache
+from functools import cache, lru_cache
 from ipaddress import AddressValueError, IPv4Address, IPv6Address, NetmaskValueError
 from typing import Any, Optional, Union
 
 from .._dns import DNSAddress
 from ..const import _TYPE_AAAA
 
-if sys.version_info >= (3, 9, 0):
-    from functools import cache
-else:
-    cache = lru_cache(maxsize=None)
-
 bytes_ = bytes
 int_ = int
-IPADDRESS_SUPPORTS_SCOPE_ID = sys.version_info >= (3, 9, 0)
 
 
 class ZeroconfIPv4Address(IPv4Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified", "_is_loopback", "__hash__", "zc_integer")
+    __slots__ = ("__hash__", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv4 address."""
@@ -72,7 +65,7 @@ class ZeroconfIPv4Address(IPv4Address):
 
 
 class ZeroconfIPv6Address(IPv6Address):
-    __slots__ = ("_str", "_is_link_local", "_is_unspecified", "_is_loopback", "__hash__", "zc_integer")
+    __slots__ = ("__hash__", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv6 address."""
@@ -128,7 +121,7 @@ def get_ip_address_object_from_record(
     record: DNSAddress,
 ) -> Optional[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
     """Get the IP address object from the record."""
-    if IPADDRESS_SUPPORTS_SCOPE_ID and record.type == _TYPE_AAAA and record.scope_id:
+    if record.type == _TYPE_AAAA and record.scope_id:
         return ip_bytes_and_scope_to_address(record.address, record.scope_id)
     return cached_ip_addresses_wrapper(record.address)
 
@@ -146,7 +139,7 @@ def ip_bytes_and_scope_to_address(
 
 def str_without_scope_id(addr: Union[ZeroconfIPv4Address, ZeroconfIPv6Address]) -> str:
     """Return the string representation of the address without the scope id."""
-    if IPADDRESS_SUPPORTS_SCOPE_ID and addr.version == 6:
+    if addr.version == 6:
         address_str = str(addr)
         return address_str.partition("%")[0]
     return str(addr)

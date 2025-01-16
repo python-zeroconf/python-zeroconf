@@ -70,25 +70,25 @@ class DNSIncoming:
     """Object representation of an incoming DNS packet"""
 
     __slots__ = (
-        "_did_read_others",
-        "flags",
-        "offset",
-        "data",
-        "view",
-        "_data_len",
-        "_name_cache",
-        "_questions",
         "_answers",
-        "id",
-        "_num_questions",
+        "_data_len",
+        "_did_read_others",
+        "_has_qu_question",
+        "_name_cache",
+        "_num_additionals",
         "_num_answers",
         "_num_authorities",
-        "_num_additionals",
-        "valid",
+        "_num_questions",
+        "_questions",
+        "data",
+        "flags",
+        "id",
         "now",
+        "offset",
         "scope_id",
         "source",
-        "_has_qu_question",
+        "valid",
+        "view",
     )
 
     def __init__(
@@ -171,7 +171,7 @@ class DNSIncoming:
         return self._num_additionals
 
     def _initial_parse(self) -> None:
-        """Parse the data needed to initalize the packet object."""
+        """Parse the data needed to initialize the packet object."""
         self._read_header()
         self._read_questions()
         if not self._num_questions:
@@ -208,18 +208,20 @@ class DNSIncoming:
         return self._num_authorities > 0
 
     def __repr__(self) -> str:
-        return "<DNSIncoming:{%s}>" % ", ".join(
-            [
-                "id=%s" % self.id,
-                "flags=%s" % self.flags,
-                "truncated=%s" % self.truncated,
-                "n_q=%s" % self._num_questions,
-                "n_ans=%s" % self._num_answers,
-                "n_auth=%s" % self._num_authorities,
-                "n_add=%s" % self._num_additionals,
-                "questions=%s" % self._questions,
-                "answers=%s" % self.answers(),
-            ]
+        return "<DNSIncoming:{}>".format(
+            ", ".join(
+                [
+                    f"id={self.id}",
+                    f"flags={self.flags}",
+                    f"truncated={self.truncated}",
+                    f"n_q={self._num_questions}",
+                    f"n_ans={self._num_answers}",
+                    f"n_auth={self._num_authorities}",
+                    f"n_add={self._num_additionals}",
+                    f"questions={self._questions}",
+                    f"answers={self.answers()}",
+                ]
+            )
         )
 
     def _read_header(self) -> None:
@@ -246,7 +248,8 @@ class DNSIncoming:
             # The question has 2 unsigned shorts in network order
             type_ = view[offset] << 8 | view[offset + 1]
             class_ = view[offset + 2] << 8 | view[offset + 3]
-            question = DNSQuestion(name, type_, class_)
+            question = DNSQuestion.__new__(DNSQuestion)
+            question._fast_init(name, type_, class_)
             if question.unique:  # QU questions use the same bit as unique
                 self._has_qu_question = True
             questions.append(question)
@@ -306,11 +309,17 @@ class DNSIncoming:
     ) -> Optional[DNSRecord]:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
-            return DNSAddress(domain, type_, class_, ttl, self._read_string(4), None, self.now)
+            address_rec = DNSAddress.__new__(DNSAddress)
+            address_rec._fast_init(domain, type_, class_, ttl, self._read_string(4), None, self.now)
+            return address_rec
         if type_ in (_TYPE_CNAME, _TYPE_PTR):
-            return DNSPointer(domain, type_, class_, ttl, self._read_name(), self.now)
+            pointer_rec = DNSPointer.__new__(DNSPointer)
+            pointer_rec._fast_init(domain, type_, class_, ttl, self._read_name(), self.now)
+            return pointer_rec
         if type_ == _TYPE_TXT:
-            return DNSText(domain, type_, class_, ttl, self._read_string(length), self.now)
+            text_rec = DNSText.__new__(DNSText)
+            text_rec._fast_init(domain, type_, class_, ttl, self._read_string(length), self.now)
+            return text_rec
         if type_ == _TYPE_SRV:
             view = self.view
             offset = self.offset
@@ -319,7 +328,8 @@ class DNSIncoming:
             priority = view[offset] << 8 | view[offset + 1]
             weight = view[offset + 2] << 8 | view[offset + 3]
             port = view[offset + 4] << 8 | view[offset + 5]
-            return DNSService(
+            srv_rec = DNSService.__new__(DNSService)
+            srv_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -330,8 +340,10 @@ class DNSIncoming:
                 self._read_name(),
                 self.now,
             )
+            return srv_rec
         if type_ == _TYPE_HINFO:
-            return DNSHinfo(
+            hinfo_rec = DNSHinfo.__new__(DNSHinfo)
+            hinfo_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -340,8 +352,10 @@ class DNSIncoming:
                 self._read_character_string(),
                 self.now,
             )
+            return hinfo_rec
         if type_ == _TYPE_AAAA:
-            return DNSAddress(
+            address_rec = DNSAddress.__new__(DNSAddress)
+            address_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -350,9 +364,11 @@ class DNSIncoming:
                 self.scope_id,
                 self.now,
             )
+            return address_rec
         if type_ == _TYPE_NSEC:
             name_start = self.offset
-            return DNSNsec(
+            nsec_rec = DNSNsec.__new__(DNSNsec)
+            nsec_rec._fast_init(
                 domain,
                 type_,
                 class_,
@@ -361,6 +377,7 @@ class DNSIncoming:
                 self._read_bitmap(name_start + length),
                 self.now,
             )
+            return nsec_rec
         # Try to ignore types we don't know about
         # Skip the payload for the resource record so the next
         # records can be parsed correctly

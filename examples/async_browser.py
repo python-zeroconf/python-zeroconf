@@ -1,14 +1,16 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """Example of browsing for a service.
 
 The default is HTTP and HAP; use --find to search for all available services in the network
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from zeroconf import IPVersion, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import (
@@ -35,12 +37,12 @@ def async_on_service_state_change(
 async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
     info = AsyncServiceInfo(service_type, name)
     await info.async_request(zeroconf, 3000)
-    print("Info from zeroconf.get_service_info: %r" % (info))
+    print(f"Info from zeroconf.get_service_info: {info!r}")
     if info:
-        addresses = ["%s:%d" % (addr, cast(int, info.port)) for addr in info.parsed_scoped_addresses()]
-        print("  Name: %s" % name)
-        print("  Addresses: %s" % ", ".join(addresses))
-        print("  Weight: %d, priority: %d" % (info.weight, info.priority))
+        addresses = [f"{addr}:{cast(int, info.port)}" for addr in info.parsed_scoped_addresses()]
+        print(f"  Name: {name}")
+        print(f"  Addresses: {', '.join(addresses)}")
+        print(f"  Weight: {info.weight}, priority: {info.priority}")
         print(f"  Server: {info.server}")
         if info.properties:
             print("  Properties are:")
@@ -56,8 +58,8 @@ async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name
 class AsyncRunner:
     def __init__(self, args: Any) -> None:
         self.args = args
-        self.aiobrowser: Optional[AsyncServiceBrowser] = None
-        self.aiozc: Optional[AsyncZeroconf] = None
+        self.aiobrowser: AsyncServiceBrowser | None = None
+        self.aiozc: AsyncZeroconf | None = None
 
     async def async_run(self) -> None:
         self.aiozc = AsyncZeroconf(ip_version=ip_version)
@@ -68,7 +70,7 @@ class AsyncRunner:
                 await AsyncZeroconfServiceTypes.async_find(aiozc=self.aiozc, ip_version=ip_version)
             )
 
-        print("\nBrowsing %s service(s), press Ctrl-C to exit...\n" % services)
+        print(f"\nBrowsing {services} service(s), press Ctrl-C to exit...\n")
         self.aiobrowser = AsyncServiceBrowser(
             self.aiozc.zeroconf, services, handlers=[async_on_service_state_change]
         )

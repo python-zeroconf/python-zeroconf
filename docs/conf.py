@@ -7,7 +7,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-from typing import Any, Dict
+from typing import Any
 
 import zeroconf
 
@@ -173,7 +173,7 @@ htmlhelp_basename = "zeroconfdoc"
 
 # -- Options for LaTeX output --------------------------------------------------
 
-latex_elements: Dict[str, Any] = {}
+latex_elements: dict[str, Any] = {}
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).

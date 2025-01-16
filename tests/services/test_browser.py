@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 """Unit tests for zeroconf._services.browser."""
 
 import asyncio
@@ -9,8 +6,9 @@ import os
 import socket
 import time
 import unittest
+from collections.abc import Iterable
 from threading import Event
-from typing import Iterable, List, Set, cast
+from typing import cast
 from unittest.mock import patch
 
 import pytest
@@ -565,7 +563,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
     got_query = asyncio.Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:
@@ -583,7 +581,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
     old_send = zeroconf_browser.async_send
 
     expected_ttl = const._DNS_OTHER_TTL
-    questions: List[List[DNSQuestion]] = []
+    questions: list[list[DNSQuestion]] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
@@ -667,7 +665,7 @@ async def test_ttl_refresh_cancelled_rescue_query():
     got_query = asyncio.Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:
@@ -770,7 +768,7 @@ async def test_ttl_refresh_cancelled_rescue_query():
 
 @pytest.mark.asyncio
 async def test_asking_qm_questions():
-    """Verify explictly asking QM questions."""
+    """Verify explicitly asking QM questions."""
     type_ = "_quservice._tcp.local."
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zeroconf_browser = aiozc.zeroconf
@@ -916,7 +914,7 @@ def test_service_browser_is_aware_of_port_changes():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     callbacks = []
 
@@ -980,7 +978,7 @@ def test_service_browser_listeners_update_service():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1045,7 +1043,7 @@ def test_service_browser_listeners_no_update_service():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1154,7 +1152,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
         10000,
         f"known-to-other.{name}",
     )
-    other_known_answers: Set[r.DNSRecord] = {answer}
+    other_known_answers: set[r.DNSRecord] = {answer}
     zc.question_history.add_question_at_time(question, now, other_known_answers)
     assert zc.question_history.suppresses(question, now, other_known_answers)
 
@@ -1199,7 +1197,7 @@ async def test_query_scheduler():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
     zc = aiozc.zeroconf
-    sends: List[r.DNSIncoming] = []
+    sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
@@ -1292,7 +1290,7 @@ async def test_query_scheduler_rescue_records():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
     zc = aiozc.zeroconf
-    sends: List[r.DNSIncoming] = []
+    sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
         """Sends an outgoing packet."""
@@ -1367,9 +1365,9 @@ def test_service_browser_matching():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
     not_match_type_ = "_asustor-looksgood_http._tcp.local."
-    not_match_registration_name = "xxxyyy.%s" % not_match_type_
+    not_match_registration_name = f"xxxyyy.{not_match_type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1460,7 +1458,7 @@ def test_service_browser_expire_callbacks():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_old._tcp.local."
-    registration_name = "uniquezip323.%s" % type_
+    registration_name = f"uniquezip323.{type_}"
     callbacks = []
 
     class MyServiceListener(r.ServiceListener):
@@ -1512,9 +1510,9 @@ def test_service_browser_expire_callbacks():
     )
     # Force the ttl to be 1 second
     now = current_time_millis()
-    for cache_record in zc.cache.cache.values():
+    for cache_record in list(zc.cache.cache.values()):
         for record in cache_record:
-            record.set_created_ttl(now, 1)
+            zc.cache._async_set_created_ttl(record, now, 1)
 
     time.sleep(0.3)
     info.port = 400
@@ -1585,7 +1583,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries():
     """Test that we stop sending startup queries if zeroconf is closed out from under the browser."""
     service_added = asyncio.Event()
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:
@@ -1654,7 +1652,7 @@ async def test_close_zeroconf_without_browser_after_start_up_queries():
     service_added = asyncio.Event()
 
     type_ = "_http._tcp.local."
-    registration_name = "xxxyyy.%s" % type_
+    registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
         if name == registration_name:

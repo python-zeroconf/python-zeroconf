@@ -83,32 +83,32 @@ from ._utils.time import (  # noqa # import needed for backwards compat
 
 __author__ = "Paul Scott-Murphy, William McBrine"
 __maintainer__ = "Jakub Stasiak <jakub@stasiak.at>"
-__version__ = "0.134.0"
+__version__ = "0.139.0"
 __license__ = "LGPL"
 
 
 __all__ = [
-    "__version__",
-    "Zeroconf",
-    "ServiceInfo",
-    "ServiceBrowser",
-    "ServiceListener",
-    "DNSQuestionType",
-    "InterfaceChoice",
-    "ServiceStateChange",
-    "IPVersion",
-    "ZeroconfServiceTypes",
-    "RecordUpdate",
-    "RecordUpdateListener",
-    "current_time_millis",
-    # Exceptions
-    "Error",
     "AbstractMethodException",
     "BadTypeInNameException",
+    "DNSQuestionType",
+    # Exceptions
+    "Error",
     "EventLoopBlocked",
+    "IPVersion",
     "IncomingDecodeError",
+    "InterfaceChoice",
     "NamePartTooLongException",
     "NonUniqueNameException",
     "NotRunningException",
+    "RecordUpdate",
+    "RecordUpdateListener",
+    "ServiceBrowser",
+    "ServiceInfo",
+    "ServiceListener",
     "ServiceNameAlreadyRegistered",
+    "ServiceStateChange",
+    "Zeroconf",
+    "ZeroconfServiceTypes",
+    "__version__",
+    "current_time_millis",
 ]

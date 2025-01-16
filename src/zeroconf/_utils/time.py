@@ -28,7 +28,7 @@ _float = float
 def current_time_millis() -> _float:
     """Current time in milliseconds.
 
-    The current implemention uses `time.monotonic`
+    The current implementation uses `time.monotonic`
     but may change in the future.
 
     The design requires the time to match asyncio.loop.time()
