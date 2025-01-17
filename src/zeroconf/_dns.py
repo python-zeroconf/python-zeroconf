@@ -25,7 +25,6 @@ import socket
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union, cast
 
 from ._exceptions import AbstractMethodException
-from ._utils.net import _is_v6_address
 from ._utils.time import current_time_millis
 from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
 

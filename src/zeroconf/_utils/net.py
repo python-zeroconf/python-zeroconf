@@ -22,8 +22,8 @@ USA
 
 import enum
 import errno
-import ipaddress
 import socket
+import ipaddress
 import struct
 import sys
 from typing import Any, List, Optional, Sequence, Tuple, Union, cast
@@ -32,12 +32,14 @@ import ifaddr
 
 from .._logger import log
 from ..const import _IPPROTO_IPV6, _MDNS_ADDR, _MDNS_ADDR6, _MDNS_PORT
+from .ipaddress import _cached_ip_addresses
 
 
 @enum.unique
 class InterfaceChoice(enum.Enum):
     Default = 1
     All = 2
+    AllWithLoopback = 3
 
 
 InterfacesType = Union[Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
@@ -58,10 +60,6 @@ class IPVersion(enum.Enum):
 
 
 # utility functions
-
-
-def _is_v6_address(addr: bytes) -> bool:
-    return len(addr) == 16
 
 
 def _encode_address(address: str) -> bytes:
@@ -125,7 +123,11 @@ def ip6_addresses_to_indexes(
     for iface in interfaces:
         if isinstance(iface, int):
             result.append((interface_index_to_ip6_address(adapters, iface), iface))
-        elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
+        elif (
+            isinstance(iface, str)
+            and (ip_address := _cached_ip_addresses(iface))
+            and ip_address.version == 6
+        ):
             result.append(ip6_to_address_and_index(adapters, iface))
 
     return result
@@ -148,6 +150,26 @@ def normalize_interface_choice(
         if ip_version != IPVersion.V6Only:
             result.append("0.0.0.0")
     elif choice is InterfaceChoice.All:
+        if ip_version != IPVersion.V4Only:
+            result.extend(
+                ip_tuple
+                for ip_tuple in get_all_addresses_v6()
+                if (ip_address := _cached_ip_addresses(ip_tuple[0][0]))
+                and not ip_address.is_loopback
+            )
+        if ip_version != IPVersion.V6Only:
+            result.extend(
+                ip
+                for ip in get_all_addresses()
+                if (ip_address := _cached_ip_addresses(ip))
+                and not ip_address.is_loopback
+            )
+        if not result:
+            raise RuntimeError(
+                "No interfaces to listen on, check that any interfaces have IP version %s"
+                % ip_version
+            )
+    elif choice is InterfaceChoice.AllWithLoopback:
         if ip_version != IPVersion.V4Only:
             result.extend(get_all_addresses_v6())
         if ip_version != IPVersion.V6Only:
