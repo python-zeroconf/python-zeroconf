@@ -1,7 +1,14 @@
 # CHANGELOG
 
 
-## v0.140.0 (2025-01-16)
+## v0.140.1 (2025-01-17)
+
+### Bug Fixes
+
+* fix: wheel builds for aarch64 (#1485) ([`9d228e2`](https://github.com/python-zeroconf/python-zeroconf/commit/9d228e28eead1561deda696e8837d59896cbc98d))
+
+
+## v0.140.0 (2025-01-17)
 
 ### Bug Fixes
 
