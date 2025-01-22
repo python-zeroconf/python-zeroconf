@@ -15,7 +15,7 @@ def test_add_expire_1000_records(benchmark: BenchmarkFixture) -> None:
             class_=_CLASS_IN,
             ttl=60,
             alias=f"test{id}.local.",
-            created=now,
+            created=now + id,
         )
         for id in range(1000)
     ]
@@ -23,7 +23,7 @@ def test_add_expire_1000_records(benchmark: BenchmarkFixture) -> None:
     @benchmark
     def _expire_records() -> None:
         cache.async_add_records(records)
-        cache.async_expire(now + 61_000)
+        cache.async_expire(now + 100_000)
 
 
 def test_expire_no_records_to_expire(benchmark: BenchmarkFixture) -> None:
@@ -37,7 +37,7 @@ def test_expire_no_records_to_expire(benchmark: BenchmarkFixture) -> None:
             class_=_CLASS_IN,
             ttl=60,
             alias=f"test{id}.local.",
-            created=now,
+            created=now + id,
         )
         for id in range(1000)
     )
