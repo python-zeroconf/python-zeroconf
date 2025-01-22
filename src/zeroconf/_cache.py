@@ -86,10 +86,8 @@ class DNSCache:
         # replaces any existing records that are __eq__ to each other which
         # removes the risk that accessing the cache from the wrong
         # direction would return the old incorrect entry.
-        if record.key not in self.cache:
+        if (store := self.cache.get(record.key)) is None:
             store = self.cache[record.key] = {}
-        else:
-            store = self.cache[record.key]
         new = record not in store and not isinstance(record, DNSNsec)
         store[record] = record
         when = record.created + (record.ttl * 1000)
@@ -100,10 +98,8 @@ class DNSCache:
 
         if isinstance(record, DNSService):
             service_record = record
-            if service_record.server_key not in self.service_cache:
+            if (service_store := self.service_cache.get(service_record.server_key)) is None:
                 service_store = self.service_cache[service_record.server_key] = {}
-            else:
-                service_store = self.service_cache[service_record.server_key]
             service_store[service_record] = service_record
         return new
 
