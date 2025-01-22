@@ -86,7 +86,10 @@ class DNSCache:
         # replaces any existing records that are __eq__ to each other which
         # removes the risk that accessing the cache from the wrong
         # direction would return the old incorrect entry.
-        store = self.cache.setdefault(record.key, {})
+        if record.key not in self.cache:
+            store = self.cache[record.key] = {}
+        else:
+            store = self.cache[record.key]
         new = record not in store and not isinstance(record, DNSNsec)
         store[record] = record
         when = record.created + (record.ttl * 1000)
@@ -97,7 +100,11 @@ class DNSCache:
 
         if isinstance(record, DNSService):
             service_record = record
-            self.service_cache.setdefault(record.server_key, {})[service_record] = service_record
+            if service_record.server_key not in self.service_cache:
+                service_store = self.service_cache[service_record.server_key] = {}
+            else:
+                service_store = self.service_cache[service_record.server_key]
+            service_store[service_record] = service_record
         return new
 
     def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
