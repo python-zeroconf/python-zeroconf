@@ -152,7 +152,8 @@ class DNSCache:
         expired: List[DNSRecord] = []
         # Find any expired records and add them to the to-delete list
         while self._expire_heap:
-            when, record = self._expire_heap[0]
+            when_record = self._expire_heap[0]
+            when = when_record[0]
             if when > now:
                 break
             heappop(self._expire_heap)
@@ -160,6 +161,7 @@ class DNSCache:
             # with a different expiration time as it will be removed
             # later when it reaches the top of the heap and its
             # expiration time is met.
+            record = when_record[1]
             if self._expirations.get(record) == when:
                 expired.append(record)
 

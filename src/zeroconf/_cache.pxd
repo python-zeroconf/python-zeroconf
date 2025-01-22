@@ -39,7 +39,7 @@ cdef class DNSCache:
     @cython.locals(store=cython.dict)
     cpdef DNSRecord async_get_unique(self, DNSRecord entry)
 
-    @cython.locals(record=DNSRecord)
+    @cython.locals(record=DNSRecord, when_record=tuple, when=double)
     cpdef list async_expire(self, double now)
 
     @cython.locals(records=cython.dict, record=DNSRecord)
