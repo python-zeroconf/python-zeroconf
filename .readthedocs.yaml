@@ -10,7 +10,7 @@ build:
     post_install:
       # https://docs.readthedocs.com/platform/stable/build-customization.html#install-dependencies-with-poetry
       - pip install poetry
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
+      - SKIP_CYTHON=1 VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
 
 sphinx:
   configuration: docs/conf.py
