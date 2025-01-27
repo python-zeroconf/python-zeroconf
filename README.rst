@@ -14,6 +14,10 @@ python-zeroconf
    :target: https://codspeed.io/python-zeroconf/python-zeroconf
    :alt: Codspeed.io status for python-zeroconf
 
+.. image:: https://readthedocs.org/projects/python-zeroconf/badge/?version=latest
+    :target: https://python-zeroconf.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 `Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
 
 This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
