@@ -58,6 +58,9 @@ from ._services import (  # noqa # import needed for backwards compat
 from ._services.browser import ServiceBrowser
 from ._services.info import (  # noqa # import needed for backwards compat
     ServiceInfo,
+    AddressResolver,
+    AddressResolverIPv4,
+    AddressResolverIPv6,
     instance_name_from_service_info,
 )
 from ._services.registry import (  # noqa # import needed for backwards compat

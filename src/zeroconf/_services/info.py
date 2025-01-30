@@ -146,6 +146,7 @@ class ServiceInfo(RecordUpdateListener):
         "_name",
         "_new_records_futures",
         "_properties",
+        "_query_record_types",
         "host_ttl",
         "interface_index",
         "key",
@@ -210,6 +211,7 @@ class ServiceInfo(RecordUpdateListener):
         self._dns_service_cache: Optional[DNSService] = None
         self._dns_text_cache: Optional[DNSText] = None
         self._get_address_and_nsec_records_cache: Optional[Set[DNSRecord]] = None
+        self._query_record_types = {_TYPE_SRV, _TYPE_TXT, _TYPE_A, _TYPE_AAAA}
 
     @property
     def name(self) -> str:
@@ -917,18 +919,22 @@ class ServiceInfo(RecordUpdateListener):
         cache = zc.cache
         history = zc.question_history
         qu_question = question_type is QU_QUESTION
-        self._add_question_with_known_answers(
-            out, qu_question, history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
-        )
-        self._add_question_with_known_answers(
-            out, qu_question, history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
-        )
-        self._add_question_with_known_answers(
-            out, qu_question, history, cache, now, server, _TYPE_A, _CLASS_IN, False
-        )
-        self._add_question_with_known_answers(
-            out, qu_question, history, cache, now, server, _TYPE_AAAA, _CLASS_IN, False
-        )
+        if _TYPE_SRV in self._query_record_types:
+            self._add_question_with_known_answers(
+                out, qu_question, history, cache, now, name, _TYPE_SRV, _CLASS_IN, True
+            )
+        if _TYPE_TXT in self._query_record_types:
+            self._add_question_with_known_answers(
+                out, qu_question, history, cache, now, name, _TYPE_TXT, _CLASS_IN, True
+            )
+        if _TYPE_A in self._query_record_types:
+            self._add_question_with_known_answers(
+                out, qu_question, history, cache, now, server, _TYPE_A, _CLASS_IN, False
+            )
+        if _TYPE_AAAA in self._query_record_types:
+            self._add_question_with_known_answers(
+                out, qu_question, history, cache, now, server, _TYPE_AAAA, _CLASS_IN, False
+            )
         return out
 
     def __repr__(self) -> str:
@@ -954,3 +960,45 @@ class ServiceInfo(RecordUpdateListener):
 
 class AsyncServiceInfo(ServiceInfo):
     """An async version of ServiceInfo."""
+
+
+class AddressResolver(ServiceInfo):
+    """Resolve a host name to an IP address."""
+
+    def __init__(self, server: str) -> None:
+        """Initialize the AddressResolver."""
+        super().__init__(server, server, server=server)
+        self._query_record_types = {_TYPE_A, _TYPE_AAAA}
+
+    @property
+    def _is_complete(self) -> bool:
+        """The ServiceInfo has all expected properties."""
+        return bool(self._ipv4_addresses) or bool(self._ipv6_addresses)
+
+
+class AddressResolverIPv6(ServiceInfo):
+    """Resolve a host name to an IPv6 address."""
+
+    def __init__(self, server: str) -> None:
+        """Initialize the AddressResolver."""
+        super().__init__(server, server, server=server)
+        self._query_record_types = {_TYPE_AAAA}
+
+    @property
+    def _is_complete(self) -> bool:
+        """The ServiceInfo has all expected properties."""
+        return bool(self._ipv6_addresses)
+
+
+class AddressResolverIPv4(ServiceInfo):
+    """Resolve a host name to an IPv4 address."""
+
+    def __init__(self, server: str) -> None:
+        """Initialize the AddressResolver."""
+        super().__init__(server, server, server=server)
+        self._query_record_types = {_TYPE_A}
+
+    @property
+    def _is_complete(self) -> bool:
+        """The ServiceInfo has all expected properties."""
+        return bool(self._ipv4_addresses)
