@@ -88,6 +88,10 @@ _IPVersion_V4Only_value = IPVersion.V4Only.value
 # the A/AAAA/SRV records for a host.
 _AVOID_SYNC_DELAY_RANDOM_INTERVAL = (20, 120)
 
+_TYPE_AAAA_RECORDS = {_TYPE_AAAA}
+_TYPE_A_RECORDS = {_TYPE_A}
+_TYPE_A_AAAA_RECORDS = {_TYPE_A, _TYPE_AAAA}
+
 bytes_ = bytes
 float_ = float
 int_ = int
@@ -968,7 +972,7 @@ class AddressResolver(ServiceInfo):
     def __init__(self, server: str) -> None:
         """Initialize the AddressResolver."""
         super().__init__(server, server, server=server)
-        self._query_record_types = {_TYPE_A, _TYPE_AAAA}
+        self._query_record_types = _TYPE_A_AAAA_RECORDS
 
     @property
     def _is_complete(self) -> bool:
@@ -982,7 +986,7 @@ class AddressResolverIPv6(ServiceInfo):
     def __init__(self, server: str) -> None:
         """Initialize the AddressResolver."""
         super().__init__(server, server, server=server)
-        self._query_record_types = {_TYPE_AAAA}
+        self._query_record_types = _TYPE_AAAA_RECORDS
 
     @property
     def _is_complete(self) -> bool:
@@ -996,7 +1000,7 @@ class AddressResolverIPv4(ServiceInfo):
     def __init__(self, server: str) -> None:
         """Initialize the AddressResolver."""
         super().__init__(server, server, server=server)
-        self._query_record_types = {_TYPE_A}
+        self._query_record_types = _TYPE_A_RECORDS
 
     @property
     def _is_complete(self) -> bool:
