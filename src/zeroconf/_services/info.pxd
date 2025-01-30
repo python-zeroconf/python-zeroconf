@@ -22,6 +22,9 @@ from .._utils.ipaddress cimport (
 )
 from .._utils.time cimport current_time_millis
 
+cdef cython.set _TYPE_AAAA_RECORDS
+cdef cython.set _TYPE_A_RECORDS
+cdef cython.set _TYPE_A_AAAA_RECORDS
 
 cdef object _resolve_all_futures_to_none
 
@@ -75,6 +78,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public DNSText _dns_text_cache
     cdef public cython.list _dns_address_cache
     cdef public cython.set _get_address_and_nsec_records_cache
+    cdef public cython.set _query_record_types
 
     @cython.locals(record_update=RecordUpdate, update=bint, cache=DNSCache)
     cpdef void async_update_records(self, object zc, double now, cython.list records)
@@ -155,3 +159,12 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef double _get_initial_delay(self)
 
     cdef double _get_random_delay(self)
+
+cdef class AddressResolver(ServiceInfo):
+    pass
+
+cdef class AddressResolverIPv6(ServiceInfo):
+    pass
+
+cdef class AddressResolverIPv4(ServiceInfo):
+    pass
