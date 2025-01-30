@@ -11,7 +11,7 @@ from zeroconf.asyncio import AsyncZeroconf
 
 
 async def resolve_name(name: str) -> None:
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    aiozc = AsyncZeroconf()
     await aiozc.zeroconf.async_wait_for_start()
     resolver = AddressResolver(name)
     if await resolver.async_request(aiozc.zeroconf, 3000):
