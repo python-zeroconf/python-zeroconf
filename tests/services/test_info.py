@@ -1797,3 +1797,77 @@ async def test_service_info_nsec_records():
     assert nsec_record.type == const._TYPE_NSEC
     assert nsec_record.ttl == 50
     assert nsec_record.rdtypes == [const._TYPE_A, const._TYPE_AAAA]
+
+
+@pytest.mark.asyncio
+async def test_address_resolver():
+    """Test that the address resolver works."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    await aiozc.zeroconf.async_wait_for_start()
+    resolver = r.AddressResolver("address_resolver_test.local.")
+    resolve_task = asyncio.create_task(resolver.async_request(aiozc.zeroconf, 3000))
+    outgoing = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    outgoing.add_answer_at_time(
+        r.DNSAddress(
+            "address_resolver_test.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b"\x7f\x00\x00\x01",
+        ),
+        0,
+    )
+
+    aiozc.zeroconf.async_send(outgoing)
+    assert await resolve_task
+    assert resolver.addresses == [b"\x7f\x00\x00\x01"]
+
+
+@pytest.mark.asyncio
+async def test_address_resolver_ipv4():
+    """Test that the IPv4 address resolver works."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    await aiozc.zeroconf.async_wait_for_start()
+    resolver = r.AddressResolverIPv4("address_resolver_test_ipv4.local.")
+    resolve_task = asyncio.create_task(resolver.async_request(aiozc.zeroconf, 3000))
+    outgoing = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    outgoing.add_answer_at_time(
+        r.DNSAddress(
+            "address_resolver_test_ipv4.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            10000,
+            b"\x7f\x00\x00\x01",
+        ),
+        0,
+    )
+
+    aiozc.zeroconf.async_send(outgoing)
+    assert await resolve_task
+    assert resolver.addresses == [b"\x7f\x00\x00\x01"]
+
+
+@pytest.mark.asyncio
+@unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
+@unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
+async def test_address_resolver_ipv6():
+    """Test that the IPv6 address resolver works."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    await aiozc.zeroconf.async_wait_for_start()
+    resolver = r.AddressResolverIPv6("address_resolver_test_ipv6.local.")
+    resolve_task = asyncio.create_task(resolver.async_request(aiozc.zeroconf, 3000))
+    outgoing = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    outgoing.add_answer_at_time(
+        r.DNSAddress(
+            "address_resolver_test_ipv6.local.",
+            const._TYPE_AAAA,
+            const._CLASS_IN,
+            10000,
+            socket.inet_pton(socket.AF_INET6, "fe80::52e:c2f2:bc5f:e9c6"),
+        ),
+        0,
+    )
+
+    aiozc.zeroconf.async_send(outgoing)
+    assert await resolve_task
+    assert resolver.ip_addresses_by_version(IPVersion.All) == [ip_address("fe80::52e:c2f2:bc5f:e9c6")]
