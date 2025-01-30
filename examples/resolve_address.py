@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Example of resolving a name to an IPv4 address."""
+"""Example of resolving a name to an IP address."""
 
 import asyncio
 import logging
