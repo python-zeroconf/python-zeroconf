@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.142.0 (2025-01-30)
+
+### Features
+
+- Add simple address resolvers and examples
+  ([#1499](https://github.com/python-zeroconf/python-zeroconf/pull/1499),
+  [`ae3c352`](https://github.com/python-zeroconf/python-zeroconf/commit/ae3c3523e5f2896989d0b932d53ef1e24ef4aee8))
+
+
 ## v0.141.0 (2025-01-22)
 
 ### Features
