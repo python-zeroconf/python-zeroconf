@@ -29,6 +29,7 @@ from typing import Awaitable, Callable
 
 from ._core import Zeroconf
 from ._dns import DNSQuestionType
+from ._exceptions import NotRunningException
 from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import AsyncServiceInfo, ServiceInfo
@@ -227,7 +228,7 @@ class AsyncZeroconf:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
         if not self.zeroconf.done:
-            with contextlib.suppress(asyncio.TimeoutError):
+            with contextlib.suppress(asyncio.TimeoutError, NotRunningException):
                 await asyncio.wait_for(self.zeroconf.async_wait_for_start(), timeout=1)
         await self.async_remove_all_service_listeners()
         await self.async_unregister_all_services()

@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import contextlib
+import sys
 from typing import Any, Awaitable, Coroutine
 
 from .._exceptions import EventLoopBlocked
@@ -70,6 +71,9 @@ async def wait_future_or_timeout(future: asyncio.Future[bool | None], timeout: f
     handle = loop.call_later(timeout, _set_future_none_if_not_done, future)
     try:
         await future
+    except asyncio.CancelledError:
+        if sys.version_info >= (3, 11) and (task := asyncio.current_task()) and task.cancelling():
+            raise
     finally:
         handle.cancel()
 

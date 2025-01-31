@@ -207,6 +207,7 @@ class Zeroconf(QuietLogger):
             not self.done
             and self.engine.running_future
             and self.engine.running_future.done()
+            and not self.engine.running_future.cancelled()
             and not self.engine.running_future.exception()
         )
 
@@ -242,7 +243,12 @@ class Zeroconf(QuietLogger):
             raise NotRunningException
         assert self.engine.running_future is not None
         await wait_future_or_timeout(self.engine.running_future, timeout=_STARTUP_TIMEOUT)
-        if not self.engine.running_future.done() or self.engine.running_future.exception() or self.done:
+        if (
+            not self.engine.running_future.done()
+            or self.engine.running_future.cancelled()
+            or self.engine.running_future.exception()
+            or self.done
+        ):
             raise NotRunningException
 
     @property
