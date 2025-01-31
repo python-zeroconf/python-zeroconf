@@ -203,12 +203,14 @@ class Zeroconf(QuietLogger):
     @property
     def started(self) -> bool:
         """Check if the instance has started."""
+        running_future = self.engine.running_future
         return bool(
             not self.done
-            and self.engine.running_future
-            and self.engine.running_future.done()
-            and not self.engine.running_future.cancelled()
-            and not self.engine.running_future.exception()
+            and running_future
+            and running_future.done()
+            and not running_future.cancelled()
+            and not running_future.exception()
+            and running_future.result()
         )
 
     def start(self) -> None:
@@ -247,6 +249,7 @@ class Zeroconf(QuietLogger):
             not self.engine.running_future.done()
             or self.engine.running_future.cancelled()
             or self.engine.running_future.exception()
+            or not self.engine.running_future.result()
             or self.done
         ):
             raise NotRunningException
