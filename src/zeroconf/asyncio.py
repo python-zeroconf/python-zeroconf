@@ -228,8 +228,8 @@ class AsyncZeroconf:
         """Ends the background threads, and prevent this instance from
         servicing further queries."""
         if not self.zeroconf.done:
-            with contextlib.suppress(asyncio.TimeoutError, NotRunningException):
-                await asyncio.wait_for(self.zeroconf.async_wait_for_start(), timeout=1)
+            with contextlib.suppress(NotRunningException):
+                await self.zeroconf.async_wait_for_start(timeout=1.0)
         await self.async_remove_all_service_listeners()
         await self.async_unregister_all_services()
         await self.zeroconf._async_close()  # pylint: disable=protected-access
