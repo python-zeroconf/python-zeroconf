@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._utils.ipaddress."""
 
+from __future__ import annotations
+
 from zeroconf import const
 from zeroconf._dns import DNSAddress
 from zeroconf._utils import ipaddress

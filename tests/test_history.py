@@ -1,5 +1,7 @@
 """Unit tests for _history.py."""
 
+from __future__ import annotations
+
 import zeroconf as r
 import zeroconf.const as const
 from zeroconf._history import QuestionHistory

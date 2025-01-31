@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._updates."""
 
+from __future__ import annotations
+
 import logging
 import socket
 import time
@@ -45,7 +47,7 @@ def test_legacy_record_update_listener():
     class LegacyRecordUpdateListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def update_record(self, zc: "Zeroconf", now: float, record: r.DNSRecord) -> None:
+        def update_record(self, zc: Zeroconf, now: float, record: r.DNSRecord) -> None:
             nonlocal updates
             updates.append(record)
 

@@ -1,5 +1,7 @@
 """conftest for zeroconf tests."""
 
+from __future__ import annotations
+
 import threading
 from unittest.mock import patch
 

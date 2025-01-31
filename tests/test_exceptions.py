@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._exceptions"""
 
+from __future__ import annotations
+
 import logging
 import unittest.mock
 
