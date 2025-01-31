@@ -21,7 +21,7 @@ cdef class RecordManager:
     cdef public DNSCache cache
     cdef public cython.set listeners
 
-    cpdef void async_updates(self, object now, object records)
+    cpdef void async_updates(self, object now, list records)
 
     cpdef void async_updates_complete(self, bint notify)
 
