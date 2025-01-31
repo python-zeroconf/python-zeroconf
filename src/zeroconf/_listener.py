@@ -20,11 +20,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import random
 from functools import partial
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Tuple, cast
 
 from ._logger import QuietLogger, log
 from ._protocol.incoming import DNSIncoming
@@ -68,23 +70,21 @@ class AsyncListener:
         "zc",
     )
 
-    def __init__(self, zc: "Zeroconf") -> None:
+    def __init__(self, zc: Zeroconf) -> None:
         self.zc = zc
         self._registry = zc.registry
         self._record_manager = zc.record_manager
         self._query_handler = zc.query_handler
-        self.data: Optional[bytes] = None
+        self.data: bytes | None = None
         self.last_time: float = 0
-        self.last_message: Optional[DNSIncoming] = None
-        self.transport: Optional[_WrappedTransport] = None
-        self.sock_description: Optional[str] = None
-        self._deferred: Dict[str, List[DNSIncoming]] = {}
-        self._timers: Dict[str, asyncio.TimerHandle] = {}
+        self.last_message: DNSIncoming | None = None
+        self.transport: _WrappedTransport | None = None
+        self.sock_description: str | None = None
+        self._deferred: dict[str, list[DNSIncoming]] = {}
+        self._timers: dict[str, asyncio.TimerHandle] = {}
         super().__init__()
 
-    def datagram_received(
-        self, data: _bytes, addrs: Union[Tuple[str, int], Tuple[str, int, int, int]]
-    ) -> None:
+    def datagram_received(self, data: _bytes, addrs: tuple[str, int] | tuple[str, int, int, int]) -> None:
         data_len = len(data)
         debug = DEBUG_ENABLED()
 
@@ -108,7 +108,7 @@ class AsyncListener:
         data_len: _int,
         now: _float,
         data: _bytes,
-        addrs: Union[Tuple[str, int], Tuple[str, int, int, int]],
+        addrs: tuple[str, int] | tuple[str, int, int, int],
     ) -> None:
         if (
             self.data == data
@@ -129,7 +129,7 @@ class AsyncListener:
             return
 
         if len(addrs) == 2:
-            v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = ()
+            v6_flow_scope: tuple[()] | tuple[int, int] = ()
             # https://github.com/python/mypy/issues/1178
             addr, port = addrs  # type: ignore
             addr_port = addrs
@@ -189,7 +189,7 @@ class AsyncListener:
         addr: _str,
         port: _int,
         transport: _WrappedTransport,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
+        v6_flow_scope: tuple[()] | tuple[int, int],
     ) -> None:
         """Deal with incoming query packets.  Provides a response if
         possible."""
@@ -224,11 +224,11 @@ class AsyncListener:
 
     def _respond_query(
         self,
-        msg: Optional[DNSIncoming],
+        msg: DNSIncoming | None,
         addr: _str,
         port: _int,
         transport: _WrappedTransport,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]],
+        v6_flow_scope: tuple[()] | tuple[int, int],
     ) -> None:
         """Respond to a query and reassemble any truncated deferred packets."""
         self._cancel_any_timers_for_addr(addr)
@@ -252,5 +252,5 @@ class AsyncListener:
         self.transport = wrapped_transport
         self.sock_description = f"{wrapped_transport.fileno} ({wrapped_transport.sock_name})"
 
-    def connection_lost(self, exc: Optional[Exception]) -> None:
+    def connection_lost(self, exc: Exception | None) -> None:
         """Handle connection lost."""

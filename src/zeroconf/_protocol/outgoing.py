@@ -20,10 +20,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import enum
 import logging
 from struct import Struct
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Sequence
 
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import NamePartTooLongException
@@ -98,20 +100,20 @@ class DNSOutgoing:
         self.finished = False
         self.id = id_
         self.multicast = multicast
-        self.packets_data: List[bytes] = []
+        self.packets_data: list[bytes] = []
 
         # these 3 are per-packet -- see also _reset_for_next_packet()
-        self.names: Dict[str, int] = {}
-        self.data: List[bytes] = []
+        self.names: dict[str, int] = {}
+        self.data: list[bytes] = []
         self.size: int = _DNS_PACKET_HEADER_LEN
         self.allow_long: bool = True
 
         self.state = STATE_INIT
 
-        self.questions: List[DNSQuestion] = []
-        self.answers: List[Tuple[DNSRecord, float]] = []
-        self.authorities: List[DNSPointer] = []
-        self.additionals: List[DNSRecord] = []
+        self.questions: list[DNSQuestion] = []
+        self.answers: list[tuple[DNSRecord, float]] = []
+        self.authorities: list[DNSPointer] = []
+        self.additionals: list[DNSRecord] = []
 
     def is_query(self) -> bool:
         """Returns true if this is a query."""
@@ -150,7 +152,7 @@ class DNSOutgoing:
         if not record.suppressed_by(inp):
             self.add_answer_at_time(record, 0.0)
 
-    def add_answer_at_time(self, record: Optional[DNSRecord], now: float_) -> None:
+    def add_answer_at_time(self, record: DNSRecord | None, now: float_) -> None:
         """Adds an answer if it does not expire by a certain time"""
         now_double = now
         if record is not None and (now_double == 0 or not record.is_expired(now_double)):
@@ -220,7 +222,7 @@ class DNSOutgoing:
         self.data.append(self._get_short(value))
         self.size += 2
 
-    def _write_int(self, value: Union[float, int]) -> None:
+    def _write_int(self, value: float | int) -> None:
         """Writes an unsigned integer to the packet"""
         value_as_int = int(value)
         long_bytes = LONG_LOOKUP.get(value_as_int)
@@ -313,7 +315,7 @@ class DNSOutgoing:
         self._write_record_class(question)
         return self._check_data_limit_or_rollback(start_data_length, start_size)
 
-    def _write_record_class(self, record: Union[DNSQuestion_, DNSRecord_]) -> None:
+    def _write_record_class(self, record: DNSQuestion_ | DNSRecord_) -> None:
         """Write out the record class including the unique/unicast (QU) bit."""
         class_ = record.class_
         if record.unique is True and self.multicast:
@@ -409,7 +411,7 @@ class DNSOutgoing:
             or additional_offset < len(self.additionals)
         )
 
-    def packets(self) -> List[bytes]:
+    def packets(self) -> list[bytes]:
         """Returns a list of bytestrings containing the packets' bytes
 
         No further parts should be added to the packet once this
