@@ -20,10 +20,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 from types import TracebackType  # used in type hints
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Awaitable, Callable
 
 from ._core import Zeroconf
 from ._dns import DNSQuestionType
@@ -63,14 +65,14 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
 
     def __init__(
         self,
-        zeroconf: "Zeroconf",
-        type_: Union[str, list],
-        handlers: Optional[Union[ServiceListener, List[Callable[..., None]]]] = None,
-        listener: Optional[ServiceListener] = None,
-        addr: Optional[str] = None,
+        zeroconf: Zeroconf,
+        type_: str | list,
+        handlers: ServiceListener | list[Callable[..., None]] | None = None,
+        listener: ServiceListener | None = None,
+        addr: str | None = None,
         port: int = _MDNS_PORT,
         delay: int = _BROWSER_TIME,
-        question_type: Optional[DNSQuestionType] = None,
+        question_type: DNSQuestionType | None = None,
     ) -> None:
         super().__init__(zeroconf, type_, handlers, listener, addr, port, delay, question_type)
         self._async_start()
@@ -79,15 +81,15 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         """Cancel the browser."""
         self._async_cancel()
 
-    async def __aenter__(self) -> "AsyncServiceBrowser":
+    async def __aenter__(self) -> AsyncServiceBrowser:
         return self
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
         await self.async_cancel()
         return None
 
@@ -98,11 +100,11 @@ class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
     @classmethod
     async def async_find(
         cls,
-        aiozc: Optional["AsyncZeroconf"] = None,
-        timeout: Union[int, float] = 5,
+        aiozc: AsyncZeroconf | None = None,
+        timeout: int | float = 5,
         interfaces: InterfacesType = InterfaceChoice.All,
-        ip_version: Optional[IPVersion] = None,
-    ) -> Tuple[str, ...]:
+        ip_version: IPVersion | None = None,
+    ) -> tuple[str, ...]:
         """
         Return all of the advertised services on any local networks.
 
@@ -145,9 +147,9 @@ class AsyncZeroconf:
         self,
         interfaces: InterfacesType = InterfaceChoice.All,
         unicast: bool = False,
-        ip_version: Optional[IPVersion] = None,
+        ip_version: IPVersion | None = None,
         apple_p2p: bool = False,
-        zc: Optional[Zeroconf] = None,
+        zc: Zeroconf | None = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, and listening.
@@ -170,12 +172,12 @@ class AsyncZeroconf:
             ip_version=ip_version,
             apple_p2p=apple_p2p,
         )
-        self.async_browsers: Dict[ServiceListener, AsyncServiceBrowser] = {}
+        self.async_browsers: dict[ServiceListener, AsyncServiceBrowser] = {}
 
     async def async_register_service(
         self,
         info: ServiceInfo,
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
         strict: bool = True,
@@ -236,8 +238,8 @@ class AsyncZeroconf:
         type_: str,
         name: str,
         timeout: int = 3000,
-        question_type: Optional[DNSQuestionType] = None,
-    ) -> Optional[AsyncServiceInfo]:
+        question_type: DNSQuestionType | None = None,
+    ) -> AsyncServiceInfo | None:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
         which defaults to 3 seconds.
@@ -268,14 +270,14 @@ class AsyncZeroconf:
             *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
         )
 
-    async def __aenter__(self) -> "AsyncZeroconf":
+    async def __aenter__(self) -> AsyncZeroconf:
         return self
 
     async def __aexit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
         await self.async_close()
         return None
