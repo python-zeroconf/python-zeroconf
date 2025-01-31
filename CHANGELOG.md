@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.143.0 (2025-01-31)
+
+### Features
+
+- Eliminate async_timeout dep on python less than 3.11
+  ([#1500](https://github.com/python-zeroconf/python-zeroconf/pull/1500),
+  [`44457be`](https://github.com/python-zeroconf/python-zeroconf/commit/44457be4571add2f851192db3b37a96d9d27b00e))
+
+
 ## v0.142.0 (2025-01-30)
 
 ### Features
