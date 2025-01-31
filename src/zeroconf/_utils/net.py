@@ -20,13 +20,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import enum
 import errno
 import ipaddress
 import socket
 import struct
 import sys
-from typing import Any, List, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Sequence, Tuple, Union, cast
 
 import ifaddr
 
@@ -70,11 +72,11 @@ def _encode_address(address: str) -> bytes:
     return socket.inet_pton(address_family, address)
 
 
-def get_all_addresses() -> List[str]:
+def get_all_addresses() -> list[str]:
     return list({addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})
 
 
-def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
+def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     # TODO: What about multi-address interfaces?
     return list(
@@ -82,7 +84,7 @@ def get_all_addresses_v6() -> List[Tuple[Tuple[str, int, int], int]]:
     )
 
 
-def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, int, int], int]:
+def ip6_to_address_and_index(adapters: list[Any], ip: str) -> tuple[tuple[str, int, int], int]:
     if "%" in ip:
         ip = ip[: ip.index("%")]  # Strip scope_id.
     ipaddr = ipaddress.ip_address(ip)
@@ -98,7 +100,7 @@ def ip6_to_address_and_index(adapters: List[Any], ip: str) -> Tuple[Tuple[str, i
     raise RuntimeError(f"No adapter found for IP address {ip}")
 
 
-def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str, int, int]:
+def interface_index_to_ip6_address(adapters: list[Any], index: int) -> tuple[str, int, int]:
     for adapter in adapters:
         if adapter.index == index:
             for adapter_ip in adapter.ips:
@@ -110,8 +112,8 @@ def interface_index_to_ip6_address(adapters: List[Any], index: int) -> Tuple[str
 
 
 def ip6_addresses_to_indexes(
-    interfaces: Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]],
-) -> List[Tuple[Tuple[str, int, int], int]]:
+    interfaces: Sequence[str | int | tuple[tuple[str, int, int], int]],
+) -> list[tuple[tuple[str, int, int], int]]:
     """Convert IPv6 interface addresses to interface indexes.
 
     IPv4 addresses are ignored.
@@ -133,14 +135,14 @@ def ip6_addresses_to_indexes(
 
 def normalize_interface_choice(
     choice: InterfacesType, ip_version: IPVersion = IPVersion.V4Only
-) -> List[Union[str, Tuple[Tuple[str, int, int], int]]]:
+) -> list[str | tuple[tuple[str, int, int], int]]:
     """Convert the interfaces choice into internal representation.
 
     :param choice: `InterfaceChoice` or list of interface addresses or indexes (IPv6 only).
     :param ip_address: IP version to use (ignored if `choice` is a list).
     :returns: List of IP addresses (for IPv4) and indexes (for IPv6).
     """
-    result: List[Union[str, Tuple[Tuple[str, int, int], int]]] = []
+    result: list[str | tuple[tuple[str, int, int], int]] = []
     if choice is InterfaceChoice.Default:
         if ip_version != IPVersion.V4Only:
             # IPv6 multicast uses interface 0 to mean the default
@@ -196,7 +198,7 @@ def set_so_reuseport_if_available(s: socket.socket) -> None:
 
 def set_mdns_port_socket_options_for_ip_version(
     s: socket.socket,
-    bind_addr: Union[Tuple[str], Tuple[str, int, int]],
+    bind_addr: tuple[str] | tuple[str, int, int],
     ip_version: IPVersion,
 ) -> None:
     """Set ttl/hops and loop for mdns port."""
@@ -219,11 +221,11 @@ def set_mdns_port_socket_options_for_ip_version(
 
 
 def new_socket(
-    bind_addr: Union[Tuple[str], Tuple[str, int, int]],
+    bind_addr: tuple[str] | tuple[str, int, int],
     port: int = _MDNS_PORT,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
-) -> Optional[socket.socket]:
+) -> socket.socket | None:
     log.debug(
         "Creating new socket with port %s, ip_version %s, apple_p2p %s and bind_addr %r",
         port,
@@ -265,7 +267,7 @@ def new_socket(
 
 def add_multicast_member(
     listen_socket: socket.socket,
-    interface: Union[str, Tuple[Tuple[str, int, int], int]],
+    interface: str | tuple[tuple[str, int, int], int],
 ) -> bool:
     # This is based on assumptions in normalize_interface_choice
     is_v6 = isinstance(interface, tuple)
@@ -331,9 +333,9 @@ def add_multicast_member(
 
 
 def new_respond_socket(
-    interface: Union[str, Tuple[Tuple[str, int, int], int]],
+    interface: str | tuple[tuple[str, int, int], int],
     apple_p2p: bool = False,
-) -> Optional[socket.socket]:
+) -> socket.socket | None:
     is_v6 = isinstance(interface, tuple)
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
@@ -360,7 +362,7 @@ def create_sockets(
     unicast: bool = False,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
-) -> Tuple[Optional[socket.socket], List[socket.socket]]:
+) -> tuple[socket.socket | None, list[socket.socket]]:
     if unicast:
         listen_socket = None
     else:

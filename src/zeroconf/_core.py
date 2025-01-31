@@ -20,12 +20,14 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys
 import threading
 from types import TracebackType
-from typing import Awaitable, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Awaitable
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
@@ -108,9 +110,9 @@ def async_send_with_transport(
     packet: bytes,
     packet_num: int,
     out: DNSOutgoing,
-    addr: Optional[str],
+    addr: str | None,
     port: int,
-    v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
+    v6_flow_scope: tuple[()] | tuple[int, int] = (),
 ) -> None:
     ipv6_socket = transport.is_ipv6
     if addr is None:
@@ -149,7 +151,7 @@ class Zeroconf(QuietLogger):
         self,
         interfaces: InterfacesType = InterfaceChoice.All,
         unicast: bool = False,
-        ip_version: Optional[IPVersion] = None,
+        ip_version: IPVersion | None = None,
         apple_p2p: bool = False,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
@@ -181,7 +183,7 @@ class Zeroconf(QuietLogger):
 
         self.engine = AsyncEngine(self, listen_socket, respond_sockets)
 
-        self.browsers: Dict[ServiceListener, ServiceBrowser] = {}
+        self.browsers: dict[ServiceListener, ServiceBrowser] = {}
         self.registry = ServiceRegistry()
         self.cache = DNSCache()
         self.question_history = QuestionHistory()
@@ -192,9 +194,9 @@ class Zeroconf(QuietLogger):
         self.query_handler = QueryHandler(self)
         self.record_manager = RecordManager(self)
 
-        self._notify_futures: Set[asyncio.Future] = set()
-        self.loop: Optional[asyncio.AbstractEventLoop] = None
-        self._loop_thread: Optional[threading.Thread] = None
+        self._notify_futures: set[asyncio.Future] = set()
+        self.loop: asyncio.AbstractEventLoop | None = None
+        self._loop_thread: threading.Thread | None = None
 
         self.start()
 
@@ -239,7 +241,7 @@ class Zeroconf(QuietLogger):
             raise NotRunningException
 
     @property
-    def listeners(self) -> Set[RecordUpdateListener]:
+    def listeners(self) -> set[RecordUpdateListener]:
         return self.record_manager.listeners
 
     async def async_wait(self, timeout: float) -> None:
@@ -264,8 +266,8 @@ class Zeroconf(QuietLogger):
         type_: str,
         name: str,
         timeout: int = 3000,
-        question_type: Optional[DNSQuestionType] = None,
-    ) -> Optional[ServiceInfo]:
+        question_type: DNSQuestionType | None = None,
+    ) -> ServiceInfo | None:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
         which defaults to 3 seconds.
@@ -301,7 +303,7 @@ class Zeroconf(QuietLogger):
     def register_service(
         self,
         info: ServiceInfo,
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
         strict: bool = True,
@@ -329,7 +331,7 @@ class Zeroconf(QuietLogger):
     async def async_register_service(
         self,
         info: ServiceInfo,
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
         allow_name_change: bool = False,
         cooperating_responders: bool = False,
         strict: bool = True,
@@ -380,8 +382,8 @@ class Zeroconf(QuietLogger):
         type_: str,
         name: str,
         timeout: int = 3000,
-        question_type: Optional[DNSQuestionType] = None,
-    ) -> Optional[AsyncServiceInfo]:
+        question_type: DNSQuestionType | None = None,
+    ) -> AsyncServiceInfo | None:
         """Returns network's service information for a particular
         name and type, or None if no service matches by the timeout,
         which defaults to 3 seconds.
@@ -400,7 +402,7 @@ class Zeroconf(QuietLogger):
         self,
         info: ServiceInfo,
         interval: int,
-        ttl: Optional[int],
+        ttl: int | None,
         broadcast_addresses: bool = True,
     ) -> None:
         """Send a broadcasts to announce a service at intervals."""
@@ -412,7 +414,7 @@ class Zeroconf(QuietLogger):
     def generate_service_broadcast(
         self,
         info: ServiceInfo,
-        ttl: Optional[int],
+        ttl: int | None,
         broadcast_addresses: bool = True,
     ) -> DNSOutgoing:
         """Generate a broadcast to announce a service."""
@@ -439,7 +441,7 @@ class Zeroconf(QuietLogger):
         self,
         out: DNSOutgoing,
         info: ServiceInfo,
-        override_ttl: Optional[int],
+        override_ttl: int | None,
         broadcast_addresses: bool = True,
     ) -> None:
         """Add answers to broadcast a service."""
@@ -481,7 +483,7 @@ class Zeroconf(QuietLogger):
             self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
         )
 
-    def generate_unregister_all_services(self) -> Optional[DNSOutgoing]:
+    def generate_unregister_all_services(self) -> DNSOutgoing | None:
         """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
         service_infos = self.registry.async_get_service_infos()
         if not service_infos:
@@ -562,7 +564,7 @@ class Zeroconf(QuietLogger):
     def add_listener(
         self,
         listener: RecordUpdateListener,
-        question: Optional[Union[DNSQuestion, List[DNSQuestion]]],
+        question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
@@ -584,7 +586,7 @@ class Zeroconf(QuietLogger):
     def async_add_listener(
         self,
         listener: RecordUpdateListener,
-        question: Optional[Union[DNSQuestion, List[DNSQuestion]]],
+        question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
@@ -604,10 +606,10 @@ class Zeroconf(QuietLogger):
     def send(
         self,
         out: DNSOutgoing,
-        addr: Optional[str] = None,
+        addr: str | None = None,
         port: int = _MDNS_PORT,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-        transport: Optional[_WrappedTransport] = None,
+        v6_flow_scope: tuple[()] | tuple[int, int] = (),
+        transport: _WrappedTransport | None = None,
     ) -> None:
         """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
@@ -616,10 +618,10 @@ class Zeroconf(QuietLogger):
     def async_send(
         self,
         out: DNSOutgoing,
-        addr: Optional[str] = None,
+        addr: str | None = None,
         port: int = _MDNS_PORT,
-        v6_flow_scope: Union[Tuple[()], Tuple[int, int]] = (),
-        transport: Optional[_WrappedTransport] = None,
+        v6_flow_scope: tuple[()] | tuple[int, int] = (),
+        transport: _WrappedTransport | None = None,
     ) -> None:
         """Sends an outgoing packet."""
         if self.done:
@@ -701,14 +703,14 @@ class Zeroconf(QuietLogger):
         await self.engine._async_close()  # pylint: disable=protected-access
         self._shutdown_threads()
 
-    def __enter__(self) -> "Zeroconf":
+    def __enter__(self) -> Zeroconf:
         return self
 
     def __exit__(  # pylint: disable=useless-return
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
         self.close()
         return None

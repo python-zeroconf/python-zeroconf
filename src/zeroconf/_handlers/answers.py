@@ -20,8 +20,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 from operator import attrgetter
-from typing import Dict, List, Set
+from typing import Dict, Set
 
 from .._dns import DNSQuestion, DNSRecord
 from .._protocol.outgoing import DNSOutgoing
@@ -96,7 +98,7 @@ def construct_outgoing_multicast_answers(
 def construct_outgoing_unicast_answers(
     answers: _AnswerWithAdditionalsType,
     ucast_source: bool,
-    questions: List[DNSQuestion],
+    questions: list[DNSQuestion],
     id_: int_,
 ) -> DNSOutgoing:
     """Add answers and additionals to a DNSOutgoing."""
@@ -111,7 +113,7 @@ def construct_outgoing_unicast_answers(
 
 def _add_answers_additionals(out: DNSOutgoing, answers: _AnswerWithAdditionalsType) -> None:
     # Find additionals and suppress any additionals that are already in answers
-    sending: Set[DNSRecord] = set(answers)
+    sending: set[DNSRecord] = set(answers)
     # Answers are sorted to group names together to increase the chance
     # that similar names will end up in the same packet and can reduce the
     # overall size of the outgoing response via name compression

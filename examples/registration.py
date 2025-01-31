@@ -2,6 +2,8 @@
 
 """Example of announcing a service (in this case, a fake HTTP server)"""
 
+from __future__ import annotations
+
 import argparse
 import logging
 import socket

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pytest_codspeed import BenchmarkFixture
 
 from zeroconf import ServiceInfo

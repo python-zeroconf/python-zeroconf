@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._utils.name."""
 
+from __future__ import annotations
+
 import socket
 
 import pytest

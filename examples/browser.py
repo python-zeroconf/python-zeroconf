@@ -5,6 +5,8 @@
 The default is HTTP and HAP; use --find to search for all available services in the network
 """
 
+from __future__ import annotations
+
 import argparse
 import logging
 from time import sleep

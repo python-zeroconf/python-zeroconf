@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._utils.net."""
 
+from __future__ import annotations
+
 import errno
 import socket
 import unittest

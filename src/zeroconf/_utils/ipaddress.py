@@ -20,9 +20,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 from functools import cache, lru_cache
 from ipaddress import AddressValueError, IPv4Address, IPv6Address, NetmaskValueError
-from typing import Any, Optional, Union
+from typing import Any
 
 from .._dns import DNSAddress
 from ..const import _TYPE_AAAA
@@ -99,8 +101,8 @@ class ZeroconfIPv6Address(IPv6Address):
 
 @lru_cache(maxsize=512)
 def _cached_ip_addresses(
-    address: Union[str, bytes, int],
-) -> Optional[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
+    address: str | bytes | int,
+) -> ZeroconfIPv4Address | ZeroconfIPv6Address | None:
     """Cache IP addresses."""
     try:
         return ZeroconfIPv4Address(address)
@@ -119,7 +121,7 @@ cached_ip_addresses = cached_ip_addresses_wrapper
 
 def get_ip_address_object_from_record(
     record: DNSAddress,
-) -> Optional[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
+) -> ZeroconfIPv4Address | ZeroconfIPv6Address | None:
     """Get the IP address object from the record."""
     if record.type == _TYPE_AAAA and record.scope_id:
         return ip_bytes_and_scope_to_address(record.address, record.scope_id)
@@ -128,7 +130,7 @@ def get_ip_address_object_from_record(
 
 def ip_bytes_and_scope_to_address(
     address: bytes_, scope: int_
-) -> Optional[Union[ZeroconfIPv4Address, ZeroconfIPv6Address]]:
+) -> ZeroconfIPv4Address | ZeroconfIPv6Address | None:
     """Convert the bytes and scope to an IP address object."""
     base_address = cached_ip_addresses_wrapper(address)
     if base_address is not None and base_address.is_link_local:
@@ -137,7 +139,7 @@ def ip_bytes_and_scope_to_address(
     return base_address
 
 
-def str_without_scope_id(addr: Union[ZeroconfIPv4Address, ZeroconfIPv6Address]) -> str:
+def str_without_scope_id(addr: ZeroconfIPv4Address | ZeroconfIPv6Address) -> str:
     """Return the string representation of the address without the scope id."""
     if addr.version == 6:
         address_str = str(addr)

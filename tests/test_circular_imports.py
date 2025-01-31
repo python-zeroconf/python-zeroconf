@@ -1,5 +1,7 @@
 """Test to check for circular imports."""
 
+from __future__ import annotations
+
 import asyncio
 import sys
 

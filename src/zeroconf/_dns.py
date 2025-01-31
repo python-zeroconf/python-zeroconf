@@ -20,9 +20,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import enum
 import socket
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
@@ -94,7 +96,7 @@ class DNSEntry:
         """Type accessor"""
         return _TYPES.get(t, f"?({t})")
 
-    def entry_to_string(self, hdr: str, other: Optional[Union[bytes, str]]) -> str:
+    def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
         """String representation with additional information"""
         return "{}[{},{}{},{}]{}".format(
             hdr,
@@ -119,7 +121,7 @@ class DNSQuestion(DNSEntry):
         self._fast_init_entry(name, type_, class_)
         self._hash = hash((self.key, type_, self.class_))
 
-    def answered_by(self, rec: "DNSRecord") -> bool:
+    def answered_by(self, rec: DNSRecord) -> bool:
         """Returns true if the question is answered by the record"""
         return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
 
@@ -170,8 +172,8 @@ class DNSRecord(DNSEntry):
         name: str,
         type_: int,
         class_: int,
-        ttl: Union[float, int],
-        created: Optional[float] = None,
+        ttl: float | int,
+        created: float | None = None,
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created or current_time_millis())
 
@@ -185,10 +187,10 @@ class DNSRecord(DNSEntry):
         """Abstract method"""
         raise AbstractMethodException
 
-    def __lt__(self, other: "DNSRecord") -> bool:
+    def __lt__(self, other: DNSRecord) -> bool:
         return self.ttl < other.ttl
 
-    def suppressed_by(self, msg: "DNSIncoming") -> bool:
+    def suppressed_by(self, msg: DNSIncoming) -> bool:
         """Returns true if any answer in a message can suffice for the
         information held in this record."""
         answers = msg.answers()
@@ -208,7 +210,7 @@ class DNSRecord(DNSEntry):
         return self.created + (percent * self.ttl * 10)
 
     # TODO: Switch to just int here
-    def get_remaining_ttl(self, now: _float) -> Union[int, float]:
+    def get_remaining_ttl(self, now: _float) -> int | float:
         """Returns the remaining TTL in seconds."""
         remain = (self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) - now) / 1000.0
         return 0 if remain < 0 else remain
@@ -225,18 +227,18 @@ class DNSRecord(DNSEntry):
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
-    def _set_created_ttl(self, created: _float, ttl: Union[float, int]) -> None:
+    def _set_created_ttl(self, created: _float, ttl: float | int) -> None:
         """Set the created and ttl of a record."""
         # It would be better if we made a copy instead of mutating the record
         # in place, but records currently don't have a copy method.
         self.created = created
         self.ttl = ttl
 
-    def write(self, out: "DNSOutgoing") -> None:  # pylint: disable=no-self-use
+    def write(self, out: DNSOutgoing) -> None:  # pylint: disable=no-self-use
         """Abstract method"""
         raise AbstractMethodException
 
-    def to_string(self, other: Union[bytes, str]) -> str:
+    def to_string(self, other: bytes | str) -> str:
         """String representation with additional information"""
         arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"
         return DNSEntry.entry_to_string(self, "record", arg)
@@ -254,8 +256,8 @@ class DNSAddress(DNSRecord):
         class_: int,
         ttl: int,
         address: bytes,
-        scope_id: Optional[int] = None,
-        created: Optional[float] = None,
+        scope_id: int | None = None,
+        created: float | None = None,
     ) -> None:
         self._fast_init(name, type_, class_, ttl, address, scope_id, created or current_time_millis())
 
@@ -266,7 +268,7 @@ class DNSAddress(DNSRecord):
         class_: _int,
         ttl: _float,
         address: bytes,
-        scope_id: Optional[_int],
+        scope_id: _int | None,
         created: _float,
     ) -> None:
         """Fast init for reuse."""
@@ -275,7 +277,7 @@ class DNSAddress(DNSRecord):
         self.scope_id = scope_id
         self._hash = hash((self.key, type_, self.class_, address, scope_id))
 
-    def write(self, out: "DNSOutgoing") -> None:
+    def write(self, out: DNSOutgoing) -> None:
         """Used in constructing an outgoing packet"""
         out.write_string(self.address)
 
@@ -320,7 +322,7 @@ class DNSHinfo(DNSRecord):
         ttl: int,
         cpu: str,
         os: str,
-        created: Optional[float] = None,
+        created: float | None = None,
     ) -> None:
         self._fast_init(name, type_, class_, ttl, cpu, os, created or current_time_millis())
 
@@ -333,7 +335,7 @@ class DNSHinfo(DNSRecord):
         self.os = os
         self._hash = hash((self.key, type_, self.class_, cpu, os))
 
-    def write(self, out: "DNSOutgoing") -> None:
+    def write(self, out: DNSOutgoing) -> None:
         """Used in constructing an outgoing packet"""
         out.write_character_string(self.cpu.encode("utf-8"))
         out.write_character_string(self.os.encode("utf-8"))
@@ -367,7 +369,7 @@ class DNSPointer(DNSRecord):
         class_: int,
         ttl: int,
         alias: str,
-        created: Optional[float] = None,
+        created: float | None = None,
     ) -> None:
         self._fast_init(name, type_, class_, ttl, alias, created or current_time_millis())
 
@@ -389,7 +391,7 @@ class DNSPointer(DNSRecord):
             + _NAME_COMPRESSION_MIN_SIZE
         )
 
-    def write(self, out: "DNSOutgoing") -> None:
+    def write(self, out: DNSOutgoing) -> None:
         """Used in constructing an outgoing packet"""
         out.write_name(self.alias)
 
@@ -422,7 +424,7 @@ class DNSText(DNSRecord):
         class_: int,
         ttl: int,
         text: bytes,
-        created: Optional[float] = None,
+        created: float | None = None,
     ) -> None:
         self._fast_init(name, type_, class_, ttl, text, created or current_time_millis())
 
@@ -433,7 +435,7 @@ class DNSText(DNSRecord):
         self.text = text
         self._hash = hash((self.key, type_, self.class_, text))
 
-    def write(self, out: "DNSOutgoing") -> None:
+    def write(self, out: DNSOutgoing) -> None:
         """Used in constructing an outgoing packet"""
         out.write_string(self.text)
 
@@ -466,12 +468,12 @@ class DNSService(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: Union[float, int],
+        ttl: float | int,
         priority: int,
         weight: int,
         port: int,
         server: str,
-        created: Optional[float] = None,
+        created: float | None = None,
     ) -> None:
         self._fast_init(
             name, type_, class_, ttl, priority, weight, port, server, created or current_time_millis()
@@ -497,7 +499,7 @@ class DNSService(DNSRecord):
         self.server_key = server.lower()
         self._hash = hash((self.key, type_, self.class_, priority, weight, port, self.server_key))
 
-    def write(self, out: "DNSOutgoing") -> None:
+    def write(self, out: DNSOutgoing) -> None:
         """Used in constructing an outgoing packet"""
         out.write_short(self.priority)
         out.write_short(self.weight)
@@ -537,10 +539,10 @@ class DNSNsec(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: Union[int, float],
+        ttl: int | float,
         next_name: str,
-        rdtypes: List[int],
-        created: Optional[float] = None,
+        rdtypes: list[int],
+        created: float | None = None,
     ) -> None:
         self._fast_init(name, type_, class_, ttl, next_name, rdtypes, created or current_time_millis())
 
@@ -551,7 +553,7 @@ class DNSNsec(DNSRecord):
         class_: _int,
         ttl: _float,
         next_name: str,
-        rdtypes: List[_int],
+        rdtypes: list[_int],
         created: _float,
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created)
@@ -559,7 +561,7 @@ class DNSNsec(DNSRecord):
         self.rdtypes = sorted(rdtypes)
         self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
 
-    def write(self, out: "DNSOutgoing") -> None:
+    def write(self, out: DNSOutgoing) -> None:
         """Used in constructing an outgoing packet."""
         bitmap = bytearray(b"\0" * 32)
         total_octets = 0
@@ -610,21 +612,21 @@ class DNSRRSet:
 
     __slots__ = ("_lookup", "_records")
 
-    def __init__(self, records: List[DNSRecord]) -> None:
+    def __init__(self, records: list[DNSRecord]) -> None:
         """Create an RRset from records sets."""
         self._records = records
-        self._lookup: Optional[Dict[DNSRecord, DNSRecord]] = None
+        self._lookup: dict[DNSRecord, DNSRecord] | None = None
 
     @property
-    def lookup(self) -> Dict[DNSRecord, DNSRecord]:
+    def lookup(self) -> dict[DNSRecord, DNSRecord]:
         """Return the lookup table."""
         return self._get_lookup()
 
-    def lookup_set(self) -> Set[DNSRecord]:
+    def lookup_set(self) -> set[DNSRecord]:
         """Return the lookup table as aset."""
         return set(self._get_lookup())
 
-    def _get_lookup(self) -> Dict[DNSRecord, DNSRecord]:
+    def _get_lookup(self) -> dict[DNSRecord, DNSRecord]:
         """Return the lookup table, building it if needed."""
         if self._lookup is None:
             # Build the hash table so we can lookup the record ttl

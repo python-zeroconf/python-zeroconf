@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pytest_codspeed import BenchmarkFixture
 
 from zeroconf import DNSCache, DNSPointer, current_time_millis

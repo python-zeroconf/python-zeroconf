@@ -20,11 +20,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import asyncio
 import itertools
 import socket
 import threading
-from typing import TYPE_CHECKING, List, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 from ._record_update import RecordUpdate
 from ._utils.asyncio import get_running_loop, run_coro_with_timeout
@@ -58,31 +60,31 @@ class AsyncEngine:
 
     def __init__(
         self,
-        zeroconf: "Zeroconf",
-        listen_socket: Optional[socket.socket],
-        respond_sockets: List[socket.socket],
+        zeroconf: Zeroconf,
+        listen_socket: socket.socket | None,
+        respond_sockets: list[socket.socket],
     ) -> None:
-        self.loop: Optional[asyncio.AbstractEventLoop] = None
+        self.loop: asyncio.AbstractEventLoop | None = None
         self.zc = zeroconf
-        self.protocols: List[AsyncListener] = []
-        self.readers: List[_WrappedTransport] = []
-        self.senders: List[_WrappedTransport] = []
-        self.running_event: Optional[asyncio.Event] = None
+        self.protocols: list[AsyncListener] = []
+        self.readers: list[_WrappedTransport] = []
+        self.senders: list[_WrappedTransport] = []
+        self.running_event: asyncio.Event | None = None
         self._listen_socket = listen_socket
         self._respond_sockets = respond_sockets
-        self._cleanup_timer: Optional[asyncio.TimerHandle] = None
+        self._cleanup_timer: asyncio.TimerHandle | None = None
 
     def setup(
         self,
         loop: asyncio.AbstractEventLoop,
-        loop_thread_ready: Optional[threading.Event],
+        loop_thread_ready: threading.Event | None,
     ) -> None:
         """Set up the instance."""
         self.loop = loop
         self.running_event = asyncio.Event()
         self.loop.create_task(self._async_setup(loop_thread_ready))
 
-    async def _async_setup(self, loop_thread_ready: Optional[threading.Event]) -> None:
+    async def _async_setup(self, loop_thread_ready: threading.Event | None) -> None:
         """Set up the instance."""
         self._async_schedule_next_cache_cleanup()
         await self._async_create_endpoints()

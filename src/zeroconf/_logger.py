@@ -21,9 +21,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import logging
 import sys
-from typing import Any, ClassVar, Dict, Union, cast
+from typing import Any, ClassVar, cast
 
 log = logging.getLogger(__name__.split(".", maxsplit=1)[0])
 log.addHandler(logging.NullHandler())
@@ -38,7 +40,7 @@ set_logger_level_if_unset()
 
 
 class QuietLogger:
-    _seen_logs: ClassVar[Dict[str, Union[int, tuple]]] = {}
+    _seen_logs: ClassVar[dict[str, int | tuple]] = {}
 
     @classmethod
     def log_exception_warning(cls, *logger_data: Any) -> None:

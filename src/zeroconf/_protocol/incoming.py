@@ -20,9 +20,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import struct
 import sys
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 
 from .._dns import (
     DNSAddress,
@@ -61,7 +63,7 @@ MAX_NAME_LENGTH = 253
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
 
-_seen_logs: Dict[str, Union[int, tuple]] = {}
+_seen_logs: dict[str, int | tuple] = {}
 _str = str
 _int = int
 
@@ -94,9 +96,9 @@ class DNSIncoming:
     def __init__(
         self,
         data: bytes,
-        source: Optional[Tuple[str, int]] = None,
-        scope_id: Optional[int] = None,
-        now: Optional[float] = None,
+        source: tuple[str, int] | None = None,
+        scope_id: int | None = None,
+        now: float | None = None,
     ) -> None:
         """Constructor from string holding bytes of packet"""
         self.flags = 0
@@ -104,9 +106,9 @@ class DNSIncoming:
         self.data = data
         self.view = data
         self._data_len = len(data)
-        self._name_cache: Dict[int, List[str]] = {}
-        self._questions: List[DNSQuestion] = []
-        self._answers: List[DNSRecord] = []
+        self._name_cache: dict[int, list[str]] = {}
+        self._questions: list[DNSQuestion] = []
+        self._answers: list[DNSRecord] = []
         self.id = 0
         self._num_questions = 0
         self._num_answers = 0
@@ -146,7 +148,7 @@ class DNSIncoming:
         return (self.flags & _FLAGS_TC) == _FLAGS_TC
 
     @property
-    def questions(self) -> List[DNSQuestion]:
+    def questions(self) -> list[DNSQuestion]:
         """Questions in the packet."""
         return self._questions
 
@@ -189,7 +191,7 @@ class DNSIncoming:
             log_exc_info = True
         log.debug(*(logger_data or ["Exception occurred"]), exc_info=log_exc_info)
 
-    def answers(self) -> List[DNSRecord]:
+    def answers(self) -> list[DNSRecord]:
         """Answers in the packet."""
         if not self._did_read_others:
             try:
@@ -306,7 +308,7 @@ class DNSIncoming:
 
     def _read_record(
         self, domain: _str, type_: _int, class_: _int, ttl: _int, length: _int
-    ) -> Optional[DNSRecord]:
+    ) -> DNSRecord | None:
         """Read known records types and skip unknown ones."""
         if type_ == _TYPE_A:
             address_rec = DNSAddress.__new__(DNSAddress)
@@ -384,7 +386,7 @@ class DNSIncoming:
         self.offset += length
         return None
 
-    def _read_bitmap(self, end: _int) -> List[int]:
+    def _read_bitmap(self, end: _int) -> list[int]:
         """Reads an NSEC bitmap from the packet."""
         rdtypes = []
         view = self.view
@@ -404,8 +406,8 @@ class DNSIncoming:
 
     def _read_name(self) -> str:
         """Reads a domain name from the packet."""
-        labels: List[str] = []
-        seen_pointers: Set[int] = set()
+        labels: list[str] = []
+        seen_pointers: set[int] = set()
         original_offset = self.offset
         self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers)
         self._name_cache[original_offset] = labels
@@ -416,7 +418,7 @@ class DNSIncoming:
             )
         return name
 
-    def _decode_labels_at_offset(self, off: _int, labels: List[str], seen_pointers: Set[int]) -> int:
+    def _decode_labels_at_offset(self, off: _int, labels: list[str], seen_pointers: set[int]) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
         view = self.view
         while off < self._data_len:

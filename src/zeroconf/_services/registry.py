@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
-from typing import Dict, List, Optional, Union
+from __future__ import annotations
 
 from .._exceptions import ServiceNameAlreadyRegistered
 from .info import ServiceInfo
@@ -41,16 +41,16 @@ class ServiceRegistry:
         self,
     ) -> None:
         """Create the ServiceRegistry class."""
-        self._services: Dict[str, ServiceInfo] = {}
-        self.types: Dict[str, List] = {}
-        self.servers: Dict[str, List] = {}
+        self._services: dict[str, ServiceInfo] = {}
+        self.types: dict[str, list] = {}
+        self.servers: dict[str, list] = {}
         self.has_entries: bool = False
 
     def async_add(self, info: ServiceInfo) -> None:
         """Add a new service to the registry."""
         self._add(info)
 
-    def async_remove(self, info: Union[List[ServiceInfo], ServiceInfo]) -> None:
+    def async_remove(self, info: list[ServiceInfo] | ServiceInfo) -> None:
         """Remove a new service from the registry."""
         self._remove(info if isinstance(info, list) else [info])
 
@@ -59,27 +59,27 @@ class ServiceRegistry:
         self._remove([info])
         self._add(info)
 
-    def async_get_service_infos(self) -> List[ServiceInfo]:
+    def async_get_service_infos(self) -> list[ServiceInfo]:
         """Return all ServiceInfo."""
         return list(self._services.values())
 
-    def async_get_info_name(self, name: str) -> Optional[ServiceInfo]:
+    def async_get_info_name(self, name: str) -> ServiceInfo | None:
         """Return all ServiceInfo for the name."""
         return self._services.get(name)
 
-    def async_get_types(self) -> List[str]:
+    def async_get_types(self) -> list[str]:
         """Return all types."""
         return list(self.types)
 
-    def async_get_infos_type(self, type_: str) -> List[ServiceInfo]:
+    def async_get_infos_type(self, type_: str) -> list[ServiceInfo]:
         """Return all ServiceInfo matching type."""
         return self._async_get_by_index(self.types, type_)
 
-    def async_get_infos_server(self, server: str) -> List[ServiceInfo]:
+    def async_get_infos_server(self, server: str) -> list[ServiceInfo]:
         """Return all ServiceInfo matching server."""
         return self._async_get_by_index(self.servers, server)
 
-    def _async_get_by_index(self, records: Dict[str, List], key: _str) -> List[ServiceInfo]:
+    def _async_get_by_index(self, records: dict[str, list], key: _str) -> list[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
         record_list = records.get(key)
         if record_list is None:
@@ -98,7 +98,7 @@ class ServiceRegistry:
         self.servers.setdefault(info.server_key, []).append(info.key)
         self.has_entries = True
 
-    def _remove(self, infos: List[ServiceInfo]) -> None:
+    def _remove(self, infos: list[ServiceInfo]) -> None:
         """Remove a services under the lock."""
         for info in infos:
             old_service_info = self._services.get(info.key)

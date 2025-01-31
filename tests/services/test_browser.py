@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._services.browser."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -863,7 +865,7 @@ def test_legacy_record_update_listener():
     class LegacyRecordUpdateListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def update_record(self, zc: "Zeroconf", now: float, record: r.DNSRecord) -> None:
+        def update_record(self, zc: Zeroconf, now: float, record: r.DNSRecord) -> None:
             nonlocal updates
             updates.append(record)
 

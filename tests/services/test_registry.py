@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._services.registry."""
 
+from __future__ import annotations
+
 import socket
 import unittest
 
