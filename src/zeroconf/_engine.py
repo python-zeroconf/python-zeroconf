@@ -143,7 +143,8 @@ class AsyncEngine:
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets."""
         assert self.running_future is not None
-        self.running_future = None
+        assert self.loop is not None
+        self.running_future = self.loop.create_future()
         for wrapped_transport in itertools.chain(self.senders, self.readers):
             wrapped_transport.transport.close()
 
