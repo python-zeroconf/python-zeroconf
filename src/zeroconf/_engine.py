@@ -51,7 +51,7 @@ class AsyncEngine:
         "loop",
         "protocols",
         "readers",
-        "running_event",
+        "running_future",
         "senders",
         "zc",
     )
@@ -67,7 +67,7 @@ class AsyncEngine:
         self.protocols: List[AsyncListener] = []
         self.readers: List[_WrappedTransport] = []
         self.senders: List[_WrappedTransport] = []
-        self.running_event: Optional[asyncio.Event] = None
+        self.running_future: Optional[asyncio.Future[bool | None]] = None
         self._listen_socket = listen_socket
         self._respond_sockets = respond_sockets
         self._cleanup_timer: Optional[asyncio.TimerHandle] = None
@@ -79,15 +79,15 @@ class AsyncEngine:
     ) -> None:
         """Set up the instance."""
         self.loop = loop
-        self.running_event = asyncio.Event()
+        self.running_future = loop.create_future()
         self.loop.create_task(self._async_setup(loop_thread_ready))
 
     async def _async_setup(self, loop_thread_ready: Optional[threading.Event]) -> None:
         """Set up the instance."""
         self._async_schedule_next_cache_cleanup()
         await self._async_create_endpoints()
-        assert self.running_event is not None
-        self.running_event.set()
+        assert self.running_future is not None
+        self.running_future.set_result(True)
         if loop_thread_ready:
             loop_thread_ready.set()
 
@@ -140,8 +140,8 @@ class AsyncEngine:
 
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets."""
-        assert self.running_event is not None
-        self.running_event.clear()
+        assert self.running_future is not None
+        self.running_future = None
         for wrapped_transport in itertools.chain(self.senders, self.readers):
             wrapped_transport.transport.close()
 

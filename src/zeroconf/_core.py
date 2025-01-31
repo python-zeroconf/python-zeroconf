@@ -53,8 +53,8 @@ from ._utils.asyncio import (
     get_running_loop,
     run_coro_with_timeout,
     shutdown_loop,
-    wait_event_or_timeout,
     wait_for_future_set_or_timeout,
+    wait_future_or_timeout,
 )
 from ._utils.name import service_type_name
 from ._utils.net import (
@@ -201,7 +201,7 @@ class Zeroconf(QuietLogger):
     @property
     def started(self) -> bool:
         """Check if the instance has started."""
-        return bool(not self.done and self.engine.running_event and self.engine.running_event.is_set())
+        return bool(not self.done and self.engine.running_future and self.engine.running_future.result())
 
     def start(self) -> None:
         """Start Zeroconf."""
@@ -233,9 +233,9 @@ class Zeroconf(QuietLogger):
         """
         if self.done:  # If the instance was shutdown from under us, raise immediately
             raise NotRunningException
-        assert self.engine.running_event is not None
-        await wait_event_or_timeout(self.engine.running_event, timeout=_STARTUP_TIMEOUT)
-        if not self.engine.running_event.is_set() or self.done:
+        assert self.engine.running_future is not None
+        await wait_future_or_timeout(self.engine.running_future, timeout=_STARTUP_TIMEOUT)
+        if not self.engine.running_future.result() or self.done:
             raise NotRunningException
 
     @property

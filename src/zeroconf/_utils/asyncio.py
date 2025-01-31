@@ -23,13 +23,7 @@ USA
 import asyncio
 import concurrent.futures
 import contextlib
-import sys
 from typing import Any, Awaitable, Coroutine, Optional, Set
-
-if sys.version_info[:2] < (3, 11):
-    from async_timeout import timeout as asyncio_timeout
-else:
-    from asyncio import timeout as asyncio_timeout  # type: ignore[attr-defined]
 
 from .._exceptions import EventLoopBlocked
 from ..const import _LOADED_SYSTEM_TIMEOUT
@@ -68,11 +62,14 @@ async def wait_for_future_set_or_timeout(
         future_set.discard(future)
 
 
-async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
-    """Wait for an event or timeout."""
-    with contextlib.suppress(asyncio.TimeoutError):
-        async with asyncio_timeout(timeout):
-            await event.wait()
+async def wait_future_or_timeout(future: asyncio.Future[bool | None], timeout: float) -> None:
+    """Wait for a future or timeout."""
+    loop = asyncio.get_running_loop()
+    handle = loop.call_later(timeout, _set_future_none_if_not_done, future)
+    try:
+        await future
+    finally:
+        handle.cancel()
 
 
 async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> Set[asyncio.Task]:

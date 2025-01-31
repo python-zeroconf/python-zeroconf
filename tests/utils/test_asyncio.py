@@ -45,16 +45,17 @@ def test_get_running_loop_no_loop() -> None:
 
 
 @pytest.mark.asyncio
-async def test_wait_event_or_timeout_times_out() -> None:
-    """Test wait_event_or_timeout will timeout."""
-    test_event = asyncio.Event()
-    await aioutils.wait_event_or_timeout(test_event, 0.1)
+async def test_wait_future_or_timeout_times_out() -> None:
+    """Test wait_future_or_timeout will timeout."""
+    loop = asyncio.get_running_loop()
+    test_future = loop.create_future()
+    await aioutils.wait_future_or_timeout(test_future, 0.1)
 
-    task = asyncio.ensure_future(test_event.wait())
+    task = asyncio.ensure_future(test_future)
     await asyncio.sleep(0.1)
 
     async def _async_wait_or_timeout():
-        await aioutils.wait_event_or_timeout(test_event, 0.1)
+        await aioutils.wait_future_or_timeout(test_future, 0.1)
 
     # Test high lock contention
     await asyncio.gather(*[_async_wait_or_timeout() for _ in range(100)])
