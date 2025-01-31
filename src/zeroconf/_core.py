@@ -203,7 +203,12 @@ class Zeroconf(QuietLogger):
     @property
     def started(self) -> bool:
         """Check if the instance has started."""
-        return bool(not self.done and self.engine.running_future and self.engine.running_future.result())
+        return bool(
+            not self.done
+            and self.engine.running_future
+            and self.engine.running_future.done()
+            and not self.engine.running_future.exception()
+        )
 
     def start(self) -> None:
         """Start Zeroconf."""
@@ -237,7 +242,7 @@ class Zeroconf(QuietLogger):
             raise NotRunningException
         assert self.engine.running_future is not None
         await wait_future_or_timeout(self.engine.running_future, timeout=_STARTUP_TIMEOUT)
-        if not self.engine.running_future.result() or self.done:
+        if not self.engine.running_future.done() or self.engine.running_future.exception() or self.done:
             raise NotRunningException
 
     @property
