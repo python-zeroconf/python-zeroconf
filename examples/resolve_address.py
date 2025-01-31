@@ -2,6 +2,8 @@
 
 """Example of resolving a name to an IP address."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys

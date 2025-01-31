@@ -2,6 +2,8 @@
 
 """Example of resolving a service with a known name"""
 
+from __future__ import annotations
+
 import logging
 import sys
 

@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._handlers"""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -1371,7 +1373,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     class MyListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: Zeroconf, now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
@@ -1973,7 +1975,7 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
     class MyListener:
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: Zeroconf, now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
@@ -2005,7 +2007,7 @@ async def test_async_updates_iteration_safe():
     class OtherListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: Zeroconf, now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
@@ -2014,7 +2016,7 @@ async def test_async_updates_iteration_safe():
     class ListenerThatAddsListener(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
-        def async_update_records(self, zc: "Zeroconf", now: float, records: list[r.RecordUpdate]) -> None:
+        def async_update_records(self, zc: Zeroconf, now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
             zc.async_add_listener(other, None)

@@ -20,11 +20,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import asyncio
 import concurrent.futures
 import contextlib
 import sys
-from typing import Any, Awaitable, Coroutine, Optional, Set
+from typing import Any, Awaitable, Coroutine
 
 if sys.version_info[:2] < (3, 11):
     from async_timeout import timeout as asyncio_timeout
@@ -47,7 +49,7 @@ def _set_future_none_if_not_done(fut: asyncio.Future) -> None:
         fut.set_result(None)
 
 
-def _resolve_all_futures_to_none(futures: Set[asyncio.Future]) -> None:
+def _resolve_all_futures_to_none(futures: set[asyncio.Future]) -> None:
     """Resolve all futures to None."""
     for fut in futures:
         _set_future_none_if_not_done(fut)
@@ -55,7 +57,7 @@ def _resolve_all_futures_to_none(futures: Set[asyncio.Future]) -> None:
 
 
 async def wait_for_future_set_or_timeout(
-    loop: asyncio.AbstractEventLoop, future_set: Set[asyncio.Future], timeout: float
+    loop: asyncio.AbstractEventLoop, future_set: set[asyncio.Future], timeout: float
 ) -> None:
     """Wait for a future or timeout (in milliseconds)."""
     future = loop.create_future()
@@ -75,7 +77,7 @@ async def wait_event_or_timeout(event: asyncio.Event, timeout: float) -> None:
             await event.wait()
 
 
-async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> Set[asyncio.Task]:
+async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> set[asyncio.Task]:
     """Return all tasks running."""
     await asyncio.sleep(0)  # flush out any call_soon_threadsafe
     # If there are multiple event loops running, all_tasks is not
@@ -87,7 +89,7 @@ async def _async_get_all_tasks(loop: asyncio.AbstractEventLoop) -> Set[asyncio.T
     return set()
 
 
-async def _wait_for_loop_tasks(wait_tasks: Set[asyncio.Task]) -> None:
+async def _wait_for_loop_tasks(wait_tasks: set[asyncio.Task]) -> None:
     """Wait for the event loop thread we started to shutdown."""
     await asyncio.wait(wait_tasks, timeout=_TASK_AWAIT_TIMEOUT)
 
@@ -130,7 +132,7 @@ def shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
     loop.call_soon_threadsafe(loop.stop)
 
 
-def get_running_loop() -> Optional[asyncio.AbstractEventLoop]:
+def get_running_loop() -> asyncio.AbstractEventLoop | None:
     """Check if an event loop is already running."""
     with contextlib.suppress(RuntimeError):
         return asyncio.get_running_loop()

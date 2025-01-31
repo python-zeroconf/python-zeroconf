@@ -1,5 +1,7 @@
 """Unit tests for zeroconf.py"""
 
+from __future__ import annotations
+
 import logging
 import socket
 import time

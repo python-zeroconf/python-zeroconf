@@ -20,7 +20,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 
 from .._cache import _UniqueRecordsType
 from .._dns import DNSQuestion, DNSRecord
@@ -42,13 +44,13 @@ class RecordManager:
 
     __slots__ = ("cache", "listeners", "zc")
 
-    def __init__(self, zeroconf: "Zeroconf") -> None:
+    def __init__(self, zeroconf: Zeroconf) -> None:
         """Init the record manager."""
         self.zc = zeroconf
         self.cache = zeroconf.cache
-        self.listeners: Set[RecordUpdateListener] = set()
+        self.listeners: set[RecordUpdateListener] = set()
 
-    def async_updates(self, now: _float, records: List[RecordUpdate]) -> None:
+    def async_updates(self, now: _float, records: list[RecordUpdate]) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
@@ -79,12 +81,12 @@ class RecordManager:
         This function must be run in the event loop as it is not
         threadsafe.
         """
-        updates: List[RecordUpdate] = []
-        address_adds: List[DNSRecord] = []
-        other_adds: List[DNSRecord] = []
-        removes: Set[DNSRecord] = set()
+        updates: list[RecordUpdate] = []
+        address_adds: list[DNSRecord] = []
+        other_adds: list[DNSRecord] = []
+        removes: set[DNSRecord] = set()
         now = msg.now
-        unique_types: Set[Tuple[str, int, int]] = set()
+        unique_types: set[tuple[str, int, int]] = set()
         cache = self.cache
         answers = msg.answers()
 
@@ -165,7 +167,7 @@ class RecordManager:
     def async_add_listener(
         self,
         listener: RecordUpdateListener,
-        question: Optional[Union[DNSQuestion, List[DNSQuestion]]],
+        question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
         """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
@@ -188,14 +190,14 @@ class RecordManager:
         self._async_update_matching_records(listener, questions)
 
     def _async_update_matching_records(
-        self, listener: RecordUpdateListener, questions: List[DNSQuestion]
+        self, listener: RecordUpdateListener, questions: list[DNSQuestion]
     ) -> None:
         """Calls back any existing entries in the cache that answer the question.
 
         This function must be run from the event loop.
         """
         now = current_time_millis()
-        records: List[RecordUpdate] = [
+        records: list[RecordUpdate] = [
             RecordUpdate(record, None)
             for question in questions
             for record in self.cache.async_entries_with_name(question.name)

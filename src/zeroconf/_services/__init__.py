@@ -20,8 +20,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import enum
-from typing import TYPE_CHECKING, Any, Callable, List
+from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -35,13 +37,13 @@ class ServiceStateChange(enum.Enum):
 
 
 class ServiceListener:
-    def add_service(self, zc: "Zeroconf", type_: str, name: str) -> None:
+    def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         raise NotImplementedError()
 
-    def remove_service(self, zc: "Zeroconf", type_: str, name: str) -> None:
+    def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         raise NotImplementedError()
 
-    def update_service(self, zc: "Zeroconf", type_: str, name: str) -> None:
+    def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         raise NotImplementedError()
 
 
@@ -49,27 +51,27 @@ class Signal:
     __slots__ = ("_handlers",)
 
     def __init__(self) -> None:
-        self._handlers: List[Callable[..., None]] = []
+        self._handlers: list[Callable[..., None]] = []
 
     def fire(self, **kwargs: Any) -> None:
         for h in self._handlers[:]:
             h(**kwargs)
 
     @property
-    def registration_interface(self) -> "SignalRegistrationInterface":
+    def registration_interface(self) -> SignalRegistrationInterface:
         return SignalRegistrationInterface(self._handlers)
 
 
 class SignalRegistrationInterface:
     __slots__ = ("_handlers",)
 
-    def __init__(self, handlers: List[Callable[..., None]]) -> None:
+    def __init__(self, handlers: list[Callable[..., None]]) -> None:
         self._handlers = handlers
 
-    def register_handler(self, handler: Callable[..., None]) -> "SignalRegistrationInterface":
+    def register_handler(self, handler: Callable[..., None]) -> SignalRegistrationInterface:
         self._handlers.append(handler)
         return self
 
-    def unregister_handler(self, handler: Callable[..., None]) -> "SignalRegistrationInterface":
+    def unregister_handler(self, handler: Callable[..., None]) -> SignalRegistrationInterface:
         self._handlers.remove(handler)
         return self

@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
 USA
 """
 
+from __future__ import annotations
+
 import random
 from collections import deque
 from typing import TYPE_CHECKING
@@ -53,7 +55,7 @@ class MulticastOutgoingQueue:
         "zc",
     )
 
-    def __init__(self, zeroconf: "Zeroconf", additional_delay: _int, max_aggregation_delay: _int) -> None:
+    def __init__(self, zeroconf: Zeroconf, additional_delay: _int, max_aggregation_delay: _int) -> None:
         self.zc = zeroconf
         self.queue: deque[AnswerGroup] = deque()
         # Additional delay is used to implement

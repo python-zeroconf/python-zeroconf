@@ -1,5 +1,7 @@
 """Benchmark helpers."""
 
+from __future__ import annotations
+
 import socket
 
 from zeroconf import DNSAddress, DNSOutgoing, DNSService, DNSText, const

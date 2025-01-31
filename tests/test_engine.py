@@ -1,5 +1,7 @@
 """Unit tests for zeroconf._engine"""
 
+from __future__ import annotations
+
 import asyncio
 import itertools
 import logging
