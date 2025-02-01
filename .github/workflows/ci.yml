@@ -134,14 +134,14 @@ jobs:
 
       # Do a dry run of PSR
       - name: Test release
-        uses: python-semantic-release/python-semantic-release@v9.16.1
+        uses: python-semantic-release/python-semantic-release@v9.17.0
         if: github.ref_name != 'master'
         with:
           root_options: --noop
 
       # On main branch: actual PSR + upload to PyPI & GitHub
       - name: Release
-        uses: python-semantic-release/python-semantic-release@v9.16.1
+        uses: python-semantic-release/python-semantic-release@v9.17.0
         id: release
         if: github.ref_name == 'master'
         with:
@@ -237,7 +237,7 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - uses: pypa/gh-action-pypi-publish@v1.12.3
+      - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
