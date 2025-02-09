@@ -26,8 +26,8 @@ import asyncio
 import logging
 import sys
 import threading
+from collections.abc import Awaitable
 from types import TracebackType
-from typing import Awaitable
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType

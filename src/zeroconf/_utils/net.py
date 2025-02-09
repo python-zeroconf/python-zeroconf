@@ -28,7 +28,8 @@ import ipaddress
 import socket
 import struct
 import sys
-from typing import Any, Sequence, Tuple, Union, cast
+from collections.abc import Sequence
+from typing import Any, Union, cast
 
 import ifaddr
 
@@ -42,7 +43,7 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
-InterfacesType = Union[Sequence[Union[str, int, Tuple[Tuple[str, int, int], int]]], InterfaceChoice]
+InterfacesType = Union[Sequence[Union[str, int, tuple[tuple[str, int, int], int]]], InterfaceChoice]
 
 
 @enum.unique
@@ -93,7 +94,7 @@ def ip6_to_address_and_index(adapters: list[Any], ip: str) -> tuple[tuple[str, i
             # IPv6 addresses are represented as tuples
             if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
                 return (
-                    cast(Tuple[str, int, int], adapter_ip.ip),
+                    cast(tuple[str, int, int], adapter_ip.ip),
                     cast(int, adapter.index),
                 )
 
@@ -106,7 +107,7 @@ def interface_index_to_ip6_address(adapters: list[Any], index: int) -> tuple[str
             for adapter_ip in adapter.ips:
                 # IPv6 addresses are represented as tuples
                 if isinstance(adapter_ip.ip, tuple):
-                    return cast(Tuple[str, int, int], adapter_ip.ip)
+                    return cast(tuple[str, int, int], adapter_ip.ip)
 
     raise RuntimeError(f"No adapter found for index {index}")
 
@@ -340,7 +341,7 @@ def new_respond_socket(
     respond_socket = new_socket(
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
         apple_p2p=apple_p2p,
-        bind_addr=cast(Tuple[Tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
+        bind_addr=cast(tuple[tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
     )
     if not respond_socket:
         return None

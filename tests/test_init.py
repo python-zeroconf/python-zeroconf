@@ -89,9 +89,10 @@ class Names(unittest.TestCase):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=["127.0.0.1"])
 
-        with patch("zeroconf._logger.log.warning") as mocked_log_warn, patch(
-            "zeroconf._logger.log.debug"
-        ) as mocked_log_debug:
+        with (
+            patch("zeroconf._logger.log.warning") as mocked_log_warn,
+            patch("zeroconf._logger.log.debug") as mocked_log_debug,
+        ):
             # now that we have a long packet in our possession, let's verify the
             # exception handling.
             out = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)

@@ -24,8 +24,9 @@ from __future__ import annotations
 
 import enum
 import logging
+from collections.abc import Sequence
 from struct import Struct
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from .._dns import DNSPointer, DNSQuestion, DNSRecord
 from .._exceptions import NamePartTooLongException

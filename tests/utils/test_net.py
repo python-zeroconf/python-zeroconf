@@ -82,9 +82,11 @@ def test_ip6_addresses_to_indexes():
 
 def test_normalize_interface_choice_errors():
     """Test we generate exception on invalid input."""
-    with patch("zeroconf._utils.net.get_all_addresses", return_value=[]), patch(
-        "zeroconf._utils.net.get_all_addresses_v6", return_value=[]
-    ), pytest.raises(RuntimeError):
+    with (
+        patch("zeroconf._utils.net.get_all_addresses", return_value=[]),
+        patch("zeroconf._utils.net.get_all_addresses_v6", return_value=[]),
+        pytest.raises(RuntimeError),
+    ):
         netutils.normalize_interface_choice(r.InterfaceChoice.All)
 
     with pytest.raises(TypeError):
@@ -128,8 +130,10 @@ def test_disable_ipv6_only_or_raise():
         errors_logged.append(args)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    with pytest.raises(OSError), patch.object(netutils.log, "error", _log_error), patch(
-        "socket.socket.setsockopt", side_effect=OSError
+    with (
+        pytest.raises(OSError),
+        patch.object(netutils.log, "error", _log_error),
+        patch("socket.socket.setsockopt", side_effect=OSError),
     ):
         netutils.disable_ipv6_only_or_raise(sock)
 

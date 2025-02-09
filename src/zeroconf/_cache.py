@@ -22,8 +22,9 @@ USA
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from heapq import heapify, heappop, heappush
-from typing import Dict, Iterable, Union, cast
+from typing import Union, cast
 
 from ._dns import (
     DNSAddress,
@@ -40,7 +41,7 @@ from .const import _ONE_SECOND, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
-_DNSRecordCacheType = Dict[str, Dict[DNSRecord, DNSRecord]]
+_DNSRecordCacheType = dict[str, dict[DNSRecord, DNSRecord]]
 _DNSRecord = DNSRecord
 _str = str
 _float = float
