@@ -26,7 +26,8 @@ import asyncio
 import concurrent.futures
 import contextlib
 import sys
-from typing import Any, Awaitable, Coroutine
+from collections.abc import Awaitable, Coroutine
+from typing import Any
 
 from .._exceptions import EventLoopBlocked
 from ..const import _LOADED_SYSTEM_TIMEOUT

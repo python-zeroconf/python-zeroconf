@@ -29,16 +29,13 @@ import random
 import threading
 import time
 import warnings
+from collections.abc import Iterable
 from functools import partial
 from types import TracebackType  # used in type hints
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
-    Iterable,
-    List,
-    Set,
     cast,
 )
 
@@ -96,7 +93,7 @@ int_ = int
 bool_ = bool
 str_ = str
 
-_QuestionWithKnownAnswers = Dict[DNSQuestion, Set[DNSPointer]]
+_QuestionWithKnownAnswers = dict[DNSQuestion, set[DNSPointer]]
 
 heappop = heapq.heappop
 heappush = heapq.heappush
@@ -282,7 +279,7 @@ def generate_service_query(
             log.debug("Asking %s was suppressed by the question history", question)
             continue
         if TYPE_CHECKING:
-            pointer_known_answers = cast(Set[DNSPointer], known_answers)
+            pointer_known_answers = cast(set[DNSPointer], known_answers)
         else:
             pointer_known_answers = known_answers
         questions_with_known_answers[question] = pointer_known_answers
@@ -618,10 +615,10 @@ class _ServiceBrowserBase(RecordUpdateListener):
         self._query_sender_task: asyncio.Task | None = None
 
         if hasattr(handlers, "add_service"):
-            listener = cast("ServiceListener", handlers)
+            listener = cast(ServiceListener, handlers)
             handlers = None
 
-        handlers = cast(List[Callable[..., None]], handlers or [])
+        handlers = cast(list[Callable[..., None]], handlers or [])
 
         if listener:
             handlers.append(_service_state_changed_from_listener(listener))

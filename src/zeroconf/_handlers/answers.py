@@ -23,13 +23,12 @@ USA
 from __future__ import annotations
 
 from operator import attrgetter
-from typing import Dict, Set
 
 from .._dns import DNSQuestion, DNSRecord
 from .._protocol.outgoing import DNSOutgoing
 from ..const import _FLAGS_AA, _FLAGS_QR_RESPONSE
 
-_AnswerWithAdditionalsType = Dict[DNSRecord, Set[DNSRecord]]
+_AnswerWithAdditionalsType = dict[DNSRecord, set[DNSRecord]]
 
 int_ = int
 

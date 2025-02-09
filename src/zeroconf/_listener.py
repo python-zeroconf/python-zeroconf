@@ -26,7 +26,7 @@ import asyncio
 import logging
 import random
 from functools import partial
-from typing import TYPE_CHECKING, Tuple, cast
+from typing import TYPE_CHECKING, cast
 
 from ._logger import QuietLogger, log
 from ._protocol.incoming import DNSIncoming
@@ -134,7 +134,7 @@ class AsyncListener:
             addr, port = addrs  # type: ignore
             addr_port = addrs
             if TYPE_CHECKING:
-                addr_port = cast(Tuple[str, int], addr_port)
+                addr_port = cast(tuple[str, int], addr_port)
             scope = None
         else:
             # https://github.com/python/mypy/issues/1178

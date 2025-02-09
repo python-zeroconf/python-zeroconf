@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import random
-from typing import TYPE_CHECKING, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 from .._cache import DNSCache
 from .._dns import (
@@ -395,7 +395,7 @@ class ServiceInfo(RecordUpdateListener):
             # as-is, without decoding them, otherwise calling
             # self.properties will lazy decode them, which is expensive.
             if TYPE_CHECKING:
-                self._properties = cast("Dict[bytes, Optional[bytes]]", properties)
+                self._properties = cast(dict[bytes, bytes | None], properties)
             else:
                 self._properties = properties
         self.text = result
@@ -462,7 +462,7 @@ class ServiceInfo(RecordUpdateListener):
         """Set IPv6 addresses from the cache."""
         if TYPE_CHECKING:
             self._ipv6_addresses = cast(
-                "List[ZeroconfIPv6Address]",
+                list[ZeroconfIPv6Address],
                 self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_AAAA),
             )
         else:
@@ -472,7 +472,7 @@ class ServiceInfo(RecordUpdateListener):
         """Set IPv4 addresses from the cache."""
         if TYPE_CHECKING:
             self._ipv4_addresses = cast(
-                "List[ZeroconfIPv4Address]",
+                list[ZeroconfIPv4Address],
                 self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A),
             )
         else:
@@ -724,7 +724,7 @@ class ServiceInfo(RecordUpdateListener):
         cache = zc.cache
         if TYPE_CHECKING:
             records = cast(
-                "List[DNSAddress]",
+                list[DNSAddress],
                 cache.get_all_by_details(self.server_key, _type, _CLASS_IN),
             )
         else:

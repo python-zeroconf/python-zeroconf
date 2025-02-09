@@ -59,8 +59,9 @@ def test_guard_against_oversized_packets():
 
     try:
         # We are patching to generate an oversized packet
-        with patch.object(outgoing, "_MAX_MSG_ABSOLUTE", 100000), patch.object(
-            outgoing, "_MAX_MSG_TYPICAL", 100000
+        with (
+            patch.object(outgoing, "_MAX_MSG_ABSOLUTE", 100000),
+            patch.object(outgoing, "_MAX_MSG_TYPICAL", 100000),
         ):
             over_sized_packet = generated.packets()[0]
             assert len(over_sized_packet) > const._MAX_MSG_ABSOLUTE

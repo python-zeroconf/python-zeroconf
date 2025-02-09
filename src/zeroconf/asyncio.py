@@ -24,8 +24,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections.abc import Awaitable
 from types import TracebackType  # used in type hints
-from typing import Awaitable, Callable
+from typing import Callable
 
 from ._core import Zeroconf
 from ._dns import DNSQuestionType
