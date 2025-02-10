@@ -74,14 +74,14 @@ def _encode_address(address: str) -> bytes:
 
 
 def get_all_addresses() -> list[str]:
-    return list({addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})
+    return list({addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})  # type: ignore[misc]
 
 
 def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     # TODO: What about multi-address interfaces?
     return list(
-        {(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6}
+        {(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6}  # type: ignore[misc]
     )
 
 
@@ -127,9 +127,9 @@ def ip6_addresses_to_indexes(
 
     for iface in interfaces:
         if isinstance(iface, int):
-            result.append((interface_index_to_ip6_address(adapters, iface), iface))
+            result.append((interface_index_to_ip6_address(adapters, iface), iface))  # type: ignore[arg-type]
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
-            result.append(ip6_to_address_and_index(adapters, iface))
+            result.append(ip6_to_address_and_index(adapters, iface))  # type: ignore[arg-type]
 
     return result
 
