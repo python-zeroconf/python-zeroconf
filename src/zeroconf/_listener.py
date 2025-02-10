@@ -131,14 +131,14 @@ class AsyncListener:
         if len(addrs) == 2:
             v6_flow_scope: tuple[()] | tuple[int, int] = ()
             # https://github.com/python/mypy/issues/1178
-            addr, port = addrs  # type: ignore
+            addr, port = addrs
             addr_port = addrs
             if TYPE_CHECKING:
                 addr_port = cast(tuple[str, int], addr_port)
             scope = None
         else:
             # https://github.com/python/mypy/issues/1178
-            addr, port, flow, scope = addrs  # type: ignore
+            addr, port, flow, scope = addrs
             if debug:  # pragma: no branch
                 log.debug("IPv6 scope_id %d associated to the receiving interface", scope)
             v6_flow_scope = (flow, scope)

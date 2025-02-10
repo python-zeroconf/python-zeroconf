@@ -79,7 +79,7 @@ class DNSEntry:
         self.class_ = class_ & _CLASS_MASK
         self.unique = (class_ & _CLASS_UNIQUE) != 0
 
-    def _dns_entry_matches(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _dns_entry_matches(self, other: DNSEntry) -> bool:
         return self.key == other.key and self.type == other.type and self.class_ == other.class_
 
     def __eq__(self, other: Any) -> bool:
@@ -135,7 +135,7 @@ class DNSQuestion(DNSEntry):
     @property
     def max_size(self) -> int:
         """Maximum size of the question in the packet."""
-        return len(self.name.encode("utf-8")) + _LEN_BYTE + _LEN_SHORT + _LEN_SHORT  # type  # class
+        return len(self.name.encode("utf-8")) + _LEN_BYTE + _LEN_SHORT + _LEN_SHORT
 
     @property
     def unicast(self) -> bool:
@@ -199,7 +199,7 @@ class DNSRecord(DNSEntry):
                 return True
         return False
 
-    def _suppressed_by_answer(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _suppressed_by_answer(self, other: DNSRecord) -> bool:
         """Returns true if another record has same name, type and class,
         and if its TTL is at least half of this record's."""
         return self == other and other.ttl > (self.ttl / 2)
@@ -285,7 +285,7 @@ class DNSAddress(DNSRecord):
         """Tests equality on address"""
         return isinstance(other, DNSAddress) and self._eq(other)
 
-    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _eq(self, other: DNSAddress) -> bool:
         return (
             self.address == other.address
             and self.scope_id == other.scope_id
@@ -344,7 +344,7 @@ class DNSHinfo(DNSRecord):
         """Tests equality on cpu and os."""
         return isinstance(other, DNSHinfo) and self._eq(other)
 
-    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _eq(self, other: DNSHinfo) -> bool:
         """Tests equality on cpu and os."""
         return self.cpu == other.cpu and self.os == other.os and self._dns_entry_matches(other)
 
@@ -399,7 +399,7 @@ class DNSPointer(DNSRecord):
         """Tests equality on alias."""
         return isinstance(other, DNSPointer) and self._eq(other)
 
-    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _eq(self, other: DNSPointer) -> bool:
         """Tests equality on alias."""
         return self.alias_key == other.alias_key and self._dns_entry_matches(other)
 
@@ -447,7 +447,7 @@ class DNSText(DNSRecord):
         """Tests equality on text."""
         return isinstance(other, DNSText) and self._eq(other)
 
-    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _eq(self, other: DNSText) -> bool:
         """Tests equality on text."""
         return self.text == other.text and self._dns_entry_matches(other)
 
@@ -510,7 +510,7 @@ class DNSService(DNSRecord):
         """Tests equality on priority, weight, port and server"""
         return isinstance(other, DNSService) and self._eq(other)
 
-    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _eq(self, other: DNSService) -> bool:
         """Tests equality on priority, weight, port and server."""
         return (
             self.priority == other.priority
@@ -585,7 +585,7 @@ class DNSNsec(DNSRecord):
         """Tests equality on next_name and rdtypes."""
         return isinstance(other, DNSNsec) and self._eq(other)
 
-    def _eq(self, other) -> bool:  # type: ignore[no-untyped-def]
+    def _eq(self, other: DNSNsec) -> bool:
         """Tests equality on next_name and rdtypes."""
         return (
             self.next_name == other.next_name

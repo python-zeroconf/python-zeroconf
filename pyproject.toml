@@ -162,15 +162,21 @@ profile = "black"
 known_first_party = ["zeroconf", "tests"]
 
 [tool.mypy]
+warn_unused_configs = true
 check_untyped_defs = true
 disallow_any_generics = false  # turn this on when we drop 3.7/3.8 support
 disallow_incomplete_defs = true
 disallow_untyped_defs = true
+warn_incomplete_stub = true
 mypy_path = "src/"
-no_implicit_optional = true
 show_error_codes = true
+warn_redundant_casts = false  # Activate for cleanup.
+warn_return_any = true
 warn_unreachable = true
-warn_unused_ignores = false
+warn_unused_ignores = false  # Does not always work properly, activate for cleanup.
+extra_checks = true
+strict_equality = true
+strict_bytes = true  # Will be true by default with mypy v2 release.
 exclude = [
     'docs/*',
     'bench/*',
