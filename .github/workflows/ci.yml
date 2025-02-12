@@ -207,7 +207,8 @@ jobs:
       # Used to host cibuildwheel
       - name: Set up Python
         uses: actions/setup-python@v5
-
+        with:
+          python-version: "3.12"
       - name: Set up QEMU
         if: ${{ matrix.qemu }}
         uses: docker/setup-qemu-action@v3
