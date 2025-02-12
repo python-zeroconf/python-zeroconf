@@ -302,6 +302,20 @@ def add_multicast_member(
                 interface,
             )
             return False
+        if _errno == errno.ENOBUFS:
+            # https://github.com/python-zeroconf/python-zeroconf/issues/1510
+            if not is_v6 and sys.platform.startswith("linux"):
+                log.info(
+                    "No buffer space available when adding %s to multicast group, "
+                    "try increasing net.ipv4.igmp_max_memberships to 1024 in sysctl.conf",
+                    interface,
+                )
+            else:
+                log.info(
+                    "No buffer space available when adding %s to multicast group.",
+                    interface,
+                )
+            return False
         if _errno == errno.EADDRNOTAVAIL:
             log.info(
                 "Address not available when adding %s to multicast "
