@@ -202,7 +202,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          fetch-depth: 0
+          ref: "master"
       - name: Set up QEMU
         if: ${{ matrix.qemu }}
         uses: docker/setup-qemu-action@v3
