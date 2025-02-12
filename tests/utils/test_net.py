@@ -222,7 +222,7 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
     with patch("socket.socket.setsockopt"):
         assert netutils.add_multicast_member(sock, interface) is True
 
-    # Ran out of IGMP memberships is forgiving, but logs on linux
+    # Ran out of IGMP memberships is forgiving and logs about igmp_max_memberships on linux
     caplog.clear()
     with (
         patch.object(sys, "platform", "linux"),
@@ -232,7 +232,7 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
         assert "No buffer space available" in caplog.text
         assert "net.ipv4.igmp_max_memberships" in caplog.text
 
-    # Ran out of IGMP memberships is forgiving, but logs on linux
+    # Ran out of IGMP memberships is forgiving and logs
     caplog.clear()
     with (
         patch.object(sys, "platform", "darwin"),
