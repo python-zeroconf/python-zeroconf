@@ -204,6 +204,10 @@ jobs:
         with:
           fetch-depth: 0
           ref: "master"
+      # Used to host cibuildwheel
+      - name: Set up Python
+        uses: actions/setup-python@v5
+
       - name: Set up QEMU
         if: ${{ matrix.qemu }}
         uses: docker/setup-qemu-action@v3
