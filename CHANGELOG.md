@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.143.1 (2025-02-12)
+
+### Bug Fixes
+
+- Make no buffer space available when adding multicast memberships forgiving
+  ([#1516](https://github.com/python-zeroconf/python-zeroconf/pull/1516),
+  [`f377d5c`](https://github.com/python-zeroconf/python-zeroconf/commit/f377d5cd08d724282c8487785163b466f3971344))
+
+
 ## v0.143.0 (2025-01-31)
 
 ### Features
