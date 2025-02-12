@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.144.0 (2025-02-12)
+
+### Features
+
+- Add armv7l wheel builds ([#1517](https://github.com/python-zeroconf/python-zeroconf/pull/1517),
+  [`39887b8`](https://github.com/python-zeroconf/python-zeroconf/commit/39887b80328d616e8e6f6ca9d08aecc06f7b0711))
+
+
 ## v0.143.1 (2025-02-12)
 
 ### Bug Fixes
