@@ -173,27 +173,53 @@ jobs:
             macos-13,
             macos-latest,
           ]
-        musl: ["", "musllinux"]
-        exclude:
-          - os: windows-2019
-            musl: "musllinux"
-          - os: macos-13
-            musl: "musllinux"
-          - os: macos-latest
-            musl: "musllinux"
-
+        qemu: ['']
+        musl: [""]
+        include:
+          - os: ubuntu-latest
+            qemu: ppc64le
+            musl: ""
+          - os: ubuntu-latest
+            qemu: ppc64le
+            musl: musllinux
+          - os: ubuntu-latest
+            qemu: s390x
+            musl: ""
+          - os: ubuntu-latest
+            qemu: s390x
+            musl: musllinux
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: ""
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: musllinux
+          - os: ubuntu-latest
+            musl: musllinux
+          - os: ubuntu-24.04-arm
+            musl: musllinux
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: "master"
-
-      # Used to host cibuildwheel
-      - name: Set up Python
-        uses: actions/setup-python@v5
+          submodules: true
+      - name: Set up QEMU
+        if: ${{ matrix.qemu }}
+        uses: docker/setup-qemu-action@v3
         with:
-          python-version: "3.11"
-
+          platforms: all
+          # This should be temporary
+          # xref https://github.com/docker/setup-qemu-action/issues/188
+          # xref https://github.com/tonistiigi/binfmt/issues/215
+          image: tonistiigi/binfmt:qemu-v8.1.5
+        id: qemu
+      - name: Prepare emulation
+        run: |
+          if [[ -n "${{ matrix.qemu }}" ]]; then
+            # Build emulated architectures only if QEMU is set,
+            # use default "auto" otherwise
+            echo "CIBW_ARCHS_LINUX=${{ matrix.qemu }}" >> $GITHUB_ENV
+          fi
       - name: Install python-semantic-release
         run: pipx install python-semantic-release==7.34.6
 
@@ -214,14 +240,12 @@ jobs:
         env:
           CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 ${{ matrix.musl == 'musllinux' && '*manylinux*' || '*musllinux*' }}
           CIBW_BEFORE_ALL_LINUX: apt install -y gcc || yum install -y gcc || apk add gcc
-          CIBW_ARCHS_LINUX: ${{ matrix.os == 'ubuntu-24.04-arm' && 'aarch64' || 'auto' }}
-          CIBW_BUILD_VERBOSITY: 3
           REQUIRE_CYTHON: 1
 
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: wheels-${{ matrix.os }}-${{ matrix.musl }}
+          name: wheels-${{ matrix.os }}-${{ matrix.musl }}-${{ matrix.qemu }}
 
   upload_pypi:
     needs: [build_wheels]
