@@ -208,6 +208,7 @@ jobs:
           image: tonistiigi/binfmt:qemu-v8.1.5
         id: qemu
       - name: Prepare emulation
+        if: ${{ matrix.qemu }}
         run: |
           if [[ -n "${{ matrix.qemu }}" ]]; then
             # Build emulated architectures only if QEMU is set,
@@ -232,7 +233,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.22.0
         # to supply options, put them in 'env', like:
         env:
-          CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* *p39-*_aarch64 *p310-*_aarch64 pp*_aarch64 ${{ matrix.musl == 'musllinux' && '*manylinux*' || '*musllinux*' }}
+          CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* ${{ matrix.musl == 'musllinux' && '*manylinux*' || '*musllinux*' }}
           CIBW_BEFORE_ALL_LINUX: apt install -y gcc || yum install -y gcc || apk add gcc
           REQUIRE_CYTHON: 1
 
