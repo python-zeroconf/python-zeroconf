@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import errno
 import socket
+import sys
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
@@ -181,7 +182,7 @@ def test_set_mdns_port_socket_options_for_ip_version():
         netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
 
 
-def test_add_multicast_member():
+def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     interface = "127.0.0.1"
 
@@ -220,6 +221,26 @@ def test_add_multicast_member():
     # No error should return True
     with patch("socket.socket.setsockopt"):
         assert netutils.add_multicast_member(sock, interface) is True
+
+    # Ran out of IGMP memberships is forgiving, but logs on linux
+    caplog.clear()
+    with (
+        patch.object(sys, "platform", "linux"),
+        patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
+    ):
+        assert netutils.add_multicast_member(sock, interface) is False
+        assert "No buffer space available" in caplog.text
+        assert "net.ipv4.igmp_max_memberships" in caplog.text
+
+    # Ran out of IGMP memberships is forgiving, but logs on linux
+    caplog.clear()
+    with (
+        patch.object(sys, "platform", "darwin"),
+        patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
+    ):
+        assert netutils.add_multicast_member(sock, interface) is False
+        assert "No buffer space available" in caplog.text
+        assert "net.ipv4.igmp_max_memberships" not in caplog.text
 
 
 def test_bind_raises_skips_address():
