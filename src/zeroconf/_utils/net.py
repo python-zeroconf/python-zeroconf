@@ -92,11 +92,12 @@ def ip6_to_address_and_index(adapters: list[ifaddr.Adapter], ip: str) -> tuple[t
     for adapter in adapters:
         for adapter_ip in adapter.ips:
             # IPv6 addresses are represented as tuples
-            if isinstance(adapter_ip.ip, tuple) and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr:
-                return (
-                    cast(tuple[str, int, int], adapter_ip.ip),
-                    cast(int, adapter.index),
-                )
+            if (
+                adapter.index is not None
+                and isinstance(adapter_ip.ip, tuple)
+                and ipaddress.ip_address(adapter_ip.ip[0]) == ipaddr
+            ):
+                return (adapter_ip.ip, adapter.index)
 
     raise RuntimeError(f"No adapter found for IP address {ip}")
 
@@ -107,7 +108,7 @@ def interface_index_to_ip6_address(adapters: list[ifaddr.Adapter], index: int) -
             for adapter_ip in adapter.ips:
                 # IPv6 addresses are represented as tuples
                 if isinstance(adapter_ip.ip, tuple):
-                    return cast(tuple[str, int, int], adapter_ip.ip)
+                    return adapter_ip.ip
 
     raise RuntimeError(f"No adapter found for index {index}")
 
