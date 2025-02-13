@@ -38,13 +38,13 @@ class ServiceStateChange(enum.Enum):
 
 class ServiceListener:
     def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class Signal:

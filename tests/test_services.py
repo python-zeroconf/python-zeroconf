@@ -71,7 +71,6 @@ class ListenerTest(unittest.TestCase):
         class MySubListener(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
                 sub_service_added.set()
-                pass
 
             def remove_service(self, zeroconf, type, name):
                 pass

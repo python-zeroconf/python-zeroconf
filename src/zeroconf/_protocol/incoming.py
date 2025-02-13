@@ -398,7 +398,7 @@ class DNSIncoming:
             bitmap_length = view[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
             for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
-                for bit in range(0, 8):
+                for bit in range(8):
                     if byte & (0x80 >> bit):
                         rdtypes.append(bit + window * 256 + i * 8)
             self.offset += 2 + bitmap_length

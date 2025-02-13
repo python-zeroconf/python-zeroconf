@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import zeroconf as r
-import zeroconf.const as const
+from zeroconf import const
 from zeroconf._history import QuestionHistory
 
 

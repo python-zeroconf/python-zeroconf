@@ -67,10 +67,9 @@ class TestRegistrar(unittest.TestCase):
         def get_ttl(record_type):
             if expected_ttl is not None:
                 return expected_ttl
-            elif record_type in [const._TYPE_A, const._TYPE_SRV, const._TYPE_NSEC]:
+            if record_type in [const._TYPE_A, const._TYPE_SRV, const._TYPE_NSEC]:
                 return const._DNS_HOST_TTL
-            else:
-                return const._DNS_OTHER_TTL
+            return const._DNS_OTHER_TTL
 
         def _process_outgoing_packet(out):
             """Sends an outgoing packet."""

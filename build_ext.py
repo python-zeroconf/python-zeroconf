@@ -54,4 +54,3 @@ def build(setup_kwargs: Any) -> None:
     except Exception:
         if os.environ.get("REQUIRE_CYTHON"):
             raise
-        pass

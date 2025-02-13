@@ -378,13 +378,13 @@ class ServiceInfo(RecordUpdateListener):
         result = b""
         for key, value in properties.items():
             if isinstance(key, str):
-                key = key.encode("utf-8")
+                key = key.encode("utf-8")  # noqa: PLW2901
                 properties_contain_str = True
 
             record = key
             if value is not None:
                 if not isinstance(value, bytes):
-                    value = str(value).encode("utf-8")
+                    value = str(value).encode("utf-8")  # noqa: PLW2901
                     properties_contain_str = True
                 record += b"=" + value
             list_.append(record)
@@ -524,7 +524,7 @@ class ServiceInfo(RecordUpdateListener):
                 # since by default IPv4Address.__eq__ compares the
                 # the addresses on version and int which more than
                 # we need here since we know the version is 4.
-                elif ip_addr.zc_integer != ipv4_addresses[0].zc_integer:
+                if ip_addr.zc_integer != ipv4_addresses[0].zc_integer:
                     ipv4_addresses.remove(ip_addr)
                     ipv4_addresses.insert(0, ip_addr)
 
@@ -540,7 +540,7 @@ class ServiceInfo(RecordUpdateListener):
             # since by default IPv6Address.__eq__ compares the
             # the addresses on version and int which more than
             # we need here since we know the version is 6.
-            elif ip_addr.zc_integer != self._ipv6_addresses[0].zc_integer:
+            if ip_addr.zc_integer != self._ipv6_addresses[0].zc_integer:
                 ipv6_addresses.remove(ip_addr)
                 ipv6_addresses.insert(0, ip_addr)
 
