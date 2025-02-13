@@ -82,7 +82,7 @@ class DNSEntry:
     def _dns_entry_matches(self, other: DNSEntry) -> bool:
         return self.key == other.key and self.type == other.type and self.class_ == other.class_
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Equality test on key (lowercase name), type, and class"""
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
@@ -128,7 +128,7 @@ class DNSQuestion(DNSEntry):
     def __hash__(self) -> int:
         return self._hash
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Tests equality on dns question."""
         return isinstance(other, DNSQuestion) and self._dns_entry_matches(other)
 
@@ -172,7 +172,7 @@ class DNSRecord(DNSEntry):
         name: str,
         type_: int,
         class_: int,
-        ttl: float,
+        ttl: float | int,
         created: float | None = None,
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created or current_time_millis())
@@ -183,7 +183,7 @@ class DNSRecord(DNSEntry):
         self.ttl = ttl
         self.created = created
 
-    def __eq__(self, other: object) -> bool:  # pylint: disable=no-self-use
+    def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
         """Abstract method"""
         raise AbstractMethodException
 
@@ -227,7 +227,7 @@ class DNSRecord(DNSEntry):
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
-    def _set_created_ttl(self, created: _float, ttl: float) -> None:
+    def _set_created_ttl(self, created: _float, ttl: float | int) -> None:
         """Set the created and ttl of a record."""
         # It would be better if we made a copy instead of mutating the record
         # in place, but records currently don't have a copy method.
@@ -281,7 +281,7 @@ class DNSAddress(DNSRecord):
         """Used in constructing an outgoing packet"""
         out.write_string(self.address)
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Tests equality on address"""
         return isinstance(other, DNSAddress) and self._eq(other)
 
@@ -340,7 +340,7 @@ class DNSHinfo(DNSRecord):
         out.write_character_string(self.cpu.encode("utf-8"))
         out.write_character_string(self.os.encode("utf-8"))
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Tests equality on cpu and os."""
         return isinstance(other, DNSHinfo) and self._eq(other)
 
@@ -395,7 +395,7 @@ class DNSPointer(DNSRecord):
         """Used in constructing an outgoing packet"""
         out.write_name(self.alias)
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Tests equality on alias."""
         return isinstance(other, DNSPointer) and self._eq(other)
 
@@ -443,7 +443,7 @@ class DNSText(DNSRecord):
         """Hash to compare like DNSText."""
         return self._hash
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Tests equality on text."""
         return isinstance(other, DNSText) and self._eq(other)
 
@@ -468,7 +468,7 @@ class DNSService(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: float,
+        ttl: float | int,
         priority: int,
         weight: int,
         port: int,
@@ -506,7 +506,7 @@ class DNSService(DNSRecord):
         out.write_short(self.port)
         out.write_name(self.server)
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Tests equality on priority, weight, port and server"""
         return isinstance(other, DNSService) and self._eq(other)
 
@@ -539,7 +539,7 @@ class DNSNsec(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: float,
+        ttl: int | float,
         next_name: str,
         rdtypes: list[int],
         created: float | None = None,
@@ -581,7 +581,7 @@ class DNSNsec(DNSRecord):
         out._write_byte(len(out_bytes))
         out.write_string(out_bytes)
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Tests equality on next_name and rdtypes."""
         return isinstance(other, DNSNsec) and self._eq(other)
 
