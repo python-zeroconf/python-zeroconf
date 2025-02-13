@@ -110,6 +110,7 @@ ignore = [
     "PYI032", # breaks Cython
     "PYI041",  # breaks Cython
     "FURB188", # usually slower
+    "PERF401", # Cython: closures inside cpdef functions not yet supported
 ]
 select = [
     "B",   # flake8-bugbear

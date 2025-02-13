@@ -208,9 +208,9 @@ class DNSCache:
         matches: list[DNSRecord] = []
         if records is None:
             return matches
-        matches.extend(
-            record for record in records.values() if type_ == record.type and class_ == record.class_
-        )
+        for record in records.values():
+            if type_ == record.type and class_ == record.class_:
+                matches.append(record)
         return matches
 
     def async_entries_with_name(self, name: str) -> list[DNSRecord]:
