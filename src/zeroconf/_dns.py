@@ -213,7 +213,7 @@ class DNSRecord(DNSEntry):
     def get_remaining_ttl(self, now: _float) -> int | float:
         """Returns the remaining TTL in seconds."""
         remain = (self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) - now) / 1000.0
-        return max(remain, 0)
+        return 0 if remain < 0 else remain
 
     def is_expired(self, now: _float) -> bool:
         """Returns true if this record has expired."""

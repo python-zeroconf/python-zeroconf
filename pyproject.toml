@@ -105,6 +105,7 @@ ignore = [
     "PGH004",  # too many to fix
     "PGH003", # too many to fix
     "SIM110", # this is slower
+    "FURB136", # this is slower for Cython
     "PYI034", # enable when we drop Py3.10
 ]
 select = [
