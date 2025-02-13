@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     infos = []
     for i in range(250):
-        infos.append(  # noqa: PERF401
+        infos.append(
             AsyncServiceInfo(
                 "_http._tcp.local.",
                 f"Paul's Test Web Site {i}._http._tcp.local.",
