@@ -103,7 +103,7 @@ class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
     async def async_find(
         cls,
         aiozc: AsyncZeroconf | None = None,
-        timeout: float = 5,
+        timeout: int | float = 5,
         interfaces: InterfacesType = InterfaceChoice.All,
         ip_version: IPVersion | None = None,
     ) -> tuple[str, ...]:
