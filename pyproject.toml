@@ -71,6 +71,7 @@ prerelease = true
 [tool.poetry.dependencies]
 python = "^3.9"
 ifaddr = ">=0.1.7"
+typing-extensions = ">=4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.2,<9.0"
