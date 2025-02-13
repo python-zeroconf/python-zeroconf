@@ -71,7 +71,6 @@ prerelease = true
 [tool.poetry.dependencies]
 python = "^3.9"
 ifaddr = ">=0.1.7"
-typing-extensions = ">=4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.2,<9.0"
@@ -106,6 +105,7 @@ ignore = [
     "PGH004",  # too many to fix
     "PGH003", # too many to fix
     "SIM110", # this is slower
+    "PYI034", # enable when we drop Py3.10
 ]
 select = [
     "B",   # flake8-bugbear

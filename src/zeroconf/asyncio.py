@@ -28,8 +28,6 @@ from collections.abc import Awaitable
 from types import TracebackType  # used in type hints
 from typing import Callable
 
-from typing_extensions import Self
-
 from ._core import Zeroconf
 from ._dns import DNSQuestionType
 from ._exceptions import NotRunningException
@@ -85,7 +83,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         """Cancel the browser."""
         self._async_cancel()
 
-    async def __aenter__(self) -> Self:
+    async def __aenter__(self) -> AsyncServiceBrowser:
         return self
 
     async def __aexit__(
@@ -274,7 +272,7 @@ class AsyncZeroconf:
             *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
         )
 
-    async def __aenter__(self) -> Self:
+    async def __aenter__(self) -> AsyncZeroconf:
         return self
 
     async def __aexit__(

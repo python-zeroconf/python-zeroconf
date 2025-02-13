@@ -38,8 +38,6 @@ from typing import (
     cast,
 )
 
-from typing_extensions import Self
-
 from .._dns import DNSPointer, DNSQuestion, DNSQuestionType
 from .._logger import log
 from .._protocol.outgoing import DNSOutgoing
@@ -817,7 +815,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             self.queue.put(pending)
         self._pending_handlers.clear()
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> ServiceBrowser:
         return self
 
     def __exit__(  # pylint: disable=useless-return

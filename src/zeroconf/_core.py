@@ -29,8 +29,6 @@ import threading
 from collections.abc import Awaitable
 from types import TracebackType
 
-from typing_extensions import Self
-
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
 from ._engine import AsyncEngine
@@ -713,7 +711,7 @@ class Zeroconf(QuietLogger):
         await self.engine._async_close()  # pylint: disable=protected-access
         self._shutdown_threads()
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> Zeroconf:
         return self
 
     def __exit__(  # pylint: disable=useless-return
