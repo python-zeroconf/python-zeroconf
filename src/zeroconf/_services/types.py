@@ -54,7 +54,7 @@ class ZeroconfServiceTypes(ServiceListener):
     def find(
         cls,
         zc: Zeroconf | None = None,
-        timeout: float = 5,
+        timeout: int | float = 5,
         interfaces: InterfacesType = InterfaceChoice.All,
         ip_version: IPVersion | None = None,
     ) -> tuple[str, ...]:
