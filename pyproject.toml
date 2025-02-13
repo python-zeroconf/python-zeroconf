@@ -109,6 +109,7 @@ ignore = [
     "PYI034", # enable when we drop Py3.10
     "PYI032", # breaks Cython
     "PYI041",  # breaks Cython
+    "FURB188", # usually slower
 ]
 select = [
     "B",   # flake8-bugbear
