@@ -34,6 +34,7 @@ from functools import partial
 from types import TracebackType  # used in type hints
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     cast,
 )
@@ -161,7 +162,7 @@ class _ScheduledPTRQuery:
             return self.when_millis < other.when_millis or self.__eq__(other)
         return NotImplemented
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
         if type(other) is _ScheduledPTRQuery:
             return self.when_millis == other.when_millis
