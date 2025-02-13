@@ -223,7 +223,7 @@ class DNSOutgoing:
         self.data.append(self._get_short(value))
         self.size += 2
 
-    def _write_int(self, value: float) -> None:
+    def _write_int(self, value: float | int) -> None:
         """Writes an unsigned integer to the packet"""
         value_as_int = int(value)
         long_bytes = LONG_LOOKUP.get(value_as_int)
