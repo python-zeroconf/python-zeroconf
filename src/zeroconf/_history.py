@@ -60,9 +60,7 @@ class QuestionHistory:
             return False
         # The last question has more known answers than
         # we knew so we have to ask
-        if previous_known_answers - known_answers:
-            return False
-        return True
+        return not previous_known_answers - known_answers
 
     def async_expire(self, now: _float) -> None:
         """Expire the history of old questions."""

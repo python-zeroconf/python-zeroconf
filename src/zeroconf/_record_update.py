@@ -43,6 +43,6 @@ class RecordUpdate:
         """Get the new or old record."""
         if index == 0:
             return self.new
-        elif index == 1:
+        if index == 1:
             return self.old
         raise IndexError(index)

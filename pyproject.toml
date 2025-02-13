@@ -93,6 +93,18 @@ line-length = 110
 ignore = [
     "S101", # use of assert
     "S104",  # S104 Possible binding to all interfaces
+    "PLR0912", # too many to fix right now
+    "TC001", # too many to fix right now
+    "TID252", # skip
+    "PLR0913", # too late to make changes here
+    "PLR0911", # would be breaking change
+    "TRY003", # too many to fix
+    "SLF001", # design choice
+    "TC003", # too many to fix
+    "PLR2004" , # too many to fix
+    "PGH004",  # too many to fix
+    "PGH003", # too many to fix
+    "SIM110", # this is slower
 ]
 select = [
     "B",   # flake8-bugbear
@@ -104,8 +116,67 @@ select = [
     "UP",  # pyupgrade
     "I",   # isort
     "RUF", # ruff specific
+    "FLY", # flynt
+    "FURB", # refurb
+    "G", # flake8-logging-format   ,
+    "PERF", # Perflint
+    "PGH", # pygrep-hooks
+    "PIE", # flake8-pie
+    "PL", # pylint
+    "PT", # flake8-pytest-style
+    "PTH", # flake8-pathlib
+    "PYI", # flake8-pyi
+    "RET", # flake8-return
+    "RSE", # flake8-raise    ,
+    "SIM", # flake8-simplify
+    "SLF", # flake8-self
+    "SLOT", # flake8-slots
+    "T100", # Trace found: {name} used
+    "T20", # flake8-print
+    "TC", # flake8-type-checking
+    "TID", # Tidy imports
+    "TRY", # tryceratops
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "S101",
+    "SLF001",
+    "PLR2004", # too many to fix right now
+    "PT011", # too many to fix right now
+    "PT006", # too many to fix right now
+    "PGH003", # too many to fix right now
+    "PT007", # too many to fix right now
+    "PT027",  # too many to fix right now
+    "PLW0603" , # too many to fix right now
+    "PLR0915", # too many to fix right now
+    "FLY002", # too many to fix right now
+    "PT018", # too many to fix right now
+    "PLR0124", # too many to fix right now
+    "SIM202" , # too many to fix right now
+    "PT012" , # too many to fix right now
+    "TID252", # too many to fix right now
+    "PLR0913", # skip this one
+    "SIM102" , # too many to fix right now
+    "SIM108", # too many to fix right now
+    "TC003",  # too many to fix right now
+    "TC002", # too many to fix right now
+    "T201", # too many to fix right now
+]
+"bench/**/*" = [
+    "T201", # intended
+]
+"examples/**/*" = [
+    "T201", # intended
+]
+"setup.py" = ["D100"]
+"conftest.py" = ["D100"]
+"docs/conf.py" = ["D100"]
 
 [tool.pylint.BASIC]
 class-const-naming-style = "any"

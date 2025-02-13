@@ -34,10 +34,11 @@ from functools import partial
 from types import TracebackType  # used in type hints
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     cast,
 )
+
+from typing_extensions import Self
 
 from .._dns import DNSPointer, DNSQuestion, DNSQuestionType
 from .._logger import log
@@ -162,7 +163,7 @@ class _ScheduledPTRQuery:
             return self.when_millis < other.when_millis or self.__eq__(other)
         return NotImplemented
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Compare two scheduled queries."""
         if type(other) is _ScheduledPTRQuery:
             return self.when_millis == other.when_millis
@@ -816,7 +817,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             self.queue.put(pending)
         self._pending_handlers.clear()
 
-    def __enter__(self) -> ServiceBrowser:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(  # pylint: disable=useless-return
