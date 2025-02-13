@@ -272,7 +272,7 @@ class DNSOutgoing:
         """
 
         # split name into each label
-        if name.endswith("."):
+        if name and name[-1] == ".":
             name = name[:-1]
 
         index = self.names.get(name, 0)
