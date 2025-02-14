@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.144.2 (2025-02-14)
+
+### Bug Fixes
+
+- Add a helpful hint for when EADDRINUSE happens during startup
+  ([#1526](https://github.com/python-zeroconf/python-zeroconf/pull/1526),
+  [`48dbb71`](https://github.com/python-zeroconf/python-zeroconf/commit/48dbb7190a4f5126e39dbcdb87e34380d4562cd0))
+
+
 ## v0.144.1 (2025-02-12)
 
 ### Bug Fixes
