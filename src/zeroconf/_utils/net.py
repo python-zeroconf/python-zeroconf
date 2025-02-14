@@ -262,6 +262,25 @@ def new_socket(
                 bind_tup,
             )
             return None
+        if ex.errno == errno.EADDRINUSE:
+            if sys.platform.startswith("darwin") or sys.platform.startswith("freebsd"):
+                log.error(
+                    "Address in use when binding to %s; "
+                    "On BSD based systems sharing the same port with another "
+                    "stack may require processes to run with the same UID; "
+                    "When using avahi, make sure disallow-other-stacks is set"
+                    " to no in avahi-daemon.conf",
+                    bind_tup,
+                )
+            else:
+                log.error(
+                    "Address in use when binding to %s; "
+                    "When using avahi, make sure disallow-other-stacks is set"
+                    " to no in avahi-daemon.conf",
+                    bind_tup,
+                )
+            # This is still a fatal error as its not going to work
+            # if we can't hear the traffic coming in.
         raise
     log.debug("Created socket %s", s)
     return s
