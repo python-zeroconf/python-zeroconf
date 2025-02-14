@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.144.3 (2025-02-14)
+
+### Bug Fixes
+
+- Non unique name during wheel upload
+  ([#1527](https://github.com/python-zeroconf/python-zeroconf/pull/1527),
+  [`43136fa`](https://github.com/python-zeroconf/python-zeroconf/commit/43136fa418d4d7826415e1d0f7761b198347ced7))
+
+
 ## v0.144.2 (2025-02-14)
 
 ### Bug Fixes
