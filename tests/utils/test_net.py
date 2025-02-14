@@ -260,6 +260,40 @@ def test_bind_raises_skips_address():
         netutils.new_socket(("0.0.0.0", 0))  # type: ignore[arg-type]
 
 
+def test_bind_raises_address_in_use(caplog: pytest.LogCaptureFixture) -> None:
+    """Test bind failing in new_socket returns None on EADDRINUSE."""
+
+    def _mock_socket(*args, **kwargs):
+        sock = MagicMock()
+        sock.bind = MagicMock(side_effect=OSError(errno.EADDRINUSE, f"Error: {errno.EADDRINUSE}"))
+        return sock
+
+    with (
+        pytest.raises(OSError),
+        patch.object(sys, "platform", "darwin"),
+        patch("socket.socket", _mock_socket),
+    ):
+        netutils.new_socket(("0.0.0.0", 0))  # type: ignore[arg-type]
+    assert (
+        "On BSD based systems sharing the same port with "
+        "another stack may require processes to run with the same UID"
+    ) in caplog.text
+    assert (
+        "When using avahi, make sure disallow-other-stacks is set to no in avahi-daemon.conf" in caplog.text
+    )
+
+    caplog.clear()
+    with pytest.raises(OSError), patch.object(sys, "platform", "linux"), patch("socket.socket", _mock_socket):
+        netutils.new_socket(("0.0.0.0", 0))  # type: ignore[arg-type]
+    assert (
+        "On BSD based systems sharing the same port with "
+        "another stack may require processes to run with the same UID"
+    ) not in caplog.text
+    assert (
+        "When using avahi, make sure disallow-other-stacks is set to no in avahi-daemon.conf" in caplog.text
+    )
+
+
 def test_new_respond_socket_new_socket_returns_none():
     """Test new_respond_socket returns None if new_socket returns None."""
     with patch.object(netutils, "new_socket", return_value=None):
