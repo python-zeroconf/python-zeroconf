@@ -161,7 +161,7 @@ jobs:
     needs: [release]
     if: needs.release.outputs.released == 'true'
 
-    name: Build wheels on ${{ matrix.os }} (${{ matrix.musl }}) [${{ matrix.qemu }}]
+    name: Wheels for ${{ matrix.os }} (${{ matrix.musl == 'musllinux' && 'musllinux' || 'manylinux' }}) ${{ matrix.qemu }} ${{ matrix.pyver }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
