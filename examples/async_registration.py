@@ -24,8 +24,7 @@ class AsyncRunner:
         background_tasks = await asyncio.gather(*tasks)
         await asyncio.gather(*background_tasks)
         print("Finished registration, press Ctrl-C to exit...")
-        while True:
-            await asyncio.sleep(1)
+        await asyncio.Event().wait()
 
     async def unregister_services(self, infos: list[AsyncServiceInfo]) -> None:
         assert self.aiozc is not None

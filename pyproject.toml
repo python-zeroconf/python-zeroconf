@@ -113,6 +113,7 @@ ignore = [
     "PERF401", # Cython: closures inside cpdef functions not yet supported
 ]
 select = [
+    "ASYNC", # async rules
     "B",   # flake8-bugbear
     "C4",  # flake8-comprehensions
     "S",   # flake8-bandit

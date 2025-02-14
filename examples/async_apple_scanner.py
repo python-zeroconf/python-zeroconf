@@ -96,8 +96,7 @@ class AsyncAppleScanner:
             ALL_SERVICES,
             **kwargs,  # type: ignore[arg-type]
         )
-        while True:
-            await asyncio.sleep(1)
+        await asyncio.Event().wait()
 
     async def async_close(self) -> None:
         assert self.aiozc is not None
