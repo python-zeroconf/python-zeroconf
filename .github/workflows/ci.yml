@@ -173,19 +173,58 @@ jobs:
             macos-13,
             macos-latest,
           ]
-        qemu: ['']
+        qemu: [""]
         musl: [""]
+        pyver: [""]
         include:
+          - os: ubuntu-latest
+            musl: "musllinux"
+          - os: ubuntu-24.04-arm
+            musl: "musllinux"
+          # qemu is slow, make a single
+          # runner per Python version
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: "musllinux"
+            pyver: cp39
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: "musllinux"
+            pyver: cp310
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: "musllinux"
+            pyver: cp311
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: "musllinux"
+            pyver: cp312
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: "musllinux"
+            pyver: cp313
+          # qemu is slow, make a single
+          # runner per Python version
           - os: ubuntu-latest
             qemu: armv7l
             musl: ""
+            pyver: cp39
           - os: ubuntu-latest
             qemu: armv7l
-            musl: musllinux
+            musl: ""
+            pyver: cp310
           - os: ubuntu-latest
-            musl: musllinux
-          - os: ubuntu-24.04-arm
-            musl: musllinux
+            qemu: armv7l
+            musl: ""
+            pyver: cp311
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: ""
+            pyver: cp312
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: ""
+            pyver: cp313
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -215,6 +254,13 @@ jobs:
             # use default "auto" otherwise
             echo "CIBW_ARCHS_LINUX=${{ matrix.qemu }}" >> $GITHUB_ENV
           fi
+      - name: Limit to a specific Python version on slow QEMU
+        if: ${{ matrix.pyver }}
+        run: |
+          if [[ -n "${{ matrix.pyver }}" ]]; then
+            echo "CIBW_BUILD=${{ matrix.pyver }}*" >> $GITHUB_ENV
+          fi
+
       - name: Install python-semantic-release
         run: pipx install python-semantic-release==7.34.6
 
