@@ -33,9 +33,14 @@ except ImportError:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    "sphinx.ext.todo",  # Allow todo comments.
+    "sphinx.ext.viewcode",  # Link to source code.
     "sphinx.ext.autodoc",
     "zeroconfautodocfix",  # Must be after "sphinx.ext.autodoc"
     "sphinx.ext.intersphinx",
+    "sphinx.ext.coverage",  # Enable the overage report.
+    "sphinx.ext.duration",  # Show build duration at the end.
+    "sphinx_rtd_theme",  # Required for theme.
 ]
 
 templates_path = ["_templates"]
@@ -52,6 +57,11 @@ html_sidebars: dict[str, Sequence[str]] = {
     "index": ("sidebar.html", "sourcelink.html", "searchbox.html"),
     "**": ("localtoc.html", "relations.html", "sourcelink.html", "searchbox.html"),
 }
+
+# -- Options for RTD theme ---------------------------------------------------
+# https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html
+
+# html_theme_options = {}
 
 # -- Options for HTML help output --------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-help-output
