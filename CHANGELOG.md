@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.145.0 (2025-02-15)
+
+### Features
+
+- **docs**: Enable link to source code
+  ([#1529](https://github.com/python-zeroconf/python-zeroconf/pull/1529),
+  [`1c7f354`](https://github.com/python-zeroconf/python-zeroconf/commit/1c7f3548b6cbddf73dbb9d69cd8987c8ad32c705))
+
+
 ## v0.144.3 (2025-02-14)
 
 ### Bug Fixes
