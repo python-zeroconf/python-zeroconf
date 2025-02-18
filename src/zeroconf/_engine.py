@@ -91,7 +91,8 @@ class AsyncEngine:
         self._async_schedule_next_cache_cleanup()
         await self._async_create_endpoints()
         assert self.running_future is not None
-        self.running_future.set_result(True)
+        if not self.running_future.done():
+            self.running_future.set_result(True)
         if loop_thread_ready:
             loop_thread_ready.set()
 
