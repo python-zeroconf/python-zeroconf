@@ -50,6 +50,7 @@ class AsyncEngine:
         "_cleanup_timer",
         "_listen_socket",
         "_respond_sockets",
+        "_setup_task",
         "loop",
         "protocols",
         "readers",
@@ -73,6 +74,7 @@ class AsyncEngine:
         self._listen_socket = listen_socket
         self._respond_sockets = respond_sockets
         self._cleanup_timer: asyncio.TimerHandle | None = None
+        self._setup_task: asyncio.Task[None] | None = None
 
     def setup(
         self,
@@ -82,14 +84,15 @@ class AsyncEngine:
         """Set up the instance."""
         self.loop = loop
         self.running_future = loop.create_future()
-        self.loop.create_task(self._async_setup(loop_thread_ready))
+        self._setup_task = self.loop.create_task(self._async_setup(loop_thread_ready))
 
     async def _async_setup(self, loop_thread_ready: threading.Event | None) -> None:
         """Set up the instance."""
         self._async_schedule_next_cache_cleanup()
         await self._async_create_endpoints()
         assert self.running_future is not None
-        self.running_future.set_result(True)
+        if not self.running_future.done():
+            self.running_future.set_result(True)
         if loop_thread_ready:
             loop_thread_ready.set()
 
@@ -135,6 +138,8 @@ class AsyncEngine:
 
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
+        assert self._setup_task is not None
+        await self._setup_task
         self._async_shutdown()
         await asyncio.sleep(0)  # flush out any call soons
         assert self._cleanup_timer is not None
