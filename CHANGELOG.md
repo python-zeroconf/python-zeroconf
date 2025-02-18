@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.145.1 (2025-02-18)
+
+### Bug Fixes
+
+- Hold a strong reference to the AsyncEngine setup task
+  ([#1533](https://github.com/python-zeroconf/python-zeroconf/pull/1533),
+  [`d4e6f25`](https://github.com/python-zeroconf/python-zeroconf/commit/d4e6f25754c15417b8bd9839dc8636b2cff717c8))
+
+
 ## v0.145.0 (2025-02-15)
 
 ### Features
