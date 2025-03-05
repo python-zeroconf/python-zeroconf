@@ -284,19 +284,19 @@ jobs:
     needs: [build_wheels]
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
 
     steps:
       - uses: actions/download-artifact@v4
         with:
           # unpacks default artifact into dist/
           # if `name: artifact` is omitted, the action will create extra parent dir
-          pattern: wheels-*
           path: dist
+          pattern: wheels-*
           merge-multiple: true
 
-      - uses: pypa/gh-action-pypi-publish@v1.12.4
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+      - uses:
+          pypa/gh-action-pypi-publish@v1.12.4
 
           # To test: repository_url: https://test.pypi.org/legacy/
