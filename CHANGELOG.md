@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.146.1 (2025-03-05)
+
+### Bug Fixes
+
+- Use trusted publishing for uploading wheels
+  ([#1541](https://github.com/python-zeroconf/python-zeroconf/pull/1541),
+  [`fa65cc8`](https://github.com/python-zeroconf/python-zeroconf/commit/fa65cc8791a6f4c53bc29088cb60b83f420b1ae6))
+
+
 ## v0.146.0 (2025-03-05)
 
 ### Features
