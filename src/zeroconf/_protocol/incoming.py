@@ -1,3 +1,4 @@
+# cython: language_level=3, boundscheck=False
 """Multicast DNS Service Discovery for Python, v0.14-wmcbrine
 Copyright 2003 Paul Scott-Murphy, 2014 William McBrine
 
