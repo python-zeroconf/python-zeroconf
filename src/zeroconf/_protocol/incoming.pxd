@@ -102,9 +102,13 @@ cdef class DNSIncoming:
 
     @cython.locals(
         length="unsigned int",
+        cstr="const unsigned char *"
     )
     cdef str _read_character_string(self)
 
+    @cython.locals(
+        cstr="const unsigned char *"
+    )
     cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(

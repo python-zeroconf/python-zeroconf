@@ -260,13 +260,15 @@ class DNSIncoming:
         """Reads a character string from the packet"""
         length = self.view[self.offset]
         self.offset += 1
-        info = self.data[self.offset : self.offset + length].decode("utf-8", "replace")
+        cstr = self.data
+        info = cstr[self.offset : self.offset + length].decode("utf-8", "replace")
         self.offset += length
         return info
 
     def _read_string(self, length: _int) -> bytes:
         """Reads a string of a given length from the packet"""
-        info = self.data[self.offset : self.offset + length]
+        cstr = self.data
+        info = cstr[self.offset : self.offset + length]
         self.offset += length
         return info
 
