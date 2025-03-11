@@ -430,7 +430,8 @@ class DNSIncoming:
 
             if length < 0x40:
                 label_idx = off + DNS_COMPRESSION_HEADER_LEN
-                labels.append(self.data[label_idx : label_idx + length].decode("utf-8", "replace"))
+                cstr = self.data
+                labels.append(cstr[label_idx : label_idx + length].decode("utf-8", "replace"))
                 off += DNS_COMPRESSION_HEADER_LEN + length
                 continue
 

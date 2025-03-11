@@ -81,7 +81,8 @@ cdef class DNSIncoming:
         link="unsigned int",
         link_data="unsigned int",
         link_py_int=object,
-        linked_labels=cython.list
+        linked_labels=cython.list,
+        cstr="const unsigned char *"
     )
     cdef unsigned int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers)
 
