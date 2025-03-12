@@ -260,13 +260,13 @@ class DNSIncoming:
         """Reads a character string from the packet"""
         length = self.view[self.offset]
         self.offset += 1
-        info = self.data[self.offset : self.offset + length].decode("utf-8", "replace")
+        info = self.view[self.offset : self.offset + length].decode("utf-8", "replace")
         self.offset += length
         return info
 
     def _read_string(self, length: _int) -> bytes:
         """Reads a string of a given length from the packet"""
-        info = self.data[self.offset : self.offset + length]
+        info = self.view[self.offset : self.offset + length]
         self.offset += length
         return info
 
@@ -397,7 +397,7 @@ class DNSIncoming:
             window = view[offset]
             bitmap_length = view[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
-            for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
+            for i, byte in enumerate(self.view[offset_plus_two:bitmap_end]):
                 for bit in range(8):
                     if byte & (0x80 >> bit):
                         rdtypes.append(bit + window * 256 + i * 8)
@@ -428,7 +428,7 @@ class DNSIncoming:
 
             if length < 0x40:
                 label_idx = off + DNS_COMPRESSION_HEADER_LEN
-                labels.append(self.data[label_idx : label_idx + length].decode("utf-8", "replace"))
+                labels.append(self.view[label_idx : label_idx + length].decode("utf-8", "replace"))
                 off += DNS_COMPRESSION_HEADER_LEN + length
                 continue
 
