@@ -8,7 +8,6 @@ import logging
 from unittest.mock import patch
 
 import pytest
-
 import zeroconf as r
 from zeroconf import _engine, const
 from zeroconf.asyncio import AsyncZeroconf
@@ -30,7 +29,7 @@ def teardown_module():
 
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_reaper():
     with patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01):
         aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -65,7 +64,7 @@ async def test_reaper():
         assert record_with_1s_ttl not in entries
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_reaper_aborts_when_done():
     """Ensure cache cleanup stops when zeroconf is done."""
     with patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01):

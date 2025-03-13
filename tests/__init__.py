@@ -29,7 +29,6 @@ from functools import cache
 from unittest import mock
 
 import ifaddr
-
 from zeroconf import DNSIncoming, DNSQuestion, DNSRecord, Zeroconf
 from zeroconf._history import QuestionHistory
 

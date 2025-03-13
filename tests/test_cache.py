@@ -7,7 +7,6 @@ import unittest.mock
 from heapq import heapify, heappop
 
 import pytest
-
 import zeroconf as r
 from zeroconf import const
 
@@ -364,7 +363,7 @@ def test_async_get_unique_returns_newest_record():
     assert record is record2
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_cache_heap_cleanup() -> None:
     """Test that the heap gets cleaned up when there are many old expirations."""
     cache = r.DNSCache()
@@ -416,7 +415,7 @@ async def test_cache_heap_cleanup() -> None:
     assert not cache.async_entries_with_name(name), cache._expire_heap
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_cache_heap_multi_name_cleanup() -> None:
     """Test cleanup with multiple names."""
     cache = r.DNSCache()
@@ -452,7 +451,7 @@ async def test_cache_heap_multi_name_cleanup() -> None:
     assert not cache.async_entries_with_name(name), cache._expire_heap
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_cache_heap_pops_order() -> None:
     """Test cache heap is popped in order."""
     cache = r.DNSCache()

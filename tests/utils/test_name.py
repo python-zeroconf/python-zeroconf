@@ -5,7 +5,6 @@ from __future__ import annotations
 import socket
 
 import pytest
-
 from zeroconf import BadTypeInNameException
 from zeroconf._services.info import ServiceInfo, instance_name_from_service_info
 from zeroconf._utils import name as nameutils

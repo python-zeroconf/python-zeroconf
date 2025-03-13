@@ -7,7 +7,6 @@ import socket
 import time
 
 import pytest
-
 import zeroconf as r
 from zeroconf import Zeroconf, const
 from zeroconf._record_update import RecordUpdate

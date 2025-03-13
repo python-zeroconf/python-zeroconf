@@ -278,7 +278,7 @@ def generate_service_query(
         if not qu_question and question_history.suppresses(question, now_millis, known_answers):
             log.debug("Asking %s was suppressed by the question history", question)
             continue
-        if TYPE_CHECKING:
+        if TYPE_CHECKING:  # noqa: SIM108
             pointer_known_answers = cast(set[DNSPointer], known_answers)
         else:
             pointer_known_answers = known_answers

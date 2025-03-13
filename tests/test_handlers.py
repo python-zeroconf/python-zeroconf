@@ -13,7 +13,6 @@ from typing import cast
 from unittest.mock import patch
 
 import pytest
-
 import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, const, current_time_millis
 from zeroconf._handlers.multicast_outgoing_queue import (
@@ -493,7 +492,7 @@ def test_unicast_response():
     zc.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_probe_answered_immediately():
     """Verify probes are responded to immediately."""
     # instantiate a zeroconf instance
@@ -544,7 +543,7 @@ async def test_probe_answered_immediately():
     zc.close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_probe_answered_immediately_with_uppercase_name():
     """Verify probes are responded to immediately with an uppercase name."""
     # instantiate a zeroconf instance
@@ -1092,7 +1091,7 @@ def test_enumeration_query_with_no_registered_services():
 
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_qu_response_only_sends_additionals_if_sends_answer():
     """Test that a QU response does not send additionals unless it sends the answer as well."""
     # instantiate a zeroconf instance
@@ -1258,7 +1257,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
 
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_cache_flush_bit():
     """Test that the cache flush bit sets the TTL to one for matching records."""
     # instantiate a zeroconf instance
@@ -1361,7 +1360,7 @@ async def test_cache_flush_bit():
 
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_record_update_manager_add_listener_callsback_existing_records():
     """Test that the RecordUpdateManager will callback existing records."""
 
@@ -1415,7 +1414,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_questions_query_handler_populates_the_question_history_from_qm_questions():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
@@ -1461,7 +1460,7 @@ async def test_questions_query_handler_populates_the_question_history_from_qm_qu
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
@@ -1504,7 +1503,7 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_guard_against_low_ptr_ttl():
     """Ensure we enforce a min for PTR record ttls to avoid excessive refresh queries from ServiceBrowsers.
 
@@ -1555,7 +1554,7 @@ async def test_guard_against_low_ptr_ttl():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_duplicate_goodbye_answers_in_packet():
     """Ensure we do not throw an exception when there are duplicate goodbye records in a packet."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -1587,7 +1586,7 @@ async def test_duplicate_goodbye_answers_in_packet():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_response_aggregation_timings(run_isolated):
     """Verify multicast responses are aggregated."""
     type_ = "_mservice._tcp.local."
@@ -1709,7 +1708,7 @@ async def test_response_aggregation_timings(run_isolated):
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_response_aggregation_timings_multiple(run_isolated, disable_duplicate_packet_suppression):
     """Verify multicast responses that are aggregated do not take longer than 620ms to send.
 
@@ -1791,7 +1790,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         assert info2.dns_pointer() in incoming.answers()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_response_aggregation_random_delay():
     """Verify the random delay for outgoing multicast will coalesce into a single group
 
@@ -1899,7 +1898,7 @@ async def test_response_aggregation_random_delay():
     assert info5.dns_pointer() in outgoing_queue.queue[1].answers
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_future_answers_are_removed_on_send():
     """Verify any future answers scheduled to be sent are removed when we send."""
     type_ = "_mservice._tcp.local."
@@ -1963,7 +1962,7 @@ async def test_future_answers_are_removed_on_send():
     assert info2.dns_pointer() in outgoing_queue.queue[0].answers
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
     """Log when a listener is added that is not using RecordUpdateListener as a base class."""
 
@@ -1988,7 +1987,7 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_updates_iteration_safe():
     """Ensure we can safely iterate over the async_updates."""
 
@@ -2032,7 +2031,7 @@ async def test_async_updates_iteration_safe():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_updates_complete_iteration_safe():
     """Ensure we can safely iterate over the async_updates_complete."""
 
