@@ -10,7 +10,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import ifaddr
 import pytest
-
 import zeroconf as r
 from zeroconf._utils import net as netutils
 

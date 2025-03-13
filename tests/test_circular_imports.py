@@ -8,7 +8,7 @@ import sys
 import pytest
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @pytest.mark.timeout(30)  # cloud can take > 9s
 @pytest.mark.parametrize(
     "module",

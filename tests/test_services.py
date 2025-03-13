@@ -11,7 +11,6 @@ from threading import Event
 from typing import Any
 
 import pytest
-
 import zeroconf as r
 from zeroconf import Zeroconf
 from zeroconf._services.info import ServiceInfo

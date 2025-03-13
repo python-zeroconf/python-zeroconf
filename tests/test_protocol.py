@@ -11,7 +11,6 @@ import unittest.mock
 from typing import cast
 
 import pytest
-
 import zeroconf as r
 from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
 

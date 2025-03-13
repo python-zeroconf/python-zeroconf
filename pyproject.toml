@@ -94,22 +94,18 @@ ignore = [
     "S101", # use of assert
     "S104",  # S104 Possible binding to all interfaces
     "PLR0912", # too many to fix right now
-    "TC001", # too many to fix right now
     "TID252", # skip
     "PLR0913", # too late to make changes here
     "PLR0911", # would be breaking change
     "TRY003", # too many to fix
     "SLF001", # design choice
-    "TC003", # too many to fix
     "PLR2004" , # too many to fix
     "PGH004",  # too many to fix
     "PGH003", # too many to fix
     "SIM110", # this is slower
-    "FURB136", # this is slower for Cython
     "PYI034", # enable when we drop Py3.10
     "PYI032", # breaks Cython
     "PYI041",  # breaks Cython
-    "FURB188", # usually slower
     "PERF401", # Cython: closures inside cpdef functions not yet supported
 ]
 select = [
@@ -124,7 +120,6 @@ select = [
     "I",   # isort
     "RUF", # ruff specific
     "FLY", # flynt
-    "FURB", # refurb
     "G", # flake8-logging-format   ,
     "PERF", # Perflint
     "PGH", # pygrep-hooks
@@ -140,7 +135,6 @@ select = [
     "SLOT", # flake8-slots
     "T100", # Trace found: {name} used
     "T20", # flake8-print
-    "TC", # flake8-type-checking
     "TID", # Tidy imports
     "TRY", # tryceratops
 ]
@@ -171,9 +165,8 @@ select = [
     "PLR0913", # skip this one
     "SIM102" , # too many to fix right now
     "SIM108", # too many to fix right now
-    "TC003",  # too many to fix right now
-    "TC002", # too many to fix right now
     "T201", # too many to fix right now
+    "PT004", # nice to have
 ]
 "bench/**/*" = [
     "T201", # intended

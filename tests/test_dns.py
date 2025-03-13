@@ -8,7 +8,6 @@ import socket
 import unittest.mock
 
 import pytest
-
 import zeroconf as r
 from zeroconf import DNSHinfo, DNSText, ServiceInfo, const, current_time_millis
 from zeroconf._dns import DNSRRSet
