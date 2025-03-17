@@ -10,13 +10,14 @@ import time
 from unittest.mock import patch
 
 import pytest
+
 from zeroconf import EventLoopBlocked
 from zeroconf._engine import _CLOSE_TIMEOUT
 from zeroconf._utils import asyncio as aioutils
 from zeroconf.const import _LOADED_SYSTEM_TIMEOUT
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_get_all_tasks() -> None:
     """Test we can get all tasks in the event loop.
 
@@ -32,7 +33,7 @@ async def test_async_get_all_tasks() -> None:
         await aioutils._async_get_all_tasks(loop)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_get_running_loop_from_async() -> None:
     """Test we can get the event loop."""
     assert isinstance(aioutils.get_running_loop(), asyncio.AbstractEventLoop)
@@ -43,7 +44,7 @@ def test_get_running_loop_no_loop() -> None:
     assert aioutils.get_running_loop() is None
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_wait_future_or_timeout_times_out() -> None:
     """Test wait_future_or_timeout will timeout."""
     loop = asyncio.get_running_loop()
@@ -117,7 +118,7 @@ def test_cumulative_timeouts_less_than_close_plus_buffer():
     ) < 1 + _CLOSE_TIMEOUT + _LOADED_SYSTEM_TIMEOUT
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_run_coro_with_timeout() -> None:
     """Test running a coroutine with a timeout raises EventLoopBlocked."""
     loop = asyncio.get_event_loop()

@@ -5,6 +5,7 @@ from __future__ import annotations
 import socket
 
 from pytest_codspeed import BenchmarkFixture
+
 from zeroconf import (
     DNSAddress,
     DNSIncoming,

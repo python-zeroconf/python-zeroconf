@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pytest_codspeed import BenchmarkFixture
+
 from zeroconf._protocol.outgoing import State
 
 from .helpers import generate_packets
