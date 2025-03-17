@@ -7,6 +7,7 @@ import socket
 import time
 
 import pytest
+
 import zeroconf as r
 from zeroconf import Zeroconf, const
 from zeroconf._record_update import RecordUpdate
@@ -80,7 +81,7 @@ def test_legacy_record_update_listener():
 
     browser.cancel()
 
-    assert len(updates)
+    assert updates
     assert len([isinstance(update, r.DNSPointer) and update.name == type_ for update in updates]) >= 1
 
     zc.remove_listener(listener)

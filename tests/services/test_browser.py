@@ -14,6 +14,7 @@ from typing import cast
 from unittest.mock import patch
 
 import pytest
+
 import zeroconf as r
 import zeroconf._services.browser as _services_browser
 from zeroconf import (
@@ -555,7 +556,7 @@ def test_first_query_delay():
             zeroconf_browser.close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
     """Verify the service browser's first questions are QU and refresh queries are QM."""
     service_added = asyncio.Event()
@@ -657,7 +658,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
             await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_ttl_refresh_cancelled_rescue_query():
     """Verify seeing a name again cancels the rescue query."""
     service_added = asyncio.Event()
@@ -767,7 +768,7 @@ async def test_ttl_refresh_cancelled_rescue_query():
             await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_asking_qm_questions():
     """Verify explicitly asking QM questions."""
     type_ = "_quservice._tcp.local."
@@ -806,7 +807,7 @@ async def test_asking_qm_questions():
             await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_asking_qu_questions():
     """Verify the service browser can ask QU questions."""
     type_ = "_quservice._tcp.local."
@@ -898,7 +899,7 @@ def test_legacy_record_update_listener():
 
     browser.cancel()
 
-    assert len(updates)
+    assert updates
     assert len([isinstance(update, r.DNSPointer) and update.name == type_ for update in updates]) >= 1
 
     zc.remove_listener(listener)
@@ -1138,7 +1139,7 @@ def test_group_ptr_queries_with_known_answers():
 
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_generate_service_query_suppress_duplicate_questions():
     """Generate a service query for sending with zeroconf.send."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -1191,7 +1192,7 @@ async def test_generate_service_query_suppress_duplicate_questions():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_query_scheduler():
     delay = const._BROWSER_TIME
     types_ = {"_hap._tcp.local.", "_http._tcp.local."}
@@ -1284,7 +1285,7 @@ async def test_query_scheduler():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_query_scheduler_rescue_records():
     delay = const._BROWSER_TIME
     types_ = {"_hap._tcp.local.", "_http._tcp.local."}
@@ -1579,7 +1580,7 @@ def test_scheduled_ptr_query_dunder_methods():
         assert query75 >= other  # type: ignore[operator]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_close_zeroconf_without_browser_before_start_up_queries():
     """Test that we stop sending startup queries if zeroconf is closed out from under the browser."""
     service_added = asyncio.Event()
@@ -1647,7 +1648,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries():
             await browser.async_cancel()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_close_zeroconf_without_browser_after_start_up_queries():
     """Test that we stop sending rescue queries if zeroconf is closed out from under the browser."""
     service_added = asyncio.Event()

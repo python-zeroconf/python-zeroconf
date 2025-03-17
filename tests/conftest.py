@@ -6,6 +6,7 @@ import threading
 from unittest.mock import patch
 
 import pytest
+
 from zeroconf import _core, const
 from zeroconf._handlers import query_handler
 
@@ -19,7 +20,7 @@ def verify_threads_ended():
     assert not threads
 
 
-@pytest.fixture()
+@pytest.fixture
 def run_isolated():
     """Change the mDNS port to run the test in isolation."""
     with (
@@ -30,7 +31,7 @@ def run_isolated():
         yield
 
 
-@pytest.fixture()
+@pytest.fixture
 def disable_duplicate_packet_suppression():
     """Disable duplicate packet suppress.
 

@@ -15,6 +15,7 @@ from typing import cast
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+
 import zeroconf as r
 from zeroconf import NotRunningException, Zeroconf, const, current_time_millis
 from zeroconf._listener import AsyncListener, _WrappedTransport
@@ -664,7 +665,7 @@ def test_tc_bit_defers_last_response_missing():
     zc.close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_open_close_twice_from_async() -> None:
     """Test we can close twice from a coroutine when using Zeroconf.
 
@@ -684,7 +685,7 @@ async def test_open_close_twice_from_async() -> None:
     await asyncio.sleep(0)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_multiple_sync_instances_stared_from_async_close():
     """Test we can shutdown multiple sync instances from async."""
 
@@ -740,7 +741,7 @@ def test_shutdown_while_register_in_process():
     bgthread.join()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch("zeroconf._core._STARTUP_TIMEOUT", 0)
 @patch("zeroconf._core.AsyncEngine._async_setup", new_callable=AsyncMock)
 async def test_event_loop_blocked(mock_start):

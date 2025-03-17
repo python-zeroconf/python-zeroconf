@@ -14,6 +14,7 @@ from threading import Event
 from unittest.mock import patch
 
 import pytest
+
 import zeroconf as r
 from zeroconf import DNSAddress, RecordUpdate, const
 from zeroconf._services import info
@@ -827,7 +828,7 @@ def test_scoped_addresses_from_cache():
 
 # This test uses asyncio because it needs to access the cache directly
 # which is not threadsafe
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_multiple_a_addresses_newest_address_first():
     """Test that info.addresses returns the newest seen address first."""
     type_ = "_http._tcp.local."
@@ -847,7 +848,7 @@ async def test_multiple_a_addresses_newest_address_first():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_invalid_a_addresses(caplog):
     type_ = "_http._tcp.local."
     registration_name = f"multiarec.{type_}"
@@ -1056,7 +1057,7 @@ def test_request_timeout():
     assert (end_time - start_time) < 3000 + 1000
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_we_try_four_times_with_random_delay():
     """Verify we try four times even with the random delay."""
     type_ = "_typethatisnothere._tcp.local."
@@ -1079,7 +1080,7 @@ async def test_we_try_four_times_with_random_delay():
     assert request_count == 4
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_release_wait_when_new_recorded_added():
     """Test that async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
@@ -1144,7 +1145,7 @@ async def test_release_wait_when_new_recorded_added():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_port_changes_are_seen():
     """Test that port changes are seen by async_request."""
     type_ = "_http._tcp.local."
@@ -1227,7 +1228,7 @@ async def test_port_changes_are_seen():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_port_changes_are_seen_with_directed_request():
     """Test that port changes are seen by async_request with a directed request."""
     type_ = "_http._tcp.local."
@@ -1310,7 +1311,7 @@ async def test_port_changes_are_seen_with_directed_request():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_ipv4_changes_are_seen():
     """Test that ipv4 changes are seen by async_request."""
     type_ = "_http._tcp.local."
@@ -1398,7 +1399,7 @@ async def test_ipv4_changes_are_seen():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_ipv6_changes_are_seen():
     """Test that ipv6 changes are seen by async_request."""
     type_ = "_http._tcp.local."
@@ -1493,7 +1494,7 @@ async def test_ipv6_changes_are_seen():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_bad_ip_addresses_ignored_in_cache():
     """Test that bad ip address in the cache are ignored async_request."""
     type_ = "_http._tcp.local."
@@ -1547,7 +1548,7 @@ async def test_bad_ip_addresses_ignored_in_cache():
     assert info.addresses_by_version(IPVersion.V4Only) == [b"\x7f\x00\x00\x01"]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_service_name_change_as_seen_has_ip_in_cache():
     """Test that service name changes are seen by async_request when the ip is in the cache."""
     type_ = "_http._tcp.local."
@@ -1629,7 +1630,7 @@ async def test_service_name_change_as_seen_has_ip_in_cache():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_service_name_change_as_seen_ip_not_in_cache():
     """Test that service name changes are seen by async_request when the ip is not in the cache."""
     type_ = "_http._tcp.local."
@@ -1711,7 +1712,7 @@ async def test_service_name_change_as_seen_ip_not_in_cache():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch.object(info, "_LISTENER_TIME", 10000000)
 async def test_release_wait_when_new_recorded_added_concurrency():
     """Test that concurrent async_request returns as soon as new matching records are added to the cache."""
@@ -1783,7 +1784,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
     await aiozc.async_close()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_service_info_nsec_records():
     """Test we can generate nsec records from ServiceInfo."""
     type_ = "_http._tcp.local."
@@ -1798,7 +1799,7 @@ async def test_service_info_nsec_records():
     assert nsec_record.rdtypes == [const._TYPE_A, const._TYPE_AAAA]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_address_resolver():
     """Test that the address resolver works."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -1822,7 +1823,7 @@ async def test_address_resolver():
     assert resolver.addresses == [b"\x7f\x00\x00\x01"]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_address_resolver_ipv4():
     """Test that the IPv4 address resolver works."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -1846,7 +1847,7 @@ async def test_address_resolver_ipv4():
     assert resolver.addresses == [b"\x7f\x00\x00\x01"]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
 @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
 async def test_address_resolver_ipv6():
