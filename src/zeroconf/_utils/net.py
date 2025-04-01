@@ -421,11 +421,12 @@ def create_sockets(
             else:
                 respond_socket = None
         else:
+            is_v6 = isinstance(i, tuple)
             respond_socket = new_socket(
                 port=0,
-                ip_version=ip_version,
+                ip_version=IPVersion.V6Only if is_v6 else IPVersion.V4Only,
                 apple_p2p=apple_p2p,
-                bind_addr=i[0] if isinstance(i, tuple) else (i,),
+                bind_addr=cast(tuple[tuple[str, int, int], int], i)[0] if is_v6 else (cast(str, i),),
             )
 
         if respond_socket is not None:
