@@ -298,3 +298,35 @@ def test_new_respond_socket_new_socket_returns_none():
     """Test new_respond_socket returns None if new_socket returns None."""
     with patch.object(netutils, "new_socket", return_value=None):
         assert netutils.new_respond_socket(("0.0.0.0", 0)) is None  # type: ignore[arg-type]
+
+
+def test_create_sockets():
+    """Test create_sockets with unicast and IPv4."""
+
+    with (
+        patch("zeroconf._utils.net.new_socket") as mock_new_socket,
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+    ):
+        mock_socket = Mock(spec=socket.socket)
+        mock_new_socket.return_value = mock_socket
+
+        listen_socket, respond_sockets = r.create_sockets(
+            interfaces=r.InterfaceChoice.All, unicast=True, ip_version=r.IPVersion.All
+        )
+
+        assert listen_socket is None
+        mock_new_socket.assert_any_call(
+            port=0,
+            ip_version=r.IPVersion.V6Only,
+            apple_p2p=False,
+            bind_addr=("2001:db8::", 1, 1),
+        )
+        mock_new_socket.assert_any_call(
+            port=0,
+            ip_version=r.IPVersion.V4Only,
+            apple_p2p=False,
+            bind_addr=("192.168.1.5",),
+        )
