@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.146.2 (2025-04-01)
+
+### Bug Fixes
+
+- Create listener socket with specific IP version
+  ([#1557](https://github.com/python-zeroconf/python-zeroconf/pull/1557),
+  [`b757ddf`](https://github.com/python-zeroconf/python-zeroconf/commit/b757ddf98d7d04c366281a4281a449c5c2cb897d))
+
+* fix: create listener socket with specific IP version
+
+Create listener sockets when using unicast with specific IP version as well, just like in
+  `new_respond_socket()`.
+
+* chore(tests): add unit test for socket creation with unicast addressing
+
+
 ## v0.146.1 (2025-03-05)
 
 ### Bug Fixes
