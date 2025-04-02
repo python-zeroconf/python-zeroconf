@@ -866,7 +866,6 @@ def test_legacy_record_update_listener():
         """A RecordUpdateListener that does not implement update_records."""
 
         def update_record(self, zc: Zeroconf, now: float, record: r.DNSRecord) -> None:
-            nonlocal updates
             updates.append(record)
 
     listener = LegacyRecordUpdateListener()
@@ -923,7 +922,6 @@ def test_service_browser_is_aware_of_port_changes():
     # dummy service callback
     def on_service_state_change(zeroconf, service_type, state_change, name):
         """Dummy callback."""
-        nonlocal callbacks
         if name == registration_name:
             callbacks.append((service_type, state_change, name))
 
@@ -985,17 +983,14 @@ def test_service_browser_listeners_update_service():
 
     class MyServiceListener(r.ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
 
@@ -1050,12 +1045,10 @@ def test_service_browser_listeners_no_update_service():
 
     class MyServiceListener(r.ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
@@ -1374,17 +1367,14 @@ def test_service_browser_matching():
 
     class MyServiceListener(r.ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
 
@@ -1465,17 +1455,14 @@ def test_service_browser_expire_callbacks():
 
     class MyServiceListener(r.ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
 

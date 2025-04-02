@@ -940,17 +940,14 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
 
     class MyServiceListener(ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
 
@@ -1191,17 +1188,14 @@ async def test_service_browser_ignores_unrelated_updates():
 
     class MyServiceListener(ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             if name == registration_name:
                 callbacks.append(("update", type_, name))
 
@@ -1349,15 +1343,12 @@ async def test_update_with_uppercase_names(run_isolated):
 
     class MyServiceListener(ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             callbacks.append(("add", type_, name))
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            nonlocal callbacks
             callbacks.append(("update", type_, name))
 
     listener = MyServiceListener()

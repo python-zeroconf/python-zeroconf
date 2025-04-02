@@ -127,7 +127,6 @@ def test_disable_ipv6_only_or_raise():
     errors_logged = []
 
     def _log_error(*args):
-        nonlocal errors_logged
         errors_logged.append(args)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
