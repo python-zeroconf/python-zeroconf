@@ -17,6 +17,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import DNSAddress, RecordUpdate, const
+from zeroconf._protocol.outgoing import DNSOutgoing
 from zeroconf._services import info
 from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
@@ -1871,3 +1872,23 @@ async def test_address_resolver_ipv6():
     aiozc.zeroconf.async_send(outgoing)
     assert await resolve_task
     assert resolver.ip_addresses_by_version(IPVersion.All) == [ip_address("fe80::52e:c2f2:bc5f:e9c6")]
+
+
+@pytest.mark.asyncio
+async def test_unicast_flag_if_requested() -> None:
+    """Verify we try four times even with the random delay."""
+    type_ = "_typethatisnothere._tcp.local."
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+
+    def async_send(out: DNSOutgoing, addr: str | None = None, port: int = const._MDNS_PORT) -> None:
+        """Sends an outgoing packet."""
+        for question in out.questions:
+            assert question.unicast
+
+    # patch the zeroconf send
+    with patch.object(aiozc.zeroconf, "async_send", async_send):
+        await aiozc.async_get_service_info(
+            f"willnotbefound.{type_}", type_, question_type=r.DNSQuestionType.QU
+        )
+
+    await aiozc.async_close()
