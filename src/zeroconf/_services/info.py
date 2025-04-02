@@ -859,7 +859,7 @@ class ServiceInfo(RecordUpdateListener):
                 if last <= now:
                     return False
                 if next_ <= now:
-                    this_question_type = question_type or QU_QUESTION if first_request else QM_QUESTION
+                    this_question_type = question_type or (QU_QUESTION if first_request else QM_QUESTION)
                     out = self._generate_request_query(zc, now, this_question_type)
                     first_request = False
                     if out.questions:
