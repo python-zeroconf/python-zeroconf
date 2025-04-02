@@ -48,7 +48,6 @@ def test_legacy_record_update_listener():
         """A RecordUpdateListener that does not implement update_records."""
 
         def update_record(self, zc: Zeroconf, now: float, record: r.DNSRecord) -> None:
-            nonlocal updates
             updates.append(record)
 
     listener = LegacyRecordUpdateListener()
