@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.146.3 (2025-04-02)
+
+### Bug Fixes
+
+- Correctly override question type flag for requests
+  ([#1558](https://github.com/python-zeroconf/python-zeroconf/pull/1558),
+  [`bd643a2`](https://github.com/python-zeroconf/python-zeroconf/commit/bd643a227bc4d6a949d558850ad1431bc2940d74))
+
+* fix: correctly override question type flag for requests
+
+Currently even when setting the explicit question type flag, the implementation ignores it for
+  subsequent queries. This commit ensures that all queries respect the explicit question type flag.
+
+* chore(tests): add test for explicit question type flag
+
+Add unit test to validate that the explicit question type flag is set correctly in outgoing
+  requests.
+
+
 ## v0.146.2 (2025-04-01)
 
 ### Bug Fixes
