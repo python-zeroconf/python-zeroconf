@@ -87,16 +87,16 @@ class Framework(unittest.TestCase):
     def test_launch_and_close_v4_v6(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
         rv.close()
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
-        rv.close()
+        with pytest.raises(RuntimeError):
+            r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
 
     @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
     @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
     def test_launch_and_close_v6_only(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
         rv.close()
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
-        rv.close()
+        with pytest.raises(RuntimeError):
+            r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
 
     @unittest.skipIf(sys.platform == "darwin", reason="apple_p2p failure path not testable on mac")
     def test_launch_and_close_apple_p2p_not_mac(self):

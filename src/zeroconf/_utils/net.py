@@ -147,10 +147,8 @@ def normalize_interface_choice(
     result: list[str | tuple[tuple[str, int, int], int]] = []
     if choice is InterfaceChoice.Default:
         if ip_version != IPVersion.V4Only:
-            # IPv6 multicast uses interface 0 to mean the default
-            result.append((("", 0, 0), 0))
-        if ip_version != IPVersion.V6Only:
-            result.append("0.0.0.0")
+            raise RuntimeError("`InterfaceChoice.Default` is only supported with IPv4.")
+        result.append("0.0.0.0")
     elif choice is InterfaceChoice.All:
         if ip_version != IPVersion.V4Only:
             result.extend(get_all_addresses_v6())
@@ -198,28 +196,33 @@ def set_so_reuseport_if_available(s: socket.socket) -> None:
             raise
 
 
-def set_mdns_port_socket_options_for_ip_version(
+def set_respond_socket_multicast_options(
     s: socket.socket,
-    bind_addr: tuple[str] | tuple[str, int, int],
     ip_version: IPVersion,
 ) -> None:
-    """Set ttl/hops and loop for mdns port."""
-    if ip_version != IPVersion.V6Only:
-        ttl = struct.pack(b"B", 255)
-        loop = struct.pack(b"B", 1)
+    """Set ttl/hops and loop for mDNS respond socket."""
+    if ip_version == IPVersion.V4Only:
         # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
         # IP_MULTICAST_LOOP socket options as an unsigned char.
-        try:
-            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
-        except OSError as e:
-            if bind_addr[0] != "" or get_errno(e) != errno.EINVAL:  # Fails to set on MacOS
-                raise
-
-    if ip_version != IPVersion.V4Only:
+        ttl = struct.pack(b"B", 255)
+        loop = struct.pack(b"B", 1)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+    elif ip_version == IPVersion.V6Only:
         # However, char doesn't work here (at least on Linux)
         s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
         s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
+    else:
+        # A shared sender socket is not really possible, especially with link-local
+        # multicast addresses (ff02::/16), the kernel needs to know which interface
+        # to use for routing.
+        #
+        # It seems that macOS even refuses to take IPv4 socket options if this is an
+        # AF_INET6 socket.
+        #
+        # In theory we could reconfigure the socket on each send, but that is not
+        # really practical for Python Zerconf.
+        raise RuntimeError("Dual-stack responder socket not supported")
 
 
 def new_socket(
@@ -243,9 +246,6 @@ def new_socket(
 
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     set_so_reuseport_if_available(s)
-
-    if port == _MDNS_PORT:
-        set_mdns_port_socket_options_for_ip_version(s, bind_addr, ip_version)
 
     if apple_p2p:
         # SO_RECV_ANYIF = 0x1104
@@ -402,6 +402,7 @@ def new_respond_socket(
             socket.IP_MULTICAST_IF,
             socket.inet_aton(cast(str, interface)),
         )
+    set_respond_socket_multicast_options(respond_socket, IPVersion.V6Only if is_v6 else IPVersion.V4Only)
     return respond_socket
 
 
@@ -423,6 +424,8 @@ def create_sockets(
     if not unicast and interfaces is InterfaceChoice.Default:
         for interface in normalized_interfaces:
             add_multicast_member(cast(socket.socket, listen_socket), interface)
+        # Sent responder socket options to the dual-use listen socket
+        set_respond_socket_multicast_options(cast(socket.socket, listen_socket), ip_version)
         return listen_socket, [cast(socket.socket, listen_socket)]
 
     respond_sockets = []
