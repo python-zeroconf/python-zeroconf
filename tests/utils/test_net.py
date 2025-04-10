@@ -35,6 +35,32 @@ def _generate_mock_adapters():
     return [mock_eth0, mock_lo0, mock_eth1, mock_vtun0]
 
 
+def test_get_all_addresses():
+    """Test public get_all_addresses API."""
+    with patch(
+        "zeroconf._utils.net.ifaddr.get_adapters",
+        return_value=_generate_mock_adapters(),
+    ):
+        from zeroconf import get_all_addresses
+
+        addresses = get_all_addresses()
+        assert isinstance(addresses, list)
+        assert len(addresses) == 3
+
+
+def test_get_all_addresses_v6():
+    """Test public get_all_addresses_v6 API."""
+    with patch(
+        "zeroconf._utils.net.ifaddr.get_adapters",
+        return_value=_generate_mock_adapters(),
+    ):
+        from zeroconf import get_all_addresses_v6
+
+        addresses = get_all_addresses_v6()
+        assert isinstance(addresses, list)
+        assert len(addresses) == 1
+
+
 def test_ip6_to_address_and_index():
     """Test we can extract from mocked adapters."""
     adapters = _generate_mock_adapters()
@@ -84,8 +110,8 @@ def test_ip6_addresses_to_indexes():
 def test_normalize_interface_choice_errors():
     """Test we generate exception on invalid input."""
     with (
-        patch("zeroconf._utils.net.get_all_addresses", return_value=[]),
-        patch("zeroconf._utils.net.get_all_addresses_v6", return_value=[]),
+        patch("zeroconf._utils.net.get_all_addresses_ipv4", return_value=[]),
+        patch("zeroconf._utils.net.get_all_addresses_ipv6", return_value=[]),
         pytest.raises(RuntimeError),
     ):
         netutils.normalize_interface_choice(r.InterfaceChoice.All)
