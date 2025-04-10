@@ -7,7 +7,7 @@ import socket
 import sys
 import unittest
 import warnings
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import ifaddr
 import pytest
@@ -20,11 +20,11 @@ from zeroconf._utils import net as netutils
 def _generate_mock_adapters():
     mock_lo0 = Mock(spec=ifaddr.Adapter)
     mock_lo0.nice_name = "lo0"
-    mock_lo0.ips = [ifaddr.IP("127.0.0.1", 8, "lo0")]
+    mock_lo0.ips = [ifaddr.IP("127.0.0.1", 8, "lo0"), ifaddr.IP(("::1", 0, 0), 128, "lo")]
     mock_lo0.index = 0
     mock_eth0 = Mock(spec=ifaddr.Adapter)
     mock_eth0.nice_name = "eth0"
-    mock_eth0.ips = [ifaddr.IP(("2001:db8::", 1, 1), 8, "eth0")]
+    mock_eth0.ips = [ifaddr.IP(("2001:db8::", 1, 1), 8, "eth0"), ifaddr.IP(("fd00:db8::", 1, 1), 8, "eth0")]
     mock_eth0.index = 1
     mock_eth1 = Mock(spec=ifaddr.Adapter)
     mock_eth1.nice_name = "eth1"
@@ -65,7 +65,7 @@ def test_get_all_addresses_v6() -> None:
     ):
         addresses = get_all_addresses_v6()
         assert isinstance(addresses, list)
-        assert len(addresses) == 1
+        assert len(addresses) == 3
         assert len(warned) == 1
         first_warning = warned[0]
         assert "get_all_addresses_v6 is deprecated" in str(first_warning.message)
@@ -200,28 +200,20 @@ def test_set_so_reuseport_if_available_not_present():
         netutils.set_so_reuseport_if_available(sock)
 
 
-def test_set_mdns_port_socket_options_for_ip_version():
+def test_set_respond_socket_multicast_options():
     """Test OSError with errno with EINVAL and bind address ''.
 
     from setsockopt IP_MULTICAST_TTL does not raise."""
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        # Should raise on EPERM always
-        with (
-            pytest.raises(OSError),
-            patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)),
-        ):
-            netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
+    # Should raise on EINVAL always
+    with (
+        socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock,
+        pytest.raises(OSError),
+        patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)),
+    ):
+        netutils.set_respond_socket_multicast_options(sock, r.IPVersion.V4Only)
 
-        # Should raise on EINVAL always when bind address is not ''
-        with (
-            pytest.raises(OSError),
-            patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)),
-        ):
-            netutils.set_mdns_port_socket_options_for_ip_version(sock, ("127.0.0.1",), r.IPVersion.V4Only)
-
-        # Should not raise on EINVAL when bind address is ''
-        with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
-            netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
+    with pytest.raises(RuntimeError):
+        netutils.set_respond_socket_multicast_options(sock, r.IPVersion.All)
 
 
 def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
@@ -352,8 +344,8 @@ def test_new_respond_socket_new_socket_returns_none():
         assert netutils.new_respond_socket(("0.0.0.0", 0)) is None  # type: ignore[arg-type]
 
 
-def test_create_sockets():
-    """Test create_sockets with unicast and IPv4."""
+def test_create_sockets_interfaces_all_unicast():
+    """Test create_sockets with unicast."""
 
     with (
         patch("zeroconf._utils.net.new_socket") as mock_new_socket,
@@ -382,3 +374,62 @@ def test_create_sockets():
             apple_p2p=False,
             bind_addr=("192.168.1.5",),
         )
+
+
+def test_create_sockets_interfaces_all() -> None:
+    """Test create_sockets with all interfaces.
+
+    Tests if a responder socket is created for every successful multicast
+    join.
+    """
+    adapters = _generate_mock_adapters()
+
+    # Additional IPv6 addresses usually fail to add membership
+    failure_interface = ("fd00:db8::", 1, 1)
+
+    expected_calls = []
+    for adapter in adapters:
+        for ip in adapter.ips:
+            if ip.ip == failure_interface:
+                continue
+
+            if ip.is_IPv4:
+                bind_addr = (ip.ip,)
+                ip_version = r.IPVersion.V4Only
+            else:
+                bind_addr = ip.ip
+                ip_version = r.IPVersion.V6Only
+
+            expected_calls.append(
+                call(
+                    port=5353,
+                    ip_version=ip_version,
+                    apple_p2p=False,
+                    bind_addr=bind_addr,
+                )
+            )
+
+    def _patched_add_multicast_member(sock, interface):
+        return interface[0] != failure_interface
+
+    with (
+        patch("zeroconf._utils.net.new_socket") as mock_new_socket,
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=adapters,
+        ),
+        patch("zeroconf._utils.net.add_multicast_member", side_effect=_patched_add_multicast_member),
+    ):
+        mock_socket = Mock(spec=socket.socket)
+        mock_new_socket.return_value = mock_socket
+
+        r.create_sockets(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
+
+        def call_to_tuple(c):
+            return (c.args, tuple(sorted(c.kwargs.items())))
+
+        # Exclude first new_socket call as this is the listen socket
+        actual_calls_set = {call_to_tuple(c) for c in mock_new_socket.call_args_list[1:]}
+        expected_calls_set = {call_to_tuple(c) for c in expected_calls}
+
+        assert actual_calls_set == expected_calls_set
