@@ -42,6 +42,7 @@ def test_get_all_addresses():
         return_value=_generate_mock_adapters(),
     ):
         from zeroconf import get_all_addresses
+
         addresses = get_all_addresses()
         assert isinstance(addresses, list)
         assert len(addresses) == 3
@@ -54,6 +55,7 @@ def test_get_all_addresses_v6():
         return_value=_generate_mock_adapters(),
     ):
         from zeroconf import get_all_addresses_v6
+
         addresses = get_all_addresses_v6()
         assert isinstance(addresses, list)
         assert len(addresses) == 1
