@@ -274,6 +274,7 @@ def new_socket(
         # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
         s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
 
+    # Bind expects (address, port) for AF_INET and (address, port, flowinfo, scope_id) for AF_INET6
     bind_tup = (bind_addr[0], port, *bind_addr[1:])
     try:
         s.bind(bind_tup)
@@ -392,15 +393,27 @@ def add_multicast_member(
 def new_respond_socket(
     interface: str | tuple[tuple[str, int, int], int],
     apple_p2p: bool = False,
+    unicast: bool = False,
 ) -> socket.socket | None:
+    """Create interface specific socket for responding to multicast queries."""
     is_v6 = isinstance(interface, tuple)
+
+    # For response sockets:
+    # - Bind explicitly to the interface address
+    # - Use ephemeral ports if in unicast mode
+    # - Create socket according to the interface IP type (IPv4 or IPv6)
     respond_socket = new_socket(
+        bind_addr=cast(tuple[tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
+        port=0 if unicast else _MDNS_PORT,
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
         apple_p2p=apple_p2p,
-        bind_addr=cast(tuple[tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
     )
+    if unicast:
+        return respond_socket
+
     if not respond_socket:
         return None
+
     log.debug("Configuring socket %s with multicast interface %s", respond_socket, interface)
     if is_v6:
         iface_bin = struct.pack("@I", cast(int, interface[1]))
@@ -423,33 +436,25 @@ def create_sockets(
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=("",))
+        listen_socket = new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
     # If we are using InterfaceChoice.Default we can use
     # a single socket to listen and respond.
     if not unicast and interfaces is InterfaceChoice.Default:
-        for i in normalized_interfaces:
-            add_multicast_member(cast(socket.socket, listen_socket), i)
+        for interface in normalized_interfaces:
+            add_multicast_member(cast(socket.socket, listen_socket), interface)
         return listen_socket, [cast(socket.socket, listen_socket)]
 
     respond_sockets = []
 
-    for i in normalized_interfaces:
-        if not unicast:
-            if add_multicast_member(cast(socket.socket, listen_socket), i):
-                respond_socket = new_respond_socket(i, apple_p2p=apple_p2p)
-            else:
-                respond_socket = None
-        else:
-            is_v6 = isinstance(i, tuple)
-            respond_socket = new_socket(
-                port=0,
-                ip_version=IPVersion.V6Only if is_v6 else IPVersion.V4Only,
-                apple_p2p=apple_p2p,
-                bind_addr=cast(tuple[tuple[str, int, int], int], i)[0] if is_v6 else (cast(str, i),),
-            )
+    for interface in normalized_interfaces:
+        # Only create response socket if unicast or becoming multicast member was successful
+        if not unicast and not add_multicast_member(cast(socket.socket, listen_socket), interface):
+            continue
+
+        respond_socket = new_respond_socket(interface, apple_p2p=apple_p2p, unicast=unicast)
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
