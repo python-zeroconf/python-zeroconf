@@ -107,14 +107,14 @@ def test_ip6_addresses_to_indexes():
         "zeroconf._utils.net.ifaddr.get_adapters",
         return_value=_generate_mock_adapters(),
     ):
-        assert netutils.ip6_addresses_to_indexes(interfaces) == [(("2001:db8::", 1, 1), 1)]
+        assert netutils.ip_addresses_to_indexes(interfaces) == [(("2001:db8::", 1, 1), 1)]
 
     interfaces_2 = ["2001:db8::"]
     with patch(
         "zeroconf._utils.net.ifaddr.get_adapters",
         return_value=_generate_mock_adapters(),
     ):
-        assert netutils.ip6_addresses_to_indexes(interfaces_2) == [(("2001:db8::", 1, 1), 1)]
+        assert netutils.ip_addresses_to_indexes(interfaces_2) == [(("2001:db8::", 1, 1), 1)]
 
 
 def test_normalize_interface_choice_errors():

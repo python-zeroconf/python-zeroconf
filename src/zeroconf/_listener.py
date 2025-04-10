@@ -63,6 +63,7 @@ class AsyncListener:
         "_registry",
         "_timers",
         "data",
+        "interface_idx",
         "last_message",
         "last_time",
         "sock_description",
@@ -70,8 +71,9 @@ class AsyncListener:
         "zc",
     )
 
-    def __init__(self, zc: Zeroconf) -> None:
+    def __init__(self, zc: Zeroconf, interface_idx: int = 0) -> None:
         self.zc = zc
+        self.interface_idx = interface_idx
         self._registry = zc.registry
         self._record_manager = zc.record_manager
         self._query_handler = zc.query_handler
@@ -139,12 +141,10 @@ class AsyncListener:
         else:
             # https://github.com/python/mypy/issues/1178
             addr, port, flow, scope = addrs
-            if debug:  # pragma: no branch
-                log.debug("IPv6 scope_id %d associated to the receiving interface", scope)
             v6_flow_scope = (flow, scope)
             addr_port = (addr, port)
 
-        msg = DNSIncoming(data, addr_port, scope, now)
+        msg = DNSIncoming(data, addr_port, self.interface_idx, now)
         self.data = data
         self.last_time = now
         self.last_message = msg

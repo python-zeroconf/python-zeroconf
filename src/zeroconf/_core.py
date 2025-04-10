@@ -178,10 +178,10 @@ class Zeroconf(QuietLogger):
             raise RuntimeError("Option `apple_p2p` is not supported on non-Apple platforms.")
 
         self.unicast = unicast
-        listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
-        log.debug("Listen socket %s, respond sockets %s", listen_socket, respond_sockets)
+        listen_sockets, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
+        log.debug("Listen socket %s, respond sockets %s", listen_sockets, respond_sockets)
 
-        self.engine = AsyncEngine(self, listen_socket, respond_sockets)
+        self.engine = AsyncEngine(self, listen_sockets, respond_sockets)
 
         self.browsers: dict[ServiceListener, ServiceBrowser] = {}
         self.registry = ServiceRegistry()

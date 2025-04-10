@@ -28,6 +28,7 @@ import socket
 import threading
 from typing import TYPE_CHECKING, cast
 
+from ._logger import log
 from ._record_update import RecordUpdate
 from ._utils.asyncio import get_running_loop, run_coro_with_timeout
 from ._utils.time import current_time_millis
@@ -48,7 +49,7 @@ class AsyncEngine:
 
     __slots__ = (
         "_cleanup_timer",
-        "_listen_socket",
+        "_listen_sockets",
         "_respond_sockets",
         "_setup_task",
         "loop",
@@ -62,7 +63,7 @@ class AsyncEngine:
     def __init__(
         self,
         zeroconf: Zeroconf,
-        listen_socket: socket.socket | None,
+        listen_sockets: list[tuple[socket.socket, int]],
         respond_sockets: list[socket.socket],
     ) -> None:
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -71,7 +72,7 @@ class AsyncEngine:
         self.readers: list[_WrappedTransport] = []
         self.senders: list[_WrappedTransport] = []
         self.running_future: asyncio.Future[bool | None] | None = None
-        self._listen_socket = listen_socket
+        self._listen_sockets = listen_sockets
         self._respond_sockets = respond_sockets
         self._cleanup_timer: asyncio.TimerHandle | None = None
         self._setup_task: asyncio.Task[None] | None = None
@@ -100,20 +101,22 @@ class AsyncEngine:
         """Create endpoints to send and receive."""
         assert self.loop is not None
         loop = self.loop
-        reader_sockets = []
+        reader_socket_tuples = self._listen_sockets.copy()
         sender_sockets = []
-        if self._listen_socket:
-            reader_sockets.append(self._listen_socket)
+        reader_sockets = (t[0] for t in reader_socket_tuples)
         for s in self._respond_sockets:
             if s not in reader_sockets:
-                reader_sockets.append(s)
+                reader_socket_tuples.append((s, 0))
             sender_sockets.append(s)
 
-        for s in reader_sockets:
+        log.info("Creating %d reader sockets (%s) and %d sender sockets", len(reader_socket_tuples), reader_socket_tuples, len(sender_sockets))
+        for s, interface_idx in reader_socket_tuples:
+            log.debug("Creating endpoint for socket %s", s)
             transport, protocol = await loop.create_datagram_endpoint(  # type: ignore[type-var]
-                lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
+                lambda: AsyncListener(self.zc, interface_idx),  # type: ignore[arg-type, return-value]
                 sock=s,
             )
+            log.debug("Creating endpoint for socket %s, transport %s, protocol %s", s, transport, protocol)
             self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
             if s in sender_sockets:

@@ -25,7 +25,7 @@ from __future__ import annotations
 from functools import cache, lru_cache
 from ipaddress import AddressValueError, IPv4Address, IPv6Address, NetmaskValueError
 from typing import Any
-
+from .._logger import log
 from .._dns import DNSAddress
 from ..const import _TYPE_AAAA
 
@@ -123,6 +123,9 @@ def get_ip_address_object_from_record(
     record: DNSAddress,
 ) -> ZeroconfIPv4Address | ZeroconfIPv6Address | None:
     """Get the IP address object from the record."""
+
+    log.info("Got ip addr: %r from %r with scope %d", record.address, record, record.scope_id if record.scope_id else 0)
+    
     if record.type == _TYPE_AAAA and record.scope_id:
         return ip_bytes_and_scope_to_address(record.address, record.scope_id)
     return cached_ip_addresses_wrapper(record.address)
