@@ -28,7 +28,7 @@ import ipaddress
 import socket
 import struct
 import sys
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, Union, cast
 
 import ifaddr
@@ -73,19 +73,27 @@ def _encode_address(address: str) -> bytes:
     return socket.inet_pton(address_family, address)
 
 
-def get_all_addresses() -> list[str]:
-    return list({addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})  # type: ignore[misc]
+def get_all_addresses_ipv4(adapters: Iterable[ifaddr.Adapter]) -> list[str]:
+    return list({addr.ip for iface in adapters for addr in iface.ips if addr.is_IPv4})  # type: ignore[misc]
 
 
-def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:
+def get_all_addresses_ipv6(adapters: Iterable[ifaddr.Adapter]) -> list[tuple[tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     # TODO: What about multi-address interfaces?
     return list(
-        {(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6}  # type: ignore[misc]
+        {(addr.ip, iface.index) for iface in adapters for addr in iface.ips if addr.is_IPv6}  # type: ignore[misc]
     )
 
 
-def ip6_to_address_and_index(adapters: list[ifaddr.Adapter], ip: str) -> tuple[tuple[str, int, int], int]:
+def get_all_addresses() -> list[str]:  # required for backwards compat
+    return get_all_addresses_ipv4(ifaddr.get_adapters())
+
+
+def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:  # required for backwards compat
+    return get_all_addresses_ipv6(ifaddr.get_adapters())
+
+
+def ip6_to_address_and_index(adapters: Iterable[ifaddr.Adapter], ip: str) -> tuple[tuple[str, int, int], int]:
     if "%" in ip:
         ip = ip[: ip.index("%")]  # Strip scope_id.
     ipaddr = ipaddress.ip_address(ip)
@@ -102,7 +110,7 @@ def ip6_to_address_and_index(adapters: list[ifaddr.Adapter], ip: str) -> tuple[t
     raise RuntimeError(f"No adapter found for IP address {ip}")
 
 
-def interface_index_to_ip6_address(adapters: list[ifaddr.Adapter], index: int) -> tuple[str, int, int]:
+def interface_index_to_ip6_address(adapters: Iterable[ifaddr.Adapter], index: int) -> tuple[str, int, int]:
     for adapter in adapters:
         if adapter.index == index:
             for adapter_ip in adapter.ips:
@@ -152,10 +160,11 @@ def normalize_interface_choice(
         if ip_version != IPVersion.V6Only:
             result.append("0.0.0.0")
     elif choice is InterfaceChoice.All:
+        adapters = ifaddr.get_adapters()
         if ip_version != IPVersion.V4Only:
-            result.extend(get_all_addresses_v6())
+            result.extend(get_all_addresses_ipv6(adapters))
         if ip_version != IPVersion.V6Only:
-            result.extend(get_all_addresses())
+            result.extend(get_all_addresses_ipv4(adapters))
         if not result:
             raise RuntimeError(
                 f"No interfaces to listen on, check that any interfaces have IP version {ip_version}"
