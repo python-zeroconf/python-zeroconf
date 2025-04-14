@@ -166,7 +166,8 @@ def test_disable_ipv6_only_or_raise():
         errors_logged.append(args)
 
     with (
-        socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock, pytest.raises(OSError),
+        socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock,
+        pytest.raises(OSError),
         patch.object(netutils.log, "error", _log_error),
         patch("socket.socket.setsockopt", side_effect=OSError),
     ):
@@ -176,7 +177,6 @@ def test_disable_ipv6_only_or_raise():
         errors_logged[0][0]
         == "Support for dual V4-V6 sockets is not present, use IPVersion.V4 or IPVersion.V6"
     )
-
 
 
 @pytest.mark.skipif(not hasattr(socket, "SO_REUSEPORT"), reason="System does not have SO_REUSEPORT")
@@ -197,7 +197,7 @@ def test_set_so_reuseport_if_available_not_present():
         socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock,
         patch("socket.socket.setsockopt", side_effect=OSError),
     ):
-            netutils.set_so_reuseport_if_available(sock)
+        netutils.set_so_reuseport_if_available(sock)
 
 
 def test_set_mdns_port_socket_options_for_ip_version():
@@ -205,13 +205,18 @@ def test_set_mdns_port_socket_options_for_ip_version():
 
     from setsockopt IP_MULTICAST_TTL does not raise."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-
         # Should raise on EPERM always
-        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
+        with (
+            pytest.raises(OSError),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)),
+        ):
             netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
 
         # Should raise on EINVAL always when bind address is not ''
-        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
+        with (
+            pytest.raises(OSError),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)),
+        ):
             netutils.set_mdns_port_socket_options_for_ip_version(sock, ("127.0.0.1",), r.IPVersion.V4Only)
 
         # Should not raise on EINVAL when bind address is ''
@@ -224,7 +229,10 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
         interface = "127.0.0.1"
 
         # EPERM should always raise
-        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
+        with (
+            pytest.raises(OSError),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)),
+        ):
             netutils.add_multicast_member(sock, interface)
 
         # EADDRINUSE should return False
@@ -244,7 +252,10 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
             assert netutils.add_multicast_member(sock, interface) is False
 
         # ENODEV should raise for ipv4
-        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
+        with (
+            pytest.raises(OSError),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)),
+        ):
             assert netutils.add_multicast_member(sock, interface) is False
 
         # ENODEV should return False for ipv6
@@ -263,7 +274,9 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
         caplog.clear()
         with (
             patch.object(sys, "platform", "linux"),
-            patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
+            patch(
+                "socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")
+            ),
         ):
             assert netutils.add_multicast_member(sock, interface) is False
             assert "No buffer space available" in caplog.text
@@ -273,7 +286,9 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
         caplog.clear()
         with (
             patch.object(sys, "platform", "darwin"),
-            patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
+            patch(
+                "socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")
+            ),
         ):
             assert netutils.add_multicast_member(sock, interface) is False
             assert "No buffer space available" in caplog.text
