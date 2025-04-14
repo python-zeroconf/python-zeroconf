@@ -6,12 +6,14 @@ import errno
 import socket
 import sys
 import unittest
+import warnings
 from unittest.mock import MagicMock, Mock, patch
 
 import ifaddr
 import pytest
 
 import zeroconf as r
+from zeroconf import get_all_addresses, get_all_addresses_v6
 from zeroconf._utils import net as netutils
 
 
@@ -35,30 +37,38 @@ def _generate_mock_adapters():
     return [mock_eth0, mock_lo0, mock_eth1, mock_vtun0]
 
 
-def test_get_all_addresses():
+def test_get_all_addresses() -> None:
     """Test public get_all_addresses API."""
-    with patch(
-        "zeroconf._utils.net.ifaddr.get_adapters",
-        return_value=_generate_mock_adapters(),
+    with (
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+        warnings.catch_warnings(record=True) as warned,
     ):
-        from zeroconf import get_all_addresses
-
         addresses = get_all_addresses()
         assert isinstance(addresses, list)
         assert len(addresses) == 3
+        assert len(warned) == 1
+        first_warning = warned[0]
+        assert "get_all_addresses is deprecated" in str(first_warning.message)
 
 
-def test_get_all_addresses_v6():
+def test_get_all_addresses_v6() -> None:
     """Test public get_all_addresses_v6 API."""
-    with patch(
-        "zeroconf._utils.net.ifaddr.get_adapters",
-        return_value=_generate_mock_adapters(),
+    with (
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+        warnings.catch_warnings(record=True) as warned,
     ):
-        from zeroconf import get_all_addresses_v6
-
         addresses = get_all_addresses_v6()
         assert isinstance(addresses, list)
         assert len(addresses) == 1
+        assert len(warned) == 1
+        first_warning = warned[0]
+        assert "get_all_addresses_v6 is deprecated" in str(first_warning.message)
 
 
 def test_ip6_to_address_and_index():

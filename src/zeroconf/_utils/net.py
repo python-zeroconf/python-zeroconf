@@ -28,6 +28,7 @@ import ipaddress
 import socket
 import struct
 import sys
+import warnings
 from collections.abc import Iterable, Sequence
 from typing import Any, Union, cast
 
@@ -85,11 +86,23 @@ def get_all_addresses_ipv6(adapters: Iterable[ifaddr.Adapter]) -> list[tuple[tup
     )
 
 
-def get_all_addresses() -> list[str]:  # required for backwards compat
+def get_all_addresses() -> list[str]:
+    warnings.warn(
+        "get_all_addresses is deprecated, and will be removed in a future version. Use ifaddr"
+        "directly instead to get a list of adapters.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return get_all_addresses_ipv4(ifaddr.get_adapters())
 
 
-def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:  # required for backwards compat
+def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:
+    warnings.warn(
+        "get_all_addresses_v6 is deprecated, and will be removed in a future version. Use ifaddr"
+        "directly instead to get a list of adapters.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return get_all_addresses_ipv6(ifaddr.get_adapters())
 
 
