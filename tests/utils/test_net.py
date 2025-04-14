@@ -6,12 +6,14 @@ import errno
 import socket
 import sys
 import unittest
+import warnings
 from unittest.mock import MagicMock, Mock, patch
 
 import ifaddr
 import pytest
 
 import zeroconf as r
+from zeroconf import get_all_addresses, get_all_addresses_v6
 from zeroconf._utils import net as netutils
 
 
@@ -33,6 +35,40 @@ def _generate_mock_adapters():
     mock_vtun0.ips = [ifaddr.IP("169.254.3.2", 16, "vtun0")]
     mock_vtun0.index = 3
     return [mock_eth0, mock_lo0, mock_eth1, mock_vtun0]
+
+
+def test_get_all_addresses() -> None:
+    """Test public get_all_addresses API."""
+    with (
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+        warnings.catch_warnings(record=True) as warned,
+    ):
+        addresses = get_all_addresses()
+        assert isinstance(addresses, list)
+        assert len(addresses) == 3
+        assert len(warned) == 1
+        first_warning = warned[0]
+        assert "get_all_addresses is deprecated" in str(first_warning.message)
+
+
+def test_get_all_addresses_v6() -> None:
+    """Test public get_all_addresses_v6 API."""
+    with (
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+        warnings.catch_warnings(record=True) as warned,
+    ):
+        addresses = get_all_addresses_v6()
+        assert isinstance(addresses, list)
+        assert len(addresses) == 1
+        assert len(warned) == 1
+        first_warning = warned[0]
+        assert "get_all_addresses_v6 is deprecated" in str(first_warning.message)
 
 
 def test_ip6_to_address_and_index():
@@ -84,8 +120,8 @@ def test_ip6_addresses_to_indexes():
 def test_normalize_interface_choice_errors():
     """Test we generate exception on invalid input."""
     with (
-        patch("zeroconf._utils.net.get_all_addresses", return_value=[]),
-        patch("zeroconf._utils.net.get_all_addresses_v6", return_value=[]),
+        patch("zeroconf._utils.net.get_all_addresses_ipv4", return_value=[]),
+        patch("zeroconf._utils.net.get_all_addresses_ipv6", return_value=[]),
         pytest.raises(RuntimeError),
     ):
         netutils.normalize_interface_choice(r.InterfaceChoice.All)
