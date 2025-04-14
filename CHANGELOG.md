@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.146.5 (2025-04-14)
+
+### Bug Fixes
+
+- Address non-working socket configuration
+  ([#1563](https://github.com/python-zeroconf/python-zeroconf/pull/1563),
+  [`cc0f835`](https://github.com/python-zeroconf/python-zeroconf/commit/cc0f8350c30c82409b1a9bfecb19ff9b3368d6a7))
+
+Co-authored-by: J. Nick Koston <nick@koston.org>
+
+
 ## v0.146.4 (2025-04-14)
 
 ### Bug Fixes
