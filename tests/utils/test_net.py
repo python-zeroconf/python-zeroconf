@@ -165,9 +165,8 @@ def test_disable_ipv6_only_or_raise():
     def _log_error(*args):
         errors_logged.append(args)
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     with (
-        pytest.raises(OSError),
+        socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock, pytest.raises(OSError),
         patch.object(netutils.log, "error", _log_error),
         patch("socket.socket.setsockopt", side_effect=OSError),
     ):
@@ -179,103 +178,106 @@ def test_disable_ipv6_only_or_raise():
     )
 
 
+
 @pytest.mark.skipif(not hasattr(socket, "SO_REUSEPORT"), reason="System does not have SO_REUSEPORT")
 def test_set_so_reuseport_if_available_is_present():
     """Test that setting socket.SO_REUSEPORT only OSError errno.ENOPROTOOPT is trapped."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError):
-        netutils.set_so_reuseport_if_available(sock)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError):
+            netutils.set_so_reuseport_if_available(sock)
 
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
-        netutils.set_so_reuseport_if_available(sock)
+        with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
+            netutils.set_so_reuseport_if_available(sock)
 
 
 @pytest.mark.skipif(hasattr(socket, "SO_REUSEPORT"), reason="System has SO_REUSEPORT")
 def test_set_so_reuseport_if_available_not_present():
     """Test that we do not try to set SO_REUSEPORT if it is not present."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    with patch("socket.socket.setsockopt", side_effect=OSError):
-        netutils.set_so_reuseport_if_available(sock)
+    with (
+        socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock,
+        patch("socket.socket.setsockopt", side_effect=OSError),
+    ):
+            netutils.set_so_reuseport_if_available(sock)
 
 
 def test_set_mdns_port_socket_options_for_ip_version():
     """Test OSError with errno with EINVAL and bind address ''.
 
     from setsockopt IP_MULTICAST_TTL does not raise."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
 
-    # Should raise on EPERM always
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
-        netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
+        # Should raise on EPERM always
+        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
+            netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
 
-    # Should raise on EINVAL always when bind address is not ''
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
-        netutils.set_mdns_port_socket_options_for_ip_version(sock, ("127.0.0.1",), r.IPVersion.V4Only)
+        # Should raise on EINVAL always when bind address is not ''
+        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
+            netutils.set_mdns_port_socket_options_for_ip_version(sock, ("127.0.0.1",), r.IPVersion.V4Only)
 
-    # Should not raise on EINVAL when bind address is ''
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
-        netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
+        # Should not raise on EINVAL when bind address is ''
+        with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
+            netutils.set_mdns_port_socket_options_for_ip_version(sock, ("",), r.IPVersion.V4Only)
 
 
 def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    interface = "127.0.0.1"
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        interface = "127.0.0.1"
 
-    # EPERM should always raise
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
-        netutils.add_multicast_member(sock, interface)
+        # EPERM should always raise
+        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)):
+            netutils.add_multicast_member(sock, interface)
 
-    # EADDRINUSE should return False
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EADDRINUSE, None)):
-        assert netutils.add_multicast_member(sock, interface) is False
+        # EADDRINUSE should return False
+        with patch("socket.socket.setsockopt", side_effect=OSError(errno.EADDRINUSE, None)):
+            assert netutils.add_multicast_member(sock, interface) is False
 
-    # EADDRNOTAVAIL should return False
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EADDRNOTAVAIL, None)):
-        assert netutils.add_multicast_member(sock, interface) is False
+        # EADDRNOTAVAIL should return False
+        with patch("socket.socket.setsockopt", side_effect=OSError(errno.EADDRNOTAVAIL, None)):
+            assert netutils.add_multicast_member(sock, interface) is False
 
-    # EINVAL should return False
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
-        assert netutils.add_multicast_member(sock, interface) is False
+        # EINVAL should return False
+        with patch("socket.socket.setsockopt", side_effect=OSError(errno.EINVAL, None)):
+            assert netutils.add_multicast_member(sock, interface) is False
 
-    # ENOPROTOOPT should return False
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
-        assert netutils.add_multicast_member(sock, interface) is False
+        # ENOPROTOOPT should return False
+        with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOPROTOOPT, None)):
+            assert netutils.add_multicast_member(sock, interface) is False
 
-    # ENODEV should raise for ipv4
-    with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
-        assert netutils.add_multicast_member(sock, interface) is False
+        # ENODEV should raise for ipv4
+        with pytest.raises(OSError), patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
+            assert netutils.add_multicast_member(sock, interface) is False
 
-    # ENODEV should return False for ipv6
-    with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
-        assert netutils.add_multicast_member(sock, ("2001:db8::", 1, 1)) is False  # type: ignore[arg-type]
+        # ENODEV should return False for ipv6
+        with patch("socket.socket.setsockopt", side_effect=OSError(errno.ENODEV, None)):
+            assert netutils.add_multicast_member(sock, ("2001:db8::", 1, 1)) is False  # type: ignore[arg-type]
 
-    # No IPv6 support should return False for IPv6
-    with patch("socket.inet_pton", side_effect=OSError()):
-        assert netutils.add_multicast_member(sock, ("2001:db8::", 1, 1)) is False  # type: ignore[arg-type]
+        # No IPv6 support should return False for IPv6
+        with patch("socket.inet_pton", side_effect=OSError()):
+            assert netutils.add_multicast_member(sock, ("2001:db8::", 1, 1)) is False  # type: ignore[arg-type]
 
-    # No error should return True
-    with patch("socket.socket.setsockopt"):
-        assert netutils.add_multicast_member(sock, interface) is True
+        # No error should return True
+        with patch("socket.socket.setsockopt"):
+            assert netutils.add_multicast_member(sock, interface) is True
 
-    # Ran out of IGMP memberships is forgiving and logs about igmp_max_memberships on linux
-    caplog.clear()
-    with (
-        patch.object(sys, "platform", "linux"),
-        patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
-    ):
-        assert netutils.add_multicast_member(sock, interface) is False
-        assert "No buffer space available" in caplog.text
-        assert "net.ipv4.igmp_max_memberships" in caplog.text
+        # Ran out of IGMP memberships is forgiving and logs about igmp_max_memberships on linux
+        caplog.clear()
+        with (
+            patch.object(sys, "platform", "linux"),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
+        ):
+            assert netutils.add_multicast_member(sock, interface) is False
+            assert "No buffer space available" in caplog.text
+            assert "net.ipv4.igmp_max_memberships" in caplog.text
 
-    # Ran out of IGMP memberships is forgiving and logs
-    caplog.clear()
-    with (
-        patch.object(sys, "platform", "darwin"),
-        patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
-    ):
-        assert netutils.add_multicast_member(sock, interface) is False
-        assert "No buffer space available" in caplog.text
-        assert "net.ipv4.igmp_max_memberships" not in caplog.text
+        # Ran out of IGMP memberships is forgiving and logs
+        caplog.clear()
+        with (
+            patch.object(sys, "platform", "darwin"),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.ENOBUFS, "No buffer space available")),
+        ):
+            assert netutils.add_multicast_member(sock, interface) is False
+            assert "No buffer space available" in caplog.text
+            assert "net.ipv4.igmp_max_memberships" not in caplog.text
 
 
 def test_bind_raises_skips_address():
