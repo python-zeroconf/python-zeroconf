@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.146.4 (2025-04-14)
+
+### Bug Fixes
+
+- Avoid loading adapter list twice
+  ([#1564](https://github.com/python-zeroconf/python-zeroconf/pull/1564),
+  [`8359488`](https://github.com/python-zeroconf/python-zeroconf/commit/83594887521507cf77bfc0a397becabaaab287c2))
+
+
 ## v0.146.3 (2025-04-02)
 
 ### Bug Fixes
