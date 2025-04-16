@@ -24,13 +24,13 @@ from __future__ import annotations
 
 import enum
 import errno
-from functools import lru_cache
 import ipaddress
 import socket
 import struct
 import sys
 import warnings
 from collections.abc import Iterable, Sequence
+from functools import lru_cache
 from typing import Any, Union, cast
 
 import ifaddr
@@ -74,6 +74,7 @@ def _encode_address(address: str) -> bytes:
     address_family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
     return socket.inet_pton(address_family, address)
 
+
 @lru_cache(maxsize=512)
 def _get_interface_name(iface: int) -> str:
     """Get the interface name from the interface index."""
@@ -81,7 +82,9 @@ def _get_interface_name(iface: int) -> str:
 
 
 def get_all_addresses_ipv4(adapters: Iterable[ifaddr.Adapter]) -> list[str]:
-    return list({(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})  # type: ignore[misc]
+    return list(
+        {(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4}
+    )  # type: ignore[misc]
 
 
 def get_all_addresses_ipv6(adapters: Iterable[ifaddr.Adapter]) -> list[tuple[tuple[str, int, int], int]]:
@@ -91,13 +94,17 @@ def get_all_addresses_ipv6(adapters: Iterable[ifaddr.Adapter]) -> list[tuple[tup
         {(addr.ip, iface.index) for iface in adapters for addr in iface.ips if addr.is_IPv6}  # type: ignore[misc]
     )
 
-def get_all_addresses_ipv6_link_local(adapters: Iterable[ifaddr.Adapter]) -> list[tuple[tuple[str, int, int], int]]:
+
+def get_all_addresses_ipv6_link_local(
+    adapters: Iterable[ifaddr.Adapter],
+) -> list[tuple[tuple[str, int, int], int]]:
     return [
         (ip.ip, iface.index)
         for iface in adapters
         for ip in iface.ips
         if ip.is_IPv6 and ip.ip[2] == iface.index
     ]
+
 
 def get_all_addresses() -> list[str]:
     warnings.warn(
@@ -119,14 +126,16 @@ def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:
     return get_all_addresses_ipv6(ifaddr.get_adapters())
 
 
-def ip_to_address_and_index(adapters: Iterable[ifaddr.Adapter], ip: str) -> tuple[tuple[str, int, int], int] | tuple[str, int]:
+def ip_to_address_and_index(
+    adapters: Iterable[ifaddr.Adapter], ip: str
+) -> tuple[tuple[str, int, int], int] | tuple[str, int]:
     """Convert IP to IP address and interface index.
 
     :param adapters: List of adapters.
     :param ip: IP address to convert. If the address is an IPv6 with scope id, the scope id is being validated.
     :returns: Tuple of IP address and interface index.
     """
-    addr, sep, scope_id = ip.partition('%')
+    addr, sep, scope_id = ip.partition("%")
     if not sep:
         scope_id = None
 
@@ -144,10 +153,7 @@ def ip_to_address_and_index(adapters: Iterable[ifaddr.Adapter], ip: str) -> tupl
                 return (adapter_ip.ip, adapter.index)
 
             # IPv4 addresses are represented as strings
-            if (
-                isinstance(adapter_ip.ip, str)
-                and ipaddress.ip_address(adapter_ip.ip) == ipaddr
-            ):
+            if isinstance(adapter_ip.ip, str) and ipaddress.ip_address(adapter_ip.ip) == ipaddr:
                 return (adapter_ip.ip, adapter.index)
 
     raise RuntimeError(f"No adapter found for IP address {ip}")
@@ -347,11 +353,12 @@ def new_socket(
     log.debug("Created socket %s", s)
     return s
 
+
 def _bind_to_interface(
     s: socket.socket,
     ifaceidx: int,
 ) -> None:
-    if hasattr(socket,'SO_BINDTODEVICE'):
+    if hasattr(socket, "SO_BINDTODEVICE"):
         iface = _get_interface_name(ifaceidx).encode()
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, iface)
     elif sys.platform != "win32":
@@ -461,7 +468,7 @@ def new_respond_socket(
     # - Use ephemeral ports if in unicast mode
     # - Create socket according to the interface IP type (IPv4 or IPv6)
     respond_socket = new_socket(
-        #bind_addr=cast(tuple[tuple[str, int, int], int], interface)[0] if is_v6 else (cast(tuple[str, int], interface)[0],),
+        # bind_addr=cast(tuple[tuple[str, int, int], int], interface)[0] if is_v6 else (cast(tuple[str, int], interface)[0],),
         bind_addr=("::", 0, interface[1]),
         port=0 if unicast else _MDNS_PORT,
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),

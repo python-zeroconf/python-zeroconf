@@ -109,7 +109,12 @@ class AsyncEngine:
                 reader_socket_tuples.append((s, 0))
             sender_sockets.append(s)
 
-        log.info("Creating %d reader sockets (%s) and %d sender sockets", len(reader_socket_tuples), reader_socket_tuples, len(sender_sockets))
+        log.info(
+            "Creating %d reader sockets (%s) and %d sender sockets",
+            len(reader_socket_tuples),
+            reader_socket_tuples,
+            len(sender_sockets),
+        )
         for s, interface_idx in reader_socket_tuples:
             log.debug("Creating endpoint for socket %s", s)
             transport, protocol = await loop.create_datagram_endpoint(  # type: ignore[type-var]

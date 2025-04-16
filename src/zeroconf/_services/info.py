@@ -507,7 +507,7 @@ class ServiceInfo(RecordUpdateListener):
                 assert isinstance(dns_address_record, DNSAddress)
             ip_addr = get_ip_address_object_from_record(dns_address_record)
 
-            #log.info("Got ip addr: %r with scope %d from %r", ip_addr, ip_addr.scope_id if ip_addr.scope_id else 0, dns_address_record)
+            # log.info("Got ip addr: %r with scope %d from %r", ip_addr, ip_addr.scope_id if ip_addr.scope_id else 0, dns_address_record)
             if ip_addr is None:
                 log.warning(
                     "Encountered invalid address while processing %s: %s",
@@ -844,11 +844,7 @@ class ServiceInfo(RecordUpdateListener):
         :param addr: address to send the request to
         :param port: port to send the request to
         """
-        log.info(
-            "Asking for %s %s",
-            question_type,
-            self._name
-        )
+        log.info("Asking for %s %s", question_type, self._name)
         if not zc.started:
             await zc.async_wait_for_start()
 
@@ -871,11 +867,7 @@ class ServiceInfo(RecordUpdateListener):
                     return False
                 if next_ <= now:
                     this_question_type = question_type or (QU_QUESTION if first_request else QM_QUESTION)
-                    log.info(
-                        "Generating request for %s %s",
-                        this_question_type,
-                        self._name
-                    )
+                    log.info("Generating request for %s %s", this_question_type, self._name)
                     out = self._generate_request_query(zc, now, this_question_type)
                     first_request = False
                     if out.questions:
