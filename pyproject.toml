@@ -268,7 +268,7 @@ ignore_errors = true
 
 [build-system]
 # 1.5.2 required for https://github.com/python-poetry/poetry/issues/7505
-requires = ['setuptools>=65.4.1', 'wheel', 'Cython>=3.0.8', "poetry-core>=1.5.2"]
+requires = ['setuptools>=65.4.1', 'wheel', 'Cython==3.1.0rc1', "poetry-core>=1.5.2"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.codespell]
