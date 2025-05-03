@@ -50,7 +50,7 @@ cdef class AsyncListener:
 
     cpdef _respond_query(
         self,
-        object msg,
+        DNSIncoming msg,
         object addr,
         object port,
         object transport,
