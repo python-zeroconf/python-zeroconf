@@ -57,7 +57,7 @@ _DNS_OTHER_TTL = 4500  # 75 minutes for non-host records (PTR, TXT etc) as-per R
 # ServiceBrowsers generating excessive queries refresh queries.
 # Apple uses a 15s minimum TTL, however we do not have the same
 # level of rate limit and safe guards so we use 1/4 of the recommended value
-_DNS_PTR_MIN_TTL = _DNS_OTHER_TTL / 4
+_DNS_PTR_MIN_TTL = 1125
 
 _DNS_PACKET_HEADER_LEN = 12
 

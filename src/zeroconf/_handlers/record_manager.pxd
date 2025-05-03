@@ -8,7 +8,7 @@ from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis
 from .._record_update cimport RecordUpdate
 
-cdef cython.float _DNS_PTR_MIN_TTL
+cdef unsigned int _DNS_PTR_MIN_TTL
 cdef cython.uint _TYPE_PTR
 cdef object _ADDRESS_RECORD_TYPES
 cdef bint TYPE_CHECKING
