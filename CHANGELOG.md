@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v0.147.0 (2025-05-03)
+
+### Features
+
+- Add cython 3.1 support ([#1580](https://github.com/python-zeroconf/python-zeroconf/pull/1580),
+  [`1d9c94a`](https://github.com/python-zeroconf/python-zeroconf/commit/1d9c94a82d8da16b8f5355131e6167b69293da6c))
+
+- Cython 3.1 support ([#1578](https://github.com/python-zeroconf/python-zeroconf/pull/1578),
+  [`daaf8d6`](https://github.com/python-zeroconf/python-zeroconf/commit/daaf8d6981c778fe4ba0a63371d9368cf217891a))
+
+- Cython 3.11 support ([#1579](https://github.com/python-zeroconf/python-zeroconf/pull/1579),
+  [`1569383`](https://github.com/python-zeroconf/python-zeroconf/commit/1569383c6cf8ce8977427cfdaf5c7104ce52ab08))
+
+
 ## v0.146.5 (2025-04-14)
 
 ### Bug Fixes
