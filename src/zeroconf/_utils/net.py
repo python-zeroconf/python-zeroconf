@@ -28,7 +28,8 @@ import ipaddress
 import socket
 import struct
 import sys
-from collections.abc import Sequence
+import warnings
+from collections.abc import Iterable, Sequence
 from typing import Any, Union, cast
 
 import ifaddr
@@ -73,19 +74,39 @@ def _encode_address(address: str) -> bytes:
     return socket.inet_pton(address_family, address)
 
 
-def get_all_addresses() -> list[str]:
-    return list({addr.ip for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv4})  # type: ignore[misc]
+def get_all_addresses_ipv4(adapters: Iterable[ifaddr.Adapter]) -> list[str]:
+    return list({addr.ip for iface in adapters for addr in iface.ips if addr.is_IPv4})  # type: ignore[misc]
 
 
-def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:
+def get_all_addresses_ipv6(adapters: Iterable[ifaddr.Adapter]) -> list[tuple[tuple[str, int, int], int]]:
     # IPv6 multicast uses positive indexes for interfaces
     # TODO: What about multi-address interfaces?
     return list(
-        {(addr.ip, iface.index) for iface in ifaddr.get_adapters() for addr in iface.ips if addr.is_IPv6}  # type: ignore[misc]
+        {(addr.ip, iface.index) for iface in adapters for addr in iface.ips if addr.is_IPv6}  # type: ignore[misc]
     )
 
 
-def ip6_to_address_and_index(adapters: list[ifaddr.Adapter], ip: str) -> tuple[tuple[str, int, int], int]:
+def get_all_addresses() -> list[str]:
+    warnings.warn(
+        "get_all_addresses is deprecated, and will be removed in a future version. Use ifaddr"
+        "directly instead to get a list of adapters.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return get_all_addresses_ipv4(ifaddr.get_adapters())
+
+
+def get_all_addresses_v6() -> list[tuple[tuple[str, int, int], int]]:
+    warnings.warn(
+        "get_all_addresses_v6 is deprecated, and will be removed in a future version. Use ifaddr"
+        "directly instead to get a list of adapters.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return get_all_addresses_ipv6(ifaddr.get_adapters())
+
+
+def ip6_to_address_and_index(adapters: Iterable[ifaddr.Adapter], ip: str) -> tuple[tuple[str, int, int], int]:
     if "%" in ip:
         ip = ip[: ip.index("%")]  # Strip scope_id.
     ipaddr = ipaddress.ip_address(ip)
@@ -102,7 +123,7 @@ def ip6_to_address_and_index(adapters: list[ifaddr.Adapter], ip: str) -> tuple[t
     raise RuntimeError(f"No adapter found for IP address {ip}")
 
 
-def interface_index_to_ip6_address(adapters: list[ifaddr.Adapter], index: int) -> tuple[str, int, int]:
+def interface_index_to_ip6_address(adapters: Iterable[ifaddr.Adapter], index: int) -> tuple[str, int, int]:
     for adapter in adapters:
         if adapter.index == index:
             for adapter_ip in adapter.ips:
@@ -147,15 +168,25 @@ def normalize_interface_choice(
     result: list[str | tuple[tuple[str, int, int], int]] = []
     if choice is InterfaceChoice.Default:
         if ip_version != IPVersion.V4Only:
-            # IPv6 multicast uses interface 0 to mean the default
-            result.append((("", 0, 0), 0))
+            # IPv6 multicast uses interface 0 to mean the default. However,
+            # the default interface can't be used for outgoing IPv6 multicast
+            # requests. In a way, interface choice default isn't really working
+            # with IPv6. Inform the user accordingly.
+            message = (
+                "IPv6 multicast requests can't be sent using default interface. "
+                "Use V4Only, InterfaceChoice.All or an explicit list of interfaces."
+            )
+            log.error(message)
+            warnings.warn(message, DeprecationWarning, stacklevel=2)
+            result.append((("::", 0, 0), 0))
         if ip_version != IPVersion.V6Only:
             result.append("0.0.0.0")
     elif choice is InterfaceChoice.All:
+        adapters = ifaddr.get_adapters()
         if ip_version != IPVersion.V4Only:
-            result.extend(get_all_addresses_v6())
+            result.extend(get_all_addresses_ipv6(adapters))
         if ip_version != IPVersion.V6Only:
-            result.extend(get_all_addresses())
+            result.extend(get_all_addresses_ipv4(adapters))
         if not result:
             raise RuntimeError(
                 f"No interfaces to listen on, check that any interfaces have IP version {ip_version}"
@@ -198,28 +229,33 @@ def set_so_reuseport_if_available(s: socket.socket) -> None:
             raise
 
 
-def set_mdns_port_socket_options_for_ip_version(
+def set_respond_socket_multicast_options(
     s: socket.socket,
-    bind_addr: tuple[str] | tuple[str, int, int],
     ip_version: IPVersion,
 ) -> None:
-    """Set ttl/hops and loop for mdns port."""
-    if ip_version != IPVersion.V6Only:
-        ttl = struct.pack(b"B", 255)
-        loop = struct.pack(b"B", 1)
+    """Set ttl/hops and loop for mDNS respond socket."""
+    if ip_version == IPVersion.V4Only:
         # OpenBSD needs the ttl and loop values for the IP_MULTICAST_TTL and
         # IP_MULTICAST_LOOP socket options as an unsigned char.
-        try:
-            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-            s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
-        except OSError as e:
-            if bind_addr[0] != "" or get_errno(e) != errno.EINVAL:  # Fails to set on MacOS
-                raise
-
-    if ip_version != IPVersion.V4Only:
+        ttl = struct.pack(b"B", 255)
+        loop = struct.pack(b"B", 1)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, loop)
+    elif ip_version == IPVersion.V6Only:
         # However, char doesn't work here (at least on Linux)
         s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 255)
         s.setsockopt(_IPPROTO_IPV6, socket.IPV6_MULTICAST_LOOP, True)
+    else:
+        # A shared sender socket is not really possible, especially with link-local
+        # multicast addresses (ff02::/16), the kernel needs to know which interface
+        # to use for routing.
+        #
+        # It seems that macOS even refuses to take IPv4 socket options if this is an
+        # AF_INET6 socket.
+        #
+        # In theory we could reconfigure the socket on each send, but that is not
+        # really practical for Python Zerconf.
+        raise RuntimeError("Dual-stack responder socket not supported")
 
 
 def new_socket(
@@ -244,14 +280,12 @@ def new_socket(
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     set_so_reuseport_if_available(s)
 
-    if port == _MDNS_PORT:
-        set_mdns_port_socket_options_for_ip_version(s, bind_addr, ip_version)
-
     if apple_p2p:
         # SO_RECV_ANYIF = 0x1104
         # https://opensource.apple.com/source/xnu/xnu-4570.41.2/bsd/sys/socket.h
         s.setsockopt(socket.SOL_SOCKET, 0x1104, 1)
 
+    # Bind expects (address, port) for AF_INET and (address, port, flowinfo, scope_id) for AF_INET6
     bind_tup = (bind_addr[0], port, *bind_addr[1:])
     try:
         s.bind(bind_tup)
@@ -370,15 +404,27 @@ def add_multicast_member(
 def new_respond_socket(
     interface: str | tuple[tuple[str, int, int], int],
     apple_p2p: bool = False,
+    unicast: bool = False,
 ) -> socket.socket | None:
+    """Create interface specific socket for responding to multicast queries."""
     is_v6 = isinstance(interface, tuple)
+
+    # For response sockets:
+    # - Bind explicitly to the interface address
+    # - Use ephemeral ports if in unicast mode
+    # - Create socket according to the interface IP type (IPv4 or IPv6)
     respond_socket = new_socket(
+        bind_addr=cast(tuple[tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
+        port=0 if unicast else _MDNS_PORT,
         ip_version=(IPVersion.V6Only if is_v6 else IPVersion.V4Only),
         apple_p2p=apple_p2p,
-        bind_addr=cast(tuple[tuple[str, int, int], int], interface)[0] if is_v6 else (cast(str, interface),),
     )
+    if unicast:
+        return respond_socket
+
     if not respond_socket:
         return None
+
     log.debug("Configuring socket %s with multicast interface %s", respond_socket, interface)
     if is_v6:
         iface_bin = struct.pack("@I", cast(int, interface[1]))
@@ -389,6 +435,7 @@ def new_respond_socket(
             socket.IP_MULTICAST_IF,
             socket.inet_aton(cast(str, interface)),
         )
+    set_respond_socket_multicast_options(respond_socket, IPVersion.V6Only if is_v6 else IPVersion.V4Only)
     return respond_socket
 
 
@@ -401,33 +448,27 @@ def create_sockets(
     if unicast:
         listen_socket = None
     else:
-        listen_socket = new_socket(ip_version=ip_version, apple_p2p=apple_p2p, bind_addr=("",))
+        listen_socket = new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
-    # If we are using InterfaceChoice.Default we can use
+    # If we are using InterfaceChoice.Default with only IPv4 or only IPv6, we can use
     # a single socket to listen and respond.
-    if not unicast and interfaces is InterfaceChoice.Default:
-        for i in normalized_interfaces:
-            add_multicast_member(cast(socket.socket, listen_socket), i)
+    if not unicast and interfaces is InterfaceChoice.Default and ip_version != IPVersion.All:
+        for interface in normalized_interfaces:
+            add_multicast_member(cast(socket.socket, listen_socket), interface)
+        # Sent responder socket options to the dual-use listen socket
+        set_respond_socket_multicast_options(cast(socket.socket, listen_socket), ip_version)
         return listen_socket, [cast(socket.socket, listen_socket)]
 
     respond_sockets = []
 
-    for i in normalized_interfaces:
-        if not unicast:
-            if add_multicast_member(cast(socket.socket, listen_socket), i):
-                respond_socket = new_respond_socket(i, apple_p2p=apple_p2p)
-            else:
-                respond_socket = None
-        else:
-            is_v6 = isinstance(i, tuple)
-            respond_socket = new_socket(
-                port=0,
-                ip_version=IPVersion.V6Only if is_v6 else IPVersion.V4Only,
-                apple_p2p=apple_p2p,
-                bind_addr=cast(tuple[tuple[str, int, int], int], i)[0] if is_v6 else (cast(str, i),),
-            )
+    for interface in normalized_interfaces:
+        # Only create response socket if unicast or becoming multicast member was successful
+        if not unicast and not add_multicast_member(cast(socket.socket, listen_socket), interface):
+            continue
+
+        respond_socket = new_respond_socket(interface, apple_p2p=apple_p2p, unicast=unicast)
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)

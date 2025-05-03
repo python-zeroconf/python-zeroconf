@@ -11,6 +11,7 @@ import threading
 import time
 import unittest
 import unittest.mock
+import warnings
 from typing import cast
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -87,16 +88,26 @@ class Framework(unittest.TestCase):
     def test_launch_and_close_v4_v6(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
         rv.close()
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
-        rv.close()
+        with warnings.catch_warnings(record=True) as warned:
+            rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
+            rv.close()
+            first_warning = warned[0]
+            assert "IPv6 multicast requests can't be sent using default interface" in str(
+                first_warning.message
+            )
 
     @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
     @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
     def test_launch_and_close_v6_only(self):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
         rv.close()
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
-        rv.close()
+        with warnings.catch_warnings(record=True) as warned:
+            rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
+            rv.close()
+            first_warning = warned[0]
+            assert "IPv6 multicast requests can't be sent using default interface" in str(
+                first_warning.message
+            )
 
     @unittest.skipIf(sys.platform == "darwin", reason="apple_p2p failure path not testable on mac")
     def test_launch_and_close_apple_p2p_not_mac(self):

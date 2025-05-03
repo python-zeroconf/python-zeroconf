@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v0.146.5 (2025-04-14)
+
+### Bug Fixes
+
+- Address non-working socket configuration
+  ([#1563](https://github.com/python-zeroconf/python-zeroconf/pull/1563),
+  [`cc0f835`](https://github.com/python-zeroconf/python-zeroconf/commit/cc0f8350c30c82409b1a9bfecb19ff9b3368d6a7))
+
+Co-authored-by: J. Nick Koston <nick@koston.org>
+
+
+## v0.146.4 (2025-04-14)
+
+### Bug Fixes
+
+- Avoid loading adapter list twice
+  ([#1564](https://github.com/python-zeroconf/python-zeroconf/pull/1564),
+  [`8359488`](https://github.com/python-zeroconf/python-zeroconf/commit/83594887521507cf77bfc0a397becabaaab287c2))
+
+
 ## v0.146.3 (2025-04-02)
 
 ### Bug Fixes
