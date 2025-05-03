@@ -44,10 +44,10 @@ cdef class DNSQuestion(DNSEntry):
 
 cdef class DNSRecord(DNSEntry):
 
-    cdef public cython.float ttl
+    cdef public unsigned int ttl
     cdef public double created
 
-    cdef _fast_init_record(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, double created)
+    cdef _fast_init_record(self, str name, cython.uint type_, cython.uint class_, unsigned int ttl, double created)
 
     cdef bint _suppressed_by_answer(self, DNSRecord answer)
 
@@ -66,7 +66,7 @@ cdef class DNSRecord(DNSEntry):
 
     cpdef bint is_recent(self, double now)
 
-    cdef _set_created_ttl(self, double now, cython.float ttl)
+    cdef _set_created_ttl(self, double now, unsigned int ttl)
 
 cdef class DNSAddress(DNSRecord):
 
@@ -74,7 +74,7 @@ cdef class DNSAddress(DNSRecord):
     cdef public bytes address
     cdef public object scope_id
 
-    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, bytes address, object scope_id, double created)
+    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, unsigned int ttl, bytes address, object scope_id, double created)
 
     cdef bint _eq(self, DNSAddress other)
 
@@ -87,7 +87,7 @@ cdef class DNSHinfo(DNSRecord):
     cdef public str cpu
     cdef public str os
 
-    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, str cpu, str os, double created)
+    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, unsigned int ttl, str cpu, str os, double created)
 
     cdef bint _eq(self, DNSHinfo other)
 
@@ -99,7 +99,7 @@ cdef class DNSPointer(DNSRecord):
     cdef public str alias
     cdef public str alias_key
 
-    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, str alias, double created)
+    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, unsigned int ttl, str alias, double created)
 
     cdef bint _eq(self, DNSPointer other)
 
@@ -110,7 +110,7 @@ cdef class DNSText(DNSRecord):
     cdef public cython.int _hash
     cdef public bytes text
 
-    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, bytes text, double created)
+    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, unsigned int ttl, bytes text, double created)
 
     cdef bint _eq(self, DNSText other)
 
@@ -125,7 +125,7 @@ cdef class DNSService(DNSRecord):
     cdef public str server
     cdef public str server_key
 
-    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, cython.uint priority, cython.uint weight, cython.uint port, str server, double created)
+    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, unsigned int ttl, cython.uint priority, cython.uint weight, cython.uint port, str server, double created)
 
     cdef bint _eq(self, DNSService other)
 
@@ -137,7 +137,7 @@ cdef class DNSNsec(DNSRecord):
     cdef public str next_name
     cdef public cython.list rdtypes
 
-    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, cython.float ttl, str next_name, cython.list rdtypes, double created)
+    cdef _fast_init(self, str name, cython.uint type_, cython.uint class_, unsigned int ttl, str next_name, cython.list rdtypes, double created)
 
     cdef bint _eq(self, DNSNsec other)
 

@@ -83,5 +83,5 @@ cdef class DNSCache:
         self,
         DNSRecord record,
         double now,
-        cython.float ttl
+        unsigned int ttl
     )

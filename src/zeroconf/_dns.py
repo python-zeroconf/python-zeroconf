@@ -166,18 +166,17 @@ class DNSRecord(DNSEntry):
 
     __slots__ = ("created", "ttl")
 
-    # TODO: Switch to just int ttl
     def __init__(
         self,
         name: str,
         type_: int,
         class_: int,
-        ttl: float | int,
+        ttl: _int,
         created: float | None = None,
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created or current_time_millis())
 
-    def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _float, created: _float) -> None:
+    def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _int, created: _float) -> None:
         """Fast init for reuse."""
         self._fast_init_entry(name, type_, class_)
         self.ttl = ttl
@@ -227,7 +226,7 @@ class DNSRecord(DNSEntry):
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
 
-    def _set_created_ttl(self, created: _float, ttl: float | int) -> None:
+    def _set_created_ttl(self, created: _float, ttl: _int) -> None:
         """Set the created and ttl of a record."""
         # It would be better if we made a copy instead of mutating the record
         # in place, but records currently don't have a copy method.
@@ -266,7 +265,7 @@ class DNSAddress(DNSRecord):
         name: str,
         type_: _int,
         class_: _int,
-        ttl: _float,
+        ttl: _int,
         address: bytes,
         scope_id: _int | None,
         created: _float,
@@ -327,7 +326,7 @@ class DNSHinfo(DNSRecord):
         self._fast_init(name, type_, class_, ttl, cpu, os, created or current_time_millis())
 
     def _fast_init(
-        self, name: str, type_: _int, class_: _int, ttl: _float, cpu: str, os: str, created: _float
+        self, name: str, type_: _int, class_: _int, ttl: _int, cpu: str, os: str, created: _float
     ) -> None:
         """Fast init for reuse."""
         self._fast_init_record(name, type_, class_, ttl, created)
@@ -374,7 +373,7 @@ class DNSPointer(DNSRecord):
         self._fast_init(name, type_, class_, ttl, alias, created or current_time_millis())
 
     def _fast_init(
-        self, name: str, type_: _int, class_: _int, ttl: _float, alias: str, created: _float
+        self, name: str, type_: _int, class_: _int, ttl: _int, alias: str, created: _float
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created)
         self.alias = alias
@@ -429,7 +428,7 @@ class DNSText(DNSRecord):
         self._fast_init(name, type_, class_, ttl, text, created or current_time_millis())
 
     def _fast_init(
-        self, name: str, type_: _int, class_: _int, ttl: _float, text: bytes, created: _float
+        self, name: str, type_: _int, class_: _int, ttl: _int, text: bytes, created: _float
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created)
         self.text = text
@@ -468,7 +467,7 @@ class DNSService(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: float | int,
+        ttl: int,
         priority: int,
         weight: int,
         port: int,
@@ -484,7 +483,7 @@ class DNSService(DNSRecord):
         name: str,
         type_: _int,
         class_: _int,
-        ttl: _float,
+        ttl: _int,
         priority: _int,
         weight: _int,
         port: _int,
@@ -539,7 +538,7 @@ class DNSNsec(DNSRecord):
         name: str,
         type_: int,
         class_: int,
-        ttl: int | float,
+        ttl: _int,
         next_name: str,
         rdtypes: list[int],
         created: float | None = None,
@@ -551,7 +550,7 @@ class DNSNsec(DNSRecord):
         name: str,
         type_: _int,
         class_: _int,
-        ttl: _float,
+        ttl: _int,
         next_name: str,
         rdtypes: list[_int],
         created: _float,

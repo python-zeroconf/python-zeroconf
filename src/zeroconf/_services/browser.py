@@ -394,9 +394,8 @@ class QueryScheduler:
         refresh_time_millis: float_,
     ) -> None:
         """Schedule a query for a pointer."""
-        ttl = int(pointer.ttl) if isinstance(pointer.ttl, float) else pointer.ttl
         scheduled_ptr_query = _ScheduledPTRQuery(
-            pointer.alias, pointer.name, ttl, expire_time_millis, refresh_time_millis
+            pointer.alias, pointer.name, pointer.ttl, expire_time_millis, refresh_time_millis
         )
         self._schedule_ptr_query(scheduled_ptr_query)
 
