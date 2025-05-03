@@ -196,7 +196,7 @@ class PacketGeneration(unittest.TestCase):
             "testname2.local.",
             const._TYPE_SRV,
             const._CLASS_IN | const._CLASS_UNIQUE,
-            const._DNS_HOST_TTL / 2,
+            int(const._DNS_HOST_TTL / 2),
             0,
             0,
             80,

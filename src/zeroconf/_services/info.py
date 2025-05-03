@@ -577,7 +577,7 @@ class ServiceInfo(RecordUpdateListener):
 
     def dns_addresses(
         self,
-        override_ttl: int | None = None,
+        override_ttl: int_ | None = None,
         version: IPVersion = IPVersion.All,
     ) -> list[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
@@ -585,7 +585,7 @@ class ServiceInfo(RecordUpdateListener):
 
     def _dns_addresses(
         self,
-        override_ttl: int | None,
+        override_ttl: int_ | None,
         version: IPVersion,
     ) -> list[DNSAddress]:
         """Return matching DNSAddress from ServiceInfo."""
@@ -611,11 +611,11 @@ class ServiceInfo(RecordUpdateListener):
             self._dns_address_cache = records
         return records
 
-    def dns_pointer(self, override_ttl: int | None = None) -> DNSPointer:
+    def dns_pointer(self, override_ttl: int_ | None = None) -> DNSPointer:
         """Return DNSPointer from ServiceInfo."""
         return self._dns_pointer(override_ttl)
 
-    def _dns_pointer(self, override_ttl: int | None) -> DNSPointer:
+    def _dns_pointer(self, override_ttl: int_ | None) -> DNSPointer:
         """Return DNSPointer from ServiceInfo."""
         cacheable = override_ttl is None
         if self._dns_pointer_cache is not None and cacheable:
@@ -632,11 +632,11 @@ class ServiceInfo(RecordUpdateListener):
             self._dns_pointer_cache = record
         return record
 
-    def dns_service(self, override_ttl: int | None = None) -> DNSService:
+    def dns_service(self, override_ttl: int_ | None = None) -> DNSService:
         """Return DNSService from ServiceInfo."""
         return self._dns_service(override_ttl)
 
-    def _dns_service(self, override_ttl: int | None) -> DNSService:
+    def _dns_service(self, override_ttl: int_ | None) -> DNSService:
         """Return DNSService from ServiceInfo."""
         cacheable = override_ttl is None
         if self._dns_service_cache is not None and cacheable:
@@ -659,11 +659,11 @@ class ServiceInfo(RecordUpdateListener):
             self._dns_service_cache = record
         return record
 
-    def dns_text(self, override_ttl: int | None = None) -> DNSText:
+    def dns_text(self, override_ttl: int_ | None = None) -> DNSText:
         """Return DNSText from ServiceInfo."""
         return self._dns_text(override_ttl)
 
-    def _dns_text(self, override_ttl: int | None) -> DNSText:
+    def _dns_text(self, override_ttl: int_ | None) -> DNSText:
         """Return DNSText from ServiceInfo."""
         cacheable = override_ttl is None
         if self._dns_text_cache is not None and cacheable:
@@ -680,11 +680,11 @@ class ServiceInfo(RecordUpdateListener):
             self._dns_text_cache = record
         return record
 
-    def dns_nsec(self, missing_types: list[int], override_ttl: int | None = None) -> DNSNsec:
+    def dns_nsec(self, missing_types: list[int], override_ttl: int_ | None = None) -> DNSNsec:
         """Return DNSNsec from ServiceInfo."""
         return self._dns_nsec(missing_types, override_ttl)
 
-    def _dns_nsec(self, missing_types: list[int], override_ttl: int | None) -> DNSNsec:
+    def _dns_nsec(self, missing_types: list[int], override_ttl: int_ | None) -> DNSNsec:
         """Return DNSNsec from ServiceInfo."""
         return DNSNsec(
             self._name,
@@ -696,11 +696,11 @@ class ServiceInfo(RecordUpdateListener):
             0.0,
         )
 
-    def get_address_and_nsec_records(self, override_ttl: int | None = None) -> set[DNSRecord]:
+    def get_address_and_nsec_records(self, override_ttl: int_ | None = None) -> set[DNSRecord]:
         """Build a set of address records and NSEC records for non-present record types."""
         return self._get_address_and_nsec_records(override_ttl)
 
-    def _get_address_and_nsec_records(self, override_ttl: int | None) -> set[DNSRecord]:
+    def _get_address_and_nsec_records(self, override_ttl: int_ | None) -> set[DNSRecord]:
         """Build a set of address records and NSEC records for non-present record types."""
         cacheable = override_ttl is None
         if self._get_address_and_nsec_records_cache is not None and cacheable:
