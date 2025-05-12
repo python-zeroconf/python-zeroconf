@@ -1863,6 +1863,7 @@ async def test_response_aggregation_random_delay():
         addresses=[socket.inet_aton("10.0.1.2")],
     )
     mocked_zc = unittest.mock.MagicMock()
+    mocked_zc.loop = asyncio.get_running_loop()
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 500)
 
     now = current_time_millis()
@@ -1930,6 +1931,7 @@ async def test_future_answers_are_removed_on_send():
         addresses=[socket.inet_aton("10.0.1.3")],
     )
     mocked_zc = unittest.mock.MagicMock()
+    mocked_zc.loop = asyncio.get_running_loop()
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 0)
 
     now = current_time_millis()
