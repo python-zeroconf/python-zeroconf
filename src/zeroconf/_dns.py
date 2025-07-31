@@ -63,7 +63,7 @@ class DNSQuestionType(enum.Enum):
     QM = 2
 
 
-class DNSEntry:
+class DNSEntry:  # noqa: PLW1641
     """A DNS entry"""
 
     __slots__ = ("class_", "key", "name", "type", "unique")
@@ -161,7 +161,7 @@ class DNSQuestion(DNSEntry):
         )
 
 
-class DNSRecord(DNSEntry):
+class DNSRecord(DNSEntry):  # noqa: PLW1641
     """A DNS record - like a DNS entry, but has a TTL"""
 
     __slots__ = ("created", "ttl")
