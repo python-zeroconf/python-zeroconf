@@ -99,7 +99,7 @@ heappop = heapq.heappop
 heappush = heapq.heappush
 
 
-class _ScheduledPTRQuery:
+class _ScheduledPTRQuery:  # noqa: PLW1641
     __slots__ = (
         "alias",
         "cancelled",
