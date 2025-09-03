@@ -548,7 +548,7 @@ class Zeroconf(QuietLogger):
 
         # Wait a random amount of time up avoid collisions and avoid
         # a thundering herd when multiple services are started on the network
-        await self.async_wait(random.randint(150, 250))
+        await self.async_wait(random.randint(150, 250))  # noqa: S311
 
         next_instance_number = 2
         next_time = now = current_time_millis()
