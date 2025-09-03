@@ -91,6 +91,10 @@ def test_integration_with_listener_v6_records(disable_duplicate_packet_suppressi
 
 @unittest.skipIf(not has_working_ipv6() or sys.platform == "win32", "Requires IPv6")
 @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
+@unittest.skipIf(
+    sys.platform == "darwin" and os.environ.get("GITHUB_ACTIONS") == "true",
+    "IPv6 multicast not working on macOS GitHub Actions",
+)
 def test_integration_with_listener_ipv6(disable_duplicate_packet_suppression):
     type_ = "_test-listenv6ip-type._tcp.local."
     name = "xxxyyy"
