@@ -28,7 +28,7 @@ import socket
 # Some timing constants
 
 _UNREGISTER_TIME = 125  # ms
-_CHECK_TIME = 175  # ms
+_CHECK_TIME = 500  # ms
 _REGISTER_TIME = 225  # ms
 _LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 10000  # ms

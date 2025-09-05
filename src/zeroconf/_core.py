@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import sys
 import threading
 from collections.abc import Awaitable
@@ -544,6 +545,11 @@ class Zeroconf(QuietLogger):
         instance_name = instance_name_from_service_info(info, strict=strict)
         if cooperating_responders:
             return
+
+        # Wait a random amount of time up avoid collisions and avoid
+        # a thundering herd when multiple services are started on the network
+        await self.async_wait(random.randint(150, 250))  # noqa: S311
+
         next_instance_number = 2
         next_time = now = current_time_millis()
         i = 0
