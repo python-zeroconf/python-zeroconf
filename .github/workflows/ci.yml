@@ -170,7 +170,7 @@ jobs:
           [
             ubuntu-24.04-arm,
             ubuntu-latest,
-            windows-2019,
+            windows-latest,
             macos-13,
             macos-latest,
           ]
