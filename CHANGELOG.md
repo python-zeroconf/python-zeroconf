@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.147.1 (2025-09-05)
+
+### Bug Fixes
+
+- Increase check time and add random wait to avoid service collisions
+  ([#1611](https://github.com/python-zeroconf/python-zeroconf/pull/1611),
+  [`8c382ee`](https://github.com/python-zeroconf/python-zeroconf/commit/8c382eedc6da80031d9a7a42f299f95f115b7e47))
+
+Co-authored-by: J. Nick Koston <nick@koston.org>
+
+
 ## v0.147.0 (2025-05-03)
 
 ### Features
