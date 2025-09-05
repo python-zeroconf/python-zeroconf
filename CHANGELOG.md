@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.147.2 (2025-09-05)
+
+### Bug Fixes
+
+- Missing wheel builds for Windows
+  ([#1613](https://github.com/python-zeroconf/python-zeroconf/pull/1613),
+  [`f8e2381`](https://github.com/python-zeroconf/python-zeroconf/commit/f8e2381a500c78dcefeba3772822d5d3ec5f6060))
+
+
 ## v0.147.1 (2025-09-05)
 
 ### Bug Fixes
