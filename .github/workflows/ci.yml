@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - release-0.x
   pull_request:
 
 concurrency:
