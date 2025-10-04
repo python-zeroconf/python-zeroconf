@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.147.3 (2025-10-04)
+
+### Bug Fixes
+
+- Update poetry to v2 ([#1623](https://github.com/python-zeroconf/python-zeroconf/pull/1623),
+  [`2c3c296`](https://github.com/python-zeroconf/python-zeroconf/commit/2c3c29655bd365213a7e0a4360b8dd860d833470))
+
+
 ## v0.147.2 (2025-09-05)
 
 ### Bug Fixes
