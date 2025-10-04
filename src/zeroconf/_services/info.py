@@ -183,6 +183,7 @@ class ServiceInfo(RecordUpdateListener):
         interface_index: int | None = None,
     ) -> None:
         # Accept both none, or one, but not both.
+        log.info("ServiceInfo.__init__() called with %s", properties)
         if addresses is not None and parsed_addresses is not None:
             raise TypeError("addresses and parsed_addresses cannot be provided together")
         if not type_.endswith(service_type_name(name, strict=False)):
@@ -505,6 +506,8 @@ class ServiceInfo(RecordUpdateListener):
             if TYPE_CHECKING:
                 assert isinstance(dns_address_record, DNSAddress)
             ip_addr = get_ip_address_object_from_record(dns_address_record)
+
+            # log.info("Got ip addr: %r with scope %d from %r", ip_addr, ip_addr.scope_id if ip_addr.scope_id else 0, dns_address_record)
             if ip_addr is None:
                 log.warning(
                     "Encountered invalid address while processing %s: %s",
@@ -533,6 +536,9 @@ class ServiceInfo(RecordUpdateListener):
             if TYPE_CHECKING:
                 assert isinstance(ip_addr, ZeroconfIPv6Address)
             ipv6_addresses = self._ipv6_addresses
+            if ip_addr.is_link_local and not ip_addr.scope_id:
+                log.debug("Ignoring link-local address without scope %s", ip_addr)
+                return False
             if ip_addr not in self._ipv6_addresses:
                 ipv6_addresses.insert(0, ip_addr)
                 return True
@@ -838,6 +844,7 @@ class ServiceInfo(RecordUpdateListener):
         :param addr: address to send the request to
         :param port: port to send the request to
         """
+        log.info("Asking for %s %s", question_type, self._name)
         if not zc.started:
             await zc.async_wait_for_start()
 
@@ -860,6 +867,7 @@ class ServiceInfo(RecordUpdateListener):
                     return False
                 if next_ <= now:
                     this_question_type = question_type or (QU_QUESTION if first_request else QM_QUESTION)
+                    log.info("Generating request for %s %s", this_question_type, self._name)
                     out = self._generate_request_query(zc, now, this_question_type)
                     first_request = False
                     if out.questions:
