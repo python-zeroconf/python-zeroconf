@@ -58,6 +58,7 @@ version_variables = [
 ]
 build_command = "pip install poetry && poetry build"
 tag_format = "{version}"
+allow_zero_version = true
 
 [tool.semantic_release.changelog]
 exclude_commit_patterns = [
@@ -71,8 +72,11 @@ keep_trailing_newline = true
 [tool.semantic_release.branches.master]
 match = "master"
 
+[tool.semantic_release.branches."release-0.x"]
+match = "release-0.x"
+
 [tool.semantic_release.branches.noop]
-match = "(?!master$)"
+match = "(?!(master|release-0.x)$)"
 prerelease = true
 
 [tool.poetry.dependencies]
