@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "zeroconf"
-version = "0.147.3"
+version = "1.0.0"
 license = "LGPL-2.1-or-later"
 description = "A pure python implementation of multicast DNS service discovery"
 readme = "README.rst"
