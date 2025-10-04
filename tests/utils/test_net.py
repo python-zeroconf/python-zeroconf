@@ -357,7 +357,7 @@ def test_create_sockets_interfaces_all_unicast():
         mock_socket = Mock(spec=socket.socket)
         mock_new_socket.return_value = mock_socket
 
-        listen_socket, respond_sockets = r.create_sockets(
+        listen_socket, _respond_sockets = r.create_sockets(
             interfaces=r.InterfaceChoice.All, unicast=True, ip_version=r.IPVersion.All
         )
 
