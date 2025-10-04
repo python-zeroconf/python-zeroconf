@@ -52,7 +52,7 @@ script = "build_ext.py"
 
 [tool.semantic_release]
 branch = "master"
-version_toml = ["pyproject.toml:tool.poetry.version"]
+version_toml = ["pyproject.toml:project.version"]
 version_variables = [
     "src/zeroconf/__init__.py:__version__"
 ]
