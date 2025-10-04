@@ -71,6 +71,9 @@ keep_trailing_newline = true
 [tool.semantic_release.branches.master]
 match = "master"
 
+[tool.semantic_release.branches."release-0.x"]
+match = "release-0.x"
+
 [tool.semantic_release.branches.noop]
 match = "(?!master$)"
 prerelease = true
