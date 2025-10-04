@@ -109,6 +109,7 @@ jobs:
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: poetry run pytest --no-cov -vvvvv --codspeed tests/benchmarks
+          mode: instrumentation
 
   release:
     needs:
@@ -138,7 +139,7 @@ jobs:
         uses: python-semantic-release/python-semantic-release@4d4cb0ab842247caea1963132c242c62aab1e4d5 # v10.4.1
         if: github.ref_name != 'master'
         with:
-          root_options: --noop
+          no_operation_mode: true
 
       # On main branch: actual PSR + upload to PyPI & GitHub
       - name: Release
@@ -204,6 +205,14 @@ jobs:
             qemu: armv7l
             musl: "musllinux"
             pyver: cp313
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: "musllinux"
+            pyver: cp314
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: "musllinux"
+            pyver: cp314t
           # qemu is slow, make a single
           # runner per Python version
           - os: ubuntu-latest
@@ -226,6 +235,14 @@ jobs:
             qemu: armv7l
             musl: ""
             pyver: cp313
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: ""
+            pyver: cp314
+          - os: ubuntu-latest
+            qemu: armv7l
+            musl: ""
+            pyver: cp314t
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
