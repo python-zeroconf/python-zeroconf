@@ -139,7 +139,7 @@ jobs:
       # Do a dry run of PSR
       - name: Test release
         uses: python-semantic-release/python-semantic-release@4d4cb0ab842247caea1963132c242c62aab1e4d5 # v10.4.1
-        if: github.ref_name != 'master'
+        if: github.ref_name != 'master' && github.ref_name != 'release-0.x'
         with:
           no_operation_mode: true
 
@@ -147,7 +147,7 @@ jobs:
       - name: Release
         uses: python-semantic-release/python-semantic-release@4d4cb0ab842247caea1963132c242c62aab1e4d5 # v10.4.1
         id: release
-        if: github.ref_name == 'master'
+        if: github.ref_name == 'master' || github.ref_name == 'release-0.x'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
