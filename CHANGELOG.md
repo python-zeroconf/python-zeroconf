@@ -1,5 +1,15 @@
 # CHANGELOG
 
+<!-- version list -->
+
+## v0.148.0 (2025-10-05)
+
+### Features
+
+- Trigger semantic releases for 0.x branch
+  ([#1626](https://github.com/python-zeroconf/python-zeroconf/pull/1626),
+  [`812a2b3`](https://github.com/python-zeroconf/python-zeroconf/commit/812a2b3ff4370593a7a0c3ad67389c76c434aa9b))
+
 
 ## v0.147.3 (2025-10-04)
 
@@ -1984,3 +1994,5 @@ Include documentation and test files in source distributions, in order to make t
 
 
 ## v0.15.1 (2014-07-10)
+
+- Initial Release
