@@ -40,7 +40,7 @@ repos:
       - id: pyupgrade
         args: [--py39-plus]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.2
+    rev: v0.13.3
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -59,7 +59,7 @@ repos:
       - id: mypy
         additional_dependencies: [ifaddr]
   - repo: https://github.com/MarcoGorelli/cython-lint
-    rev: v0.16.7
+    rev: v0.17.0
     hooks:
       - id: cython-lint
       - id: double-quote-cython-strings
