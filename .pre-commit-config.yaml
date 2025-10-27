@@ -35,12 +35,12 @@ repos:
         args: ["--tab-width", "2"]
         files: ".(css|html|js|json|md|toml|yaml)$"
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
+    rev: v3.21.0
     hooks:
       - id: pyupgrade
         args: [--py39-plus]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.3
+    rev: v0.14.2
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -59,7 +59,7 @@ repos:
       - id: mypy
         additional_dependencies: [ifaddr]
   - repo: https://github.com/MarcoGorelli/cython-lint
-    rev: v0.17.0
+    rev: v0.18.1
     hooks:
       - id: cython-lint
       - id: double-quote-cython-strings
