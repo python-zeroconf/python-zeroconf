@@ -15,7 +15,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v5
         with:
           python-version: "3.12"
@@ -27,7 +27,7 @@ jobs:
     name: Lint Commit Messages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
         with:
           fetch-depth: 0
       - uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6
@@ -68,7 +68,7 @@ jobs:
             python-version: "pypy-3.10"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
       - name: Install poetry
         run: pipx install poetry
       - name: Set up Python
@@ -90,14 +90,14 @@ jobs:
       - name: Test with Pytest
         run: poetry run pytest --durations=20 --timeout=60 -v --cov=zeroconf --cov-branch --cov-report xml --cov-report html --cov-report term-missing tests
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   benchmark:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
       - name: Setup Python 3.13
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v5
         with:
@@ -108,7 +108,7 @@ jobs:
           REQUIRE_CYTHON=1 poetry install --only=main,dev
         shell: bash
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@346a2d8a8d9d38909abd0bc3d23f773110f076ad # v3
+        uses: CodSpeedHQ/action@972e3437949c89e1357ebd1a2dbc852fcbc57245 # v3
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: poetry run pytest --no-cov -vvvvv --codspeed tests/benchmarks
@@ -132,21 +132,21 @@ jobs:
       newest_release_tag: ${{ steps.release.outputs.tag }}
 
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
         with:
           fetch-depth: 0
           ref: ${{ github.head_ref || github.ref_name }}
 
       # Do a dry run of PSR
       - name: Test release
-        uses: python-semantic-release/python-semantic-release@02f2a5c74dbb6aa2989f10fc4af12cd8e6bf025f # v10.5.2
+        uses: python-semantic-release/python-semantic-release@350c48fcb3ffcdfd2e0a235206bc2ecea6b69df0 # v10.5.3
         if: github.ref_name != 'master'
         with:
           no_operation_mode: true
 
       # On main branch: actual PSR + upload to PyPI & GitHub
       - name: Release
-        uses: python-semantic-release/python-semantic-release@02f2a5c74dbb6aa2989f10fc4af12cd8e6bf025f # v10.5.2
+        uses: python-semantic-release/python-semantic-release@350c48fcb3ffcdfd2e0a235206bc2ecea6b69df0 # v10.5.3
         id: release
         if: github.ref_name == 'master'
         with:
@@ -248,7 +248,7 @@ jobs:
             pyver: cp314t
     steps:
       - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
         with:
           fetch-depth: 0
           ref: "master"
@@ -282,7 +282,7 @@ jobs:
             echo "CIBW_BUILD=${{ matrix.pyver }}*" >> $GITHUB_ENV
           fi
 
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v4
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
         with:
           ref: ${{ needs.release.outputs.newest_release_tag }}
           fetch-depth: 0
@@ -295,7 +295,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: apt install -y gcc || yum install -y gcc || apk add gcc
           REQUIRE_CYTHON: 1
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v4
         with:
           path: ./wheelhouse/*.whl
           name: wheels-${{ matrix.os }}-${{ matrix.musl }}-${{ matrix.qemu }}-${{ matrix.pyver }}
@@ -308,7 +308,7 @@ jobs:
       id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
 
     steps:
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v4
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v4
         with:
           # unpacks default artifact into dist/
           # if `name: artifact` is omitted, the action will create extra parent dir
