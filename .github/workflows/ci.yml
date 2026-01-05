@@ -119,7 +119,7 @@ jobs:
       - test
       - lint
       - commitlint
-    if: ${{ github.repository_owner }} == "python-zeroconf"
+    if: github.repository_owner == 'python-zeroconf'
 
     runs-on: ubuntu-latest
     environment: release
