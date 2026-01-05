@@ -19,6 +19,7 @@ cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 cdef class AsyncListener:
 
     cdef public object zc
+    cdef public cython.uint interface_idx
     cdef ServiceRegistry _registry
     cdef RecordManager _record_manager
     cdef QueryHandler _query_handler
