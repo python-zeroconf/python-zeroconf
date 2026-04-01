@@ -90,7 +90,7 @@ jobs:
       - name: Test with Pytest
         run: poetry run pytest --durations=20 --timeout=60 -v --cov=zeroconf --cov-branch --cov-report xml --cov-report html --cov-report term-missing tests
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -108,7 +108,7 @@ jobs:
           REQUIRE_CYTHON=1 poetry install --only=main,dev
         shell: bash
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@2ac572851726409c88c02a307f1ea2632a9ea59b # v3
+        uses: CodSpeedHQ/action@d872884a306dd4853acf0f584f4b706cf0cc72a2 # v3
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: poetry run pytest --no-cov -vvvvv --codspeed tests/benchmarks
@@ -259,7 +259,7 @@ jobs:
           python-version: "3.12"
       - name: Set up QEMU
         if: ${{ matrix.qemu }}
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
         with:
           platforms: all
           # This should be temporary
@@ -288,7 +288,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build wheels ${{ matrix.musl }} (${{ matrix.qemu }})
-        uses: pypa/cibuildwheel@298ed2fb2c105540f5ed055e8a6ad78d82dd3a7e # v3.3.1
+        uses: pypa/cibuildwheel@ee02a1537ce3071a004a6b08c41e72f0fdc42d9a # v3.4.0
         # to supply options, put them in 'env', like:
         env:
           CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* ${{ matrix.musl == 'musllinux' && '*manylinux*' || '*musllinux*' }}
@@ -308,7 +308,7 @@ jobs:
       id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
 
     steps:
-      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
         with:
           # unpacks default artifact into dist/
           # if `name: artifact` is omitted, the action will create extra parent dir
