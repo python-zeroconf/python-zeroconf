@@ -246,6 +246,19 @@ jobs:
             qemu: armv7l
             musl: ""
             pyver: cp314t
+          # qemu is slow, make a single runner per Python version
+          - {os: ubuntu-latest, qemu: riscv64, musl: "musllinux", pyver: cp310}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "musllinux", pyver: cp311}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "musllinux", pyver: cp312}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "musllinux", pyver: cp313}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "musllinux", pyver: cp314}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "musllinux", pyver: cp314t}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp310}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp311}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp312}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp313}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp314}
+          - {os: ubuntu-latest, qemu: riscv64, musl: "", pyver: cp314t}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
