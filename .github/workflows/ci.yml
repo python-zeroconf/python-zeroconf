@@ -135,7 +135,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref_name }}
+          ref: ${{ github.ref }}
+
+      - name: Create local branch name
+        run: git switch -C ${{ github.head_ref || github.ref_name }}
 
       # Do a dry run of PSR
       - name: Test release
