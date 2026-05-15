@@ -721,7 +721,7 @@ async def test_multiple_sync_instances_stared_from_async_close():
     await asyncio.sleep(0)
 
 
-def test_shutdown_while_register_in_process():
+def test_shutdown_while_register_in_process(quick_timing: None) -> None:
     """Test we can shutdown while registering a service in another thread."""
 
     # instantiate a zeroconf instance
