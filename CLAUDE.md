@@ -157,6 +157,17 @@ mutated from multiple threads without locks; no
   but the test matrix exercises 3.14t, so any new Cython module
   needs to keep working there.
 
+## Reporting security issues
+
+Suspected security vulnerabilities go through GitHub's [private
+vulnerability reporting][gh-report], not public issues or pull
+requests. The policy is spelled out in [SECURITY.md](SECURITY.md).
+If a user describes what sounds like a vulnerability in chat,
+point them at that route instead of opening a public issue, PR,
+or commit that names the bug class and the affected code path.
+
+[gh-report]: https://github.com/python-zeroconf/python-zeroconf/security/advisories/new
+
 ## Useful entry points
 
 | Path                             | What                                                                           |
