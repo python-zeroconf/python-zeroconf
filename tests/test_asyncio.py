@@ -605,7 +605,7 @@ async def test_async_wait_unblocks_on_update() -> None:
 
 
 @pytest.mark.asyncio
-async def test_service_info_async_request(quick_timing: None) -> None:
+async def test_service_info_async_request() -> None:
     """Test registering services broadcasts and query with AsyncServceInfo.async_request."""
     if not has_working_ipv6() or os.environ.get("SKIP_IPV6"):
         pytest.skip("Requires IPv6")
