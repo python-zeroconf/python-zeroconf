@@ -171,7 +171,7 @@ accelerated projects.
   `_ANSWER_STRATEGY_POINTER = 1` in `query_handler.py` as a C int
   assignment; the Python module dict never gets the binding.
   `from zeroconf._handlers.query_handler import
-_ANSWER_STRATEGY_POINTER` succeeds in pure-Python but raises
+  _ANSWER_STRATEGY_POINTER` succeeds in pure-Python but raises
   `ImportError` under Cython. If you need the value visible from
   Python (e.g. a test wants to assert on it), define both names —
   a public `ANSWER_STRATEGY_POINTER = 1` Python binding plus a
