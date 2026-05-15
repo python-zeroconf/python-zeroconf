@@ -1050,12 +1050,12 @@ def test_request_timeout():
     """Test that the timeout does not throw an exception and finishes close to the actual timeout."""
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
     start_time = r.current_time_millis()
-    assert zeroconf.get_service_info("_notfound.local.", "notthere._notfound.local.") is None
+    assert zeroconf.get_service_info("_notfound.local.", "notthere._notfound.local.", timeout=200) is None
     end_time = r.current_time_millis()
     zeroconf.close()
-    # 3000ms for the default timeout
+    # 200ms for the timeout passed above
     # 1000ms for loaded systems + schedule overhead
-    assert (end_time - start_time) < 3000 + 1000
+    assert (end_time - start_time) < 200 + 1000
 
 
 @pytest.mark.asyncio
@@ -1888,7 +1888,7 @@ async def test_unicast_flag_if_requested() -> None:
     # patch the zeroconf send
     with patch.object(aiozc.zeroconf, "async_send", async_send):
         await aiozc.async_get_service_info(
-            f"willnotbefound.{type_}", type_, question_type=r.DNSQuestionType.QU
+            f"willnotbefound.{type_}", type_, timeout=200, question_type=r.DNSQuestionType.QU
         )
 
     await aiozc.async_close()

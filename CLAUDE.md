@@ -157,6 +157,69 @@ mutated from multiple threads without locks; no
   but the test matrix exercises 3.14t, so any new Cython module
   needs to keep working there.
 
+## Cython gotchas
+
+Non-obvious traps in the `.py` + `.pxd` setup that work fine in
+pure-Python mode but break or silently misbehave in the shipped
+Cython wheels. Distilled from the patterns that already exist in
+this repo's `.pxd` files and from incidents in sibling Cython-
+accelerated projects.
+
+- **`cdef`-typed module constants are not Python-importable.**
+  Declaring `cdef unsigned int _ANSWER_STRATEGY_POINTER` in
+  `query_handler.pxd` makes Cython treat
+  `_ANSWER_STRATEGY_POINTER = 1` in `query_handler.py` as a C int
+  assignment; the Python module dict never gets the binding.
+  `from zeroconf._handlers.query_handler import
+  _ANSWER_STRATEGY_POINTER` succeeds in pure-Python but raises
+  `ImportError` under Cython. If you need the value visible from
+  Python (e.g. a test wants to assert on it), define both names —
+  a public `ANSWER_STRATEGY_POINTER = 1` Python binding plus a
+  `cdef`-typed `_ANSWER_STRATEGY_POINTER = ANSWER_STRATEGY_POINTER`
+  alias for hot-path comparisons.
+
+- **Match the existing `unsigned int` convention for length, TTL,
+  type/class, and offset fields.** `_protocol/incoming.pxd`,
+  `_cache.pxd`, and `_handlers/*.pxd` already declare these as
+  `unsigned int` end-to-end. Introducing a `cdef int` return that
+  carries a value originally decoded into `unsigned int` flips
+  sign for any value with bit 31 set — TTL is a 32-bit DNS field
+  (RFC 1035 §3.2.1, interpreted as unsigned), so a large TTL
+  passed back through a `cdef int` boundary becomes negative and
+  trips `< 0` sentinel branches. Stay with `unsigned int` across
+  the whole call chain; if you need a real sentinel, return an
+  explicit value (`UINT_MAX`, a dedicated constant) and check for
+  it by equality.
+
+- **Module-level Python int constants force `PyLong_AsLong` on
+  every hot-path comparison.** `if record.type == _TYPE_PTR`
+  compiles to a Python attribute lookup + `PyLong_AsLong` per
+  call when `_TYPE_PTR` is just a `.py`-level binding. The repo
+  already follows the right pattern — `_cache.pxd` /
+  `record_manager.pxd` declare `cdef unsigned int _TYPE_PTR`,
+  `_DNS_PTR_MIN_TTL`, `_MIN_SCHEDULED_RECORD_EXPIRATION`, etc.
+  When adding a new size / TTL / type constant from `const.py`
+  to a `cdef` hot path in `_protocol/`, `_cache`, `_handlers/`,
+  or `_listener`, add the `cdef`-typed alias to the corresponding
+  `.pxd` at the same time.
+
+- **Sign-compare warnings in generated C are real.** `gcc`/
+  `clang` warns when comparing `unsigned int` with `int` because
+  the signed value is implicitly converted to unsigned for the
+  compare — a negative value becomes a huge positive. Match the
+  signedness of compared operands in the `.pxd` (e.g. if the
+  local is `unsigned int`, declare the constant as
+  `cdef unsigned int`; if the local is `int`, declare it
+  `cdef int`). The warning predicts the unsigned -> signed
+  overflow class of bug.
+
+- **CodSpeed regressions only show up in the Cython build.**
+  Pure-Python (`SKIP_CYTHON=1`) tests can pass while production
+  wire-format hot paths regress. Trust the CodSpeed check on PRs
+  that touch any file in `TO_CYTHONIZE`; rebuild in place with
+  `REQUIRE_CYTHON=1 poetry install --only=main,dev` before
+  pushing if perf-sensitive code changed.
+
 ## Reporting security issues
 
 Suspected security vulnerabilities go through GitHub's [private
