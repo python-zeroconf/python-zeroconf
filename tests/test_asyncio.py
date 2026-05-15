@@ -260,7 +260,7 @@ async def test_async_service_registration_with_server_missing() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration_same_server_different_ports() -> None:
+async def test_async_service_registration_same_server_different_ports(quick_timing: None) -> None:
     """Test registering services with the same server with different srv records."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
@@ -327,7 +327,7 @@ async def test_async_service_registration_same_server_different_ports() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration_same_server_same_ports() -> None:
+async def test_async_service_registration_same_server_same_ports(quick_timing: None) -> None:
     """Test registering services with the same server with the exact same srv record."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
@@ -468,7 +468,7 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration_name_strict_check() -> None:
+async def test_async_service_registration_name_strict_check(quick_timing: None) -> None:
     """Test registering services throws when the name does not comply."""
     zc = Zeroconf(interfaces=["127.0.0.1"])
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -824,7 +824,7 @@ async def test_service_browser_cancel_async_context_manager():
 
 
 @pytest.mark.asyncio
-async def test_async_unregister_all_services() -> None:
+async def test_async_unregister_all_services(quick_timing: None) -> None:
     """Test unregistering all services."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
@@ -870,8 +870,8 @@ async def test_async_unregister_all_services() -> None:
     _clear_cache(aiozc.zeroconf)
 
     tasks = []
-    tasks.append(aiozc.async_get_service_info(type_, registration_name))
-    tasks.append(aiozc.async_get_service_info(type_, registration_name2))
+    tasks.append(aiozc.async_get_service_info(type_, registration_name, timeout=200))
+    tasks.append(aiozc.async_get_service_info(type_, registration_name2, timeout=200))
     results = await asyncio.gather(*tasks)
     assert results[0] is None
     assert results[1] is None
@@ -883,7 +883,7 @@ async def test_async_unregister_all_services() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_zeroconf_service_types():
+async def test_async_zeroconf_service_types(quick_timing: None) -> None:
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -1276,12 +1276,15 @@ async def test_async_request_timeout():
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     await aiozc.zeroconf.async_wait_for_start()
     start_time = current_time_millis()
-    assert await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.") is None
+    assert (
+        await aiozc.async_get_service_info("_notfound.local.", "notthere._notfound.local.", timeout=200)
+        is None
+    )
     end_time = current_time_millis()
     await aiozc.async_close()
-    # 3000ms for the default timeout
+    # 200ms for the timeout passed above
     # 1000ms for loaded systems + schedule overhead
-    assert (end_time - start_time) < 3000 + 1000
+    assert (end_time - start_time) < 200 + 1000
 
 
 @pytest.mark.asyncio
