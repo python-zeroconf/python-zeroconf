@@ -30,13 +30,12 @@ import random
 import threading
 import time
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import partial
 from types import TracebackType  # used in type hints
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     cast,
 )
 

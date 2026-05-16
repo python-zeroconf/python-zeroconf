@@ -53,8 +53,8 @@ Compared to some other Zeroconf/Bonjour/Avahi Python packages, python-zeroconf:
 Python compatibility
 --------------------
 
-* CPython 3.9+
-* PyPy 3.9+
+* CPython 3.10+
+* PyPy 3.10+
 
 Versioning
 ----------
