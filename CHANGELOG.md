@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v0.149.0 (2026-05-16)
+
+### Features
+
+- Drop Python 3.9 support ([#1688](https://github.com/python-zeroconf/python-zeroconf/pull/1688),
+  [`327b93d`](https://github.com/python-zeroconf/python-zeroconf/commit/327b93dc602707e25d53788f0fb14e142f4558b3))
+
+### Performance Improvements
+
+- **build**: Parallelize cython extension compilation
+  ([#1689](https://github.com/python-zeroconf/python-zeroconf/pull/1689),
+  [`1ea6b94`](https://github.com/python-zeroconf/python-zeroconf/commit/1ea6b940ecbfd7e7654ad022cf7f4f888cf1daa5))
+
+
 ## v0.147.4 (2026-05-16)
 
 ### Bug Fixes
