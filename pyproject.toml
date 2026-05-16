@@ -170,12 +170,9 @@ select = [
     "FLY002", # too many to fix right now
     "PT018", # too many to fix right now
     "PLR0124", # too many to fix right now
-    "SIM202" , # too many to fix right now
     "PT012" , # too many to fix right now
     "TID252", # too many to fix right now
     "PLR0913", # skip this one
-    "SIM102" , # too many to fix right now
-    "SIM108", # too many to fix right now
     "T201", # too many to fix right now
     "PT004", # nice to have
 ]
