@@ -195,7 +195,6 @@ jobs:
             ubuntu-24.04-arm,
             ubuntu-latest,
             windows-latest,
-            macos-13,
             macos-latest,
           ]
         qemu: [""]
@@ -318,6 +317,7 @@ jobs:
         env:
           CIBW_SKIP: cp36-* cp37-* pp36-* pp37-* pp38-* cp38-* ${{ matrix.musl == 'musllinux' && '*manylinux*' || '*musllinux*' }}
           CIBW_BEFORE_ALL_LINUX: apt install -y gcc || yum install -y gcc || apk add gcc
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
           REQUIRE_CYTHON: 1
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
