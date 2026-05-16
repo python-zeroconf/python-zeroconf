@@ -793,13 +793,17 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         """Cancel the browser."""
         assert self.zc.loop is not None
         self.queue.put(None)
-        # Skip scheduling _async_cancel when the loop is closed — a closed
-        # loop rejects call_soon_threadsafe. Normally _async_cancel stops the
-        # query scheduler and cancels the query-sender task while the loop is
-        # running; here Zeroconf.close() has already torn the loop down, so
-        # there is no running task left to cancel from this path.
-        if not self.zc.loop.is_closed():
-            self.zc.loop.call_soon_threadsafe(self._async_cancel)
+        # Skip scheduling _async_cancel when the loop is closed: a closed
+        # loop rejects call_soon_threadsafe with RuntimeError. While the
+        # loop is running, _async_cancel stops the query scheduler and
+        # cancels the query-sender task; that is the normal cleanup path.
+        # The is_closed() check is racy if cancel() runs concurrently with
+        # Zeroconf.close(), so guard the schedule call as well.
+        try:
+            if not self.zc.loop.is_closed():
+                self.zc.loop.call_soon_threadsafe(self._async_cancel)
+        except RuntimeError:
+            pass
         self.join()
 
     def run(self) -> None:

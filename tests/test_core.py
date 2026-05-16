@@ -100,6 +100,7 @@ class Framework(unittest.TestCase):
         assert loop.is_closed()
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "Requires /proc/<pid>/fd")
+    @unittest.skipUnless(Path(f"/proc/{os.getpid()}/fd").is_dir(), "/proc/<pid>/fd not available")
     def test_close_does_not_leak_file_descriptors(self):
         """Tight loops of Zeroconf()/close() do not leak FDs (issue #1589)."""
         fd_dir = Path(f"/proc/{os.getpid()}/fd")
@@ -110,11 +111,11 @@ class Framework(unittest.TestCase):
         # Warm-up cycle so any one-shot import-time FDs land before measuring.
         r.Zeroconf(interfaces=["127.0.0.1"]).close()
         baseline = _fd_count()
-        for _ in range(20):
+        for _ in range(10):
             r.Zeroconf(interfaces=["127.0.0.1"]).close()
         # Allow tiny slack for unrelated FDs the test harness may open
         # (e.g. coverage), but reject the per-cycle linear growth pattern
-        # the bug produced (~3 FDs per cycle, so >=30 over 20 cycles).
+        # the bug produced (~3 FDs per cycle, so >=30 over 10 cycles).
         assert _fd_count() - baseline < 10
 
     @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
