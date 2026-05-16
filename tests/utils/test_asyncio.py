@@ -123,7 +123,7 @@ async def test_run_coro_with_timeout() -> None:
     """Test running a coroutine with a timeout raises EventLoopBlocked."""
     loop = asyncio.get_event_loop()
     task: asyncio.Task | None = None
-    task_created = threading.Event()
+    task_created = asyncio.Event()
 
     async def _saved_sleep_task():
         nonlocal task
@@ -139,8 +139,9 @@ async def test_run_coro_with_timeout() -> None:
 
     # The outer .result() can raise EventLoopBlocked before the loop
     # has scheduled the coroutine — wait until the inner task is
-    # created before asserting on it.
-    assert task_created.wait(1.0)
+    # created before asserting on it. Use an asyncio.Event so the
+    # wait yields back to the loop instead of blocking it.
+    await asyncio.wait_for(task_created.wait(), 1.0)
     assert task is not None
     # ensure the thread is shutdown
     task.cancel()
