@@ -95,10 +95,7 @@ def time_changed_millis(millis: float | None = None) -> None:
     """Call all scheduled events for a time."""
     loop = asyncio.get_running_loop()
     loop_time = loop.time()
-    if millis is not None:
-        mock_seconds_into_future = millis / 1000
-    else:
-        mock_seconds_into_future = loop_time
+    mock_seconds_into_future = millis / 1000 if millis is not None else loop_time
 
     with mock.patch("time.monotonic", return_value=mock_seconds_into_future):
         for task in list(loop._scheduled):  # type: ignore[attr-defined]
