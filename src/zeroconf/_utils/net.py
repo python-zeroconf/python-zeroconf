@@ -30,7 +30,7 @@ import struct
 import sys
 import warnings
 from collections.abc import Iterable, Sequence
-from typing import Any, Union, cast
+from typing import Any, cast
 
 import ifaddr
 
@@ -44,7 +44,7 @@ class InterfaceChoice(enum.Enum):
     All = 2
 
 
-InterfacesType = Union[Sequence[Union[str, int, tuple[tuple[str, int, int], int]]], InterfaceChoice]
+InterfacesType = Sequence[str | int | tuple[tuple[str, int, int], int]] | InterfaceChoice
 
 
 @enum.unique

@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from heapq import heapify, heappop, heappush
-from typing import Union, cast
+from typing import cast
 
 from ._dns import (
     DNSAddress,
@@ -40,7 +40,7 @@ from ._utils.time import current_time_millis
 from .const import _ONE_SECOND, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
-_UniqueRecordsType = Union[DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService]
+_UniqueRecordsType = DNSAddress | DNSHinfo | DNSPointer | DNSText | DNSService
 _DNSRecordCacheType = dict[str, dict[DNSRecord, DNSRecord]]
 _DNSRecord = DNSRecord
 _str = str
