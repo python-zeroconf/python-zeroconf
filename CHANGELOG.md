@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.1 (2026-05-16)
+
+### Bug Fixes
+
+- **ci**: Drop cp39 from cibuildwheel matrix
+  ([#1691](https://github.com/python-zeroconf/python-zeroconf/pull/1691),
+  [`591288b`](https://github.com/python-zeroconf/python-zeroconf/commit/591288ba77a872ce6ccfe040f9c73da89e180f8d))
+
+
 ## v0.149.0 (2026-05-16)
 
 ### Features
