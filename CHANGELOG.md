@@ -2,6 +2,53 @@
 
 <!-- version list -->
 
+## v0.147.4 (2026-05-16)
+
+### Bug Fixes
+
+- **core**: Close owned event loop on Zeroconf.close() to stop FD leak
+  ([#1685](https://github.com/python-zeroconf/python-zeroconf/pull/1685),
+  [`2f78370`](https://github.com/python-zeroconf/python-zeroconf/commit/2f78370c75d1082afe3191b7447aebfff1206657))
+
+### Build System
+
+- Adjust actions checkout ref parameter on release
+  ([#1669](https://github.com/python-zeroconf/python-zeroconf/pull/1669),
+  [`bc8ec8d`](https://github.com/python-zeroconf/python-zeroconf/commit/bc8ec8d59d875522f75901644d423d30d803a030))
+
+### Documentation
+
+- Add CLAUDE.md orientation file and pr-workflow skill
+  ([#1672](https://github.com/python-zeroconf/python-zeroconf/pull/1672),
+  [`8f8b4d6`](https://github.com/python-zeroconf/python-zeroconf/commit/8f8b4d6526729906337f4562c7b391745bb878af))
+
+- Add Cython gotchas section to CLAUDE.md
+  ([#1679](https://github.com/python-zeroconf/python-zeroconf/pull/1679),
+  [`5cfb09d`](https://github.com/python-zeroconf/python-zeroconf/commit/5cfb09d89395cb507d436c45fc38edb9e44b94c8))
+
+- Add SECURITY.md with private vulnerability reporting policy
+  ([#1675](https://github.com/python-zeroconf/python-zeroconf/pull/1675),
+  [`13f9048`](https://github.com/python-zeroconf/python-zeroconf/commit/13f9048f0f9786ce18e89daef04073847735a006))
+
+### Testing
+
+- Add quick_timing fixture and apply to register-heavy tests
+  ([#1678](https://github.com/python-zeroconf/python-zeroconf/pull/1678),
+  [`d5e1f01`](https://github.com/python-zeroconf/python-zeroconf/commit/d5e1f01bb336ea19d982ce7d99f191723d3f18af))
+
+- Fix flaky test_run_coro_with_timeout
+  ([#1683](https://github.com/python-zeroconf/python-zeroconf/pull/1683),
+  [`277f80d`](https://github.com/python-zeroconf/python-zeroconf/commit/277f80da2c0fea5b256f981bd3f425906f6b7be6))
+
+- Pass timeout=0 explicitly in test_event_loop_blocked
+  ([#1676](https://github.com/python-zeroconf/python-zeroconf/pull/1676),
+  [`1b31ed5`](https://github.com/python-zeroconf/python-zeroconf/commit/1b31ed5fed9db1608255799701cd6f32b494952f))
+
+- Pass timeout=200 to ServiceInfo-request timeout tests
+  ([#1677](https://github.com/python-zeroconf/python-zeroconf/pull/1677),
+  [`01ef6ff`](https://github.com/python-zeroconf/python-zeroconf/commit/01ef6ffd9ff442b3cfb37d2793e0ca6ad5148832))
+
+
 ## v0.148.0 (2025-10-05)
 
 ### Features
