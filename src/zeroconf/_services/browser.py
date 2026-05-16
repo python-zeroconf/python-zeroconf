@@ -23,6 +23,7 @@ USA
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import heapq
 import queue
 import random
@@ -793,7 +794,16 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         """Cancel the browser."""
         assert self.zc.loop is not None
         self.queue.put(None)
-        self.zc.loop.call_soon_threadsafe(self._async_cancel)
+        # While the loop is running, _async_cancel stops the query scheduler
+        # and cancels the query-sender task — that is the normal cleanup
+        # path. Skip scheduling solely because the loop is closed: a closed
+        # loop rejects call_soon_threadsafe with RuntimeError. The
+        # is_closed() check narrows the common case (loop already closed by
+        # Zeroconf.close()) without paying for raise/catch; suppress covers
+        # the residual is_closed() -> call_soon_threadsafe race window.
+        with contextlib.suppress(RuntimeError):
+            if not self.zc.loop.is_closed():
+                self.zc.loop.call_soon_threadsafe(self._async_cancel)
         self.join()
 
     def run(self) -> None:

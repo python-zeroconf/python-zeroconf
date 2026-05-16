@@ -676,13 +676,22 @@ class Zeroconf(QuietLogger):
 
     def _shutdown_threads(self) -> None:
         """Shutdown any threads."""
+        assert self.loop is not None
+        if self.loop.is_closed():
+            # close() is documented as idempotent — a second call after the
+            # loop has been torn down must be a no-op rather than raising.
+            return
         self.notify_all()
         if not self._loop_thread:
             return
-        assert self.loop is not None
         shutdown_loop(self.loop)
         self._loop_thread.join()
         self._loop_thread = None
+        # The loop's selector (epoll FD on Linux) and self-pipe sockets stay
+        # open until loop.close() is called. We own this loop because
+        # _start_thread() created it, so close it here to avoid leaking
+        # those file descriptors across Zeroconf() construct/close cycles.
+        self.loop.close()
 
     def close(self) -> None:
         """Ends the background threads, and prevent this instance from
