@@ -154,6 +154,7 @@ class Zeroconf(QuietLogger):
         unicast: bool = False,
         ip_version: IPVersion | None = None,
         apple_p2p: bool = False,
+        use_asyncio: bool | None = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
@@ -169,6 +170,14 @@ class Zeroconf(QuietLogger):
         :param ip_version: IP versions to support. If `choice` is a list, the default is detected
             from it. Otherwise defaults to V4 only for backward compatibility.
         :param apple_p2p: use AWDL interface (only macOS)
+        :param use_asyncio: explicitly control whether to attach to the running
+            asyncio event loop (``True``) or run an internal thread with its
+            own loop (``False``). ``None`` (default) keeps the historic
+            behavior: attach if an event loop is running, otherwise start a
+            thread. Set to ``False`` when running inside an environment that
+            already has an event loop (e.g. Jupyter) but you want blocking
+            semantics. ``True`` raises :class:`RuntimeError` immediately if no
+            running event loop is found, instead of falling back to the thread.
         """
         if ip_version is None:
             ip_version = autodetect_ip_version(interfaces)
@@ -178,7 +187,11 @@ class Zeroconf(QuietLogger):
         if apple_p2p and sys.platform != "darwin":
             raise RuntimeError("Option `apple_p2p` is not supported on non-Apple platforms.")
 
+        if use_asyncio is True and get_running_loop() is None:
+            raise RuntimeError("use_asyncio=True requires a running asyncio event loop")
+
         self.unicast = unicast
+        self._use_asyncio = use_asyncio
         listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
         log.debug("Listen socket %s, respond sockets %s", listen_socket, respond_sockets)
 
@@ -216,7 +229,7 @@ class Zeroconf(QuietLogger):
 
     def start(self) -> None:
         """Start Zeroconf."""
-        self.loop = get_running_loop()
+        self.loop = None if self._use_asyncio is False else get_running_loop()
         if self.loop:
             self.engine.setup(self.loop, None)
             return
