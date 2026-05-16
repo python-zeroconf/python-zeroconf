@@ -229,10 +229,7 @@ class Zeroconf(QuietLogger):
 
     def start(self) -> None:
         """Start Zeroconf."""
-        if self._use_asyncio is False:
-            self.loop = None
-        else:
-            self.loop = get_running_loop()
+        self.loop = None if self._use_asyncio is False else get_running_loop()
         if self.loop:
             self.engine.setup(self.loop, None)
             return
