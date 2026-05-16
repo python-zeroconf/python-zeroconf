@@ -154,6 +154,36 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(apple_p2p=True)
         rv.close()
 
+    def test_use_asyncio_false_forces_thread_when_loop_running(self):
+        """use_asyncio=False starts a thread even with a running event loop."""
+
+        async def run() -> r.Zeroconf:
+            return r.Zeroconf(interfaces=["127.0.0.1"], use_asyncio=False)
+
+        loop = asyncio.new_event_loop()
+        zc: r.Zeroconf | None = None
+        try:
+            zc = loop.run_until_complete(run())
+            assert zc._loop_thread is not None
+            assert zc.loop is not loop
+        finally:
+            if zc is not None:
+                zc.close()
+            loop.close()
+
+    def test_use_asyncio_true_requires_running_loop(self):
+        """use_asyncio=True without a running loop raises RuntimeError."""
+        with pytest.raises(RuntimeError, match="requires a running asyncio event loop"):
+            r.Zeroconf(interfaces=["127.0.0.1"], use_asyncio=True)
+
+    def test_use_asyncio_default_starts_thread_without_loop(self):
+        """use_asyncio=None (default) keeps the historic auto-detect behaviour."""
+        zc = r.Zeroconf(interfaces=["127.0.0.1"])
+        try:
+            assert zc._loop_thread is not None
+        finally:
+            zc.close()
+
     def test_async_updates_from_response(self):
         def mock_incoming_msg(
             service_state_change: r.ServiceStateChange,
