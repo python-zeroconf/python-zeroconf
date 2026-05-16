@@ -186,6 +186,9 @@ class Zeroconf(QuietLogger):
         if apple_p2p and sys.platform != "darwin":
             raise RuntimeError("Option `apple_p2p` is not supported on non-Apple platforms.")
 
+        if use_asyncio is True and get_running_loop() is None:
+            raise RuntimeError("use_asyncio=True requires a running asyncio event loop")
+
         self.unicast = unicast
         self._use_asyncio = use_asyncio
         listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
@@ -229,8 +232,6 @@ class Zeroconf(QuietLogger):
             self.loop = None
         else:
             self.loop = get_running_loop()
-            if self._use_asyncio is True and self.loop is None:
-                raise RuntimeError("use_asyncio=True requires a running asyncio event loop")
         if self.loop:
             self.engine.setup(self.loop, None)
             return
