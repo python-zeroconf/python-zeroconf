@@ -173,10 +173,11 @@ class Zeroconf(QuietLogger):
         :param use_asyncio: explicitly control whether to attach to the running
             asyncio event loop (``True``) or run an internal thread with its
             own loop (``False``). ``None`` (default) keeps the historic
-            behaviour: attach if an event loop is running, otherwise start a
+            behavior: attach if an event loop is running, otherwise start a
             thread. Set to ``False`` when running inside an environment that
             already has an event loop (e.g. Jupyter) but you want blocking
-            semantics.
+            semantics. ``True`` raises :class:`RuntimeError` immediately if no
+            running event loop is found, instead of falling back to the thread.
         """
         if ip_version is None:
             ip_version = autodetect_ip_version(interfaces)

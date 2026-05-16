@@ -177,7 +177,7 @@ class Framework(unittest.TestCase):
             r.Zeroconf(interfaces=["127.0.0.1"], use_asyncio=True)
 
     def test_use_asyncio_default_starts_thread_without_loop(self):
-        """use_asyncio=None (default) keeps the historic auto-detect behaviour."""
+        """use_asyncio=None (default) keeps the historic auto-detect behavior."""
         zc = r.Zeroconf(interfaces=["127.0.0.1"])
         try:
             assert zc._loop_thread is not None
