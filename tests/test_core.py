@@ -12,6 +12,7 @@ import time
 import unittest
 import unittest.mock
 import warnings
+from pathlib import Path
 from typing import cast
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -82,6 +83,39 @@ class Framework(unittest.TestCase):
         rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
         rv.close()
         rv.close()
+
+    def test_close_releases_owned_event_loop(self):
+        """Closing a Zeroconf that started its own loop thread closes that loop.
+
+        Regression test for issue #1589 — without loop.close(), the selector
+        (epoll on Linux) and its self-pipe sockets stay open across each
+        Zeroconf construct/close cycle and the process eventually exhausts
+        its FD limit.
+        """
+        rv = r.Zeroconf(interfaces=["127.0.0.1"])
+        loop = rv.loop
+        assert loop is not None
+        assert loop.is_running()
+        rv.close()
+        assert loop.is_closed()
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "Requires /proc/<pid>/fd")
+    def test_close_does_not_leak_file_descriptors(self):
+        """Tight loops of Zeroconf()/close() do not leak FDs (issue #1589)."""
+        fd_dir = Path(f"/proc/{os.getpid()}/fd")
+
+        def _fd_count() -> int:
+            return sum(1 for _ in fd_dir.iterdir())
+
+        # Warm-up cycle so any one-shot import-time FDs land before measuring.
+        r.Zeroconf(interfaces=["127.0.0.1"]).close()
+        baseline = _fd_count()
+        for _ in range(20):
+            r.Zeroconf(interfaces=["127.0.0.1"]).close()
+        # Allow tiny slack for unrelated FDs the test harness may open
+        # (e.g. coverage), but reject the per-cycle linear growth pattern
+        # the bug produced (~3 FDs per cycle, so >=30 over 20 cycles).
+        assert _fd_count() - baseline < 10
 
     @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
     @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")

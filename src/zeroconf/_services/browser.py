@@ -793,7 +793,12 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
         """Cancel the browser."""
         assert self.zc.loop is not None
         self.queue.put(None)
-        self.zc.loop.call_soon_threadsafe(self._async_cancel)
+        # If the Zeroconf instance has been closed, the loop is no longer
+        # accepting work. The browser's internal listener was already
+        # detached by Zeroconf.close() via remove_all_service_listeners(),
+        # so there is nothing left for _async_cancel to do.
+        if not self.zc.loop.is_closed():
+            self.zc.loop.call_soon_threadsafe(self._async_cancel)
         self.join()
 
     def run(self) -> None:
