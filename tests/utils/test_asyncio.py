@@ -123,19 +123,25 @@ async def test_run_coro_with_timeout() -> None:
     """Test running a coroutine with a timeout raises EventLoopBlocked."""
     loop = asyncio.get_event_loop()
     task: asyncio.Task | None = None
+    task_created = asyncio.Event()
 
     async def _saved_sleep_task():
         nonlocal task
-        task = asyncio.create_task(asyncio.sleep(0.2))
-        assert task is not None
+        task = asyncio.create_task(asyncio.sleep(1))
+        task_created.set()
         await task
 
     def _run_in_loop():
-        aioutils.run_coro_with_timeout(_saved_sleep_task(), loop, 0.1)
+        aioutils.run_coro_with_timeout(_saved_sleep_task(), loop, 50)
 
     with pytest.raises(EventLoopBlocked), patch.object(aioutils, "_LOADED_SYSTEM_TIMEOUT", 0.0):
         await loop.run_in_executor(None, _run_in_loop)
 
+    # The outer .result() can raise EventLoopBlocked before the loop
+    # has scheduled the coroutine — wait until the inner task is
+    # created before asserting on it. Use an asyncio.Event so the
+    # wait yields back to the loop instead of blocking it.
+    await asyncio.wait_for(task_created.wait(), 1.0)
     assert task is not None
     # ensure the thread is shutdown
     task.cancel()
