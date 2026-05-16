@@ -211,10 +211,6 @@ jobs:
           - os: ubuntu-latest
             qemu: armv7l
             musl: "musllinux"
-            pyver: cp39
-          - os: ubuntu-latest
-            qemu: armv7l
-            musl: "musllinux"
             pyver: cp310
           - os: ubuntu-latest
             qemu: armv7l
@@ -238,10 +234,6 @@ jobs:
             pyver: cp314t
           # qemu is slow, make a single
           # runner per Python version
-          - os: ubuntu-latest
-            qemu: armv7l
-            musl: ""
-            pyver: cp39
           - os: ubuntu-latest
             qemu: armv7l
             musl: ""
