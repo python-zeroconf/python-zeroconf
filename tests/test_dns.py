@@ -76,7 +76,7 @@ class TestDunder(unittest.TestCase):
     def test_dns_question_repr(self):
         question = r.DNSQuestion("irrelevant", const._TYPE_SRV, const._CLASS_IN | const._CLASS_UNIQUE)
         repr(question)
-        assert not question != question
+        assert (question != question) is False
 
     def test_dns_service_repr(self):
         service = r.DNSService(
@@ -112,7 +112,7 @@ class TestDunder(unittest.TestCase):
             addresses=[socket.inet_aton("10.0.1.2")],
         )
 
-        assert not info != info
+        assert (info != info) is False
         repr(info)
 
     def test_service_info_text_properties_not_given(self):

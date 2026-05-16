@@ -227,10 +227,7 @@ class TestServiceBrowser(unittest.TestCase):
             generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
             assert generated.is_response() is True
 
-            if service_state_change == r.ServiceStateChange.Removed:
-                ttl = 0
-            else:
-                ttl = 120
+            ttl = 0 if service_state_change == r.ServiceStateChange.Removed else 120
 
             generated.add_answer_at_time(
                 r.DNSText(
@@ -1575,9 +1572,8 @@ async def test_close_zeroconf_without_browser_before_start_up_queries():
     registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
-        if name == registration_name:
-            if state_change is ServiceStateChange.Added:
-                service_added.set()
+        if name == registration_name and state_change is ServiceStateChange.Added:
+            service_added.set()
 
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zeroconf_browser = aiozc.zeroconf
@@ -1644,9 +1640,8 @@ async def test_close_zeroconf_without_browser_after_start_up_queries():
     registration_name = f"xxxyyy.{type_}"
 
     def on_service_state_change(zeroconf, service_type, state_change, name):
-        if name == registration_name:
-            if state_change is ServiceStateChange.Added:
-                service_added.set()
+        if name == registration_name and state_change is ServiceStateChange.Added:
+            service_added.set()
 
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zeroconf_browser = aiozc.zeroconf
