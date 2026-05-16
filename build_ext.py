@@ -46,6 +46,8 @@ EXTENSIONS = [
 
 class BuildExt(build_ext):
     def build_extensions(self) -> None:
+        if self.parallel is None:  # type: ignore[has-type]
+            self.parallel = os.cpu_count() or 1
         try:
             super().build_extensions()
         except Exception:
