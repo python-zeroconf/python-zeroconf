@@ -695,6 +695,16 @@ async def test_service_info_async_request(quick_timing: None) -> None:
     assert aiosinfos[1] is not None
     assert aiosinfos[1].addresses == [socket.inet_aton("10.0.1.5")]
 
+    # Drop pending multicast responses queued under the original
+    # `info` / `info2` registrations. Their snapshots predate the
+    # `async_update_service` swap, so if they flushed after
+    # `_clear_cache` below they would poison `aiosinfo.server`
+    # with `ash-1.local.` and the `_is_complete=False` loop would
+    # then keep asking for an A record nobody answers. The pending
+    # `loop.call_at` for each queue fires harmlessly on the empty
+    # deque.
+    aiozc.zeroconf.out_queue.queue.clear()
+    aiozc.zeroconf.out_delay_queue.queue.clear()
     aiosinfo = AsyncServiceInfo(type_, registration_name)
     _clear_cache(aiozc.zeroconf)
     # Generating the race condition is almost impossible
