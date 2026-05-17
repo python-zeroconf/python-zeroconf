@@ -436,15 +436,27 @@ class TestServiceInfo(unittest.TestCase):
                 service_info_event.set()
 
             try:
+                # Seed TXT/A/AAAA with a future `than` before the helper
+                # thread starts. The first (QU) query bypasses suppression
+                # so phase 1 still sees 4 questions; the second (QM) query
+                # fires ~270ms later, too tight a window to seed reliably
+                # from the test thread on slow runners. async_expire only
+                # removes entries where now - than > 999, so future-dated
+                # entries persist for the whole test.
+                seed_history_questions = (
+                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN),
+                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN),
+                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN),
+                )
+                far_future = r.current_time_millis() + 60_000
+                for question in seed_history_questions:
+                    zc.question_history.add_question_at_time(question, far_future, set())
+
                 helper_thread = threading.Thread(
                     target=get_service_info_helper,
                     args=(zc, service_type, service_name),
                 )
                 helper_thread.start()
-                # 500ms CI buffer absorbs scheduling jitter on slow runners
-                # (notably Windows) without compromising the timing windows
-                # the rest of the test relies on; entries added each loop
-                # iteration must still land inside _DUPLICATE_QUESTION_INTERVAL.
                 wait_time = (const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 500) / 1000
 
                 # Expect query for SRV, TXT, A, AAAA
@@ -461,32 +473,20 @@ class TestServiceInfo(unittest.TestCase):
                 # by the question history
                 last_sent = None
                 send_event.clear()
-                # Seed the history before the next scheduled query (200ms +
-                # randint(20, 120) after the first one) can fire. Without
-                # this, slow macOS/Windows runners can race: the loop's
-                # first wait_time*0.25 wait hasn't timed out yet when the
-                # second query is sent, so the test sees 4 unsuppressed
-                # questions instead of 1.
-                seed_history_questions = (
-                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN),
-                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN),
-                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN),
-                )
-                now = r.current_time_millis()
-                for question in seed_history_questions:
-                    zc.question_history.add_question_at_time(question, now, set())
-                for _ in range(3):
-                    send_event.wait(
-                        wait_time * 0.25
-                    )  # Wait long enough to be inside the question history window
-                    now = r.current_time_millis()
-                    for question in seed_history_questions:
-                        zc.question_history.add_question_at_time(question, now, set())
-                send_event.wait(wait_time * 0.25)
+                send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 1  # type: ignore[unreachable]
                 assert r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
+
+                # Future-date SRV too: the server-side SRV entry from the
+                # previous QM query expires after 999ms, before the next
+                # scheduled query (~1s + jitter later).
+                zc.question_history.add_question_at_time(
+                    r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN),
+                    r.current_time_millis() + 60_000,
+                    set(),
+                )
 
                 wait_time = (
                     const._DUPLICATE_QUESTION_INTERVAL + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 500
@@ -494,32 +494,7 @@ class TestServiceInfo(unittest.TestCase):
                 # Expect no queries as all are suppressed by the question history
                 last_sent = None
                 send_event.clear()
-                for _ in range(3):
-                    send_event.wait(
-                        wait_time * 0.25
-                    )  # Wait long enough to be inside the question history window
-                    now = r.current_time_millis()
-                    zc.question_history.add_question_at_time(
-                        r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN),
-                        now,
-                        set(),
-                    )
-                    zc.question_history.add_question_at_time(
-                        r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN),
-                        now,
-                        set(),
-                    )
-                    zc.question_history.add_question_at_time(
-                        r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN),
-                        now,
-                        set(),
-                    )
-                    zc.question_history.add_question_at_time(
-                        r.DNSQuestion(service_name, const._TYPE_SRV, const._CLASS_IN),
-                        now,
-                        set(),
-                    )
-                send_event.wait(wait_time * 0.25)
+                send_event.wait(wait_time)
                 # All questions are suppressed so no query should be sent
                 assert last_sent is None
                 assert service_info is None
