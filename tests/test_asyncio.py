@@ -569,7 +569,7 @@ async def test_async_tasks(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_wait_unblocks_on_update() -> None:
+async def test_async_wait_unblocks_on_update(quick_timing: None) -> None:
     """Test async_wait will unblock on update."""
 
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
