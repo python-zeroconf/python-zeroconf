@@ -461,26 +461,27 @@ class TestServiceInfo(unittest.TestCase):
                 # by the question history
                 last_sent = None
                 send_event.clear()
+                # Seed the history before the next scheduled query (200ms +
+                # randint(20, 120) after the first one) can fire. Without
+                # this, slow macOS/Windows runners can race: the loop's
+                # first wait_time*0.25 wait hasn't timed out yet when the
+                # second query is sent, so the test sees 4 unsuppressed
+                # questions instead of 1.
+                seed_history_questions = (
+                    r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN),
+                    r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN),
+                    r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN),
+                )
+                now = r.current_time_millis()
+                for question in seed_history_questions:
+                    zc.question_history.add_question_at_time(question, now, set())
                 for _ in range(3):
                     send_event.wait(
                         wait_time * 0.25
                     )  # Wait long enough to be inside the question history window
                     now = r.current_time_millis()
-                    zc.question_history.add_question_at_time(
-                        r.DNSQuestion(service_name, const._TYPE_A, const._CLASS_IN),
-                        now,
-                        set(),
-                    )
-                    zc.question_history.add_question_at_time(
-                        r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN),
-                        now,
-                        set(),
-                    )
-                    zc.question_history.add_question_at_time(
-                        r.DNSQuestion(service_name, const._TYPE_TXT, const._CLASS_IN),
-                        now,
-                        set(),
-                    )
+                    for question in seed_history_questions:
+                        zc.question_history.add_question_at_time(question, now, set())
                 send_event.wait(wait_time * 0.25)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 1  # type: ignore[unreachable]
