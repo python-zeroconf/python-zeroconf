@@ -140,7 +140,9 @@ jobs:
 
     runs-on: ubuntu-latest
     environment: release
-    concurrency: release
+    concurrency:
+      group: release-${{ github.head_ref || github.ref }}
+      cancel-in-progress: false
     permissions:
       id-token: write
       contents: write
