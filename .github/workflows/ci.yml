@@ -75,6 +75,8 @@ jobs:
           - os: macos-latest
             python-version: "pypy-3.10"
     runs-on: ${{ matrix.os }}
+    env:
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Set up uv
@@ -89,13 +91,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "poetry"
           allow-prereleases: true
+      - name: Cache poetry venv
+        id: cache-venv
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            .venv
+            src/zeroconf/**/*.so
+          key: venv-v1-${{ runner.os }}-${{ env.ImageOS }}-${{ env.ImageVersion }}-py${{ matrix.python-version }}-${{ matrix.extension }}-${{ hashFiles('poetry.lock', 'pyproject.toml', 'build_ext.py') }}-${{ hashFiles('src/zeroconf/**/*.py', 'src/zeroconf/**/*.pxd') }}
       - name: Install Dependencies no cython
-        if: ${{ matrix.extension == 'skip_cython' }}
+        if: ${{ matrix.extension == 'skip_cython' && steps.cache-venv.outputs.cache-hit != 'true' }}
         env:
           SKIP_CYTHON: 1
         run: poetry install --only=main,dev
       - name: Install Dependencies with cython
-        if: ${{ matrix.extension != 'skip_cython' }}
+        if: ${{ matrix.extension != 'skip_cython' && steps.cache-venv.outputs.cache-hit != 'true' }}
         env:
           REQUIRE_CYTHON: 1
         run: poetry install --only=main,dev
@@ -108,6 +118,8 @@ jobs:
 
   benchmark:
     runs-on: ubuntu-latest
+    env:
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       - name: Setup Python 3.13
@@ -120,7 +132,16 @@ jobs:
           enable-cache: true
       - name: Install poetry
         run: uv tool install poetry
+      - name: Cache poetry venv
+        id: cache-venv
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            .venv
+            src/zeroconf/**/*.so
+          key: venv-v1-${{ runner.os }}-${{ env.ImageOS }}-${{ env.ImageVersion }}-benchmark-py3.13-${{ hashFiles('poetry.lock', 'pyproject.toml', 'build_ext.py') }}-${{ hashFiles('src/zeroconf/**/*.py', 'src/zeroconf/**/*.pxd') }}
       - name: Install Dependencies
+        if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
           REQUIRE_CYTHON=1 poetry install --only=main,dev
         shell: bash
