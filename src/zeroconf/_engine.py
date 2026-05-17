@@ -23,6 +23,7 @@ USA
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import itertools
 import socket
 import threading
@@ -114,6 +115,13 @@ class AsyncEngine:
                 lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
                 sock=s,
             )
+            # The transport now owns ``s``; drop our reference so
+            # ``_async_shutdown`` only closes sockets that never reached a
+            # transport (e.g. when setup is cancelled mid-flight).
+            if s is self._listen_socket:
+                self._listen_socket = None
+            if s in self._respond_sockets:
+                self._respond_sockets.remove(s)
             self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
             if s in sender_sockets:
@@ -139,19 +147,36 @@ class AsyncEngine:
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
         assert self._setup_task is not None
-        await self._setup_task
+        # Setup may have been cancelled by a prior ``_async_shutdown`` (e.g.
+        # close-before-start); swallow the cancellation so close still runs
+        # to completion.
+        with contextlib.suppress(asyncio.CancelledError):
+            await self._setup_task
         self._async_shutdown()
         await asyncio.sleep(0)  # flush out any call soons
-        assert self._cleanup_timer is not None
-        self._cleanup_timer.cancel()
+        if self._cleanup_timer is not None:
+            self._cleanup_timer.cancel()
 
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets."""
         assert self.running_future is not None
         assert self.loop is not None
         self.running_future = self.loop.create_future()
+        # Stop ``_async_create_endpoints`` from continuing to wrap sockets
+        # after shutdown has started — otherwise it would create transports
+        # that nobody closes, leaking FDs.
+        if self._setup_task is not None and not self._setup_task.done():
+            self._setup_task.cancel()
         for wrapped_transport in itertools.chain(self.senders, self.readers):
             wrapped_transport.transport.close()
+        # Anything still in these collections was never adopted by a
+        # transport; release the FDs so they don't leak.
+        if self._listen_socket is not None:
+            self._listen_socket.close()
+            self._listen_socket = None
+        for s in self._respond_sockets:
+            s.close()
+        self._respond_sockets = []
 
     def close(self) -> None:
         """Close from sync context.

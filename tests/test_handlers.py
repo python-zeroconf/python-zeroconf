@@ -1799,6 +1799,8 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         zc.record_manager.async_updates_from_response(incoming)
         assert info2.dns_pointer() in incoming.answers()
 
+    await aiozc.async_close()
+
 
 @pytest.mark.asyncio
 async def test_response_aggregation_random_delay():

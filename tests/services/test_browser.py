@@ -1051,6 +1051,9 @@ def test_service_browser_listeners_no_update_service():
             if name == registration_name:
                 callbacks.append(("remove", type_, name))
 
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
+            """No-op so the browser thread doesn't see ``NotImplementedError``."""
+
     listener = MyServiceListener()
 
     browser = r.ServiceBrowser(zc, type_, None, listener)
