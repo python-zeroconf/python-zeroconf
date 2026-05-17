@@ -34,6 +34,7 @@ def teardown_module():
 
 
 class ListenerTest(unittest.TestCase):
+    @pytest.mark.usefixtures("quick_timing")
     def test_integration_with_listener_class(self):
         sub_service_added = Event()
         service_added = Event()
@@ -113,7 +114,7 @@ class ListenerTest(unittest.TestCase):
             assert service_added.is_set()
 
             # short pause to allow multicast timers to expire
-            time.sleep(3)
+            time.sleep(0.5)
 
             zeroconf_browser.add_service_listener(type_, DuplicateListener())
             duplicate_service_added.wait(

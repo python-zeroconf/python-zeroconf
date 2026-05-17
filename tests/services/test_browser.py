@@ -331,7 +331,9 @@ class TestServiceBrowser(unittest.TestCase):
             service_updated_event.clear()
             service_text = b"path=/~matt2/"
             _inject_response(zeroconf, mock_record_update_incoming_msg(r.ServiceStateChange.Updated))
-            service_updated_event.wait(wait_time)
+            # Negative assertion: a duplicate update must NOT fire the listener. The wait
+            # always times out, so keep the budget short rather than reusing wait_time.
+            service_updated_event.wait(0.3)
             assert service_added_count == 1
             assert service_updated_count == 2
             assert service_removed_count == 0
