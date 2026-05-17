@@ -114,17 +114,22 @@ class AsyncEngine:
                 lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
                 sock=s,
             )
-            # The transport now owns ``s``; drop our reference so
-            # ``_async_shutdown`` only closes sockets that never reached a
-            # transport (e.g. when setup is cancelled mid-flight).
-            if s is self._listen_socket:
-                self._listen_socket = None
-            if s in self._respond_sockets:
-                self._respond_sockets.remove(s)
+            # Register the wrapped transport before dropping the engine's
+            # handle on ``s`` so a concurrent ``_async_shutdown`` always
+            # sees the socket in exactly one place (transport-owned via
+            # ``self.readers``/``self.senders``, or still raw in
+            # ``_listen_socket``/``_respond_sockets``) — never in neither.
+            # The block between the two awaits is atomic under asyncio,
+            # so today this ordering is belt-and-braces; do not introduce
+            # an ``await`` between the append and the reference drop.
             self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
             if s in sender_sockets:
                 self.senders.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
+            if s is self._listen_socket:
+                self._listen_socket = None
+            if s in self._respond_sockets:
+                self._respond_sockets.remove(s)
 
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
@@ -165,10 +170,13 @@ class AsyncEngine:
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets.
 
-        Idempotent: ``close()`` may invoke this multiple times across the
-        sync, in-loop, and async close paths. Every operation here is a
-        no-op on the second pass — keep it that way (e.g. don't add
-        counters or one-shot side effects without a guard).
+        Safe to call repeatedly: ``close()`` may invoke this across the
+        sync, in-loop, and async close paths. The setup-task cancel,
+        transport closes, and raw-socket closes are all no-ops on the
+        second pass; keep it that way (don't add counters or one-shot
+        side effects without a guard). ``running_future`` is replaced on
+        every call by design, so a fresh future blocks readers that join
+        after a partial restart attempt.
         """
         assert self.running_future is not None
         assert self.loop is not None

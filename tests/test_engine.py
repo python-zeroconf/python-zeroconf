@@ -87,7 +87,40 @@ async def test_setup_releases_socket_ownership() -> None:
         engine = aiozc.zeroconf.engine
         assert engine._listen_socket is None
         assert engine._respond_sockets == []
-        assert engine.readers  # all sockets reached a transport
+        assert engine.readers  # all sockets reached a reader transport
+        assert engine.senders  # ...and a sender transport
+    finally:
+        await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_close_propagates_outer_cancellation() -> None:
+    """Outer-task cancellation while awaiting setup must reach the caller.
+
+    Pins the ``self._setup_task.cancelled()`` gate in ``_async_close``:
+    only a CancelledError from a *setup-task* cancel is swallowed; a
+    CancelledError that did not come from a setup-task cancel has to
+    surface so outer callers (``run_coro_with_timeout``, ``asyncio.wait_for``)
+    see it.
+
+    A future whose exception was set to ``CancelledError`` re-raises on
+    ``await`` while still reporting ``cancelled() is False`` — the exact
+    shape of an outer-task cancel from the gate's point of view.
+    """
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    try:
+        await aiozc.zeroconf.async_wait_for_start()
+        engine = aiozc.zeroconf.engine
+        loop = asyncio.get_running_loop()
+        original_task = engine._setup_task
+        fake_task = loop.create_future()
+        fake_task.set_exception(asyncio.CancelledError())
+        engine._setup_task = fake_task  # type: ignore[assignment]
+        try:
+            with pytest.raises(asyncio.CancelledError):
+                await engine._async_close()
+        finally:
+            engine._setup_task = original_task
     finally:
         await aiozc.async_close()
 
