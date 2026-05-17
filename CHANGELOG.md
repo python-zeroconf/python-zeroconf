@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.2 (2026-05-17)
+
+### Bug Fixes
+
+- **ci**: Drop retired macos-13 runner and skip cp39/pp39 in wheel matrix
+  ([#1693](https://github.com/python-zeroconf/python-zeroconf/pull/1693),
+  [`745198b`](https://github.com/python-zeroconf/python-zeroconf/commit/745198b1128213915c1c89829feb950046e3de91))
+
+
 ## v0.149.1 (2026-05-16)
 
 ### Bug Fixes
