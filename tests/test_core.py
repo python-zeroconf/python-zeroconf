@@ -24,7 +24,7 @@ from zeroconf._listener import AsyncListener, _WrappedTransport
 from zeroconf._protocol.incoming import DNSIncoming
 from zeroconf.asyncio import AsyncZeroconf
 
-from . import _clear_cache, _inject_response, _wait_for_start, has_working_ipv6
+from . import _backdate_cache, _clear_cache, _inject_response, _wait_for_start, has_working_ipv6
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -301,7 +301,7 @@ class Framework(unittest.TestCase):
             # all old records with that name, rrtype, and rrclass that were received
             # more than one second ago are declared invalid,
             # and marked to expire from the cache in one second.
-            time.sleep(1.1)
+            _backdate_cache(zeroconf)
 
             # service updated. currently only text record can be updated
             service_text = b"path=/~humingchun/"
@@ -310,12 +310,12 @@ class Framework(unittest.TestCase):
             assert dns_text is not None
             assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
 
-            time.sleep(1.1)
+            _backdate_cache(zeroconf)
 
             # The split message only has a SRV and A record.
             # This should not evict TXT records from the cache
             _inject_response(zeroconf, mock_split_incoming_msg(r.ServiceStateChange.Updated))
-            time.sleep(1.1)
+            _backdate_cache(zeroconf)
             dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
             assert dns_text is not None
             assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~humingchun/'
@@ -426,7 +426,7 @@ def test_goodbye_all_services():
     zc.close()
 
 
-def test_register_service_with_custom_ttl():
+def test_register_service_with_custom_ttl(quick_timing: None) -> None:
     """Test a registering a service with a custom ttl."""
 
     # instantiate a zeroconf instance
@@ -453,7 +453,7 @@ def test_register_service_with_custom_ttl():
     zc.close()
 
 
-def test_logging_packets(caplog):
+def test_logging_packets(caplog: pytest.LogCaptureFixture, quick_timing: None) -> None:
     """Test packets are only logged with debug logging."""
 
     # instantiate a zeroconf instance
