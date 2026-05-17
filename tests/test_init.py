@@ -8,6 +8,8 @@ import time
 import unittest.mock
 from unittest.mock import patch
 
+import pytest
+
 import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, const
 
@@ -68,6 +70,7 @@ class Names(unittest.TestCase):
         generated.add_question(question)
         r.DNSIncoming(generated.packets()[0])
 
+    @pytest.mark.usefixtures("quick_timing")
     def test_verify_name_change_with_lots_of_names(self):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=["127.0.0.1"])

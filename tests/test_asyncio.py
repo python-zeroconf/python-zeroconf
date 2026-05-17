@@ -126,7 +126,7 @@ async def test_sync_within_event_loop_executor() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration() -> None:
+async def test_async_service_registration(quick_timing: None) -> None:
     """Test registering services broadcasts the registration by default."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
@@ -193,7 +193,7 @@ async def test_async_service_registration() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration_with_server_missing() -> None:
+async def test_async_service_registration_with_server_missing(quick_timing: None) -> None:
     """Test registering a service with the server not specified.
 
     For backwards compatibility, the server should be set to the
@@ -394,7 +394,7 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration_name_conflict() -> None:
+async def test_async_service_registration_name_conflict(quick_timing: None) -> None:
     """Test registering services throws on name conflict."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc2-type._tcp.local."
@@ -503,7 +503,7 @@ async def test_async_service_registration_name_strict_check(quick_timing: None) 
 
 
 @pytest.mark.asyncio
-async def test_async_tasks() -> None:
+async def test_async_tasks(quick_timing: None) -> None:
     """Test awaiting broadcast tasks"""
 
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -605,7 +605,7 @@ async def test_async_wait_unblocks_on_update() -> None:
 
 
 @pytest.mark.asyncio
-async def test_service_info_async_request() -> None:
+async def test_service_info_async_request(quick_timing: None) -> None:
     """Test registering services broadcasts and query with AsyncServceInfo.async_request."""
     if not has_working_ipv6() or os.environ.get("SKIP_IPV6"):
         pytest.skip("Requires IPv6")
@@ -700,7 +700,7 @@ async def test_service_info_async_request() -> None:
     # Generating the race condition is almost impossible
     # without patching since its a TOCTOU race
     with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
-        await aiosinfo.async_request(aiozc.zeroconf, 3000)
+        await aiosinfo.async_request(aiozc.zeroconf, 500)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
 
@@ -714,7 +714,7 @@ async def test_service_info_async_request() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_service_browser() -> None:
+async def test_async_service_browser(quick_timing: None) -> None:
     """Test AsyncServiceBrowser."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test9-srvc-type._tcp.local."
@@ -906,10 +906,10 @@ async def test_async_zeroconf_service_types(quick_timing: None) -> None:
     await asyncio.sleep(0.2)
     _clear_cache(zeroconf_registrar.zeroconf)
     try:
-        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=["127.0.0.1"], timeout=2)
+        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=["127.0.0.1"], timeout=0.5)
         assert type_ in service_types
         _clear_cache(zeroconf_registrar.zeroconf)
-        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=2)
+        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=0.5)
         assert type_ in service_types
 
     finally:

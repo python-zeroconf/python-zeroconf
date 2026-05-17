@@ -160,6 +160,7 @@ class TestRegistrar(unittest.TestCase):
         nbr_answers = nbr_additionals = nbr_authorities = 0
         zc.close()
 
+    @pytest.mark.usefixtures("quick_timing")
     def test_name_conflicts(self):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=["127.0.0.1"])
@@ -189,6 +190,7 @@ class TestRegistrar(unittest.TestCase):
             zc.register_service(conflicting_info)
         zc.close()
 
+    @pytest.mark.usefixtures("quick_timing")
     def test_register_and_lookup_type_by_uppercase_name(self):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=["127.0.0.1"])

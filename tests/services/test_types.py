@@ -47,10 +47,10 @@ def test_integration_with_listener(disable_duplicate_packet_suppression):
     )
     zeroconf_registrar.registry.async_add(info)
     try:
-        service_types = ZeroconfServiceTypes.find(interfaces=["127.0.0.1"], timeout=2)
+        service_types = ZeroconfServiceTypes.find(interfaces=["127.0.0.1"], timeout=0.5)
         assert type_ in service_types
         _clear_cache(zeroconf_registrar)
-        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=2)
+        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
         assert type_ in service_types
 
     finally:
@@ -79,10 +79,10 @@ def test_integration_with_listener_v6_records(disable_duplicate_packet_suppressi
     )
     zeroconf_registrar.registry.async_add(info)
     try:
-        service_types = ZeroconfServiceTypes.find(interfaces=["127.0.0.1"], timeout=2)
+        service_types = ZeroconfServiceTypes.find(interfaces=["127.0.0.1"], timeout=0.5)
         assert type_ in service_types
         _clear_cache(zeroconf_registrar)
-        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=2)
+        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
         assert type_ in service_types
 
     finally:
@@ -115,10 +115,10 @@ def test_integration_with_listener_ipv6(disable_duplicate_packet_suppression):
     )
     zeroconf_registrar.registry.async_add(info)
     try:
-        service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=2)
+        service_types = ZeroconfServiceTypes.find(ip_version=r.IPVersion.V6Only, timeout=0.5)
         assert type_ in service_types
         _clear_cache(zeroconf_registrar)
-        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=2)
+        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
         assert type_ in service_types
 
     finally:
@@ -147,10 +147,10 @@ def test_integration_with_subtype_and_listener(disable_duplicate_packet_suppress
     )
     zeroconf_registrar.registry.async_add(info)
     try:
-        service_types = ZeroconfServiceTypes.find(interfaces=["127.0.0.1"], timeout=2)
+        service_types = ZeroconfServiceTypes.find(interfaces=["127.0.0.1"], timeout=0.5)
         assert discovery_type in service_types
         _clear_cache(zeroconf_registrar)
-        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=2)
+        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=0.5)
         assert discovery_type in service_types
 
     finally:
