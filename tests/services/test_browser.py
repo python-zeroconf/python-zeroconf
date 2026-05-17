@@ -1052,7 +1052,7 @@ def test_service_browser_listeners_no_update_service():
                 callbacks.append(("remove", type_, name))
 
         def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
-            """No-op so the browser thread doesn't see ``NotImplementedError``."""
+            pass
 
     listener = MyServiceListener()
 

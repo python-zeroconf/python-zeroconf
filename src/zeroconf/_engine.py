@@ -114,14 +114,9 @@ class AsyncEngine:
                 lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
                 sock=s,
             )
-            # Register the wrapped transport before dropping the engine's
-            # handle on ``s`` so a concurrent ``_async_shutdown`` always
-            # sees the socket in exactly one place (transport-owned via
-            # ``self.readers``/``self.senders``, or still raw in
-            # ``_listen_socket``/``_respond_sockets``) — never in neither.
-            # The block between the two awaits is atomic under asyncio,
-            # so today this ordering is belt-and-braces; do not introduce
-            # an ``await`` between the append and the reference drop.
+            # Register the wrapped transport before releasing the engine's
+            # handle so a concurrent shutdown always sees ``s`` in exactly
+            # one place; do not add an ``await`` between these two steps.
             self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
             if s in sender_sockets:
@@ -151,12 +146,9 @@ class AsyncEngine:
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
         assert self._setup_task is not None
-        # Setup may have been cancelled by a prior ``_async_shutdown``
-        # (close-before-start); swallow that case only. ``setup_task.cancelled()``
-        # is True precisely when the task itself was cancelled, so a
-        # ``CancelledError`` raised by an outer-task cancellation falls
-        # through to the caller, and any non-cancel setup exception is
-        # re-raised by ``await``.
+        # Swallow CancelledError only if the setup task itself was
+        # cancelled (close-before-start); outer-task cancellation must
+        # propagate.
         try:
             await self._setup_task
         except asyncio.CancelledError:
@@ -168,28 +160,17 @@ class AsyncEngine:
             self._cleanup_timer.cancel()
 
     def _async_shutdown(self) -> None:
-        """Shutdown transports and sockets.
-
-        Safe to call repeatedly: ``close()`` may invoke this across the
-        sync, in-loop, and async close paths. The setup-task cancel,
-        transport closes, and raw-socket closes are all no-ops on the
-        second pass; keep it that way (don't add counters or one-shot
-        side effects without a guard). ``running_future`` is replaced on
-        every call by design, so a fresh future blocks readers that join
-        after a partial restart attempt.
-        """
+        """Shutdown transports and sockets; safe to call repeatedly."""
         assert self.running_future is not None
         assert self.loop is not None
         self.running_future = self.loop.create_future()
-        # Stop ``_async_create_endpoints`` from continuing to wrap sockets
-        # after shutdown has started — otherwise it would create transports
-        # that nobody closes, leaking FDs.
+        # Cancel pending setup so it can't wrap fresh transports after
+        # shutdown has started.
         if self._setup_task is not None and not self._setup_task.done():
             self._setup_task.cancel()
         for wrapped_transport in itertools.chain(self.senders, self.readers):
             wrapped_transport.transport.close()
-        # Anything still in these collections was never adopted by a
-        # transport; release the FDs so they don't leak.
+        # Anything still here was never adopted by a transport.
         if self._listen_socket is not None:
             self._listen_socket.close()
             self._listen_socket = None

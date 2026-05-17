@@ -75,38 +75,22 @@ async def test_reaper():
 
 @pytest.mark.asyncio
 async def test_setup_releases_socket_ownership() -> None:
-    """After endpoints are created, ``_listen_socket``/``_respond_sockets`` are empty.
-
-    Pins the invariant that ``_async_shutdown`` relies on: sockets adopted
-    by transports are removed from the engine's pending-socket collections,
-    so anything left there is unowned and safe to close directly.
-    """
+    """Engine releases its pending-socket refs once each socket has a transport."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     try:
         await aiozc.zeroconf.async_wait_for_start()
         engine = aiozc.zeroconf.engine
         assert engine._listen_socket is None
         assert engine._respond_sockets == []
-        assert engine.readers  # all sockets reached a reader transport
-        assert engine.senders  # ...and a sender transport
+        assert engine.readers
+        assert engine.senders
     finally:
         await aiozc.async_close()
 
 
 @pytest.mark.asyncio
 async def test_async_close_propagates_outer_cancellation() -> None:
-    """Outer-task cancellation while awaiting setup must reach the caller.
-
-    Pins the ``self._setup_task.cancelled()`` gate in ``_async_close``:
-    only a CancelledError from a *setup-task* cancel is swallowed; a
-    CancelledError that did not come from a setup-task cancel has to
-    surface so outer callers (``run_coro_with_timeout``, ``asyncio.wait_for``)
-    see it.
-
-    A future whose exception was set to ``CancelledError`` re-raises on
-    ``await`` while still reporting ``cancelled() is False`` — the exact
-    shape of an outer-task cancel from the gate's point of view.
-    """
+    """Outer-task cancellation while awaiting setup propagates to the caller."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     try:
         await aiozc.zeroconf.async_wait_for_start()
