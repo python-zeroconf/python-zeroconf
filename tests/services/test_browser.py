@@ -1033,7 +1033,7 @@ def test_service_browser_listeners_update_service():
 
 
 def test_service_browser_listeners_no_update_service():
-    """Test that the ServiceBrowser ServiceListener that does not implement update_service."""
+    """A listener that ignores update events records only add/remove callbacks."""
 
     # instantiate a zeroconf instance
     zc = Zeroconf(interfaces=["127.0.0.1"])

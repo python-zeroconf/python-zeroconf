@@ -146,11 +146,17 @@ class AsyncEngine:
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
         assert self._setup_task is not None
-        # ``gather(return_exceptions=True)`` lets a setup task that was
-        # cancelled by a prior ``_async_shutdown`` (close-before-start)
-        # finish without re-raising, while still propagating cancellation
-        # of the calling task.
-        await asyncio.gather(self._setup_task, return_exceptions=True)
+        # Setup may have been cancelled by a prior ``_async_shutdown``
+        # (close-before-start); swallow that case only. ``setup_task.cancelled()``
+        # is True precisely when the task itself was cancelled, so a
+        # ``CancelledError`` raised by an outer-task cancellation falls
+        # through to the caller, and any non-cancel setup exception is
+        # re-raised by ``await``.
+        try:
+            await self._setup_task
+        except asyncio.CancelledError:
+            if not self._setup_task.cancelled():
+                raise
         self._async_shutdown()
         await asyncio.sleep(0)  # flush out any call soons
         if self._cleanup_timer is not None:
