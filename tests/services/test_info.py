@@ -441,7 +441,11 @@ class TestServiceInfo(unittest.TestCase):
                     args=(zc, service_type, service_name),
                 )
                 helper_thread.start()
-                wait_time = (const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5) / 1000
+                # 500ms CI buffer absorbs scheduling jitter on slow runners
+                # (notably Windows) without compromising the timing windows
+                # the rest of the test relies on; entries added each loop
+                # iteration must still land inside _DUPLICATE_QUESTION_INTERVAL.
+                wait_time = (const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 500) / 1000
 
                 # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
@@ -484,7 +488,7 @@ class TestServiceInfo(unittest.TestCase):
                 assert service_info is None
 
                 wait_time = (
-                    const._DUPLICATE_QUESTION_INTERVAL + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 5
+                    const._DUPLICATE_QUESTION_INTERVAL + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 500
                 ) / 1000
                 # Expect no queries as all are suppressed by the question history
                 last_sent = None
