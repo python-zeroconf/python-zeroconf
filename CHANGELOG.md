@@ -2,6 +2,37 @@
 
 <!-- version list -->
 
+## v0.149.4 (2026-05-17)
+
+### Bug Fixes
+
+- **core**: Release sockets when close runs before engine setup completes
+  ([#1706](https://github.com/python-zeroconf/python-zeroconf/pull/1706),
+  [`0deb56b`](https://github.com/python-zeroconf/python-zeroconf/commit/0deb56b78fe6cd701a43ce34dccd4b69d6dd6d36))
+
+### Testing
+
+- Drop pending multicast responses before TOCTOU assertion
+  ([#1701](https://github.com/python-zeroconf/python-zeroconf/pull/1701),
+  [`d2058d9`](https://github.com/python-zeroconf/python-zeroconf/commit/d2058d95882c70fb2eb786d373a630314e656c15))
+
+- Speed up slow loopback tests (closes #1697)
+  ([#1699](https://github.com/python-zeroconf/python-zeroconf/pull/1699),
+  [`dd341a3`](https://github.com/python-zeroconf/python-zeroconf/commit/dd341a378e904cbf9b9a09e5c2ac8ff7c9944cd0))
+
+- Speed up slow loopback tests (closes #1700)
+  ([#1703](https://github.com/python-zeroconf/python-zeroconf/pull/1703),
+  [`d03ea36`](https://github.com/python-zeroconf/python-zeroconf/commit/d03ea364dea5866e0301ff11f6b78714ecf991e8))
+
+- Speed up test_async_wait_unblocks_on_update
+  ([#1702](https://github.com/python-zeroconf/python-zeroconf/pull/1702),
+  [`653c385`](https://github.com/python-zeroconf/python-zeroconf/commit/653c38559c468672cf907d808d432dec0fb06968))
+
+- Widen scheduling buffer in flaky get_info suppression test
+  ([#1698](https://github.com/python-zeroconf/python-zeroconf/pull/1698),
+  [`9b4db62`](https://github.com/python-zeroconf/python-zeroconf/commit/9b4db625e121c2d590ed8fe2f4d187d5e3bb9a73))
+
+
 ## v0.149.3 (2026-05-17)
 
 ### Bug Fixes
