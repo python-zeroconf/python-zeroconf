@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.3 (2026-05-17)
+
+### Bug Fixes
+
+- **ci**: Drop x86_64 mac wheels and clean up obsolete CIBW_SKIP entries
+  ([#1694](https://github.com/python-zeroconf/python-zeroconf/pull/1694),
+  [`104c5d6`](https://github.com/python-zeroconf/python-zeroconf/commit/104c5d6674896612aa83a89fd17b90de5f38a508))
+
+
 ## v0.149.2 (2026-05-17)
 
 ### Bug Fixes
