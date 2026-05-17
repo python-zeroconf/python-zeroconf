@@ -74,6 +74,25 @@ async def test_reaper():
 
 
 @pytest.mark.asyncio
+async def test_setup_releases_socket_ownership() -> None:
+    """After endpoints are created, ``_listen_socket``/``_respond_sockets`` are empty.
+
+    Pins the invariant that ``_async_shutdown`` relies on: sockets adopted
+    by transports are removed from the engine's pending-socket collections,
+    so anything left there is unowned and safe to close directly.
+    """
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    try:
+        await aiozc.zeroconf.async_wait_for_start()
+        engine = aiozc.zeroconf.engine
+        assert engine._listen_socket is None
+        assert engine._respond_sockets == []
+        assert engine.readers  # all sockets reached a transport
+    finally:
+        await aiozc.async_close()
+
+
+@pytest.mark.asyncio
 async def test_reaper_aborts_when_done():
     """Ensure cache cleanup stops when zeroconf is done."""
     with patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01):

@@ -23,7 +23,6 @@ USA
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import itertools
 import socket
 import threading
@@ -147,18 +146,24 @@ class AsyncEngine:
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
         assert self._setup_task is not None
-        # Setup may have been cancelled by a prior ``_async_shutdown`` (e.g.
-        # close-before-start); swallow the cancellation so close still runs
-        # to completion.
-        with contextlib.suppress(asyncio.CancelledError):
-            await self._setup_task
+        # ``gather(return_exceptions=True)`` lets a setup task that was
+        # cancelled by a prior ``_async_shutdown`` (close-before-start)
+        # finish without re-raising, while still propagating cancellation
+        # of the calling task.
+        await asyncio.gather(self._setup_task, return_exceptions=True)
         self._async_shutdown()
         await asyncio.sleep(0)  # flush out any call soons
         if self._cleanup_timer is not None:
             self._cleanup_timer.cancel()
 
     def _async_shutdown(self) -> None:
-        """Shutdown transports and sockets."""
+        """Shutdown transports and sockets.
+
+        Idempotent: ``close()`` may invoke this multiple times across the
+        sync, in-loop, and async close paths. Every operation here is a
+        no-op on the second pass — keep it that way (e.g. don't add
+        counters or one-shot side effects without a guard).
+        """
         assert self.running_future is not None
         assert self.loop is not None
         self.running_future = self.loop.create_future()
