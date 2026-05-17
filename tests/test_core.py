@@ -496,6 +496,10 @@ def test_get_service_info_failure_path():
     zc.close()
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="multicast loopback on the 127.0.0.1-only socket is unreliable on GH Actions Windows runners",
+)
 def test_sending_unicast():
     """Test sending unicast response."""
     zc = Zeroconf(interfaces=["127.0.0.1"])
@@ -517,8 +521,6 @@ def test_sending_unicast():
     assert zc.cache.get(entry) is None
 
     zc.send(generated)
-
-    # Handle slow github CI runners on windows
     for _ in range(10):
         time.sleep(0.05)
         if zc.cache.get(entry) is not None:

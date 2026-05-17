@@ -1,6 +1,9 @@
 build/
 *.pyc
 *.pyo
+.coverage
+coverage.xml
+htmlcov/
 Thumbs.db
 .DS_Store
 .project
