@@ -430,9 +430,9 @@ class TestServiceInfo(unittest.TestCase):
 
                 return r.DNSIncoming(generated.packets()[0])
 
-            def get_service_info_helper(zc, type, name):
+            def get_service_info_helper(zc, type, name, timeout):
                 nonlocal service_info
-                service_info = zc.get_service_info(type, name)
+                service_info = zc.get_service_info(type, name, timeout)
                 service_info_event.set()
 
             try:
@@ -453,9 +453,14 @@ class TestServiceInfo(unittest.TestCase):
                 for question in seed_history_questions:
                     zc.question_history.add_question_at_time(question, far_future, set())
 
+                # No answers ever come back (all queries are suppressed),
+                # so cap the helper at the worst-case sum of the three
+                # phase waits below plus margin instead of the 3000ms
+                # default. Phase 3 waits ~1.6s (the 999ms QM gap plus
+                # jitter and 500ms buffer); 1500ms covers it.
                 helper_thread = threading.Thread(
                     target=get_service_info_helper,
-                    args=(zc, service_type, service_name),
+                    args=(zc, service_type, service_name, 1500),
                 )
                 helper_thread.start()
                 wait_time = (const._LISTENER_TIME + info._AVOID_SYNC_DELAY_RANDOM_INTERVAL[1] + 500) / 1000
