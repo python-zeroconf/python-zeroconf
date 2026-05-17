@@ -114,10 +114,17 @@ class AsyncEngine:
                 lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
                 sock=s,
             )
+            # Register the wrapped transport before releasing the engine's
+            # handle so a concurrent shutdown always sees ``s`` in exactly
+            # one place; do not add an ``await`` between these two steps.
             self.protocols.append(cast(AsyncListener, protocol))
             self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
             if s in sender_sockets:
                 self.senders.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
+            if s is self._listen_socket:
+                self._listen_socket = None
+            if s in self._respond_sockets:
+                self._respond_sockets.remove(s)
 
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
@@ -139,19 +146,37 @@ class AsyncEngine:
     async def _async_close(self) -> None:
         """Cancel and wait for the cleanup task to finish."""
         assert self._setup_task is not None
-        await self._setup_task
+        # Swallow CancelledError only if the setup task itself was
+        # cancelled (close-before-start); outer-task cancellation must
+        # propagate.
+        try:
+            await self._setup_task
+        except asyncio.CancelledError:
+            if not self._setup_task.cancelled():
+                raise
         self._async_shutdown()
         await asyncio.sleep(0)  # flush out any call soons
-        assert self._cleanup_timer is not None
-        self._cleanup_timer.cancel()
+        if self._cleanup_timer is not None:
+            self._cleanup_timer.cancel()
 
     def _async_shutdown(self) -> None:
-        """Shutdown transports and sockets."""
+        """Shutdown transports and sockets; safe to call repeatedly."""
         assert self.running_future is not None
         assert self.loop is not None
         self.running_future = self.loop.create_future()
+        # Cancel pending setup so it can't wrap fresh transports after
+        # shutdown has started.
+        if self._setup_task is not None and not self._setup_task.done():
+            self._setup_task.cancel()
         for wrapped_transport in itertools.chain(self.senders, self.readers):
             wrapped_transport.transport.close()
+        # Anything still here was never adopted by a transport.
+        if self._listen_socket is not None:
+            self._listen_socket.close()
+            self._listen_socket = None
+        for s in self._respond_sockets:
+            s.close()
+        self._respond_sockets = []
 
     def close(self) -> None:
         """Close from sync context.

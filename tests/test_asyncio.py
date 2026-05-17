@@ -500,6 +500,7 @@ async def test_async_service_registration_name_strict_check(quick_timing: None) 
 
     await aiozc.async_unregister_service(info)
     await aiozc.async_close()
+    zc.close()
 
 
 @pytest.mark.asyncio

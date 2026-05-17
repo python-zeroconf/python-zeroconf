@@ -1529,6 +1529,7 @@ async def test_bad_ip_addresses_ignored_in_cache():
     info = ServiceInfo(type_, registration_name)
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses_by_version(IPVersion.V4Only) == [b"\x7f\x00\x00\x01"]
+    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -1804,6 +1805,7 @@ async def test_address_resolver():
     aiozc.zeroconf.async_send(outgoing)
     assert await resolve_task
     assert resolver.addresses == [b"\x7f\x00\x00\x01"]
+    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -1828,6 +1830,7 @@ async def test_address_resolver_ipv4():
     aiozc.zeroconf.async_send(outgoing)
     assert await resolve_task
     assert resolver.addresses == [b"\x7f\x00\x00\x01"]
+    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -1854,6 +1857,7 @@ async def test_address_resolver_ipv6():
     aiozc.zeroconf.async_send(outgoing)
     assert await resolve_task
     assert resolver.ip_addresses_by_version(IPVersion.All) == [ip_address("fe80::52e:c2f2:bc5f:e9c6")]
+    await aiozc.async_close()
 
 
 @pytest.mark.asyncio

@@ -105,6 +105,7 @@ def test_shutdown_loop() -> None:
 
     assert loop.is_running() is False
     runcoro_thread.join()
+    loop.close()
 
 
 def test_cumulative_timeouts_less_than_close_plus_buffer():

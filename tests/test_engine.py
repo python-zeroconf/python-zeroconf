@@ -74,6 +74,42 @@ async def test_reaper():
 
 
 @pytest.mark.asyncio
+async def test_setup_releases_socket_ownership() -> None:
+    """Engine releases its pending-socket refs once each socket has a transport."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    try:
+        await aiozc.zeroconf.async_wait_for_start()
+        engine = aiozc.zeroconf.engine
+        assert engine._listen_socket is None
+        assert engine._respond_sockets == []
+        assert engine.readers
+        assert engine.senders
+    finally:
+        await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_close_propagates_outer_cancellation() -> None:
+    """Outer-task cancellation while awaiting setup propagates to the caller."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    try:
+        await aiozc.zeroconf.async_wait_for_start()
+        engine = aiozc.zeroconf.engine
+        loop = asyncio.get_running_loop()
+        original_task = engine._setup_task
+        fake_task = loop.create_future()
+        fake_task.set_exception(asyncio.CancelledError())
+        engine._setup_task = fake_task  # type: ignore[assignment]
+        try:
+            with pytest.raises(asyncio.CancelledError):
+                await engine._async_close()
+        finally:
+            engine._setup_task = original_task
+    finally:
+        await aiozc.async_close()
+
+
+@pytest.mark.asyncio
 async def test_reaper_aborts_when_done():
     """Ensure cache cleanup stops when zeroconf is done."""
     with patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01):
