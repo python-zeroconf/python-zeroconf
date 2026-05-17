@@ -39,9 +39,17 @@ async def test_reaper():
         original_entries = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
         record_with_10s_ttl = r.DNSAddress("a", const._TYPE_SOA, const._CLASS_IN, 10, b"a")
         record_with_1s_ttl = r.DNSAddress("a", const._TYPE_SOA, const._CLASS_IN, 1, b"b")
+        # Backdate the short-lived record so it expires at the next
+        # reaper tick instead of waiting the full TTL in real time.
+        record_with_1s_ttl.created -= 2000
         zeroconf.cache.async_add_records([record_with_10s_ttl, record_with_1s_ttl])
         question = r.DNSQuestion("_hap._tcp._local.", const._TYPE_PTR, const._CLASS_IN)
         now = r.current_time_millis()
+        # Add the question at `past` so the reaper's next tick will see
+        # `current_time - past > _DUPLICATE_QUESTION_INTERVAL` and prune it,
+        # while the initial `suppresses(now, ...)` check still sees the
+        # question as recent (since `now - past == 999`, not strictly `> 999`).
+        past = now - 999
         other_known_answers: set[r.DNSRecord] = {
             r.DNSPointer(
                 "_hap._tcp.local.",
@@ -51,10 +59,10 @@ async def test_reaper():
                 "known-to-other._hap._tcp.local.",
             )
         }
-        zeroconf.question_history.add_question_at_time(question, now, other_known_answers)
+        zeroconf.question_history.add_question_at_time(question, past, other_known_answers)
         assert zeroconf.question_history.suppresses(question, now, other_known_answers)
         entries_with_cache = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
-        await asyncio.sleep(1.2)
+        await asyncio.sleep(0.1)
         entries = list(itertools.chain(*(cache.entries_with_name(name) for name in cache.names())))
         assert zeroconf.cache.get(record_with_1s_ttl) is None
         await aiozc.async_close()
@@ -77,6 +85,10 @@ async def test_reaper_aborts_when_done():
         assert zeroconf.cache.get(record_with_10s_ttl) is not None
         assert zeroconf.cache.get(record_with_1s_ttl) is not None
         await aiozc.async_close()
-        await asyncio.sleep(1.2)
+        # Backdate to immediate expiry so we don't have to wait the full
+        # TTL; the assertion is that the reaper has stopped, so a
+        # short sleep is enough to give it a chance to (incorrectly) run.
+        record_with_1s_ttl.created -= 2000
+        await asyncio.sleep(0.1)
         assert zeroconf.cache.get(record_with_10s_ttl) is not None
         assert zeroconf.cache.get(record_with_1s_ttl) is not None

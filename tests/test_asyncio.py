@@ -708,16 +708,21 @@ async def test_service_info_async_request(quick_timing: None) -> None:
     aiosinfo = AsyncServiceInfo(type_, registration_name)
     _clear_cache(aiozc.zeroconf)
     # Generating the race condition is almost impossible
-    # without patching since its a TOCTOU race
+    # without patching since its a TOCTOU race. 1500ms covers
+    # the initial _LISTENER_TIME + random delay (200-320ms) and
+    # leaves plenty of margin for the loopback response to land
+    # before the loop times out.
     with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
-        await aiosinfo.async_request(aiozc.zeroconf, 3000)
+        await aiosinfo.async_request(aiozc.zeroconf, 1500)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
 
     task = await aiozc.async_unregister_service(new_info)
     await task
 
-    aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
+    # Cap timeout: the service is gone, so this is expected to return None;
+    # waiting the default 3000ms is pure overhead.
+    aiosinfo = await aiozc.async_get_service_info(type_, registration_name, timeout=200)
     assert aiosinfo is None
 
     await aiozc.async_close()
@@ -784,7 +789,7 @@ async def test_async_service_browser(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_context_manager() -> None:
+async def test_async_context_manager(quick_timing: None) -> None:
     """Test using an async context manager."""
     type_ = "_test10-sr-type._tcp.local."
     name = "xxxyyy"
@@ -984,7 +989,7 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
 
 
 @pytest.mark.asyncio
-async def test_integration():
+async def test_integration(quick_timing: None) -> None:
     service_added = asyncio.Event()
     service_removed = asyncio.Event()
     unexpected_ttl = asyncio.Event()
@@ -1176,9 +1181,11 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
     # patch the zeroconf send
     with patch.object(zeroconf_info, "async_send", send):
         aiosinfo = AsyncServiceInfo(type_, registration_name)
-        # Patch _is_complete so we send multiple times
+        # Patch _is_complete so we send multiple times. 500ms covers
+        # the QU query at 0ms plus the QM query at ~_LISTENER_TIME +
+        # max random delay (~320ms).
         with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
-            await aiosinfo.async_request(aiozc.zeroconf, 1200)
+            await aiosinfo.async_request(aiozc.zeroconf, 500)
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
             assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]

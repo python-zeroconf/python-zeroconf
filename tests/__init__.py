@@ -91,6 +91,23 @@ def _clear_cache(zc: Zeroconf) -> None:
     zc.question_history.clear()
 
 
+def _backdate_cache(zc: Zeroconf, ms: int = 1100) -> None:
+    """Backdate every cached record's `created` time by `ms` milliseconds.
+
+    rfc6762#section-10.2 keys off "received more than one second ago", so
+    backdating is equivalent to sleeping `ms` in real time without the
+    wall-clock wait.
+
+    Iterate `store.values()`, not the dict directly — when a record is
+    re-added with an equal hash, the key stays the original object while
+    the value is replaced with the latest; mutating the key would update
+    stale objects no one reads.
+    """
+    for store in zc.cache.cache.values():
+        for record in store.values():
+            record.created -= ms
+
+
 def time_changed_millis(millis: float | None = None) -> None:
     """Call all scheduled events for a time."""
     loop = asyncio.get_running_loop()

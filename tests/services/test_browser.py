@@ -556,7 +556,7 @@ def test_first_query_delay():
 
 
 @pytest.mark.asyncio
-async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
+async def test_asking_default_is_asking_qm_questions_after_the_first_qu(quick_timing: None) -> None:
     """Verify the service browser's first questions are QU and refresh queries are QM."""
     service_added = asyncio.Event()
     service_removed = asyncio.Event()
@@ -658,7 +658,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu():
 
 
 @pytest.mark.asyncio
-async def test_ttl_refresh_cancelled_rescue_query():
+async def test_ttl_refresh_cancelled_rescue_query(quick_timing: None) -> None:
     """Verify seeing a name again cancels the rescue query."""
     service_added = asyncio.Event()
     service_removed = asyncio.Event()
@@ -846,7 +846,7 @@ async def test_asking_qu_questions():
             await aiozc.async_close()
 
 
-def test_legacy_record_update_listener():
+def test_legacy_record_update_listener(quick_timing: None) -> None:
     """Test a RecordUpdateListener that does not implement update_records."""
 
     # instantiate a zeroconf instance
@@ -1499,10 +1499,15 @@ def test_service_browser_expire_callbacks():
     # Force the ttl to be 1 second
     now = current_time_millis()
     for cache_record in list(zc.cache.cache.values()):
-        for record in cache_record:
+        for record in cache_record.values():
             zc.cache._async_set_created_ttl(record, now, 1)
 
-    time.sleep(0.3)
+    # Wait for the add callback to fire from the original inject_response.
+    for _ in range(30):
+        time.sleep(0.01)
+        if len(callbacks) == 1:
+            break
+
     info.port = 400
     info._dns_service_cache = None  # we are mutating the record so clear the cache
 
@@ -1511,8 +1516,8 @@ def test_service_browser_expire_callbacks():
         mock_incoming_msg([info.dns_service()]),
     )
 
-    for _ in range(10):
-        time.sleep(0.05)
+    for _ in range(30):
+        time.sleep(0.01)
         if len(callbacks) == 2:
             break
 
@@ -1521,8 +1526,19 @@ def test_service_browser_expire_callbacks():
         ("update", type_, registration_name),
     ]
 
-    for _ in range(25):
-        time.sleep(0.05)
+    # Re-add every cached record with `created` in the past so the
+    # next reaper tick (0.01s) expires them and fires the remove
+    # callback, instead of waiting the full TTL in real time.
+    # Going through `_async_set_created_ttl` updates the expiration
+    # heap; mutating `record.created` directly would leave the heap
+    # entry pointing at the original `when` so the reaper never wakes.
+    past = current_time_millis() - 2000
+    for cache_record in list(zc.cache.cache.values()):
+        for record in list(cache_record.values()):
+            zc.cache._async_set_created_ttl(record, past, 1)
+
+    for _ in range(30):
+        time.sleep(0.01)
         if len(callbacks) == 3:
             break
 
@@ -1567,7 +1583,7 @@ def test_scheduled_ptr_query_dunder_methods():
 
 
 @pytest.mark.asyncio
-async def test_close_zeroconf_without_browser_before_start_up_queries():
+async def test_close_zeroconf_without_browser_before_start_up_queries(quick_timing: None) -> None:
     """Test that we stop sending startup queries if zeroconf is closed out from under the browser."""
     service_added = asyncio.Event()
     type_ = "_http._tcp.local."
@@ -1634,7 +1650,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries():
 
 
 @pytest.mark.asyncio
-async def test_close_zeroconf_without_browser_after_start_up_queries():
+async def test_close_zeroconf_without_browser_after_start_up_queries(quick_timing: None) -> None:
     """Test that we stop sending rescue queries if zeroconf is closed out from under the browser."""
     service_added = asyncio.Event()
 
