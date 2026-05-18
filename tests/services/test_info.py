@@ -23,7 +23,7 @@ from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import _inject_response, has_working_ipv6
+from .. import QUICK_REQUEST_TIMEOUT_MS, _inject_response, has_working_ipv6
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -1006,7 +1006,9 @@ def test_asking_qu_questions(quick_request_timing):
 
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
-        zeroconf.get_service_info(f"name.{type_}", type_, 50, question_type=r.DNSQuestionType.QU)
+        zeroconf.get_service_info(
+            f"name.{type_}", type_, QUICK_REQUEST_TIMEOUT_MS, question_type=r.DNSQuestionType.QU
+        )
         assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         zeroconf.close()
 
@@ -1030,7 +1032,9 @@ def test_asking_qm_questions(quick_request_timing):
 
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
-        zeroconf.get_service_info(f"name.{type_}", type_, 50, question_type=r.DNSQuestionType.QM)
+        zeroconf.get_service_info(
+            f"name.{type_}", type_, QUICK_REQUEST_TIMEOUT_MS, question_type=r.DNSQuestionType.QM
+        )
         assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         zeroconf.close()
 

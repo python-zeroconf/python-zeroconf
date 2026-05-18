@@ -35,6 +35,13 @@ from zeroconf._history import QuestionHistory
 
 _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
+# get_service_info / async_request timeout for tests using the
+# `quick_request_timing` fixture. The fixture cuts the initial-query
+# delay to ~15ms (10ms _LISTENER_TIME + 1-5ms jitter), so 50ms is
+# ample headroom for tests that only need to observe the first one
+# or two queries.
+QUICK_REQUEST_TIMEOUT_MS = 50
+
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
     def suppresses(self, question: DNSQuestion, now: float, known_answers: set[DNSRecord]) -> bool:

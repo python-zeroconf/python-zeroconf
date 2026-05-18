@@ -43,6 +43,7 @@ from zeroconf.asyncio import (
 from zeroconf.const import _LISTENER_TIME
 
 from . import (
+    QUICK_REQUEST_TIMEOUT_MS,
     QuestionHistoryWithoutSuppression,
     _clear_cache,
     has_working_ipv6,
@@ -1184,9 +1185,9 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu(qui
         aiosinfo = AsyncServiceInfo(type_, registration_name)
         # Patch _is_complete so we send multiple times. Under
         # `quick_request_timing` both the QU query at 0ms and the QM
-        # query at ~15ms land well inside 50ms.
+        # query at ~15ms land well inside QUICK_REQUEST_TIMEOUT_MS.
         with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
-            await aiosinfo.async_request(aiozc.zeroconf, 50)
+            await aiosinfo.async_request(aiozc.zeroconf, QUICK_REQUEST_TIMEOUT_MS)
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
             assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
