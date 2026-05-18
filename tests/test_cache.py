@@ -583,6 +583,26 @@ def test_cache_eviction_victim_shares_key_with_new_record() -> None:
     assert total == cache._total_records
 
 
+def test_cache_dnsnsec_flood_is_bounded() -> None:
+    """DNSNsec records honour ``_MAX_CACHE_RECORDS`` (no bypass via the ``new`` flag)."""
+    cache = r.DNSCache()
+    overflow = 100
+    cache.async_add_records(
+        r.DNSNsec(
+            f"nsec-{i}.local.",
+            const._TYPE_NSEC,
+            const._CLASS_IN,
+            120,
+            f"nsec-{i}.local.",
+            [const._TYPE_A],
+        )
+        for i in range(const._MAX_CACHE_RECORDS + overflow)
+    )
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    total = sum(len(store) for store in cache.cache.values())
+    assert total == const._MAX_CACHE_RECORDS
+
+
 def test_cache_re_add_flood_does_not_grow_heap_unbounded() -> None:
     """Replaying cached records with shifting TTLs cannot grow ``_expire_heap`` unbounded."""
     cache = r.DNSCache()
