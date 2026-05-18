@@ -40,22 +40,22 @@ set_logger_level_if_unset()
 
 
 _MAX_SEEN_LOGS = 512
-_seen_logs: set[str] = set()
+_seen_logs: dict[str, None] = {}
 
 
-def _mark_seen(seen: set[str], key: str) -> bool:
+def _mark_seen(seen: dict[str, None], key: str) -> bool:
     """Record ``key`` in ``seen`` and return True if it was newly added.
 
-    Bounds the set so callers passing attacker-influenced keys (peer
+    Bounds the dict so callers passing attacker-influenced keys (peer
     addresses, packet offsets) cannot grow it without bound. Evicts
-    one arbitrary entry per overflow so warning-level re-emissions
-    stay smooth rather than arriving in bursts.
+    the oldest entry per overflow (dict preserves insertion order on
+    Python 3.7+), so ``_MAX_SEEN_LOGS`` is a recency window.
     """
     if key in seen:
         return False
     if len(seen) >= _MAX_SEEN_LOGS:
-        seen.pop()
-    seen.add(key)
+        del seen[next(iter(seen))]
+    seen[key] = None
     return True
 
 

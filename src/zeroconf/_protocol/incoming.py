@@ -63,7 +63,7 @@ MAX_NAME_LENGTH = 253
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
 
-_seen_logs: set[str] = set()
+_seen_logs: dict[str, None] = {}
 _str = str
 _int = int
 
