@@ -1011,6 +1011,28 @@ def test_label_compression_attack():
     assert len(parsed.answers()) == 1
 
 
+def test_dns_compression_pointer_chain_depth_attack() -> None:
+    """Test our wire parser rejects deeply chained compression pointers without recursing."""
+    # Build a packet with one question whose name is a 1500-deep chain of forward
+    # compression pointers, ending in a root label. Each pointer is 2 bytes,
+    # so chain length easily exceeds CPython's default recursion limit.
+    header = b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00"
+    # Question at offset 12: pointer to offset 18 (past the question's type/class).
+    question_name = bytes([0xC0, 18])
+    question_type_class = b"\x00\x01\x00\x01"
+    chain_depth = 1500
+    chain = bytearray()
+    for i in range(chain_depth):
+        target = 18 + 2 * (i + 1)
+        chain.append(0xC0 | (target >> 8))
+        chain.append(target & 0xFF)
+    chain.append(0x00)
+    packet = header + question_name + question_type_class + bytes(chain)
+    parsed = r.DNSIncoming(packet, ("1.2.3.4", 5353))
+    assert parsed.valid is False
+    assert parsed.questions == []
+
+
 def test_dns_compression_loop_attack():
     """Test our wire parser does not loop forever when dns compression is in a loop."""
     packet = (
