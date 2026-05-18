@@ -65,6 +65,7 @@ async def test_wait_future_or_timeout_times_out() -> None:
         await task
 
 
+@patch.object(aioutils, "_TASK_AWAIT_TIMEOUT", 0.1)
 def test_shutdown_loop() -> None:
     """Test shutting down an event loop."""
     loop = None
@@ -89,7 +90,7 @@ def test_shutdown_loop() -> None:
         runcoro_thread_ready.set()
         assert loop is not None
         with contextlib.suppress(concurrent.futures.TimeoutError):
-            asyncio.run_coroutine_threadsafe(_still_running(), loop).result(1)
+            asyncio.run_coroutine_threadsafe(_still_running(), loop).result(0.1)
 
     runcoro_thread = threading.Thread(target=_run_coro, daemon=True)
     runcoro_thread.start()

@@ -1060,6 +1060,12 @@ async def test_integration(quick_timing: None) -> None:
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
+        # Wait for the browser's first startup query to land (with an empty
+        # cache) before registering — otherwise on fast loopback the register
+        # may finish before the first query fires, and answers[0] picks up
+        # the known PTR via §7.1 suppression.
+        await asyncio.wait_for(got_query.wait(), 1)
+        got_query.clear()
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
         loop = asyncio.get_running_loop()

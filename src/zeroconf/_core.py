@@ -104,6 +104,10 @@ _PROTECTED_AGGREGATION_DELAY = 200  # ms
 
 _REGISTER_BROADCASTS = 3
 
+# Random delay before probing (RFC 6762 §8.1) to avoid a thundering
+# herd when multiple services start at once.
+_REGISTER_RANDOM_INTERVAL = (150, 250)  # ms
+
 
 def async_send_with_transport(
     log_debug: bool,
@@ -561,7 +565,7 @@ class Zeroconf(QuietLogger):
 
         # Wait a random amount of time up avoid collisions and avoid
         # a thundering herd when multiple services are started on the network
-        await self.async_wait(random.randint(150, 250))  # noqa: S311
+        await self.async_wait(random.randint(*_REGISTER_RANDOM_INTERVAL))  # noqa: S311
 
         next_instance_number = 2
         next_time = now = current_time_millis()
