@@ -85,13 +85,18 @@ def test_llog_exception_debug():
     assert mock_log_debug.mock_calls == [call("the exception", exc_info=False)]
 
 
-def test_seen_logs_is_bounded():
-    """Distinct keys must not grow ``_seen_logs`` without bound."""
+def test_seen_logs_is_bounded() -> None:
+    """``_seen_logs`` stays at the cap and evicts oldest-first (FIFO)."""
     _logger._seen_logs.clear()
+    overflow = 5
     with patch("zeroconf._logger.log.warning"), patch("zeroconf._logger.log.debug"):
-        for i in range(_MAX_SEEN_LOGS + 5):
+        for i in range(_MAX_SEEN_LOGS + overflow):
             QuietLogger.log_warning_once(f"warning-{i}")
-    assert len(_logger._seen_logs) <= _MAX_SEEN_LOGS
+    assert len(_logger._seen_logs) == _MAX_SEEN_LOGS
+    for i in range(overflow):
+        assert f"warning-{i}" not in _logger._seen_logs
+    for i in range(_MAX_SEEN_LOGS, _MAX_SEEN_LOGS + overflow):
+        assert f"warning-{i}" in _logger._seen_logs
 
 
 def test_log_exception_once():
