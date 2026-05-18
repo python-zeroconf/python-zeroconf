@@ -39,7 +39,7 @@ def set_logger_level_if_unset() -> None:
 set_logger_level_if_unset()
 
 
-_MAX_SEEN_LOGS = 256
+_MAX_SEEN_LOGS = 512
 _seen_logs: set[str] = set()
 
 
@@ -47,12 +47,14 @@ def _mark_seen(seen: set[str], key: str) -> bool:
     """Record ``key`` in ``seen`` and return True if it was newly added.
 
     Bounds the set so callers passing attacker-influenced keys (peer
-    addresses, packet offsets) cannot grow it without bound.
+    addresses, packet offsets) cannot grow it without bound. Evicts
+    one arbitrary entry per overflow so warning-level re-emissions
+    stay smooth rather than arriving in bursts.
     """
     if key in seen:
         return False
     if len(seen) >= _MAX_SEEN_LOGS:
-        seen.clear()
+        seen.pop()
     seen.add(key)
     return True
 
