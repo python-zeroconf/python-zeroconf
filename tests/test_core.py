@@ -743,6 +743,51 @@ def test_tc_bit_defers_last_response_missing():
     zc.close()
 
 
+def test_tc_bit_defer_window_is_bounded():
+    """TC-deferral assembly window must not slide past first_arrival + max delay."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    _wait_for_start(zc)
+    type_ = "_boundeddefer._tcp.local."
+    registration_name = f"knownname.{type_}"
+
+    info = r.ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        {"path": "/~paulsm/"},
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    zc.registry.async_add(info)
+
+    protocol = zc.engine.protocols[0]
+    now_ms = r.current_time_millis()
+    _clear_cache(zc)
+    source_ip = "203.0.113.99"
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    generated.add_question(r.DNSQuestion(type_, const._TYPE_PTR, const._CLASS_IN))
+    for _ in range(300):
+        generated.add_answer_at_time(info.dns_pointer(), now_ms)
+    packets = generated.packets()
+    assert len(packets) >= 3
+
+    # Pin the per-packet delay at its maximum so any subsequent reset would
+    # land past the deadline established by the first packet.
+    with patch("zeroconf._listener.random.randint", return_value=500):
+        threadsafe_query(zc, protocol, r.DNSIncoming(packets[0]), source_ip, const._MDNS_PORT, Mock(), ())
+        first_when = protocol._timers[source_ip].when()
+
+        for raw in packets[1:-1]:
+            threadsafe_query(zc, protocol, r.DNSIncoming(raw), source_ip, const._MDNS_PORT, Mock(), ())
+            assert protocol._timers[source_ip].when() <= first_when
+
+    zc.registry.async_remove(info)
+    zc.close()
+
+
 @pytest.mark.asyncio
 async def test_open_close_twice_from_async() -> None:
     """Test we can close twice from a coroutine when using Zeroconf.

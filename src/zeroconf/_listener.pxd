@@ -29,6 +29,7 @@ cdef class AsyncListener:
     cdef public object sock_description
     cdef public cython.dict _deferred
     cdef public cython.dict _timers
+    cdef public cython.dict _deferred_deadlines
 
     @cython.locals(now=double, debug=cython.bint)
     cpdef datagram_received(self, cython.bytes bytes, cython.tuple addrs)
@@ -38,7 +39,7 @@ cdef class AsyncListener:
 
     cdef _cancel_any_timers_for_addr(self, object addr)
 
-    @cython.locals(incoming=DNSIncoming, deferred=list)
+    @cython.locals(incoming=DNSIncoming, deferred=list, now=double, delay=double, deadline=object, fire_at=double)
     cpdef handle_query_or_defer(
         self,
         DNSIncoming msg,

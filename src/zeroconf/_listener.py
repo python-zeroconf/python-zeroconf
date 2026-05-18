@@ -58,6 +58,7 @@ class AsyncListener:
 
     __slots__ = (
         "_deferred",
+        "_deferred_deadlines",
         "_query_handler",
         "_record_manager",
         "_registry",
@@ -82,6 +83,7 @@ class AsyncListener:
         self.sock_description: str | None = None
         self._deferred: dict[str, list[DNSIncoming]] = {}
         self._timers: dict[str, asyncio.TimerHandle] = {}
+        self._deferred_deadlines: dict[str, float] = {}
         super().__init__()
 
     def datagram_received(self, data: _bytes, addrs: tuple[str, int] | tuple[str, int, int, int]) -> None:
@@ -203,12 +205,25 @@ class AsyncListener:
             if incoming.data == msg.data:
                 return
         deferred.append(msg)
-        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))  # noqa: S311
         loop = self.zc.loop
         assert loop is not None
+        now = loop.time()
+        delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))  # noqa: S311
+        # Bound the assembly window to first_arrival + max delay so a peer
+        # streaming TC packets cannot keep deferring the flush indefinitely.
+        deadline = self._deferred_deadlines.get(addr)
+        if deadline is None:
+            deadline = now + millis_to_seconds(_TC_DELAY_RANDOM_INTERVAL[1])
+            self._deferred_deadlines[addr] = deadline
+        fire_at = now + delay
+        if fire_at >= deadline:
+            # Existing timer (if any) already fires at or before the deadline.
+            if addr in self._timers:
+                return
+            fire_at = deadline
         self._cancel_any_timers_for_addr(addr)
         self._timers[addr] = loop.call_at(
-            loop.time() + delay,
+            fire_at,
             self._respond_query,
             None,
             addr,
@@ -232,6 +247,7 @@ class AsyncListener:
     ) -> None:
         """Respond to a query and reassemble any truncated deferred packets."""
         self._cancel_any_timers_for_addr(addr)
+        self._deferred_deadlines.pop(addr, None)
         packets = self._deferred.pop(addr, [])
         if msg:
             packets.append(msg)
