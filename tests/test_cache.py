@@ -439,7 +439,9 @@ async def test_cache_heap_multi_name_cleanup() -> None:
         )
         cache.async_add_records([record])
 
-    assert len(cache._expire_heap) == min_records_to_cleanup + 5
+    # ``_async_add`` rebuilds ``_expire_heap`` proactively when stale entries
+    # dominate (heap > 2x expirations), so the heap is already capped at
+    # ~one entry per unique record long before ``async_expire`` is called.
     assert len(cache.async_entries_with_name(name)) == 1
     assert len(cache.async_entries_with_name(name2)) == 5
 
@@ -473,7 +475,8 @@ async def test_cache_heap_pops_order() -> None:
         )
         cache.async_add_records([record])
 
-    assert len(cache._expire_heap) == min_records_to_cleanup + 5
+    # ``_async_add`` proactively rebuilds the heap when stale entries dominate,
+    # so the heap holds only one entry per unique record by this point.
     assert len(cache.async_entries_with_name(name)) == 1
     assert len(cache.async_entries_with_name(name2)) == 5
 
@@ -482,3 +485,237 @@ async def test_cache_heap_pops_order() -> None:
         ts, _ = heappop(cache._expire_heap)
         assert ts >= start_ts
         start_ts = ts
+
+
+def _addr(name: str, idx: int, *, ttl: int = 120, created: float | None = None) -> r.DNSAddress:
+    """Build a DNSAddress with idx-derived payload for the bound/eviction tests."""
+    return r.DNSAddress(
+        name,
+        const._TYPE_A,
+        const._CLASS_IN,
+        ttl,
+        bytes((idx & 0xFF, (idx >> 8) & 0xFF, 0, 1)),
+        created=r.current_time_millis() if created is None else created,
+    )
+
+
+def test_cache_size_is_bounded() -> None:
+    """A flood of unique-name records is capped at ``_MAX_CACHE_RECORDS``."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    overflow = 1000
+    flood_size = const._MAX_CACHE_RECORDS + overflow
+
+    cache.async_add_records(_addr(f"flood-{i}.local.", i, created=now + i) for i in range(flood_size))
+
+    total = sum(len(store) for store in cache.cache.values())
+    assert total == const._MAX_CACHE_RECORDS
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    # FIFO-ish: the earliest-created records (closest to expiration) get
+    # evicted first, so the names that remain are from the tail.
+    for i in range(overflow):
+        assert f"flood-{i}.local." not in cache.cache
+    for i in range(flood_size - overflow, flood_size):
+        assert f"flood-{i}.local." in cache.cache
+
+
+def test_cache_eviction_empty_heap_returns_without_evicting() -> None:
+    """Eviction tolerates an empty ``_expire_heap`` (invariant-violation safety net)."""
+    cache = r.DNSCache()
+    # By the cache invariant every record in ``_total_records`` has a heap
+    # entry, so eviction should never see an empty heap. Force the broken
+    # state directly to pin the defensive behaviour: ``_async_evict_oldest``
+    # returns without raising and the subsequent insert still lands. Since
+    # eviction can't free space, the counter is allowed to drift past the
+    # cap by exactly one — pinned so a future change to the recovery
+    # semantics (e.g., refusing the add or clamping) fails this test.
+    cache._total_records = const._MAX_CACHE_RECORDS
+    cache._expire_heap = []
+    cache.async_add_records([_addr("post-empty.local.", 0)])
+    assert "post-empty.local." in cache.cache
+    assert cache._total_records == const._MAX_CACHE_RECORDS + 1
+
+
+def test_cache_eviction_skips_stale_heap_entries() -> None:
+    """Eviction skips stale heap entries left by TTL re-adds."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    cache.async_add_records(
+        _addr(f"stale-{i}.local.", i, created=now + i) for i in range(const._MAX_CACHE_RECORDS)
+    )
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+    # Re-add the closest-to-expiration record with a longer TTL; the prior
+    # ``(when, record)`` tuple stays as stale, eviction must skip it.
+    victim_name = "stale-0.local."
+    cache.async_add_records([_addr(victim_name, 0, ttl=7200, created=now)])
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+    cache.async_add_records([_addr("trigger.local.", 0xFFFF, created=now + const._MAX_CACHE_RECORDS)])
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    assert victim_name in cache.cache
+    assert "stale-1.local." not in cache.cache
+
+
+def test_cache_eviction_victim_shares_key_with_new_record() -> None:
+    """Inserting a record whose key collides with the eviction victim keeps it reachable."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    cache.async_add_records(
+        _addr(f"filler-{i}.local.", i, created=now + 1000 + i) for i in range(const._MAX_CACHE_RECORDS - 1)
+    )
+
+    # Insert at "shared.local." with the earliest expiration so eviction
+    # picks it. ``_remove_key`` then deletes ``cache["shared.local."]``.
+    shared_key = "shared.local."
+    cache.async_add_records([_addr(shared_key, 0x0102, created=now)])
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+    # Adding a new record under the SAME key: a pre-eviction-captured
+    # ``store`` would write into an orphaned dict; the fix re-resolves.
+    new_shared = _addr(shared_key, 0x0506, created=now + 999)
+    cache.async_add_records([new_shared])
+
+    assert shared_key in cache.cache, "new record orphaned: cache bucket missing"
+    assert new_shared in cache.cache[shared_key]
+    assert cache.async_get_unique(new_shared) == new_shared
+    total = sum(len(store) for store in cache.cache.values())
+    assert total == cache._total_records
+
+
+def test_cache_dnsnsec_at_cap_evicts_prior_record() -> None:
+    """A single DNSNsec arriving at the cap evicts one prior record and stays reachable."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    cache.async_add_records(
+        _addr(f"fill-{i}.local.", i, created=now + i) for i in range(const._MAX_CACHE_RECORDS)
+    )
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+    nsec = r.DNSNsec(
+        "nsec-arrival.local.",
+        const._TYPE_NSEC,
+        const._CLASS_IN,
+        120,
+        "nsec-arrival.local.",
+        [const._TYPE_A],
+    )
+    cache.async_add_records([nsec])
+
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    assert nsec in cache.cache[nsec.key]
+    # The earliest-created fill record is gone (FIFO-ish eviction).
+    assert "fill-0.local." not in cache.cache
+
+
+def test_cache_dnsnsec_flood_is_bounded() -> None:
+    """DNSNsec records honour ``_MAX_CACHE_RECORDS`` (no bypass via the ``new`` flag)."""
+    cache = r.DNSCache()
+    overflow = 100
+    cache.async_add_records(
+        r.DNSNsec(
+            f"nsec-{i}.local.",
+            const._TYPE_NSEC,
+            const._CLASS_IN,
+            120,
+            f"nsec-{i}.local.",
+            [const._TYPE_A],
+        )
+        for i in range(const._MAX_CACHE_RECORDS + overflow)
+    )
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    total = sum(len(store) for store in cache.cache.values())
+    assert total == const._MAX_CACHE_RECORDS
+
+
+def test_cache_re_add_flood_does_not_grow_heap_unbounded() -> None:
+    """Replaying cached records with shifting TTLs cannot grow ``_expire_heap`` unbounded."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    # Stay below the cache cap so eviction never fires; the attack here is
+    # heap growth via re-add, not cap saturation. Clear the
+    # ``_MIN_SCHEDULED_RECORD_EXPIRATION`` floor so the rebuild engages.
+    record_count = 200
+    cache.async_add_records(_addr(f"flood-{i}.local.", i, created=now) for i in range(record_count))
+    assert cache._total_records == record_count
+
+    # 10 cycles x ``record_count`` stale pushes each. Without
+    # ``_maybe_rebuild_heap`` firing inside ``_async_add``, the heap would
+    # grow to ~11 x record_count.
+    for cycle in range(10):
+        cache.async_add_records(
+            _addr(f"flood-{i}.local.", i, ttl=7200 + cycle, created=now) for i in range(record_count)
+        )
+
+    # Heap is bounded near the rebuild threshold; ``+ record_count`` of slack
+    # to stay resilient to where in a re-add cycle the rebuild last fired.
+    assert len(cache._expire_heap) <= 2 * len(cache._expirations) + record_count
+    assert cache._total_records == record_count
+
+
+def test_cache_eviction_decrements_total_records() -> None:
+    """Natural removal (goodbyes, expirations) keeps ``_total_records`` in sync."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    records = [_addr(f"sync-{i}.local.", i, created=now) for i in range(50)]
+    cache.async_add_records(records)
+    assert cache._total_records == 50
+
+    cache.async_remove_records(records[:20])
+    assert cache._total_records == 30
+
+    cache.async_expire(now + (200 * 1000))
+    assert cache._total_records == 0
+    assert not cache.cache
+
+
+def test_cache_total_records_invariant_under_mixed_ops() -> None:
+    """``_total_records`` stays equal to the sum of bucket sizes across all touched paths."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+
+    def actual() -> int:
+        return sum(len(store) for store in cache.cache.values())
+
+    addrs = [_addr(f"mix-{i}.local.", i, created=now + i) for i in range(20)]
+    cache.async_add_records(addrs)
+    assert cache._total_records == actual() == 20
+
+    # Re-add of an identical record: no increment.
+    cache.async_add_records([addrs[0]])
+    assert cache._total_records == actual() == 20
+
+    # DNSService writes service_cache too — counter still matches cache size.
+    svc = r.DNSService("svc.local.", const._TYPE_SRV, const._CLASS_IN, 120, 0, 0, 80, "host.local.")
+    cache.async_add_records([svc])
+    assert cache._total_records == actual() == 21
+    cache.async_remove_records([svc])
+    assert cache._total_records == actual() == 20
+
+    # DNSNsec is stored but excluded from the "new" return; counter tracks it anyway.
+    nsec = r.DNSNsec("nsec.local.", const._TYPE_NSEC, const._CLASS_IN, 120, "nsec.local.", [const._TYPE_A])
+    cache.async_add_records([nsec])
+    assert cache._total_records == actual() == 21
+    cache.async_remove_records([nsec])
+    assert cache._total_records == actual() == 20
+
+    # Shared-key insert/remove: emptying the bucket drops the cache key but
+    # counter decrements only by the records that left.
+    shared_a = _addr("shared.local.", 0x0101, created=now)
+    shared_b = _addr("shared.local.", 0x0202, created=now)
+    cache.async_add_records([shared_a, shared_b])
+    assert cache._total_records == actual() == 22
+    cache.async_remove_records([shared_a, shared_b])
+    assert cache._total_records == actual() == 20
+    assert "shared.local." not in cache.cache
+
+    cache.async_expire(now + (200 * 1000))
+    assert cache._total_records == actual() == 0
+    assert not cache.cache
+
+    # Full-cap eviction loop: counter never grows past the cap, never drifts.
+    cap_records = [_addr(f"cap-{i}.local.", i, created=now + i) for i in range(const._MAX_CACHE_RECORDS + 50)]
+    for rec in cap_records:
+        cache.async_add_records([rec])
+        assert cache._total_records == actual()
+    assert cache._total_records == const._MAX_CACHE_RECORDS

@@ -59,6 +59,12 @@ _DNS_OTHER_TTL = 4500  # 75 minutes for non-host records (PTR, TXT etc) as-per R
 # level of rate limit and safe guards so we use 1/4 of the recommended value
 _DNS_PTR_MIN_TTL = 1125
 
+# Upper bound on the number of records the DNSCache will hold before it
+# starts evicting the closest-to-expiration entry to make room for new
+# arrivals. Bounds the memory a malicious LAN peer can force the cache
+# to retain by multicasting many unique-name records.
+_MAX_CACHE_RECORDS = 10000
+
 _DNS_PACKET_HEADER_LEN = 12
 
 _MAX_MSG_TYPICAL = 1460  # unused

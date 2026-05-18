@@ -19,6 +19,7 @@ cdef object _UNIQUE_RECORD_TYPES
 cdef unsigned int _TYPE_PTR
 cdef cython.uint _ONE_SECOND
 cdef unsigned int _MIN_SCHEDULED_RECORD_EXPIRATION
+cdef unsigned int _MAX_CACHE_RECORDS
 
 
 @cython.locals(record_cache=dict)
@@ -31,6 +32,7 @@ cdef class DNSCache:
     cdef public cython.dict service_cache
     cdef public list _expire_heap
     cdef public dict _expirations
+    cdef public unsigned int _total_records
 
     cpdef bint async_add_records(self, object entries)
 
@@ -60,9 +62,16 @@ cdef class DNSCache:
         service_store=cython.dict,
         service_record=DNSService,
         when=object,
-        new=bint
+        new=bint,
+        is_new=bint
     )
     cdef bint _async_add(self, DNSRecord record)
+
+    @cython.locals(record=DNSRecord, when_record=tuple)
+    cdef void _async_evict_oldest(self)
+
+    @cython.locals(expire_heap_len="unsigned int")
+    cdef void _maybe_rebuild_heap(self)
 
     @cython.locals(service_record=DNSService)
     cdef void _async_remove(self, DNSRecord record)
