@@ -48,7 +48,7 @@ def _mark_seen(seen: dict[str, None], key: str) -> bool:
 
     Bounds the dict so callers passing attacker-influenced keys (peer
     addresses, packet offsets) cannot grow it without bound. Evicts
-    the oldest entry per overflow (dict preserves insertion order on
+    the oldest entries on overflow (dict preserves insertion order on
     Python 3.7+), so ``_MAX_SEEN_LOGS`` is a recency window.
 
     The dict is shared across all ``Zeroconf`` instances in the
@@ -57,20 +57,20 @@ def _mark_seen(seen: dict[str, None], key: str) -> bool:
     (``in``, ``__setitem__``, ``pop``, ``len``) are atomic in CPython
     3.13+ FT and don't crash, but the compound ``iter`` → ``next``
     used to find the FIFO victim can raise ``RuntimeError`` if
-    another thread mutates the dict between the two ops. Catch and
-    skip — the other thread is already shrinking the set, so missing
-    one eviction here just lets the cap drift up by one entry per
-    racing thread until contention clears.
+    another thread mutates the dict between the two ops. The
+    eviction loop drains until ``len(seen) < _MAX_SEEN_LOGS`` so that
+    any drift accumulated by prior concurrent inserts is corrected by
+    the next caller, and bails on ``RuntimeError`` (another thread is
+    already shrinking the set) so we don't spin.
     """
     if key in seen:
         return False
-    if len(seen) >= _MAX_SEEN_LOGS:
+    while len(seen) >= _MAX_SEEN_LOGS:
         try:
-            oldest = next(iter(seen), None)
-        except RuntimeError:
-            oldest = None
-        if oldest is not None:
-            seen.pop(oldest, None)
+            oldest = next(iter(seen))
+        except (RuntimeError, StopIteration):
+            break
+        seen.pop(oldest, None)
     seen[key] = None
     return True
 

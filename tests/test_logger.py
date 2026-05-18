@@ -105,6 +105,27 @@ def test_mark_seen_absorbs_runtime_error_during_eviction() -> None:
     assert "new-key" in seen
 
 
+def test_mark_seen_drains_drift_above_cap() -> None:
+    """``_mark_seen`` drains a drifted-over-cap dict back to the cap.
+
+    Concurrent inserts on the free-threaded build can leave the dict
+    transiently above ``_MAX_SEEN_LOGS`` (e.g. two threads both passed
+    the ``len < cap`` check and both inserted). The next non-racing
+    call must drain the accumulated overshoot, not just evict one
+    entry — otherwise the cap silently inflates with thread count.
+    """
+    seen: dict[str, None] = {}
+    drift = 10
+    for i in range(_MAX_SEEN_LOGS + drift):
+        seen[f"k-{i}"] = None
+    assert len(seen) == _MAX_SEEN_LOGS + drift
+    assert _mark_seen(seen, "new-key") is True
+    assert len(seen) == _MAX_SEEN_LOGS
+    assert "new-key" in seen
+    for i in range(drift + 1):
+        assert f"k-{i}" not in seen
+
+
 def test_seen_logs_is_bounded() -> None:
     """``_seen_logs`` stays at the cap and evicts oldest-first (FIFO)."""
     _logger._seen_logs.clear()
