@@ -23,7 +23,7 @@ from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import _inject_response, has_working_ipv6
+from .. import QUICK_REQUEST_TIMEOUT_MS, _inject_response, has_working_ipv6
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -511,6 +511,7 @@ class TestServiceInfo(unittest.TestCase):
                 zc.remove_all_service_listeners()
                 zc.close()
 
+    @pytest.mark.usefixtures("quick_request_timing")
     def test_get_info_single(self):
         zc = r.Zeroconf(interfaces=["127.0.0.1"])
 
@@ -556,6 +557,9 @@ class TestServiceInfo(unittest.TestCase):
                     args=(zc, service_type, service_name),
                 )
                 helper_thread.start()
+                # Positive wait — the first query fires within
+                # `_LISTENER_TIME` + jitter (~15ms under
+                # `quick_request_timing`, ~320ms without).
                 wait_time = 1
 
                 # Expect query for SRV, TXT, A, AAAA
@@ -568,7 +572,10 @@ class TestServiceInfo(unittest.TestCase):
                 assert r.DNSQuestion(service_name, const._TYPE_AAAA, const._CLASS_IN) in last_sent.questions
                 assert service_info is None
 
-                # Expect no further queries
+                # Expect no further queries — under `quick_request_timing`
+                # the next query would have fired ~15ms after the previous
+                # send, so 100ms is plenty of headroom for the negative
+                # assertion.
                 last_sent = None
                 send_event.clear()
                 _inject_response(
@@ -602,7 +609,7 @@ class TestServiceInfo(unittest.TestCase):
                         ]
                     ),
                 )
-                send_event.wait(wait_time)
+                send_event.wait(0.1)
                 assert last_sent is None
                 assert service_info is not None
 
@@ -985,7 +992,7 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
     assert info_service.dns_text().text == b"\x0epath=/~paulsm/"
 
 
-def test_asking_qu_questions():
+def test_asking_qu_questions(quick_request_timing):
     """Verify explicitly asking QU questions."""
     type_ = "_quservice._tcp.local."
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
@@ -1004,12 +1011,14 @@ def test_asking_qu_questions():
 
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
-        zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QU)
+        zeroconf.get_service_info(
+            f"name.{type_}", type_, QUICK_REQUEST_TIMEOUT_MS, question_type=r.DNSQuestionType.QU
+        )
         assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
         zeroconf.close()
 
 
-def test_asking_qm_questions():
+def test_asking_qm_questions(quick_request_timing):
     """Verify explicitly asking QM questions."""
     type_ = "_quservice._tcp.local."
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
@@ -1028,7 +1037,9 @@ def test_asking_qm_questions():
 
     # patch the zeroconf send
     with patch.object(zeroconf, "async_send", send):
-        zeroconf.get_service_info(f"name.{type_}", type_, 500, question_type=r.DNSQuestionType.QM)
+        zeroconf.get_service_info(
+            f"name.{type_}", type_, QUICK_REQUEST_TIMEOUT_MS, question_type=r.DNSQuestionType.QM
+        )
         assert first_outgoing.questions[0].unicast is False  # type: ignore[union-attr]
         zeroconf.close()
 

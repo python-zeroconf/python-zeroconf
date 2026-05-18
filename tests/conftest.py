@@ -10,6 +10,7 @@ import pytest
 
 from zeroconf import _core, const
 from zeroconf._handlers import query_handler
+from zeroconf._services import info as service_info
 
 
 @pytest.fixture(autouse=True)
@@ -57,5 +58,23 @@ def quick_timing() -> Generator[None]:
         patch.object(_core, "_CHECK_TIME", 10),
         patch.object(_core, "_REGISTER_TIME", 10),
         patch.object(_core, "_UNREGISTER_TIME", 10),
+    ):
+        yield
+
+
+@pytest.fixture
+def quick_request_timing() -> Generator[None]:
+    """Shorten the initial-query delay used by AsyncServiceInfo.async_request.
+
+    The 200ms `_LISTENER_TIME` and 20-120ms random jitter (RFC 6762
+    §5.2) help spread queries from multiple clients on real networks.
+    On loopback they're pure overhead — get_service_info-style tests
+    wait ~250ms before the first query even fires. Opt in by adding
+    `quick_request_timing` to a test's argument list, then drop the
+    test's own timeouts (which had to accommodate that delay).
+    """
+    with (
+        patch.object(service_info, "_LISTENER_TIME", 10),
+        patch.object(service_info, "_AVOID_SYNC_DELAY_RANDOM_INTERVAL", (1, 5)),
     ):
         yield

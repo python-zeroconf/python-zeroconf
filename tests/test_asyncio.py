@@ -43,6 +43,7 @@ from zeroconf.asyncio import (
 from zeroconf.const import _LISTENER_TIME
 
 from . import (
+    QUICK_REQUEST_TIMEOUT_MS,
     QuestionHistoryWithoutSuppression,
     _clear_cache,
     has_working_ipv6,
@@ -1139,7 +1140,7 @@ async def test_integration(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
+async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu(quick_request_timing):
     """Verify the service info first question is QU and subsequent ones are QM questions."""
     type_ = "_quservice._tcp.local."
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
@@ -1182,11 +1183,11 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu():
     # patch the zeroconf send
     with patch.object(zeroconf_info, "async_send", send):
         aiosinfo = AsyncServiceInfo(type_, registration_name)
-        # Patch _is_complete so we send multiple times. 500ms covers
-        # the QU query at 0ms plus the QM query at ~_LISTENER_TIME +
-        # max random delay (~320ms).
+        # Patch _is_complete so we send multiple times. Under
+        # `quick_request_timing` both the QU query at 0ms and the QM
+        # query at ~15ms land well inside QUICK_REQUEST_TIMEOUT_MS.
         with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
-            await aiosinfo.async_request(aiozc.zeroconf, 500)
+            await aiosinfo.async_request(aiozc.zeroconf, QUICK_REQUEST_TIMEOUT_MS)
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
             assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
