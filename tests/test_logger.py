@@ -126,6 +126,27 @@ def test_mark_seen_drains_drift_above_cap() -> None:
         assert f"k-{i}" not in seen
 
 
+def test_mark_seen_drains_drift_on_hit_path() -> None:
+    """``_mark_seen`` drains drift even when ``key`` is already cached.
+
+    A hit-heavy workload after a contention burst (e.g. the same
+    exception text deduplicated repeatedly) must still correct the
+    overshoot — otherwise the dict can sit permanently above the cap
+    until a miss happens to come along.
+    """
+    seen: dict[str, None] = {}
+    drift = 10
+    for i in range(_MAX_SEEN_LOGS + drift):
+        seen[f"k-{i}"] = None
+    # Hit on a non-oldest key — survives the drift drain.
+    hit_key = f"k-{_MAX_SEEN_LOGS}"
+    assert _mark_seen(seen, hit_key) is False
+    assert len(seen) == _MAX_SEEN_LOGS
+    assert hit_key in seen
+    for i in range(drift):
+        assert f"k-{i}" not in seen
+
+
 def test_seen_logs_is_bounded() -> None:
     """``_seen_logs`` stays at the cap and evicts oldest-first (FIFO)."""
     _logger._seen_logs.clear()

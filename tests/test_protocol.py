@@ -973,17 +973,27 @@ def test_seen_logs_is_bounded():
     )
     overflow = 5
     _incoming_module._seen_logs.clear()
+    # Snapshot the actual key the parser inserted per port. This is whatever
+    # ``str(exc_info()[1])`` produces today — the test stays agnostic to the
+    # exception text format so a future normalization of the message (see
+    # the discussion on #1714) doesn't break the assertions, while still
+    # pinning that the parser exception path actually entered the dict.
+    keys_per_port: list[str] = []
     for port in range(_MAX_SEEN_LOGS + overflow):
         r.DNSIncoming(packet, ("1.2.3.4", port))
-    # Bound is hit exactly — confirms the parser exception path actually
-    # entered the dict with a per-port-unique key; a future change that
-    # dropped self.source from the exception text would collapse to a
-    # single dedup key and fail this assertion.
+        keys_per_port.append(next(reversed(_incoming_module._seen_logs)))
+    # Bound is hit exactly.
     assert len(_incoming_module._seen_logs) == _MAX_SEEN_LOGS
-    # FIFO eviction: the earliest port's exception string is gone, the
-    # latest port's is still present.
-    assert not any("'1.2.3.4', 0)" in k for k in _incoming_module._seen_logs)
-    assert any(f"'1.2.3.4', {_MAX_SEEN_LOGS + overflow - 1})" in k for k in _incoming_module._seen_logs)
+    # Each port produced a distinct dedup key — a regression that dropped
+    # the per-packet-varying component (e.g. self.source) from the exception
+    # text would collapse all 517 calls to one key and fail this.
+    assert len(set(keys_per_port)) == _MAX_SEEN_LOGS + overflow
+    # FIFO eviction by key identity (no substring matching on the message
+    # format): the earliest ports' keys are gone, the latest ports' remain.
+    for port in range(overflow):
+        assert keys_per_port[port] not in _incoming_module._seen_logs
+    for port in range(_MAX_SEEN_LOGS, _MAX_SEEN_LOGS + overflow):
+        assert keys_per_port[port] in _incoming_module._seen_logs
 
 
 def test_label_length_attack():

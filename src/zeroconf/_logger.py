@@ -43,6 +43,23 @@ _MAX_SEEN_LOGS = 512
 _seen_logs: dict[str, None] = {}
 
 
+def _evict_oldest(seen: dict[str, None]) -> bool:
+    """Pop the oldest entry from ``seen``; return False if it raced.
+
+    Individual dict ops (``pop`` with a default, ``next``) are atomic
+    on the free-threaded build, but the compound ``iter`` → ``next``
+    used to pick the FIFO victim can raise ``RuntimeError`` if
+    another thread mutates the dict between the two ops. The caller
+    breaks its drain loop on False so concurrent mutation can't make
+    it spin.
+    """
+    try:
+        seen.pop(next(iter(seen)), None)
+    except (RuntimeError, StopIteration):
+        return False
+    return True
+
+
 def _mark_seen(seen: dict[str, None], key: str) -> bool:
     """Record ``key`` in ``seen`` and return True if it was newly added.
 
@@ -53,26 +70,22 @@ def _mark_seen(seen: dict[str, None], key: str) -> bool:
 
     The dict is shared across all ``Zeroconf`` instances in the
     process; on the free-threaded build (3.14t) and under multi-
-    instance sync use, callers can race. Individual dict operations
-    (``in``, ``__setitem__``, ``pop``, ``len``) are atomic in CPython
-    3.13+ FT and don't crash, but the compound ``iter`` → ``next``
-    used to find the FIFO victim can raise ``RuntimeError`` if
-    another thread mutates the dict between the two ops. The
-    eviction loop drains until ``len(seen) < _MAX_SEEN_LOGS`` so that
-    any drift accumulated by prior concurrent inserts is corrected by
-    the next caller, and bails on ``RuntimeError`` (another thread is
-    already shrinking the set) so we don't spin.
+    instance sync use, callers can race the ``len < cap`` check and
+    both insert, leaving the dict transiently above the cap. The
+    drain loop runs on every call (steady-state-at-cap hits are a
+    single ``len`` + compare past the membership check because the
+    helper short-circuits) so a contention burst is corrected by the
+    next caller regardless of whether it's a hit or a miss.
     """
-    if key in seen:
-        return False
-    while len(seen) >= _MAX_SEEN_LOGS:
-        try:
-            oldest = next(iter(seen))
-        except (RuntimeError, StopIteration):
-            break
-        seen.pop(oldest, None)
-    seen[key] = None
-    return True
+    inserting = key not in seen
+    # Hit (``inserting`` is False): drain only if drifted above cap.
+    # Miss (``inserting`` is True): drain to ``cap - 1`` to make room
+    # for the new key. Bool subtracts as 0/1 to pick the right limit.
+    while len(seen) > _MAX_SEEN_LOGS - inserting and _evict_oldest(seen):
+        pass
+    if inserting:
+        seen[key] = None
+    return inserting
 
 
 class QuietLogger:
