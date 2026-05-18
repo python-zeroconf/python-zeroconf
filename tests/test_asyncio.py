@@ -43,6 +43,7 @@ from zeroconf.asyncio import (
 from zeroconf.const import _LISTENER_TIME
 
 from . import (
+    LOOPBACK_FIND_TIMEOUT,
     QUICK_REQUEST_TIMEOUT_MS,
     QuestionHistoryWithoutSuppression,
     _clear_cache,
@@ -925,10 +926,14 @@ async def test_async_zeroconf_service_types(quick_timing: None) -> None:
     await asyncio.sleep(0.05)
     _clear_cache(zeroconf_registrar.zeroconf)
     try:
-        service_types = await AsyncZeroconfServiceTypes.async_find(interfaces=["127.0.0.1"], timeout=0.2)
+        service_types = await AsyncZeroconfServiceTypes.async_find(
+            interfaces=["127.0.0.1"], timeout=LOOPBACK_FIND_TIMEOUT
+        )
         assert type_ in service_types
         _clear_cache(zeroconf_registrar.zeroconf)
-        service_types = await AsyncZeroconfServiceTypes.async_find(aiozc=zeroconf_registrar, timeout=0.2)
+        service_types = await AsyncZeroconfServiceTypes.async_find(
+            aiozc=zeroconf_registrar, timeout=LOOPBACK_FIND_TIMEOUT
+        )
         assert type_ in service_types
 
     finally:

@@ -42,6 +42,13 @@ _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 # or two queries.
 QUICK_REQUEST_TIMEOUT_MS = 50
 
+# Timeout for ZeroconfServiceTypes.find() / AsyncZeroconfServiceTypes.async_find()
+# in loopback integration tests. `find()` is just `time.sleep(timeout)` —
+# it doesn't short-circuit on the first matching response — so the
+# timeout becomes a lower bound on the test runtime. On loopback the
+# registrar's response lands within a few ms; 200ms is ~50x headroom.
+LOOPBACK_FIND_TIMEOUT = 0.2
+
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
     def suppresses(self, question: DNSQuestion, now: float, known_answers: set[DNSRecord]) -> bool:
