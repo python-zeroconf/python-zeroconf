@@ -567,6 +567,128 @@ def test_cache_eviction_skips_stale_heap_entries() -> None:
     assert "stale-1.local." not in cache.cache
 
 
+def test_cache_eviction_victim_shares_key_with_new_record() -> None:
+    """Eviction must not orphan the new record when it collides on ``record.key``.
+
+    If the closest-to-expiration record is the *last* one stored under
+    ``record.key`` and the incoming record uses the same key,
+    ``_remove_key`` deletes ``self.cache[record.key]`` during eviction.
+    A previous capture of ``store = self.cache.get(record.key)`` would
+    then write the new record into an orphaned dict not reachable via
+    the cache. Pin that the new record is reachable.
+    """
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    # Fill the cache to one shy of the cap with unique-name records, each
+    # with a later created time than the shared-key victim below.
+    cache.async_add_records(
+        r.DNSAddress(
+            f"filler-{i}.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            120,
+            bytes((i & 0xFF, (i >> 8) & 0xFF, 0, 1)),
+            created=now + 1000 + i,
+        )
+        for i in range(const._MAX_CACHE_RECORDS - 1)
+    )
+
+    # Insert a record at "shared.local." with the earliest expiration —
+    # this is the one closest_to_expiration eviction will pick.
+    shared_key = "shared.local."
+    old_shared = r.DNSAddress(
+        shared_key,
+        const._TYPE_A,
+        const._CLASS_IN,
+        120,
+        b"\x01\x02\x03\x04",
+        created=now,
+    )
+    cache.async_add_records([old_shared])
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    assert shared_key in cache.cache
+
+    # Add a new record with the SAME key. Eviction will remove old_shared,
+    # which empties cache[shared_key], so _remove_key deletes that bucket.
+    # If _async_add captured the store before eviction it will now be
+    # writing into an orphaned dict.
+    new_shared = r.DNSAddress(
+        shared_key,
+        const._TYPE_A,
+        const._CLASS_IN,
+        120,
+        b"\x05\x06\x07\x08",
+        created=now + 999,
+    )
+    cache.async_add_records([new_shared])
+
+    # The new record must be reachable via the cache.
+    assert shared_key in cache.cache, "new record orphaned: cache bucket missing"
+    assert new_shared in cache.cache[shared_key]
+    assert cache.async_get_unique(new_shared) == new_shared
+    # And the counter accounting must still match observable state.
+    total = sum(len(store) for store in cache.cache.values())
+    assert total == cache._total_records
+
+
+def test_cache_eviction_rebuilds_heap_when_mostly_stale() -> None:
+    """Eviction rebuilds ``_expire_heap`` up front when stale entries dominate.
+
+    Without the rebuild, a single ``_async_add`` at cap could pop a long
+    stale prefix one entry at a time — O(stale_prefix * log n). The
+    rebuild is the same heuristic ``async_expire`` already uses: when
+    ``len(heap) > 2 * len(expirations)``, the heap is reconstructed
+    from only the valid entries in one O(n) pass before the pop loop.
+    """
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    base_kwargs = {"type_": const._TYPE_A, "class_": const._CLASS_IN}
+
+    cache.async_add_records(
+        r.DNSAddress(
+            f"r-{i}.local.",
+            ttl=120,
+            address=bytes((i & 0xFF, (i >> 8) & 0xFF, 0, 1)),
+            created=now + i,
+            **base_kwargs,
+        )
+        for i in range(const._MAX_CACHE_RECORDS)
+    )
+    # Two re-adds with distinct TTLs leave two stale entries per record
+    # in ``_expire_heap`` while ``_expirations`` stays at MAX. Heap reaches
+    # ~3x MAX, which trips the ``len(heap) > 2 * len(expirations)``
+    # threshold on the next eviction.
+    for ttl in (7200, 14400):
+        cache.async_add_records(
+            r.DNSAddress(
+                f"r-{i}.local.",
+                ttl=ttl,
+                address=bytes((i & 0xFF, (i >> 8) & 0xFF, 0, 1)),
+                created=now + i,
+                **base_kwargs,
+            )
+            for i in range(const._MAX_CACHE_RECORDS)
+        )
+    assert len(cache._expire_heap) > 2 * len(cache._expirations)
+
+    # One more insert pushes us over the cap; eviction fires and must
+    # rebuild before scanning.
+    cache.async_add_records(
+        [
+            r.DNSAddress(
+                "trigger.local.",
+                ttl=120,
+                address=b"\xff\xff\xff\xff",
+                created=now + const._MAX_CACHE_RECORDS,
+                **base_kwargs,
+            )
+        ]
+    )
+    # Rebuild dropped the stale entries; heap and expirations now match.
+    assert len(cache._expire_heap) == len(cache._expirations) == const._MAX_CACHE_RECORDS
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+
 def test_cache_eviction_decrements_total_records() -> None:
     """Natural removal (goodbyes, expirations) must keep ``_total_records`` in sync."""
     cache = r.DNSCache()
@@ -592,3 +714,95 @@ def test_cache_eviction_decrements_total_records() -> None:
     cache.async_expire(now + (200 * 1000))
     assert cache._total_records == 0
     assert not cache.cache
+
+
+def test_cache_total_records_invariant_under_mixed_ops() -> None:
+    """``_total_records`` must equal ``sum(len(store) for store in cache.values())``.
+
+    Walks the counter through every code path that touches it — new inserts,
+    re-adds of an existing record (no increment), DNSService (extra
+    service_cache write), DNSNsec (stored but not counted as "new" by the
+    flag), shared-key inserts that empty their bucket on removal, full-cap
+    eviction, async_expire, manual async_remove_records — and asserts the
+    invariant after every step. Any future change that misses an increment
+    or doubles a decrement will trip this immediately; ``_total_records`` is
+    ``cdef unsigned int`` in the Cython build, so silent underflow would
+    otherwise propagate as a permanent eviction-on-every-add storm.
+    """
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+
+    def actual() -> int:
+        return sum(len(store) for store in cache.cache.values())
+
+    # Fresh inserts: counter follows insert count exactly.
+    addrs = [
+        r.DNSAddress(
+            f"mix-{i}.local.", const._TYPE_A, const._CLASS_IN, 120, bytes((i, 0, 0, 1)), created=now + i
+        )
+        for i in range(20)
+    ]
+    cache.async_add_records(addrs)
+    assert cache._total_records == actual() == 20
+
+    # Re-add of an identical record: no increment (already present).
+    cache.async_add_records([addrs[0]])
+    assert cache._total_records == actual() == 20
+
+    # DNSService writes service_cache too — counter must still match cache size.
+    svc = r.DNSService("svc.local.", const._TYPE_SRV, const._CLASS_IN, 120, 0, 0, 80, "host.local.")
+    cache.async_add_records([svc])
+    assert cache._total_records == actual() == 21
+    cache.async_remove_records([svc])
+    assert cache._total_records == actual() == 20
+
+    # DNSNsec is stored but excluded from the "new" return value; the counter
+    # still tracks it because it occupies a bucket slot.
+    nsec = r.DNSNsec(
+        "nsec.local.",
+        const._TYPE_NSEC,
+        const._CLASS_IN,
+        120,
+        "nsec.local.",
+        [const._TYPE_A],
+    )
+    cache.async_add_records([nsec])
+    assert cache._total_records == actual() == 21
+    cache.async_remove_records([nsec])
+    assert cache._total_records == actual() == 20
+
+    # Shared-key insert/remove: emptying a bucket removes the cache key, but
+    # the counter must still decrement only by the number of records gone.
+    shared_a = r.DNSAddress(
+        "shared.local.", const._TYPE_A, const._CLASS_IN, 120, b"\x01\x01\x01\x01", created=now
+    )
+    shared_b = r.DNSAddress(
+        "shared.local.", const._TYPE_A, const._CLASS_IN, 120, b"\x02\x02\x02\x02", created=now
+    )
+    cache.async_add_records([shared_a, shared_b])
+    assert cache._total_records == actual() == 22
+    cache.async_remove_records([shared_a, shared_b])
+    assert cache._total_records == actual() == 20
+    assert "shared.local." not in cache.cache
+
+    # async_expire path: counter must follow the records dropped.
+    cache.async_expire(now + (200 * 1000))
+    assert cache._total_records == actual() == 0
+    assert not cache.cache
+
+    # Full-cap eviction loop: counter never grows past the cap, never drifts.
+    cap_records = [
+        r.DNSAddress(
+            f"cap-{i}.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            120,
+            bytes((i & 0xFF, (i >> 8) & 0xFF, 0, 1)),
+            created=now + i,
+        )
+        for i in range(const._MAX_CACHE_RECORDS + 50)
+    ]
+    for rec in cap_records:
+        cache.async_add_records([rec])
+        assert cache._total_records == actual()
+    assert cache._total_records == const._MAX_CACHE_RECORDS

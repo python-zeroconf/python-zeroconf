@@ -67,7 +67,7 @@ cdef class DNSCache:
     )
     cdef bint _async_add(self, DNSRecord record)
 
-    @cython.locals(record=DNSRecord, when_record=tuple)
+    @cython.locals(record=DNSRecord, when_record=tuple, expire_heap_len="unsigned int")
     cdef void _async_evict_oldest(self)
 
     @cython.locals(service_record=DNSService)

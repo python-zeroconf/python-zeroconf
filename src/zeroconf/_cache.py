@@ -90,15 +90,20 @@ class DNSCache:
         # replaces any existing records that are __eq__ to each other which
         # removes the risk that accessing the cache from the wrong
         # direction would return the old incorrect entry.
-        if (store := self.cache.get(record.key)) is None:
-            store = self.cache[record.key] = {}
-        is_new = record not in store
+        store = self.cache.get(record.key)
+        is_new = store is None or record not in store
         # Bound total cache size; evict closest-to-expiration entry to
         # make room before inserting a new record. Prevents a LAN-local
         # flood of unique-name records from growing the cache without
         # bound (RFC 6762 §10 advisory caching, defense-in-depth).
         if is_new and self._total_records >= _MAX_CACHE_RECORDS:
             self._async_evict_oldest()
+            # The victim may have been the last record under
+            # ``record.key``, in which case ``_remove_key`` deleted
+            # the bucket. Re-fetch before creating below.
+            store = self.cache.get(record.key)
+        if store is None:
+            store = self.cache[record.key] = {}
         new = is_new and not isinstance(record, DNSNsec)
         if is_new:
             self._total_records += 1
@@ -120,10 +125,23 @@ class DNSCache:
         """Drop the closest-to-expiration record to make room for a new one.
 
         Skips stale heap entries (records re-added with a different TTL),
-        which mirrors the staleness check in ``async_expire``.
+        which mirrors the staleness check in ``async_expire``. If the
+        heap is mostly stale (long stale prefix from sustained TTL
+        re-adds), rebuild it once up front so the pop loop below
+        doesn't do O(stale_prefix * log n) work on a single add. Same
+        heuristic / threshold as ``async_expire``.
 
         This function must be run in from event loop.
         """
+        expire_heap_len = len(self._expire_heap)
+        if (
+            expire_heap_len > _MIN_SCHEDULED_RECORD_EXPIRATION
+            and expire_heap_len > len(self._expirations) * 2
+        ):
+            self._expire_heap = [
+                entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
+            ]
+            heapify(self._expire_heap)
         while self._expire_heap:
             when_record = heappop(self._expire_heap)
             record = when_record[1]
