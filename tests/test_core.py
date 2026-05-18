@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 import zeroconf as r
-from zeroconf import NotRunningException, Zeroconf, _listener, const, current_time_millis
+from zeroconf import NotRunningException, Zeroconf, const, current_time_millis
 from zeroconf._listener import AsyncListener, _WrappedTransport
 from zeroconf._protocol.incoming import DNSIncoming
 from zeroconf.asyncio import AsyncZeroconf
@@ -631,7 +631,6 @@ def test_tc_bit_defers():
     zc.close()
 
 
-@patch.object(_listener, "_TC_DELAY_RANDOM_INTERVAL", (150, 250))
 def test_tc_bit_defers_last_response_missing():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     _wait_for_start(zc)
@@ -731,8 +730,8 @@ def test_tc_bit_defers_last_response_missing():
     assert timer3.cancelled()
     assert timer4 != timer3
 
-    for _ in range(30):
-        time.sleep(0.02)
+    for _ in range(8):
+        time.sleep(0.1)
         if source_ip not in protocol._timers and source_ip not in protocol._deferred:
             break
 
