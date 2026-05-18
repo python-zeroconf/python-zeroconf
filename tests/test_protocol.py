@@ -14,6 +14,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
+from zeroconf._logger import _MAX_SEEN_LOGS
 from zeroconf._protocol import incoming as _incoming_module
 
 from . import has_working_ipv6
@@ -971,9 +972,9 @@ def test_seen_logs_is_bounded():
         b"\x00\x01\x00\x04\xc0\xa8\xd0\x06"
     )
     _incoming_module._seen_logs.clear()
-    for port in range(_incoming_module._MAX_SEEN_LOGS + 5):
+    for port in range(_MAX_SEEN_LOGS + 5):
         r.DNSIncoming(packet, ("1.2.3.4", port))
-    assert len(_incoming_module._seen_logs) <= _incoming_module._MAX_SEEN_LOGS
+    assert len(_incoming_module._seen_logs) <= _MAX_SEEN_LOGS
 
 
 def test_label_length_attack():
