@@ -28,7 +28,7 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
-def test_integration_with_listener(disable_duplicate_packet_suppression):
+def test_integration_with_listener(quick_timing, disable_duplicate_packet_suppression):
     type_ = "_test-listen-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -59,7 +59,7 @@ def test_integration_with_listener(disable_duplicate_packet_suppression):
 
 @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
 @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
-def test_integration_with_listener_v6_records(disable_duplicate_packet_suppression):
+def test_integration_with_listener_v6_records(quick_timing, disable_duplicate_packet_suppression):
     type_ = "_test-listenv6rec-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -95,7 +95,7 @@ def test_integration_with_listener_v6_records(disable_duplicate_packet_suppressi
     sys.platform == "darwin" and os.environ.get("GITHUB_ACTIONS") == "true",
     "IPv6 multicast not working on macOS GitHub Actions",
 )
-def test_integration_with_listener_ipv6(disable_duplicate_packet_suppression):
+def test_integration_with_listener_ipv6(quick_timing, disable_duplicate_packet_suppression):
     type_ = "_test-listenv6ip-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -127,7 +127,7 @@ def test_integration_with_listener_ipv6(disable_duplicate_packet_suppression):
         zeroconf_registrar.close()
 
 
-def test_integration_with_subtype_and_listener(disable_duplicate_packet_suppression):
+def test_integration_with_subtype_and_listener(quick_timing, disable_duplicate_packet_suppression):
     subtype_ = "_subtype._sub"
     type_ = "_listen._tcp.local."
     name = "xxxyyy"

@@ -45,9 +45,11 @@ QUICK_REQUEST_TIMEOUT_MS = 50
 # Timeout for ZeroconfServiceTypes.find() / AsyncZeroconfServiceTypes.async_find()
 # in loopback integration tests. `find()` is just `time.sleep(timeout)` —
 # it doesn't short-circuit on the first matching response — so the
-# timeout becomes a lower bound on the test runtime. On loopback the
-# registrar's response lands within a few ms; 200ms is ~50x headroom.
-LOOPBACK_FIND_TIMEOUT = 0.2
+# timeout becomes a lower bound on the test runtime. Callers MUST use
+# the `quick_timing` fixture, which shrinks the browser's first-query
+# delay from RFC 6762 §5.2's 20-120ms window to 1-5ms; with that shave
+# the registrar's response lands inside ~10ms and 75ms is ~7x headroom.
+LOOPBACK_FIND_TIMEOUT = 0.075
 
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):

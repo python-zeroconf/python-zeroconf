@@ -10,6 +10,7 @@ import pytest
 
 from zeroconf import _core, const
 from zeroconf._handlers import query_handler
+from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
 
 
@@ -46,18 +47,21 @@ def disable_duplicate_packet_suppression():
 
 @pytest.fixture
 def quick_timing() -> Generator[None]:
-    """Shorten the probe/announce/goodbye intervals for tests on loopback.
+    """Shorten the probe/announce/goodbye/first-query intervals for tests on loopback.
 
     The production values (_CHECK_TIME=500ms, _REGISTER_TIME=225ms,
-    _UNREGISTER_TIME=125ms) exist for RFC 6762 interop on real
-    networks. Tests on 127.0.0.1 do not need them and pay 1-2s per
-    register/unregister cycle without this fixture. Opt in by adding
-    `quick_timing` to a test's argument list.
+    _UNREGISTER_TIME=125ms, _FIRST_QUERY_DELAY_RANDOM_INTERVAL=20-120ms)
+    exist for RFC 6762 interop on real networks (§8.1 thundering-herd
+    avoidance for probing, §5.2 for the initial-query delay). Tests on
+    127.0.0.1 do not need them and pay 1-2s per register/unregister
+    cycle and 20-120ms per ServiceBrowser startup without this fixture.
+    Opt in by adding `quick_timing` to a test's argument list.
     """
     with (
         patch.object(_core, "_CHECK_TIME", 10),
         patch.object(_core, "_REGISTER_TIME", 10),
         patch.object(_core, "_UNREGISTER_TIME", 10),
+        patch.object(service_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (1, 5)),
     ):
         yield
 
