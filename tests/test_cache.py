@@ -519,6 +519,19 @@ def test_cache_size_is_bounded() -> None:
         assert f"flood-{i}.local." in cache.cache
 
 
+def test_cache_eviction_empty_heap_returns_without_evicting() -> None:
+    """Eviction tolerates an empty ``_expire_heap`` (invariant-violation safety net)."""
+    cache = r.DNSCache()
+    # By the cache invariant every record in ``_total_records`` has a heap
+    # entry, so eviction should never see an empty heap. Force the broken
+    # state directly to pin the defensive behaviour: ``_async_evict_oldest``
+    # returns without raising and the subsequent insert still lands.
+    cache._total_records = const._MAX_CACHE_RECORDS
+    cache._expire_heap = []
+    cache.async_add_records([_addr("post-empty.local.", 0)])
+    assert "post-empty.local." in cache.cache
+
+
 def test_cache_eviction_skips_stale_heap_entries() -> None:
     """Eviction skips stale heap entries left by TTL re-adds."""
     cache = r.DNSCache()
