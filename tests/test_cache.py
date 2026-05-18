@@ -482,3 +482,60 @@ async def test_cache_heap_pops_order() -> None:
         ts, _ = heappop(cache._expire_heap)
         assert ts >= start_ts
         start_ts = ts
+
+
+def test_cache_size_is_bounded() -> None:
+    """A flood of unique-name records is capped at ``_MAX_CACHE_RECORDS``."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    overflow = 1000
+    flood_size = const._MAX_CACHE_RECORDS + overflow
+
+    cache.async_add_records(
+        r.DNSAddress(
+            f"flood-{i}.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            120,
+            bytes((i & 0xFF, (i >> 8) & 0xFF, 0, 1)),
+            created=now + i,
+        )
+        for i in range(flood_size)
+    )
+
+    total = sum(len(store) for store in cache.cache.values())
+    assert total == const._MAX_CACHE_RECORDS
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    # FIFO-ish: the earliest-created records (closest to expiration) get
+    # evicted first, so the names that remain are from the tail.
+    for i in range(overflow):
+        assert f"flood-{i}.local." not in cache.cache
+    for i in range(flood_size - overflow, flood_size):
+        assert f"flood-{i}.local." in cache.cache
+
+
+def test_cache_eviction_decrements_total_records() -> None:
+    """Natural removal (goodbyes, expirations) must keep ``_total_records`` in sync."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    records = [
+        r.DNSAddress(
+            f"sync-{i}.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            120,
+            bytes((i & 0xFF, (i >> 8) & 0xFF, 0, 1)),
+            created=now,
+        )
+        for i in range(50)
+    ]
+    cache.async_add_records(records)
+    assert cache._total_records == 50
+
+    cache.async_remove_records(records[:20])
+    assert cache._total_records == 30
+
+    # async_expire on a future time should drop the rest
+    cache.async_expire(now + (200 * 1000))
+    assert cache._total_records == 0
+    assert not cache.cache

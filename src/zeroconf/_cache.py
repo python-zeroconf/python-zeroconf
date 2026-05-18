@@ -37,7 +37,7 @@ from ._dns import (
     DNSText,
 )
 from ._utils.time import current_time_millis
-from .const import _ONE_SECOND, _TYPE_PTR
+from .const import _MAX_CACHE_RECORDS, _ONE_SECOND, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = DNSAddress | DNSHinfo | DNSPointer | DNSText | DNSService
@@ -72,6 +72,7 @@ class DNSCache:
         self._expire_heap: list[tuple[float, DNSRecord]] = []
         self._expirations: dict[DNSRecord, float] = {}
         self.service_cache: _DNSRecordCacheType = {}
+        self._total_records: int = 0
 
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
@@ -91,7 +92,16 @@ class DNSCache:
         # direction would return the old incorrect entry.
         if (store := self.cache.get(record.key)) is None:
             store = self.cache[record.key] = {}
-        new = record not in store and not isinstance(record, DNSNsec)
+        is_new = record not in store
+        # Bound total cache size; evict closest-to-expiration entry to
+        # make room before inserting a new record. Prevents a LAN-local
+        # flood of unique-name records from growing the cache without
+        # bound (RFC 6762 §10 advisory caching, defense-in-depth).
+        if is_new and self._total_records >= _MAX_CACHE_RECORDS:
+            self._async_evict_oldest()
+        new = is_new and not isinstance(record, DNSNsec)
+        if is_new:
+            self._total_records += 1
         store[record] = record
         when = record.created + (record.ttl * 1000)
         if self._expirations.get(record) != when:
@@ -105,6 +115,22 @@ class DNSCache:
                 service_store = self.service_cache[service_record.server_key] = {}
             service_store[service_record] = service_record
         return new
+
+    def _async_evict_oldest(self) -> None:
+        """Drop the closest-to-expiration record to make room for a new one.
+
+        Skips stale heap entries (records re-added with a different TTL),
+        which mirrors the staleness check in ``async_expire``.
+
+        This function must be run in from event loop.
+        """
+        while self._expire_heap:
+            when_record = heappop(self._expire_heap)
+            record = when_record[1]
+            if self._expirations.get(record) != when_record[0]:
+                continue
+            self._async_remove(record)
+            return
 
     def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
         """Add multiple records.
@@ -129,6 +155,7 @@ class DNSCache:
             _remove_key(self.service_cache, service_record.server_key, service_record)
         _remove_key(self.cache, record.key, record)
         self._expirations.pop(record, None)
+        self._total_records -= 1
 
     def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
         """Remove multiple records.
