@@ -14,6 +14,8 @@ import pytest
 
 import zeroconf as r
 from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
+from zeroconf._logger import _MAX_SEEN_LOGS
+from zeroconf._protocol import incoming as _incoming_module
 
 from . import has_working_ipv6
 
@@ -960,6 +962,38 @@ def test_dns_compression_generic_failure(caplog):
     parsed = r.DNSIncoming(packet, ("1.2.3.4", 5353))
     assert len(parsed.answers()) == 1
     assert "Received invalid packet from ('1.2.3.4', 5353)" in caplog.text
+
+
+def test_seen_logs_is_bounded():
+    """Corrupt packets from varying peers fill ``_seen_logs`` exactly to the cap."""
+    packet = (
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01"
+        b"\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05-\x0c\x00\x01\x80\x01\x00\x00"
+        b"\x00\x01\x00\x04\xc0\xa8\xd0\x06"
+    )
+    overflow = 5
+    _incoming_module._seen_logs.clear()
+    # Snapshot the actual key the parser inserted per port. This is whatever
+    # ``str(exc_info()[1])`` produces today — the test stays agnostic to the
+    # exception text format so a future normalization of the message (see
+    # the discussion on #1714) doesn't break the assertions, while still
+    # pinning that the parser exception path actually entered the dict.
+    keys_per_port: list[str] = []
+    for port in range(_MAX_SEEN_LOGS + overflow):
+        r.DNSIncoming(packet, ("1.2.3.4", port))
+        keys_per_port.append(next(reversed(_incoming_module._seen_logs)))
+    # Bound is hit exactly.
+    assert len(_incoming_module._seen_logs) == _MAX_SEEN_LOGS
+    # Each port produced a distinct dedup key — a regression that dropped
+    # the per-packet-varying component (e.g. self.source) from the exception
+    # text would collapse all 517 calls to one key and fail this.
+    assert len(set(keys_per_port)) == _MAX_SEEN_LOGS + overflow
+    # FIFO eviction by key identity (no substring matching on the message
+    # format): the earliest ports' keys are gone, the latest ports' remain.
+    for port in range(overflow):
+        assert keys_per_port[port] not in _incoming_module._seen_logs
+    for port in range(_MAX_SEEN_LOGS, _MAX_SEEN_LOGS + overflow):
+        assert keys_per_port[port] in _incoming_module._seen_logs
 
 
 def test_label_length_attack():
