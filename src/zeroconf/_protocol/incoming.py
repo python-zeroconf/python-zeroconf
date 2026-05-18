@@ -60,7 +60,7 @@ DNS_COMPRESSION_POINTER_LEN = 2
 MAX_DNS_LABELS = 128
 MAX_NAME_LENGTH = 253
 
-DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
+DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError, RecursionError)
 
 
 _seen_logs: dict[str, None] = {}
@@ -403,7 +403,7 @@ class DNSIncoming:
         labels: list[str] = []
         seen_pointers: set[int] = set()
         original_offset = self.offset
-        self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers)
+        self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers, 0)
         self._name_cache[original_offset] = labels
         name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
@@ -412,8 +412,14 @@ class DNSIncoming:
             )
         return name
 
-    def _decode_labels_at_offset(self, off: _int, labels: list[str], seen_pointers: set[int]) -> int:
+    def _decode_labels_at_offset(
+        self, off: _int, labels: list[str], seen_pointers: set[int], depth: _int
+    ) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
+        if depth > MAX_DNS_LABELS:
+            raise IncomingDecodeError(
+                f"DNS compression pointer chain exceeds {MAX_DNS_LABELS} at {off} from {self.source}"
+            )
         view = self.view
         while off < self._data_len:
             length = view[off]
@@ -451,7 +457,7 @@ class DNSIncoming:
             if not linked_labels:
                 linked_labels = []
                 seen_pointers.add(link_py_int)
-                self._decode_labels_at_offset(link, linked_labels, seen_pointers)
+                self._decode_labels_at_offset(link, linked_labels, seen_pointers, depth + 1)
                 self._name_cache[link_py_int] = linked_labels
             labels.extend(linked_labels)
             if len(labels) > MAX_DNS_LABELS:

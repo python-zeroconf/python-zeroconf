@@ -2,6 +2,37 @@
 
 <!-- version list -->
 
+## v0.149.5 (2026-05-18)
+
+### Bug Fixes
+
+- Bound DNS compression-pointer chain depth in DNSIncoming
+  ([#1719](https://github.com/python-zeroconf/python-zeroconf/pull/1719),
+  [`f9e2359`](https://github.com/python-zeroconf/python-zeroconf/commit/f9e23592137f30fdf7ef710dba065da31c79b1cf))
+
+### Testing
+
+- Cap helper get_service_info timeout in suppression test (~3.0s → ~1.85s)
+  ([#1708](https://github.com/python-zeroconf/python-zeroconf/pull/1708),
+  [`ee3c7d7`](https://github.com/python-zeroconf/python-zeroconf/commit/ee3c7d74ff45327a3a6d520b86a691e21e2bc219))
+
+- Drop ZeroconfServiceTypes.find() timeouts from 500ms to 200ms on loopback
+  ([#1710](https://github.com/python-zeroconf/python-zeroconf/pull/1710),
+  [`64d143d`](https://github.com/python-zeroconf/python-zeroconf/commit/64d143d2ee7874ee1d9cef0dd2799c008b4aa791))
+
+- Eliminate test_get_info_single race by injecting from the send mock
+  ([#1716](https://github.com/python-zeroconf/python-zeroconf/pull/1716),
+  [`963d3d7`](https://github.com/python-zeroconf/python-zeroconf/commit/963d3d70e1cde056967eba0d8747ddcd247ae707))
+
+- Fix race in test_register_and_lookup_type_by_uppercase_name
+  ([#1712](https://github.com/python-zeroconf/python-zeroconf/pull/1712),
+  [`91aa21d`](https://github.com/python-zeroconf/python-zeroconf/commit/91aa21d52a0873f5fc12d43675b1b521dfe20519))
+
+- Speed up service-info request tests with quick_request_timing fixture
+  ([#1709](https://github.com/python-zeroconf/python-zeroconf/pull/1709),
+  [`4bae30a`](https://github.com/python-zeroconf/python-zeroconf/commit/4bae30a2ed0910ee7c4f1d0f92f2c400a7b10f31))
+
+
 ## v0.149.4 (2026-05-17)
 
 ### Bug Fixes
