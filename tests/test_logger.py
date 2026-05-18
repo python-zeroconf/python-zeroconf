@@ -6,7 +6,7 @@ import logging
 from unittest.mock import call, patch
 
 from zeroconf import _logger
-from zeroconf._logger import _MAX_SEEN_LOGS, QuietLogger, set_logger_level_if_unset
+from zeroconf._logger import _MAX_SEEN_LOGS, QuietLogger, _mark_seen, set_logger_level_if_unset
 
 
 def test_loading_logger():
@@ -83,6 +83,26 @@ def test_llog_exception_debug():
         quiet_logger.log_exception_debug("the exception")
 
     assert mock_log_debug.mock_calls == [call("the exception", exc_info=False)]
+
+
+def test_mark_seen_absorbs_runtime_error_during_eviction() -> None:
+    """Concurrent mutation can make ``iter(seen)`` raise ``RuntimeError``.
+
+    Free-threaded (3.14t) and multi-instance sync callers share
+    ``_seen_logs``; if another thread mutates it between ``iter()``
+    and ``next()`` the iterator raises ``RuntimeError``.
+    ``_mark_seen`` must absorb that and still insert the new key.
+    """
+
+    class RacyDict(dict[str, None]):
+        def __iter__(self):  # type: ignore[override]
+            raise RuntimeError("dictionary changed size during iteration")
+
+    seen: dict[str, None] = RacyDict()
+    for i in range(_MAX_SEEN_LOGS):
+        seen[f"k-{i}"] = None
+    assert _mark_seen(seen, "new-key") is True
+    assert "new-key" in seen
 
 
 def test_seen_logs_is_bounded() -> None:

@@ -965,16 +965,25 @@ def test_dns_compression_generic_failure(caplog):
 
 
 def test_seen_logs_is_bounded():
-    """Corrupt packets from varying peers must not grow _seen_logs without bound."""
+    """Corrupt packets from varying peers fill ``_seen_logs`` exactly to the cap."""
     packet = (
         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01"
         b"\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05-\x0c\x00\x01\x80\x01\x00\x00"
         b"\x00\x01\x00\x04\xc0\xa8\xd0\x06"
     )
+    overflow = 5
     _incoming_module._seen_logs.clear()
-    for port in range(_MAX_SEEN_LOGS + 5):
+    for port in range(_MAX_SEEN_LOGS + overflow):
         r.DNSIncoming(packet, ("1.2.3.4", port))
-    assert len(_incoming_module._seen_logs) <= _MAX_SEEN_LOGS
+    # Bound is hit exactly — confirms the parser exception path actually
+    # entered the dict with a per-port-unique key; a future change that
+    # dropped self.source from the exception text would collapse to a
+    # single dedup key and fail this assertion.
+    assert len(_incoming_module._seen_logs) == _MAX_SEEN_LOGS
+    # FIFO eviction: the earliest port's exception string is gone, the
+    # latest port's is still present.
+    assert not any("'1.2.3.4', 0)" in k for k in _incoming_module._seen_logs)
+    assert any(f"'1.2.3.4', {_MAX_SEEN_LOGS + overflow - 1})" in k for k in _incoming_module._seen_logs)
 
 
 def test_label_length_attack():

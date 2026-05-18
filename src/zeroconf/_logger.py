@@ -50,11 +50,27 @@ def _mark_seen(seen: dict[str, None], key: str) -> bool:
     addresses, packet offsets) cannot grow it without bound. Evicts
     the oldest entry per overflow (dict preserves insertion order on
     Python 3.7+), so ``_MAX_SEEN_LOGS`` is a recency window.
+
+    The dict is shared across all ``Zeroconf`` instances in the
+    process; on the free-threaded build (3.14t) and under multi-
+    instance sync use, callers can race. Individual dict operations
+    (``in``, ``__setitem__``, ``pop``, ``len``) are atomic in CPython
+    3.13+ FT and don't crash, but the compound ``iter`` → ``next``
+    used to find the FIFO victim can raise ``RuntimeError`` if
+    another thread mutates the dict between the two ops. Catch and
+    skip — the other thread is already shrinking the set, so missing
+    one eviction here just lets the cap drift up by one entry per
+    racing thread until contention clears.
     """
     if key in seen:
         return False
     if len(seen) >= _MAX_SEEN_LOGS:
-        del seen[next(iter(seen))]
+        try:
+            oldest = next(iter(seen), None)
+        except RuntimeError:
+            oldest = None
+        if oldest is not None:
+            seen.pop(oldest, None)
     seen[key] = None
     return True
 
