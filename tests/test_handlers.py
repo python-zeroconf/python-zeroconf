@@ -219,7 +219,11 @@ class TestRegistrar(unittest.TestCase):
         for _ in range(50):
             time.sleep(0.02)
             info.load_from_cache(zc)
-            if info.addresses:
+            # Wait for both A and TXT records — they arrive as separate
+            # cache updates and the listener may schedule the assertions
+            # between the two. Breaking on just `info.addresses` makes
+            # the test flaky under PyPy / skip_cython.
+            if info.addresses and info.properties:
                 break
         assert info.addresses == [socket.inet_pton(socket.AF_INET, "1.2.3.4")]
         assert info.properties == {b"version": b"1.0"}
