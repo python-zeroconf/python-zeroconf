@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.149.7 (2026-05-18)
+
+### Bug Fixes
+
+- Bound DNSCache record count to prevent unbounded LAN-driven growth
+  ([#1718](https://github.com/python-zeroconf/python-zeroconf/pull/1718),
+  [`0ad3f37`](https://github.com/python-zeroconf/python-zeroconf/commit/0ad3f37b5b852b8f614d322283d148efb2cef6e4))
+
+### Testing
+
+- Shave ServiceBrowser first-query delay on loopback
+  ([#1720](https://github.com/python-zeroconf/python-zeroconf/pull/1720),
+  [`0ff3c6b`](https://github.com/python-zeroconf/python-zeroconf/commit/0ff3c6b9dd40e01263ce88803139c3ba68349682))
+
+
 ## v0.149.6 (2026-05-18)
 
 ### Bug Fixes
