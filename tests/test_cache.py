@@ -583,6 +583,31 @@ def test_cache_eviction_victim_shares_key_with_new_record() -> None:
     assert total == cache._total_records
 
 
+def test_cache_dnsnsec_at_cap_evicts_prior_record() -> None:
+    """A single DNSNsec arriving at the cap evicts one prior record and stays reachable."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    cache.async_add_records(
+        _addr(f"fill-{i}.local.", i, created=now + i) for i in range(const._MAX_CACHE_RECORDS)
+    )
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+    nsec = r.DNSNsec(
+        "nsec-arrival.local.",
+        const._TYPE_NSEC,
+        const._CLASS_IN,
+        120,
+        "nsec-arrival.local.",
+        [const._TYPE_A],
+    )
+    cache.async_add_records([nsec])
+
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    assert nsec in cache.cache[nsec.key]
+    # The earliest-created fill record is gone (FIFO-ish eviction).
+    assert "fill-0.local." not in cache.cache
+
+
 def test_cache_dnsnsec_flood_is_bounded() -> None:
     """DNSNsec records honour ``_MAX_CACHE_RECORDS`` (no bypass via the ``new`` flag)."""
     cache = r.DNSCache()
