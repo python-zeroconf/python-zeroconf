@@ -525,11 +525,15 @@ def test_cache_eviction_empty_heap_returns_without_evicting() -> None:
     # By the cache invariant every record in ``_total_records`` has a heap
     # entry, so eviction should never see an empty heap. Force the broken
     # state directly to pin the defensive behaviour: ``_async_evict_oldest``
-    # returns without raising and the subsequent insert still lands.
+    # returns without raising and the subsequent insert still lands. Since
+    # eviction can't free space, the counter is allowed to drift past the
+    # cap by exactly one — pinned so a future change to the recovery
+    # semantics (e.g., refusing the add or clamping) fails this test.
     cache._total_records = const._MAX_CACHE_RECORDS
     cache._expire_heap = []
     cache.async_add_records([_addr("post-empty.local.", 0)])
     assert "post-empty.local." in cache.cache
+    assert cache._total_records == const._MAX_CACHE_RECORDS + 1
 
 
 def test_cache_eviction_skips_stale_heap_entries() -> None:

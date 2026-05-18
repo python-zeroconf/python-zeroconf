@@ -135,21 +135,12 @@ class DNSCache:
                 continue
             self._async_remove(record)
             return
+        # Heap-empty fall-through is unreachable by the cache invariant
+        # (every counted record has a heap entry); accounting drift would
+        # surface in tests via test_cache_total_records_invariant_under_mixed_ops.
 
     def _maybe_rebuild_heap(self) -> None:
-        """Rebuild ``_expire_heap`` if stale entries dominate.
-
-        Re-adds of an existing record with a new TTL append a fresh
-        ``(when, record)`` and leave the prior tuple behind as stale;
-        eviction's stale-skip loop and ``async_expire`` already absorb
-        these, but unchecked accumulation lets a peer that just replays
-        cached records grow the heap arbitrarily between cleanups.
-        Same threshold as the long-standing rebuild in ``async_expire``:
-        only fire when stale entries outweigh live ones (heap > 2 x
-        expirations), and only above a minimum floor so a small cache
-        isn't rebuilt for nothing. Amortized cost is O(1) per push;
-        the O(N) rebuild fires at most once per N stale pushes.
-        """
+        """Rebuild ``_expire_heap`` when stale entries dominate live ones."""
         expire_heap_len = len(self._expire_heap)
         if (
             expire_heap_len > _MIN_SCHEDULED_RECORD_EXPIRATION
