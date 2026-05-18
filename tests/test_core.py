@@ -631,7 +631,7 @@ def test_tc_bit_defers():
     zc.close()
 
 
-@patch.object(_listener, "_TC_DELAY_RANDOM_INTERVAL", (10, 20))
+@patch.object(_listener, "_TC_DELAY_RANDOM_INTERVAL", (150, 250))
 def test_tc_bit_defers_last_response_missing():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     _wait_for_start(zc)
@@ -731,7 +731,7 @@ def test_tc_bit_defers_last_response_missing():
     assert timer3.cancelled()
     assert timer4 != timer3
 
-    for _ in range(20):
+    for _ in range(30):
         time.sleep(0.02)
         if source_ip not in protocol._timers and source_ip not in protocol._deferred:
             break
