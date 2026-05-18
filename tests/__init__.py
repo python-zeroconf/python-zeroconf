@@ -51,6 +51,14 @@ QUICK_REQUEST_TIMEOUT_MS = 50
 # the registrar's response lands inside ~10ms and 75ms is ~7x headroom.
 LOOPBACK_FIND_TIMEOUT = 0.075
 
+# IPv6-only `find()` on Linux GitHub runners can hit `[Errno 101] Network
+# is unreachable` on the `::1` socket and falls back to the `fe80::` link-
+# local interface, which adds latency the IPv4 loopback path never pays.
+# PyPy widens that further with JIT warmup. The 75ms budget that works on
+# IPv4 loopback is too tight for the V6Only path under those conditions
+# — give it more headroom.
+IPV6_LOOPBACK_FIND_TIMEOUT = 0.5
+
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
     def suppresses(self, question: DNSQuestion, now: float, known_answers: set[DNSRecord]) -> bool:

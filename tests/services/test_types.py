@@ -11,7 +11,7 @@ import unittest
 import zeroconf as r
 from zeroconf import ServiceInfo, Zeroconf, ZeroconfServiceTypes
 
-from .. import LOOPBACK_FIND_TIMEOUT, _clear_cache, has_working_ipv6
+from .. import IPV6_LOOPBACK_FIND_TIMEOUT, LOOPBACK_FIND_TIMEOUT, _clear_cache, has_working_ipv6
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -116,11 +116,11 @@ def test_integration_with_listener_ipv6(quick_timing, disable_duplicate_packet_s
     zeroconf_registrar.registry.async_add(info)
     try:
         service_types = ZeroconfServiceTypes.find(
-            ip_version=r.IPVersion.V6Only, timeout=LOOPBACK_FIND_TIMEOUT
+            ip_version=r.IPVersion.V6Only, timeout=IPV6_LOOPBACK_FIND_TIMEOUT
         )
         assert type_ in service_types
         _clear_cache(zeroconf_registrar)
-        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=LOOPBACK_FIND_TIMEOUT)
+        service_types = ZeroconfServiceTypes.find(zc=zeroconf_registrar, timeout=IPV6_LOOPBACK_FIND_TIMEOUT)
         assert type_ in service_types
 
     finally:
