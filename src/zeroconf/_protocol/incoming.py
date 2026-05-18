@@ -63,7 +63,8 @@ MAX_NAME_LENGTH = 253
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError)
 
 
-_seen_logs: dict[str, int | tuple] = {}
+_MAX_SEEN_LOGS = 256
+_seen_logs: set[str] = set()
 _str = str
 _int = int
 
@@ -183,11 +184,14 @@ class DNSIncoming:
     @classmethod
     def _log_exception_debug(cls, *logger_data: Any) -> None:
         log_exc_info = False
-        exc_info = sys.exc_info()
-        exc_str = str(exc_info[1])
+        exc_str = str(sys.exc_info()[1])
         if exc_str not in _seen_logs:
-            # log the trace only on the first time
-            _seen_logs[exc_str] = exc_info
+            # The dedup key embeds attacker-controlled fields (peer IP/port,
+            # byte offsets); clear when full so a malicious peer can't grow
+            # the set without bound.
+            if len(_seen_logs) >= _MAX_SEEN_LOGS:
+                _seen_logs.clear()
+            _seen_logs.add(exc_str)
             log_exc_info = True
         log.debug(*(logger_data or ["Exception occurred"]), exc_info=log_exc_info)
 

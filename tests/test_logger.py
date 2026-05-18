@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from unittest.mock import call, patch
 
-from zeroconf._logger import QuietLogger, set_logger_level_if_unset
+from zeroconf._logger import _MAX_SEEN_LOGS, QuietLogger, set_logger_level_if_unset
 
 
 def test_loading_logger():
@@ -25,7 +25,7 @@ def test_loading_logger():
 
 def test_log_warning_once():
     """Test we only log with warning level once."""
-    QuietLogger._seen_logs = {}
+    QuietLogger._seen_logs = set()
     quiet_logger = QuietLogger()
     with (
         patch("zeroconf._logger.log.warning") as mock_log_warning,
@@ -48,7 +48,7 @@ def test_log_warning_once():
 
 def test_log_exception_warning():
     """Test we only log with warning level once."""
-    QuietLogger._seen_logs = {}
+    QuietLogger._seen_logs = set()
     quiet_logger = QuietLogger()
     with (
         patch("zeroconf._logger.log.warning") as mock_log_warning,
@@ -71,7 +71,7 @@ def test_log_exception_warning():
 
 def test_llog_exception_debug():
     """Test we only log with a trace once."""
-    QuietLogger._seen_logs = {}
+    QuietLogger._seen_logs = set()
     quiet_logger = QuietLogger()
     with patch("zeroconf._logger.log.debug") as mock_log_debug:
         quiet_logger.log_exception_debug("the exception")
@@ -84,9 +84,18 @@ def test_llog_exception_debug():
     assert mock_log_debug.mock_calls == [call("the exception", exc_info=False)]
 
 
+def test_seen_logs_is_bounded():
+    """Distinct keys must not grow ``_seen_logs`` without bound."""
+    QuietLogger._seen_logs = set()
+    with patch("zeroconf._logger.log.warning"), patch("zeroconf._logger.log.debug"):
+        for i in range(_MAX_SEEN_LOGS + 5):
+            QuietLogger.log_warning_once(f"warning-{i}")
+    assert len(QuietLogger._seen_logs) <= _MAX_SEEN_LOGS
+
+
 def test_log_exception_once():
     """Test we only log with warning level once."""
-    QuietLogger._seen_logs = {}
+    QuietLogger._seen_logs = set()
     quiet_logger = QuietLogger()
     exc = Exception()
     with (

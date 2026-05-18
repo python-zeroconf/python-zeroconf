@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 log = logging.getLogger(__name__.split(".", maxsplit=1)[0])
 log.addHandler(logging.NullHandler())
@@ -39,50 +39,42 @@ def set_logger_level_if_unset() -> None:
 set_logger_level_if_unset()
 
 
+_MAX_SEEN_LOGS = 256
+
+
 class QuietLogger:
-    _seen_logs: ClassVar[dict[str, int | tuple]] = {}
+    _seen_logs: ClassVar[set[str]] = set()
+
+    @classmethod
+    def _mark_seen(cls, key: str) -> bool:
+        """Record ``key`` and return True if it was newly added."""
+        if key in cls._seen_logs:
+            return False
+        # Keys can carry caller-supplied fields (peer addresses, packet
+        # offsets); clear when full so a malicious peer can't grow the
+        # set without bound.
+        if len(cls._seen_logs) >= _MAX_SEEN_LOGS:
+            cls._seen_logs.clear()
+        cls._seen_logs.add(key)
+        return True
 
     @classmethod
     def log_exception_warning(cls, *logger_data: Any) -> None:
-        exc_info = sys.exc_info()
-        exc_str = str(exc_info[1])
-        if exc_str not in cls._seen_logs:
-            # log at warning level the first time this is seen
-            cls._seen_logs[exc_str] = exc_info
-            logger = log.warning
-        else:
-            logger = log.debug
+        first_time = cls._mark_seen(str(sys.exc_info()[1]))
+        logger = log.warning if first_time else log.debug
         logger(*(logger_data or ["Exception occurred"]), exc_info=True)
 
     @classmethod
     def log_exception_debug(cls, *logger_data: Any) -> None:
-        log_exc_info = False
-        exc_info = sys.exc_info()
-        exc_str = str(exc_info[1])
-        if exc_str not in cls._seen_logs:
-            # log the trace only on the first time
-            cls._seen_logs[exc_str] = exc_info
-            log_exc_info = True
-        log.debug(*(logger_data or ["Exception occurred"]), exc_info=log_exc_info)
+        first_time = cls._mark_seen(str(sys.exc_info()[1]))
+        log.debug(*(logger_data or ["Exception occurred"]), exc_info=first_time)
 
     @classmethod
     def log_warning_once(cls, *args: Any) -> None:
-        msg_str = args[0]
-        if msg_str not in cls._seen_logs:
-            cls._seen_logs[msg_str] = 0
-            logger = log.warning
-        else:
-            logger = log.debug
-        cls._seen_logs[msg_str] = cast(int, cls._seen_logs[msg_str]) + 1
+        logger = log.warning if cls._mark_seen(args[0]) else log.debug
         logger(*args)
 
     @classmethod
     def log_exception_once(cls, exc: Exception, *args: Any) -> None:
-        msg_str = args[0]
-        if msg_str not in cls._seen_logs:
-            cls._seen_logs[msg_str] = 0
-            logger = log.warning
-        else:
-            logger = log.debug
-        cls._seen_logs[msg_str] = cast(int, cls._seen_logs[msg_str]) + 1
+        logger = log.warning if cls._mark_seen(args[0]) else log.debug
         logger(*args, exc_info=exc)

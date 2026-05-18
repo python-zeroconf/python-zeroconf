@@ -14,6 +14,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
+from zeroconf._protocol import incoming as _incoming_module
 
 from . import has_working_ipv6
 
@@ -960,6 +961,19 @@ def test_dns_compression_generic_failure(caplog):
     parsed = r.DNSIncoming(packet, ("1.2.3.4", 5353))
     assert len(parsed.answers()) == 1
     assert "Received invalid packet from ('1.2.3.4', 5353)" in caplog.text
+
+
+def test_seen_logs_is_bounded():
+    """Corrupt packets from varying peers must not grow _seen_logs without bound."""
+    packet = (
+        b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x06domain\x05local\x00\x00\x01"
+        b"\x80\x01\x00\x00\x00\x01\x00\x04\xc0\xa8\xd0\x05-\x0c\x00\x01\x80\x01\x00\x00"
+        b"\x00\x01\x00\x04\xc0\xa8\xd0\x06"
+    )
+    _incoming_module._seen_logs.clear()
+    for port in range(_incoming_module._MAX_SEEN_LOGS + 5):
+        r.DNSIncoming(packet, ("1.2.3.4", port))
+    assert len(_incoming_module._seen_logs) <= _incoming_module._MAX_SEEN_LOGS
 
 
 def test_label_length_attack():
