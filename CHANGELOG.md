@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.6 (2026-05-18)
+
+### Bug Fixes
+
+- Bound _seen_logs and stop retaining exc_info
+  ([#1717](https://github.com/python-zeroconf/python-zeroconf/pull/1717),
+  [`95561e2`](https://github.com/python-zeroconf/python-zeroconf/commit/95561e28b24922358f1991e38e3a86d70d72dcec))
+
+
 ## v0.149.5 (2026-05-18)
 
 ### Bug Fixes
