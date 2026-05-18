@@ -135,9 +135,6 @@ class DNSCache:
                 continue
             self._async_remove(record)
             return
-        # Heap-empty fall-through is unreachable by the cache invariant
-        # (every counted record has a heap entry); accounting drift would
-        # surface in tests via test_cache_total_records_invariant_under_mixed_ops.
 
     def _maybe_rebuild_heap(self) -> None:
         """Rebuild ``_expire_heap`` when stale entries dominate live ones."""
