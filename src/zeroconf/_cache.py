@@ -110,9 +110,14 @@ class DNSCache:
         store[record] = record
         when = record.created + (record.ttl * 1000)
         if self._expirations.get(record) != when:
-            # Avoid adding duplicates to the heap
             heappush(self._expire_heap, (when, record))
             self._expirations[record] = when
+            # Re-adds of an existing record with a new TTL push a fresh
+            # entry but leave the prior tuple behind as stale, so a peer
+            # that just replays cached records can grow ``_expire_heap``
+            # without ever tripping the cap. Rebuild when stale entries
+            # dominate.
+            self._maybe_rebuild_heap()
 
         if isinstance(record, DNSService):
             service_record = record
@@ -122,16 +127,28 @@ class DNSCache:
         return new
 
     def _async_evict_oldest(self) -> None:
-        """Drop the closest-to-expiration record to make room for a new one.
+        """Drop the closest-to-expiration record to make room for a new one."""
+        while self._expire_heap:
+            when_record = heappop(self._expire_heap)
+            record = when_record[1]
+            if self._expirations.get(record) != when_record[0]:
+                continue
+            self._async_remove(record)
+            return
 
-        Skips stale heap entries (records re-added with a different TTL),
-        which mirrors the staleness check in ``async_expire``. If the
-        heap is mostly stale (long stale prefix from sustained TTL
-        re-adds), rebuild it once up front so the pop loop below
-        doesn't do O(stale_prefix * log n) work on a single add. Same
-        heuristic / threshold as ``async_expire``.
+    def _maybe_rebuild_heap(self) -> None:
+        """Rebuild ``_expire_heap`` if stale entries dominate.
 
-        This function must be run in from event loop.
+        Re-adds of an existing record with a new TTL append a fresh
+        ``(when, record)`` and leave the prior tuple behind as stale;
+        eviction's stale-skip loop and ``async_expire`` already absorb
+        these, but unchecked accumulation lets a peer that just replays
+        cached records grow the heap arbitrarily between cleanups.
+        Same threshold as the long-standing rebuild in ``async_expire``:
+        only fire when stale entries outweigh live ones (heap > 2 x
+        expirations), and only above a minimum floor so a small cache
+        isn't rebuilt for nothing. Amortized cost is O(1) per push;
+        the O(N) rebuild fires at most once per N stale pushes.
         """
         expire_heap_len = len(self._expire_heap)
         if (
@@ -142,13 +159,6 @@ class DNSCache:
                 entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
             ]
             heapify(self._expire_heap)
-        while self._expire_heap:
-            when_record = heappop(self._expire_heap)
-            record = when_record[1]
-            if self._expirations.get(record) != when_record[0]:
-                continue
-            self._async_remove(record)
-            return
 
     def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
         """Add multiple records.
@@ -190,43 +200,23 @@ class DNSCache:
 
         :param now: The current time in milliseconds.
         """
-        if not (expire_heap_len := len(self._expire_heap)):
+        if not self._expire_heap:
             return []
 
         expired: list[DNSRecord] = []
-        # Find any expired records and add them to the to-delete list
         while self._expire_heap:
             when_record = self._expire_heap[0]
             when = when_record[0]
             if when > now:
                 break
             heappop(self._expire_heap)
-            # Check if the record hasn't been re-added to the heap
-            # with a different expiration time as it will be removed
-            # later when it reaches the top of the heap and its
-            # expiration time is met.
+            # Skip entries left behind by a TTL re-add; the live tuple is
+            # later in the heap and will be removed when it reaches the top.
             record = when_record[1]
             if self._expirations.get(record) == when:
                 expired.append(record)
 
-        # If the expiration heap grows larger than the number expirations
-        # times two, we clean it up to avoid keeping expired entries in
-        # the heap and consuming memory. We guard this with a minimum
-        # threshold to avoid cleaning up the heap too often when there are
-        # only a few scheduled expirations.
-        if (
-            expire_heap_len > _MIN_SCHEDULED_RECORD_EXPIRATION
-            and expire_heap_len > len(self._expirations) * 2
-        ):
-            # Remove any expired entries from the expiration heap
-            # that do not match the expiration time in the expirations
-            # as it means the record has been re-added to the heap
-            # with a different expiration time.
-            self._expire_heap = [
-                entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
-            ]
-            heapify(self._expire_heap)
-
+        self._maybe_rebuild_heap()
         self.async_remove_records(expired)
         return expired
 
