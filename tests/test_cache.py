@@ -514,6 +514,59 @@ def test_cache_size_is_bounded() -> None:
         assert f"flood-{i}.local." in cache.cache
 
 
+def test_cache_eviction_skips_stale_heap_entries() -> None:
+    """Eviction must skip stale ``_expire_heap`` entries left by TTL re-adds."""
+    cache = r.DNSCache()
+    now = r.current_time_millis()
+    # Fill to one shy of the cap so a single add triggers exactly one eviction
+    cache.async_add_records(
+        r.DNSAddress(
+            f"stale-{i}.local.",
+            const._TYPE_A,
+            const._CLASS_IN,
+            120,
+            bytes((i & 0xFF, (i >> 8) & 0xFF, 0, 1)),
+            created=now + i,
+        )
+        for i in range(const._MAX_CACHE_RECORDS)
+    )
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+    # Re-add the closest-to-expiration record with a longer TTL. The original
+    # (when, record) tuple stays at the head of _expire_heap as a stale entry;
+    # _expirations[record] now points to the new (later) expiration. Eviction
+    # must pop and skip that stale tuple before settling on a real victim.
+    victim_name = "stale-0.local."
+    refreshed = r.DNSAddress(
+        victim_name,
+        const._TYPE_A,
+        const._CLASS_IN,
+        7200,
+        bytes((0, 0, 0, 1)),
+        created=now + 0,
+    )
+    cache.async_add_records([refreshed])
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+
+    # Force one eviction. The next-oldest legitimate record must go; the
+    # refreshed record stays alive.
+    cache.async_add_records(
+        [
+            r.DNSAddress(
+                "trigger.local.",
+                const._TYPE_A,
+                const._CLASS_IN,
+                120,
+                b"\xff\xff\xff\xff",
+                created=now + const._MAX_CACHE_RECORDS,
+            )
+        ]
+    )
+    assert cache._total_records == const._MAX_CACHE_RECORDS
+    assert victim_name in cache.cache
+    assert "stale-1.local." not in cache.cache
+
+
 def test_cache_eviction_decrements_total_records() -> None:
     """Natural removal (goodbyes, expirations) must keep ``_total_records`` in sync."""
     cache = r.DNSCache()
