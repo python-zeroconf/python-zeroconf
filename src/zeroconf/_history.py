@@ -23,7 +23,7 @@ USA
 from __future__ import annotations
 
 from ._dns import DNSQuestion, DNSRecord
-from .const import _DUPLICATE_QUESTION_INTERVAL
+from .const import _DUPLICATE_QUESTION_INTERVAL, _MAX_QUESTION_HISTORY_ENTRIES
 
 # The QuestionHistory is used to implement Duplicate Question Suppression
 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.3
@@ -40,6 +40,14 @@ class QuestionHistory:
 
     def add_question_at_time(self, question: DNSQuestion, now: _float, known_answers: set[DNSRecord]) -> None:
         """Remember a question with known answers."""
+        # Bound history size between the periodic 10s cleanup ticks. When at
+        # cap, first drop entries past the duplicate-suppression window; if
+        # still at cap, evict the oldest insertion (dict is ordered).
+        if question not in self._history and len(self._history) >= _MAX_QUESTION_HISTORY_ENTRIES:
+            self.async_expire(now)
+            while len(self._history) >= _MAX_QUESTION_HISTORY_ENTRIES:
+                oldest = next(iter(self._history))
+                del self._history[oldest]
         self._history[question] = (now, known_answers)
 
     def suppresses(self, question: DNSQuestion, now: _float, known_answers: set[DNSRecord]) -> bool:

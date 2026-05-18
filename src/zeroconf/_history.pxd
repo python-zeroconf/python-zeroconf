@@ -4,6 +4,7 @@ from ._dns cimport DNSQuestion
 
 
 cdef cython.double _DUPLICATE_QUESTION_INTERVAL
+cdef unsigned int _MAX_QUESTION_HISTORY_ENTRIES
 
 cdef class QuestionHistory:
 

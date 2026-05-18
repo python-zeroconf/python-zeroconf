@@ -65,6 +65,12 @@ _DNS_PTR_MIN_TTL = 1125
 # to retain by multicasting many unique-name records.
 _MAX_CACHE_RECORDS = 10000
 
+# Upper bound on the number of entries QuestionHistory will hold between
+# the periodic 10s cache-cleanup ticks. Bounds the memory a malicious LAN
+# peer can force the duplicate-question-suppression history to retain by
+# flooding distinct questions (RFC 6762 §7.3, defense-in-depth).
+_MAX_QUESTION_HISTORY_ENTRIES = 10000
+
 _DNS_PACKET_HEADER_LEN = 12
 
 _MAX_MSG_TYPICAL = 1460  # unused
