@@ -388,9 +388,23 @@ class DNSIncoming:
             offset = self.offset
             offset_plus_one = offset + 1
             offset_plus_two = offset + 2
+            # RFC 4034 §4.1.2: each window block is window-number byte +
+            # bitmap-length byte (1..32) + bitmap. A bitmap_length that walks
+            # past the record's declared end would otherwise leave self.offset
+            # pointing inside (or past) the next record header, corrupting
+            # every subsequent record in the same packet.
+            if offset_plus_two > end:
+                raise IncomingDecodeError(
+                    f"NSEC bitmap window header truncated at offset {offset} from {self.source}"
+                )
             window = view[offset]
             bitmap_length = view[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
+            if bitmap_length == 0 or bitmap_length > 32 or bitmap_end > end:
+                raise IncomingDecodeError(
+                    f"NSEC bitmap length {bitmap_length} invalid or overruns record end "
+                    f"at offset {offset} from {self.source}"
+                )
             for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
                 for bit in range(8):
                     if byte & (0x80 >> bit):
