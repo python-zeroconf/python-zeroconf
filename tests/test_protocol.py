@@ -807,6 +807,85 @@ def test_parse_packet_with_nsec_record():
     assert nsec_record.next_name == "MyHome54 (2)._meshcop._udp.local."
 
 
+def test_nsec_bitmap_length_overruns_record_end():
+    """Reject NSEC bitmap whose declared length runs past the record boundary."""
+    # 0 questions, 2 answers. Answer 1 is a malformed NSEC: rdlength=9, but the
+    # bitmap window claims length=255 — overrunning the record. Answer 2 is a
+    # PTR that must still parse because the offset for the next record stays
+    # pinned to the NSEC's declared end.
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
+        b"\x04test\x05local\x00"
+        b"\x00\x2f\x80\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x09"
+        b"\xc0\x0c"
+        b"\x00\xff"
+        b"\x80\x00\x00\x00\x00"
+        b"\xc0\x0c"
+        b"\x00\x0c\x00\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x02"
+        b"\xc0\x0c"
+    )
+    parsed = r.DNSIncoming(packet)
+    answers = parsed.answers()
+    ptrs = [a for a in answers if isinstance(a, r.DNSPointer)]
+    assert len(ptrs) == 1
+    assert ptrs[0].alias == "test.local."
+    # The malformed NSEC must not surface — if it did, it would carry rdtypes
+    # synthesized from bytes past the record boundary.
+    assert not any(isinstance(a, r.DNSNsec) for a in answers)
+
+
+def test_nsec_bitmap_zero_length_window_rejected():
+    """A bitmap window with length=0 violates RFC 4034 §4.1.2 and must be rejected."""
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
+        b"\x04test\x05local\x00"
+        b"\x00\x2f\x80\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x04"
+        b"\xc0\x0c"
+        b"\x00\x00"
+        b"\xc0\x0c"
+        b"\x00\x0c\x00\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x02"
+        b"\xc0\x0c"
+    )
+    parsed = r.DNSIncoming(packet)
+    answers = parsed.answers()
+    ptrs = [a for a in answers if isinstance(a, r.DNSPointer)]
+    assert len(ptrs) == 1
+    assert not any(isinstance(a, r.DNSNsec) for a in answers)
+
+
+def test_nsec_bitmap_truncated_window_header_rejected():
+    """Reject NSEC bitmap with a trailing byte too short to hold a window header."""
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
+        b"\x04test\x05local\x00"
+        b"\x00\x2f\x80\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x06"
+        b"\xc0\x0c"
+        b"\x00\x01\x80"
+        b"\xff"
+        b"\xc0\x0c"
+        b"\x00\x0c\x00\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x02"
+        b"\xc0\x0c"
+    )
+    parsed = r.DNSIncoming(packet)
+    answers = parsed.answers()
+    ptrs = [a for a in answers if isinstance(a, r.DNSPointer)]
+    assert len(ptrs) == 1
+    assert ptrs[0].alias == "test.local."
+    assert not any(isinstance(a, r.DNSNsec) for a in answers)
+
+
 def test_records_same_packet_share_fate():
     """Test records in the same packet all have the same created time."""
     out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)

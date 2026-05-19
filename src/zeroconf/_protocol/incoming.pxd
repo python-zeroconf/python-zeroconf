@@ -128,6 +128,7 @@ cdef class DNSIncoming:
         byte="unsigned int",
         i="unsigned int",
         bitmap_length="unsigned int",
+        bitmap_end="unsigned int",
     )
     cdef list _read_bitmap(self, unsigned int end)
 
