@@ -20,7 +20,7 @@ import pytest
 
 import zeroconf as r
 from zeroconf import NotRunningException, Zeroconf, const, current_time_millis
-from zeroconf._listener import AsyncListener, _WrappedTransport
+from zeroconf._listener import _TC_DELAY_RANDOM_INTERVAL, AsyncListener, _WrappedTransport
 from zeroconf._protocol.incoming import DNSIncoming
 from zeroconf.asyncio import AsyncZeroconf
 
@@ -776,7 +776,8 @@ def test_tc_bit_defer_window_is_bounded():
 
     # Pin the per-packet delay at its maximum so any subsequent reset would
     # land past the deadline established by the first packet.
-    with patch("zeroconf._listener.random.randint", return_value=500):
+    max_delay_ms = _TC_DELAY_RANDOM_INTERVAL[1]
+    with patch("zeroconf._listener.random.randint", return_value=max_delay_ms):
         threadsafe_query(zc, protocol, r.DNSIncoming(packets[0]), source_ip, const._MDNS_PORT, Mock(), ())
         first_when = protocol._timers[source_ip].when()
 

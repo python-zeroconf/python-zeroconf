@@ -39,7 +39,10 @@ cdef class AsyncListener:
 
     cdef _cancel_any_timers_for_addr(self, object addr)
 
-    @cython.locals(incoming=DNSIncoming, deferred=list, now=double, delay=double, deadline=object, fire_at=double)
+    @cython.locals(deadline=object, fire_at=double)
+    cdef double _compute_deferred_fire_at(self, object addr, double now, double delay)
+
+    @cython.locals(incoming=DNSIncoming, deferred=list, now=double, delay=double, fire_at=double)
     cpdef handle_query_or_defer(
         self,
         DNSIncoming msg,

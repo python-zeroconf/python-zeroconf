@@ -209,18 +209,9 @@ class AsyncListener:
         assert loop is not None
         now = loop.time()
         delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))  # noqa: S311
-        # Bound the assembly window to first_arrival + max delay so a peer
-        # streaming TC packets cannot keep deferring the flush indefinitely.
-        deadline = self._deferred_deadlines.get(addr)
-        if deadline is None:
-            deadline = now + millis_to_seconds(_TC_DELAY_RANDOM_INTERVAL[1])
-            self._deferred_deadlines[addr] = deadline
-        fire_at = now + delay
-        if fire_at >= deadline:
-            # Existing timer (if any) already fires at or before the deadline.
-            if addr in self._timers:
-                return
-            fire_at = deadline
+        fire_at = self._compute_deferred_fire_at(addr, now, delay)
+        if fire_at < 0.0:
+            return
         self._cancel_any_timers_for_addr(addr)
         self._timers[addr] = loop.call_at(
             fire_at,
@@ -231,6 +222,21 @@ class AsyncListener:
             transport,
             v6_flow_scope,
         )
+
+    def _compute_deferred_fire_at(self, addr: _str, now: _float, delay: _float) -> _float:
+        """Return the bounded call_at time for a TC-deferred flush, or -1.0 to keep the existing timer."""
+        # RFC 6762 §18.5 frames the random delay as a fixed reassembly budget
+        # starting at first arrival, not a sliding heartbeat.
+        deadline = self._deferred_deadlines.get(addr)
+        if deadline is None:
+            deadline = now + millis_to_seconds(_TC_DELAY_RANDOM_INTERVAL[1])
+            self._deferred_deadlines[addr] = deadline
+        fire_at = now + delay
+        if fire_at >= deadline:
+            if addr in self._timers:
+                return -1.0
+            return deadline
+        return fire_at
 
     def _cancel_any_timers_for_addr(self, addr: _str) -> None:
         """Cancel any future truncated packet timers for the address."""
