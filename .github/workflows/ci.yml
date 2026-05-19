@@ -225,53 +225,53 @@ jobs:
             musl: "musllinux"
           # qemu is slow, make a single
           # runner per Python version
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: "musllinux"
             pyver: cp310
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: "musllinux"
             pyver: cp311
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: "musllinux"
             pyver: cp312
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: "musllinux"
             pyver: cp313
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: "musllinux"
             pyver: cp314
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: "musllinux"
             pyver: cp314t
           # qemu is slow, make a single
           # runner per Python version
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: ""
             pyver: cp310
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: ""
             pyver: cp311
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: ""
             pyver: cp312
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: ""
             pyver: cp313
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: ""
             pyver: cp314
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             qemu: armv7l
             musl: ""
             pyver: cp314t
