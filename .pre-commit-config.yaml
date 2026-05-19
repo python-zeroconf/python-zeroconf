@@ -8,11 +8,6 @@ ci:
   autoupdate_commit_msg: "chore(pre-commit.ci): pre-commit autoupdate"
 
 repos:
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.16.2
-    hooks:
-      - id: commitizen
-        stages: [commit-msg]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
