@@ -861,6 +861,36 @@ def test_nsec_bitmap_zero_length_window_rejected():
     assert not any(isinstance(a, r.DNSNsec) for a in answers)
 
 
+def test_nsec_bitmap_truncated_window_header_rejected():
+    """A bitmap with a trailing byte too short to hold a window header must be rejected.
+
+    rdata = compressed next-name (2B) + one valid window block (3B) + 1 stray byte.
+    On the second loop iteration, offset+2 walks past the record's declared end —
+    the parser must refuse to read window/length fields from past the record.
+    """
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
+        b"\x04test\x05local\x00"
+        b"\x00\x2f\x80\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x06"
+        b"\xc0\x0c"
+        b"\x00\x01\x80"
+        b"\xff"
+        b"\xc0\x0c"
+        b"\x00\x0c\x00\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x02"
+        b"\xc0\x0c"
+    )
+    parsed = r.DNSIncoming(packet)
+    answers = parsed.answers()
+    ptrs = [a for a in answers if isinstance(a, r.DNSPointer)]
+    assert len(ptrs) == 1
+    assert ptrs[0].alias == "test.local."
+    assert not any(isinstance(a, r.DNSNsec) for a in answers)
+
+
 def test_records_same_packet_share_fate():
     """Test records in the same packet all have the same created time."""
     out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
