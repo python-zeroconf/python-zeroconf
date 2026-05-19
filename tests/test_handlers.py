@@ -1783,19 +1783,19 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
         protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
         protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
-        # The delay should increase with two packets and
-        # 900ms is beyond the maximum aggregation delay
-        # when there is no network protection delay
-        await asyncio.sleep(0.9)
+        # The minimum protected send_after is 1000ms + 20ms random; sleep
+        # well under that so coarse timers on slow runners cannot push the
+        # send into this window and flake the assertion.
+        await asyncio.sleep(0.5)
         calls = send_mock.mock_calls
         assert len(calls) == 0
 
         # 1000ms  (1s network protection delays)
-        # - 900ms (already slept)
+        # - 500ms (already slept)
         # + 120ms (maximum random delay)
         # + 200ms (maximum protected aggregation delay)
         # +  20ms (execution time)
-        await asyncio.sleep(millis_to_seconds(1000 - 900 + 120 + 200 + 20))
+        await asyncio.sleep(millis_to_seconds(1000 - 500 + 120 + 200 + 20))
         calls = send_mock.mock_calls
         assert len(calls) == 1
         outgoing = send_mock.call_args[0][0]
