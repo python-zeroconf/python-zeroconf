@@ -13,6 +13,7 @@ concurrency:
 
 env:
   POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  UV_PYTHON_PREFERENCE: only-managed  # avoid ancient system Python
 
 jobs:
   lint:
@@ -24,20 +25,10 @@ jobs:
           python-version: "3.12"
       - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
-  # Make sure commit messages follow the conventional commits convention:
+  # Make sure the PR title follows the conventional commits convention:
   # https://www.conventionalcommits.org
-  commitlint:
-    name: Lint Commit Messages
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-        with:
-          fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6
-
-  # PRs are squash-merged, so the PR title becomes the commit subject on
-  # master. Validate it against Conventional Commits so the squashed commit
-  # stays release-tool-friendly even when individual commits don't.
+  # PRs are squash-merged, so the PR title becomes the commit on master and
+  # drives python-semantic-release's version bump.
   pr-title:
     name: Lint PR Title
     runs-on: ubuntu-latest
@@ -48,6 +39,12 @@ jobs:
       - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            starts with a lowercase character.
 
   test:
     strategy:
@@ -155,7 +152,6 @@ jobs:
     needs:
       - test
       - lint
-      - commitlint
     if: ${{ github.repository_owner }} == "python-zeroconf"
 
     runs-on: ubuntu-latest

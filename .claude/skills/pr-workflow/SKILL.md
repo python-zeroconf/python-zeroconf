@@ -49,28 +49,29 @@ behaviour change that affects packet contents or timing —
 reviewers shouldn't have to reverse-engineer why a constant moved
 or a probe interval changed.
 
-## 3. Commit message conventions
+## 3. PR title conventions
 
-Commit messages are linted by `commitlint` with
-`@commitlint/config-conventional`, _and_ by `commitizen` in
-pre-commit (`stages: [commit-msg]`). Both must pass.
+PRs are squash-merged, so the PR title becomes the commit on
+`master`. Only the PR title is linted (by the `pr-title` CI job
+running `amannn/action-semantic-pull-request`); per-commit
+messages on the PR branch are not checked.
 
-- **Conventional Commits prefix is required.** Pick from:
-  `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`,
-  `ci`, `chore`, `style`, `revert`. The `feat`/`fix`/`perf`
-  prefixes show up in the release-notes; `chore*` and `ci*` are
-  excluded by semantic-release (`exclude_commit_patterns` in
-  `pyproject.toml`), so use those for housekeeping.
+- **Conventional Commits prefix is required on the PR title.**
+  Pick from: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`,
+  `build`, `ci`, `chore`, `style`, `revert`. The
+  `feat`/`fix`/`perf` prefixes show up in the release-notes;
+  `chore*` and `ci*` are excluded by semantic-release
+  (`exclude_commit_patterns` in `pyproject.toml`), so use those
+  for housekeeping.
 - **Imperative-mood subject.** "fix: handle empty answer", not
   "fix: handled empty answer".
-- **No header length cap.** The commitlint config sets
-  `header-max-length: [0, "always", Infinity]`, so a slightly
-  longer subject is fine if it earns the space; don't pad.
+- **Lowercase first character after the prefix** (enforced by
+  `subjectPattern: ^(?![A-Z]).+$`).
 - **No `Co-Authored-By` trailers from automated agents.**
-- **One logical change per commit.** Let pre-commit run (ruff
+- **One logical change per PR.** Let pre-commit run (ruff
   lint + format, mypy, flake8, codespell, cython-lint,
   pyupgrade). If a hook auto-fixes something, re-stage and
-  re-commit; the commit-msg hook re-runs on the new commit.
+  re-commit.
 
 ## 4. Cython / `.pxd` discipline
 
@@ -101,10 +102,10 @@ Always pass the body via `--body-file`, never `--body "..."` with
 shell-escaping — Markdown backticks, asterisks, and angle
 brackets must pass through verbatim.
 
-The PR title should match the commit subject (same Conventional
-Commits prefix). If the PR ends up squash-merged, the title
-becomes the merged commit message, so it has to satisfy
-commitlint on its own.
+The PR title is what gets enforced — it becomes the squash-merge
+commit subject on `master`, so it has to parse as a Conventional
+Commit on its own. Per-commit messages on the branch are not
+linted.
 
 ## 6. After the PR is open
 
@@ -112,11 +113,12 @@ CI runs three jobs:
 
 - `lint` — `pre-commit/action`. If pre-commit passed locally
   this passes too.
-- `commitlint` — `wagoid/commitlint-github-action`. Validates
-  every commit on the PR; if you amended after pushing, force-
-  push the branch so the rewritten commits get linted.
-- `test` — the full pytest matrix across CPython 3.9–3.14,
-  3.14t (free-threaded), and PyPy 3.9 / 3.10, on Linux + macOS +
+- `pr-title` — `amannn/action-semantic-pull-request`. Validates
+  the PR title against Conventional Commits. If it fails, fix
+  the title in the GitHub UI or with `gh pr edit --title "..."`;
+  the workflow re-runs on the edit, no push needed.
+- `test` — the full pytest matrix across CPython 3.10–3.14,
+  3.14t (free-threaded), and PyPy 3.10, on Linux + macOS +
   Windows. The free-threaded entry is the canary for unguarded
   shared-state bugs; failures there are often genuine even when
   the GIL-enabled rows pass.
