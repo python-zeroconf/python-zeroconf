@@ -2,6 +2,29 @@
 
 <!-- version list -->
 
+## v0.149.8 (2026-05-19)
+
+### Bug Fixes
+
+- Bound NSEC bitmap length against record end
+  ([#1731](https://github.com/python-zeroconf/python-zeroconf/pull/1731),
+  [`1d83550`](https://github.com/python-zeroconf/python-zeroconf/commit/1d83550c58ed0ea69b611a907cd4bdfcb2eef535))
+
+### Testing
+
+- Give IPv6-only loopback find() its own timeout
+  ([#1721](https://github.com/python-zeroconf/python-zeroconf/pull/1721),
+  [`fcd1ffb`](https://github.com/python-zeroconf/python-zeroconf/commit/fcd1ffb4af9b3b26bc0ecae30641251a4c9a4ba6))
+
+- Widen LOOPBACK_FIND_TIMEOUT under PyPy
+  ([#1742](https://github.com/python-zeroconf/python-zeroconf/pull/1742),
+  [`6924606`](https://github.com/python-zeroconf/python-zeroconf/commit/69246065085fa25f9baf20abbf0eaddcb4a4d88c))
+
+- Widen safety margin in test_response_aggregation_timings_multiple
+  ([#1737](https://github.com/python-zeroconf/python-zeroconf/pull/1737),
+  [`228af17`](https://github.com/python-zeroconf/python-zeroconf/commit/228af178657a70dd2e76420a8187345de6ede46f))
+
+
 ## v0.149.7 (2026-05-18)
 
 ### Bug Fixes
