@@ -862,12 +862,7 @@ def test_nsec_bitmap_zero_length_window_rejected():
 
 
 def test_nsec_bitmap_truncated_window_header_rejected():
-    """A bitmap with a trailing byte too short to hold a window header must be rejected.
-
-    rdata = compressed next-name (2B) + one valid window block (3B) + 1 stray byte.
-    On the second loop iteration, offset+2 walks past the record's declared end —
-    the parser must refuse to read window/length fields from past the record.
-    """
+    """Reject NSEC bitmap with a trailing byte too short to hold a window header."""
     packet = (
         b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
         b"\x04test\x05local\x00"
