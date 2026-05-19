@@ -104,7 +104,8 @@ def test_question_history_evicts_oldest_first():
     first = r.DNSQuestion("_first._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
     history.add_question_at_time(first, now, answers)
 
-    # Fill remaining slots with fresh, non-expired entries.
+    # Add `cap` more fresh, non-expired entries — one past the cap — so the
+    # final insertion forces oldest-first eviction of `first`.
     for i in range(cap):
         q = r.DNSQuestion(f"_svc{i}._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
         history.add_question_at_time(q, now, answers)
