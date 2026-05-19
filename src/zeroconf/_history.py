@@ -40,17 +40,8 @@ class QuestionHistory:
 
     def add_question_at_time(self, question: DNSQuestion, now: _float, known_answers: set[DNSRecord]) -> None:
         """Remember a question with known answers."""
-        # Bound history size between the periodic 10s cleanup ticks. When at
-        # cap, peek at the oldest insertion (dict is ordered) — only run the
-        # full O(n) async_expire sweep if it could actually reclaim something,
-        # else a sustained flood at cap turns each insert into a wasted scan.
         if question not in self._history and len(self._history) >= _MAX_QUESTION_HISTORY_ENTRIES:
-            oldest = next(iter(self._history))
-            oldest_than, _ = self._history[oldest]
-            if now - oldest_than > _DUPLICATE_QUESTION_INTERVAL:
-                self.async_expire(now)
-            while len(self._history) >= _MAX_QUESTION_HISTORY_ENTRIES:
-                del self._history[next(iter(self._history))]
+            self._evict_to_make_room(now)
         self._history[question] = (now, known_answers)
 
     def suppresses(self, question: DNSQuestion, now: _float, known_answers: set[DNSRecord]) -> bool:
@@ -86,3 +77,19 @@ class QuestionHistory:
     def clear(self) -> None:
         """Clear the history."""
         self._history.clear()
+
+    def _evict_to_make_room(self, now: _float) -> None:
+        """Drop expired or oldest entries when the history is at cap.
+
+        Peeks at the oldest insertion (dict is ordered) — only runs the
+        full O(n) async_expire sweep if it could actually reclaim
+        something, else a sustained flood at cap turns each insert into
+        a wasted scan. Falls back to oldest-first eviction.
+        """
+        oldest = next(iter(self._history))
+        oldest_entry = self._history[oldest]
+        oldest_than = oldest_entry[0]
+        if now - oldest_than > _DUPLICATE_QUESTION_INTERVAL:
+            self.async_expire(now)
+        while len(self._history) >= _MAX_QUESTION_HISTORY_ENTRIES:
+            del self._history[next(iter(self._history))]

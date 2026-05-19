@@ -12,6 +12,9 @@ cdef class QuestionHistory:
 
     cpdef void add_question_at_time(self, DNSQuestion question, double now, cython.set known_answers)
 
+    @cython.locals(oldest=DNSQuestion, oldest_entry=cython.tuple, oldest_than=double)
+    cdef void _evict_to_make_room(self, double now)
+
     @cython.locals(than=double, previous_question=cython.tuple, previous_known_answers=cython.set)
     cpdef bint suppresses(self, DNSQuestion question, double now, cython.set known_answers)
 
