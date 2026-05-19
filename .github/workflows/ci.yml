@@ -99,7 +99,7 @@ jobs:
           path: |
             .venv
             src/zeroconf/**/*.so
-          key: venv-v1-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.extension }}-${{ hashFiles('poetry.lock', 'pyproject.toml', 'build_ext.py', 'src/zeroconf/**/*.py', 'src/zeroconf/**/*.pxd') }}
+          key: venv-v2-${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.extension }}-${{ hashFiles('poetry.lock', 'pyproject.toml', 'build_ext.py', 'src/zeroconf/**/*.py', 'src/zeroconf/**/*.pxd') }}
       - name: Install Dependencies no cython
         if: ${{ matrix.extension == 'skip_cython' && steps.cache-venv.outputs.cache-hit != 'true' }}
         env:
@@ -138,7 +138,7 @@ jobs:
           path: |
             .venv
             src/zeroconf/**/*.so
-          key: venv-v1-${{ runner.os }}-benchmark-py3.13-${{ hashFiles('poetry.lock', 'pyproject.toml', 'build_ext.py', 'src/zeroconf/**/*.py', 'src/zeroconf/**/*.pxd') }}
+          key: venv-v2-${{ runner.os }}-benchmark-py3.13-${{ hashFiles('poetry.lock', 'pyproject.toml', 'build_ext.py', 'src/zeroconf/**/*.py', 'src/zeroconf/**/*.pxd') }}
       - name: Install Dependencies
         if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
