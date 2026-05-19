@@ -85,13 +85,17 @@ path. The authoritative list of cythonized modules lives in
 
 ## Commit / PR conventions
 
-- **Conventional Commits are enforced.** CI runs commitlint with
-  `@commitlint/config-conventional`, and pre-commit runs
-  commitizen on the commit message. The header has no length cap
-  (`header-max-length = [0, "always", Infinity]`), but the
-  _type_ prefix is required: `feat:`, `fix:`, `chore:`, `ci:`,
-  `docs:`, `refactor:`, `test:`, `perf:`, `build:`, etc.
-  `semantic-release` excludes `chore*` and `ci*` from the
+- **Conventional Commits PR title, lowercase subject.** PRs are
+  squash-merged, so the **PR title** becomes the commit on
+  `master` and is the only string that has to parse as a
+  Conventional Commit. The repo enforces this via the `pr-title`
+  CI job in `ci.yml` using `amannn/action-semantic-pull-request`.
+  Accepted types: `feat`, `fix`, `chore`, `ci`, `docs`,
+  `refactor`, `test`, `perf`, `build`, etc. The subject (text
+  after `type(scope):`) must start lowercase (enforced by
+  `subjectPattern: ^(?![A-Z]).+$`). Per-commit messages on the
+  PR branch are **not** linted; they get collapsed at squash-
+  merge. `semantic-release` excludes `chore*` and `ci*` from the
   changelog, so use those prefixes for housekeeping and reserve
   `feat`/`fix`/`perf` for user-visible changes.
 - **No `Co-Authored-By` trailers from automated agents.** Project
@@ -267,8 +271,8 @@ or commit that names the bug class and the affected code path.
   the resulting wheel will crash at import time.
 - **Don't add `Co-Authored-By` trailers from automated agents
   to commits** in this repo.
-- **Don't introduce a commit message that violates Conventional
-  Commits.** The commitlint job will fail the PR.
+- **Don't introduce a PR title that violates Conventional
+  Commits.** The `pr-title` job will fail the PR.
 - **Don't tighten timings or constants in `const.py` without an
   RFC citation in the commit message.** mDNS interop with
   Avahi / Bonjour / Windows hinges on those numbers.
