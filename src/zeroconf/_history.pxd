@@ -8,7 +8,7 @@ cdef unsigned int _MAX_QUESTION_HISTORY_ENTRIES
 
 cdef class QuestionHistory:
 
-    cdef cython.dict _history
+    cdef public cython.dict _history
 
     cpdef void add_question_at_time(self, DNSQuestion question, double now, cython.set known_answers)
 
