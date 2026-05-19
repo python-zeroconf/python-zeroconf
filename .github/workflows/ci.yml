@@ -13,6 +13,7 @@ concurrency:
 
 env:
   POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  UV_PYTHON_PREFERENCE: only-managed  # avoid ancient system Python
 
 jobs:
   lint:
