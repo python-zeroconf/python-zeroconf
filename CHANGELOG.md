@@ -2,6 +2,33 @@
 
 <!-- version list -->
 
+## v0.149.14 (2026-05-20)
+
+### Bug Fixes
+
+- Skip NSEC records in ServiceBrowser to suppress spurious updates
+  ([#1762](https://github.com/python-zeroconf/python-zeroconf/pull/1762),
+  [`137a5d6`](https://github.com/python-zeroconf/python-zeroconf/commit/137a5d6c29389ffcd8abfba0925d8cbe58cb2c1b))
+
+### Testing
+
+- Add blockbuster to detect blocking calls in asyncio tests
+  ([#1761](https://github.com/python-zeroconf/python-zeroconf/pull/1761),
+  [`90a5a39`](https://github.com/python-zeroconf/python-zeroconf/commit/90a5a39df7400926bc5498a86b9fe4c46eaffd44))
+
+- Scale aggregation timings 10x to speed up timing-dependent tests
+  ([#1759](https://github.com/python-zeroconf/python-zeroconf/pull/1759),
+  [`3e5ac4f`](https://github.com/python-zeroconf/python-zeroconf/commit/3e5ac4fbc5cd8d8b5ffed5cc8994782e7157cfad))
+
+- Shave loopback timing overhead from remaining slow tests
+  ([#1760](https://github.com/python-zeroconf/python-zeroconf/pull/1760),
+  [`343dc7a`](https://github.com/python-zeroconf/python-zeroconf/commit/343dc7a305b47a574f58265081f172ed54f461bb))
+
+- Widen QM follow-up window in info_asking_default test
+  ([#1765](https://github.com/python-zeroconf/python-zeroconf/pull/1765),
+  [`4ffba87`](https://github.com/python-zeroconf/python-zeroconf/commit/4ffba87177fcc11a0fd8ccb7d93c6996a1269a26))
+
+
 ## v0.149.13 (2026-05-20)
 
 ### Bug Fixes
