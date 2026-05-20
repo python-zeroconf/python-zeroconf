@@ -365,7 +365,7 @@ def test_recent_packets_window_is_bounded() -> None:
     now = current_time_millis()
 
     packets = []
-    for i in range(_listener._RECENT_PACKETS_MAX + 4):
+    for i in range(const._RECENT_PACKETS_MAX + 4):
         query = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
         query.add_question(r.DNSQuestion(f"n{i}._http._tcp.local.", const._TYPE_PTR, const._CLASS_IN))
         packets.append(query.packets()[0])
@@ -377,7 +377,7 @@ def test_recent_packets_window_is_bounded() -> None:
         _handle_query_or_defer.reset_mock()
 
         # The oldest packets should have been evicted and now replay.
-        evicted = packets[: len(packets) - _listener._RECENT_PACKETS_MAX]
+        evicted = packets[: len(packets) - const._RECENT_PACKETS_MAX]
         for packet in evicted:
             listener._process_datagram_at_time(False, len(packet), now, packet, addrs)
         assert _handle_query_or_defer.call_count == len(evicted)

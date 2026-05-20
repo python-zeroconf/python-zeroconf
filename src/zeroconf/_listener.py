@@ -32,18 +32,18 @@ from ._logger import QuietLogger, log
 from ._protocol.incoming import DNSIncoming
 from ._transport import _WrappedTransport, make_wrapped_transport
 from ._utils.time import current_time_millis, millis_to_seconds
-from .const import _DUPLICATE_PACKET_SUPPRESSION_INTERVAL, _MAX_MSG_ABSOLUTE
+from .const import _DUPLICATE_PACKET_SUPPRESSION_INTERVAL, _MAX_MSG_ABSOLUTE, _RECENT_PACKETS_MAX
 
 if TYPE_CHECKING:
     from ._core import Zeroconf
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
-# Bounded recency window so an alternating (A, B, A, B, ...) flood can't
-# slip past single-slot dedup. State lives on the listener (one per
-# interface) so a duplicate seen on one interface does not suppress a
-# legitimate QU / unicast reply that arrives on a different interface.
-_RECENT_PACKETS_MAX = 16
+# Bounded recency window (`_RECENT_PACKETS_MAX`, imported from `.const`)
+# so an alternating (A, B, A, B, ...) flood can't slip past single-slot
+# dedup. State lives on the listener (one per interface) so a duplicate
+# seen on one interface does not suppress a legitimate QU / unicast
+# reply that arrives on a different interface.
 
 
 _bytes = bytes
