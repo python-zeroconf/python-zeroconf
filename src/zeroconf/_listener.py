@@ -211,6 +211,9 @@ class AsyncListener:
         delay = millis_to_seconds(random.randint(*_TC_DELAY_RANDOM_INTERVAL))  # noqa: S311
         fire_at = self._compute_deferred_fire_at(addr, now, delay)
         if fire_at < 0.0:
+            # Sentinel: a new reset would push the flush past the
+            # per-addr reassembly deadline, so leave the existing
+            # TimerHandle in place rather than re-arming it.
             return
         self._cancel_any_timers_for_addr(addr)
         self._timers[addr] = loop.call_at(
@@ -234,8 +237,14 @@ class AsyncListener:
         fire_at = now + delay
         if fire_at >= deadline:
             if addr in self._timers:
+                # Existing timer already fires at or before the deadline;
+                # signal the caller to leave it alone rather than reset it.
                 return -1.0
+            # First packet for this addr already proposes a fire-time at
+            # or past the deadline — clamp to the deadline so the flush
+            # still happens within the reassembly budget.
             return deadline
+        # Within budget: schedule at the proposed fire-time.
         return fire_at
 
     def _cancel_any_timers_for_addr(self, addr: _str) -> None:
