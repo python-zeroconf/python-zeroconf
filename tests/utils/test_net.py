@@ -131,7 +131,7 @@ def test_normalize_interface_choice_errors():
 
 
 @pytest.mark.parametrize(
-    "errno,expected_result",
+    ("errno", "expected_result"),
     [
         (errno.EADDRINUSE, False),
         (errno.EADDRNOTAVAIL, False),

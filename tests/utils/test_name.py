@@ -28,11 +28,11 @@ def test_service_type_name_overlong_full_name():
 
 
 @pytest.mark.parametrize(
-    "instance_name, service_type",
-    (
+    ("instance_name", "service_type"),
+    [
         ("CustomerInformationService-F4D4885E9EEB", "_ibisip_http._tcp.local."),
         ("DeviceManagementService_F4D4885E9EEB", "_ibisip_http._tcp.local."),
-    ),
+    ],
 )
 def test_service_type_name_non_strict_compliant_names(instance_name, service_type):
     """Test service_type_name for valid names, but not strict-compliant."""
@@ -62,8 +62,8 @@ def test_service_type_name_non_strict_compliant_names(instance_name, service_typ
 
 
 @pytest.mark.parametrize(
-    "type_, expected",
-    (
+    ("type_", "expected"),
+    [
         ("_http._tcp.LOCAL.", "_http._tcp.LOCAL."),
         ("_http._TCP.local.", "_http._TCP.local."),
         ("_HTTP._tcp.local.", "_HTTP._tcp.local."),
@@ -71,7 +71,7 @@ def test_service_type_name_non_strict_compliant_names(instance_name, service_typ
         ("_ntp._udp.LOCAL.", "_ntp._udp.LOCAL."),
         ("_ntp._UDP.local.", "_ntp._UDP.local."),
         ("Instance._ntp._udp.LOCAL.", "_ntp._udp.LOCAL."),
-    ),
+    ],
 )
 def test_service_type_name_uppercase_trailer(type_, expected):
     """RFC 1035 §2.3.3 / RFC 6762 §16 — DNS names are case-insensitive."""
