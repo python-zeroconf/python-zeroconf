@@ -1090,12 +1090,14 @@ def test_service_browser_nsec_record_does_not_trigger_update():
     zc = Zeroconf(interfaces=["127.0.0.1"])
     type_ = "_hap._tcp.local."
     registration_name = f"xxxyyy.{type_}"
-    callbacks = []
+    callbacks: list[tuple[str, str, str]] = []
+    service_added = Event()
 
     class MyServiceListener(r.ServiceListener):
         def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             if name == registration_name:
                 callbacks.append(("add", type_, name))
+                service_added.set()
 
         def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
             if name == registration_name:
@@ -1107,44 +1109,47 @@ def test_service_browser_nsec_record_does_not_trigger_update():
 
     listener = MyServiceListener()
     browser = r.ServiceBrowser(zc, type_, None, listener)
+    try:
+        desc = {"path": "/~paulsm/"}
+        address = socket.inet_aton("10.0.1.2")
+        info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
 
-    desc = {"path": "/~paulsm/"}
-    address = socket.inet_aton("10.0.1.2")
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+        _inject_response(
+            zc,
+            mock_incoming_msg(
+                [
+                    info.dns_pointer(),
+                    info.dns_service(),
+                    info.dns_text(),
+                    *info.dns_addresses(),
+                ]
+            ),
+        )
+        assert service_added.wait(timeout=5), "add_service callback never fired"
 
-    _inject_response(
-        zc,
-        mock_incoming_msg(
-            [
-                info.dns_pointer(),
-                info.dns_service(),
-                info.dns_text(),
-                *info.dns_addresses(),
-            ]
-        ),
-    )
-    time.sleep(0.2)
+        # NSEC inject runs synchronously through the event loop; once
+        # _inject_response returns, async_update_records has already
+        # decided not to enqueue a callback for the NSEC record.
+        _inject_response(
+            zc,
+            mock_incoming_msg(
+                [
+                    r.DNSNsec(
+                        registration_name,
+                        const._TYPE_NSEC,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        const._DNS_OTHER_TTL,
+                        registration_name,
+                        [const._TYPE_AAAA],
+                    ),
+                ]
+            ),
+        )
 
-    _inject_response(
-        zc,
-        mock_incoming_msg(
-            [
-                r.DNSNsec(
-                    registration_name,
-                    const._TYPE_NSEC,
-                    const._CLASS_IN | const._CLASS_UNIQUE,
-                    const._DNS_OTHER_TTL,
-                    registration_name,
-                    [const._TYPE_AAAA],
-                ),
-            ]
-        ),
-    )
-    time.sleep(0.2)
-
-    assert callbacks == [("add", type_, registration_name)]
-    browser.cancel()
-    zc.close()
+        assert callbacks == [("add", type_, registration_name)]
+    finally:
+        browser.cancel()
+        zc.close()
 
 
 def test_service_browser_uses_non_strict_names():
