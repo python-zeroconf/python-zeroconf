@@ -63,7 +63,7 @@ LOOPBACK_FIND_TIMEOUT = 0.3 if _IS_PYPY else 0.075
 # PyPy widens that further with JIT warmup. The 75ms budget that works on
 # IPv4 loopback is too tight for the V6Only path under those conditions
 # — give it more headroom.
-IPV6_LOOPBACK_FIND_TIMEOUT = 0.5
+IPV6_LOOPBACK_FIND_TIMEOUT = 1.0 if _IS_PYPY else 0.5
 
 
 class QuestionHistoryWithoutSuppression(QuestionHistory):
