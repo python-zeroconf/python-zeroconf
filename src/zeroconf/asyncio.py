@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from types import TracebackType  # used in type hints
 
 from ._core import Zeroconf
@@ -151,6 +151,7 @@ class AsyncZeroconf:
         ip_version: IPVersion | None = None,
         apple_p2p: bool = False,
         zc: Zeroconf | None = None,
+        multicast_addresses: Sequence[str | int | tuple[tuple[str, int, int], int]] | None = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, and listening.
@@ -166,12 +167,16 @@ class AsyncZeroconf:
         :param ip_version: IP versions to support. If `choice` is a list, the default is detected
             from it. Otherwise defaults to V4 only for backward compatibility.
         :param apple_p2p: use AWDL interface (only macOS)
+        :param multicast_addresses: optional list of additional IP addresses to
+            add to the listen socket's multicast group; see
+            :class:`Zeroconf` for details.
         """
         self.zeroconf = zc or Zeroconf(
             interfaces=interfaces,
             unicast=unicast,
             ip_version=ip_version,
             apple_p2p=apple_p2p,
+            multicast_addresses=multicast_addresses,
         )
         self.async_browsers: dict[ServiceListener, AsyncServiceBrowser] = {}
 

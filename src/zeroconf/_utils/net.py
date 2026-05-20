@@ -444,18 +444,36 @@ def create_sockets(
     unicast: bool = False,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
+    multicast_addresses: Sequence[str | int | tuple[tuple[str, int, int], int]] | None = None,
 ) -> tuple[socket.socket | None, list[socket.socket]]:
+    """Create the listen and respond sockets.
+
+    ``multicast_addresses`` is an optional list of additional addresses that
+    are added to the listen socket's multicast group without creating respond
+    sockets for them. This is useful on sandboxed platforms (notably iOS)
+    where binding port 5353 on a physical interface is blocked by the system
+    mDNS daemon but multicast membership on that interface is still required
+    to receive incoming queries.
+    """
+    if multicast_addresses and unicast:
+        raise ValueError("multicast_addresses is incompatible with unicast=True")
+
     if unicast:
         listen_socket = None
     else:
         listen_socket = new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
+    extra_multicast_members = (
+        normalize_interface_choice(list(multicast_addresses), ip_version) if multicast_addresses else []
+    )
 
     # If we are using InterfaceChoice.Default with only IPv4 or only IPv6, we can use
     # a single socket to listen and respond.
     if not unicast and interfaces is InterfaceChoice.Default and ip_version != IPVersion.All:
         for interface in normalized_interfaces:
+            add_multicast_member(cast(socket.socket, listen_socket), interface)
+        for interface in extra_multicast_members:
             add_multicast_member(cast(socket.socket, listen_socket), interface)
         # Sent responder socket options to the dual-use listen socket
         set_respond_socket_multicast_options(cast(socket.socket, listen_socket), ip_version)
@@ -472,6 +490,9 @@ def create_sockets(
 
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
+
+    for interface in extra_multicast_members:
+        add_multicast_member(cast(socket.socket, listen_socket), interface)
 
     return listen_socket, respond_sockets
 

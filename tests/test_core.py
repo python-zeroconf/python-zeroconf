@@ -184,6 +184,20 @@ class Framework(unittest.TestCase):
         finally:
             zc.close()
 
+    def test_multicast_addresses_forwarded_to_create_sockets(self):
+        """Zeroconf forwards multicast_addresses to create_sockets unchanged."""
+        with patch("zeroconf._core.create_sockets", return_value=(None, [])) as mock_create:
+            zc = r.Zeroconf(
+                interfaces=["127.0.0.1"],
+                multicast_addresses=["192.168.1.5"],
+                unicast=True,
+            )
+            try:
+                _, kwargs = mock_create.call_args
+                assert kwargs["multicast_addresses"] == ["192.168.1.5"]
+            finally:
+                zc.close()
+
     def test_async_updates_from_response(self):
         def mock_incoming_msg(
             service_state_change: r.ServiceStateChange,
