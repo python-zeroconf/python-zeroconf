@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator, Iterator
 from unittest.mock import patch
 
 import pytest
@@ -14,6 +14,64 @@ from zeroconf._handlers import query_handler
 from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
 from zeroconf.asyncio import AsyncZeroconf
+
+try:
+    from blockbuster import BlockBuster, blockbuster_ctx
+except ImportError:  # platforms without blockbuster (e.g. PyPy under QEMU)
+    BlockBuster = None  # type: ignore[assignment,misc]
+    blockbuster_ctx = None  # type: ignore[assignment]
+
+_BENCHMARKS_DIR = "tests/benchmarks"
+
+# Tests that perform sync IO inside the asyncio event loop and trip
+# blockbuster. Marked xfail (strict=False) so CI stays green; pop
+# entries as the underlying blocking calls get fixed. Most of the
+# `test_async_service_registration*` and `test_async_tasks` entries
+# share a single root cause: `Zeroconf.async_close()` -> ... ->
+# `ServiceBrowser.cancel()` calls `Thread.join()` to drain the
+# dedicated browser thread, and on Python 3.10-3.12 the thread is
+# still alive when the join happens. `test_use_asyncio_false_*` is
+# by design (sync bootstrap when `use_asyncio=False` is requested from
+# inside a running loop); `test_run_coro_with_timeout` exercises the
+# sync-from-thread bridge intentionally. The strict=False marker keeps
+# the suite green on the Python versions where the race resolves the
+# other way.
+_KNOWN_BLOCKING: frozenset[str] = frozenset(
+    {
+        "tests/test_asyncio.py::test_async_service_registration",
+        "tests/test_asyncio.py::test_async_service_registration_with_server_missing",
+        "tests/test_asyncio.py::test_async_service_registration_same_server_different_ports",
+        "tests/test_asyncio.py::test_async_service_registration_same_server_same_ports",
+        "tests/test_asyncio.py::test_async_tasks",
+        "tests/test_core.py::Framework::test_use_asyncio_false_forces_thread_when_loop_running",
+        "tests/utils/test_asyncio.py::test_run_coro_with_timeout",
+    }
+)
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Mark known-blocking tests xfail so blockbuster doesn't fail the suite."""
+    if blockbuster_ctx is None:
+        return
+    marker = pytest.mark.xfail(
+        reason="blockbuster: blocking call in asyncio path",
+        strict=False,
+    )
+    for item in items:
+        if item.nodeid in _KNOWN_BLOCKING:
+            item.add_marker(marker)
+
+
+@pytest.fixture(autouse=True)
+def blockbuster(
+    request: pytest.FixtureRequest,
+) -> Iterator[BlockBuster | None]:
+    """Fail any test that performs a blocking call inside the asyncio loop."""
+    if blockbuster_ctx is None or _BENCHMARKS_DIR in str(request.node.fspath):
+        yield None
+        return
+    with blockbuster_ctx() as bb:
+        yield bb
 
 
 @pytest.fixture(autouse=True)
