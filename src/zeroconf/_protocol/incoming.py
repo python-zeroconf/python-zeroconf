@@ -312,6 +312,19 @@ class DNSIncoming:
                     self.data,
                     exc_info=True,
                 )
+            if rec is not None and self.offset != end:
+                # The decoded record consumed a different number of bytes than
+                # rdlength advertised. The record is built from a slice that
+                # straddles its rdata boundary, so drop it and resync to the
+                # declared end so the next record header lands aligned.
+                log.debug(
+                    "Record for %s with type %s did not consume exactly rdlength=%d; dropping",
+                    domain,
+                    _TYPES.get(type_, type_),
+                    length,
+                )
+                self.offset = end
+                rec = None
             if rec is not None:
                 self._answers.append(rec)
 
