@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
 from .._cache import DNSCache
@@ -106,6 +107,36 @@ randint = random.randint
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
+
+
+def _index_of_same_address(
+    addresses: Sequence[ZeroconfIPv4Address | ZeroconfIPv6Address],
+    ip_addr: ZeroconfIPv4Address | ZeroconfIPv6Address,
+) -> int:
+    """Return the index of an existing entry with the same packed bytes, or -1.
+
+    Match by ``zc_integer`` so IPv6 addresses that differ only in
+    scope_id (one observed without scope on an IPv4 socket, another
+    observed with scope on an IPv6 socket) collapse to a single entry.
+    """
+    target = ip_addr.zc_integer
+    for idx, existing in enumerate(addresses):
+        if existing.zc_integer == target:
+            return idx
+    return -1
+
+
+def _has_more_scope_info(
+    new_addr: ZeroconfIPv4Address | ZeroconfIPv6Address,
+    existing: ZeroconfIPv4Address | ZeroconfIPv6Address,
+) -> bool:
+    """True if ``new_addr`` carries a scope_id the ``existing`` entry lacks."""
+    if new_addr.version != 6:
+        return False
+    if TYPE_CHECKING:
+        assert isinstance(new_addr, ZeroconfIPv6Address)
+        assert isinstance(existing, ZeroconfIPv6Address)
+    return new_addr.scope_id is not None and existing.scope_id is None
 
 
 def instance_name_from_service_info(info: ServiceInfo, strict: bool = True) -> str:
@@ -453,10 +484,46 @@ class ServiceInfo(RecordUpdateListener):
             if record.is_expired(now):
                 continue
             ip_addr = get_ip_address_object_from_record(record)
-            if ip_addr is not None and ip_addr not in address_list:
+            if ip_addr is None:
+                continue
+            # The cache keeps scoped and unscoped link-local AAAA
+            # records as separate entries because DNSAddress equality
+            # includes scope_id. Collapse them here so each address
+            # appears once; the scoped variant wins so callers of
+            # parsed_scoped_addresses() get a %<interface_index>-
+            # qualified link-local address when one was observed.
+            existing_idx = _index_of_same_address(address_list, ip_addr)
+            if existing_idx == -1:
                 address_list.append(ip_addr)
+                continue
+            if _has_more_scope_info(ip_addr, address_list[existing_idx]):
+                address_list[existing_idx] = ip_addr
         address_list.reverse()  # Reverse to get LIFO order
         return address_list
+
+    def _upsert_ipv6_address(self, ip_addr: ZeroconfIPv6Address) -> bool:
+        """Insert or update an IPv6 address in LIFO order.
+
+        Compares by integer (not IPv6Address equality, which respects
+        scope_id) so the same link-local address received first without
+        scope (IPv4 socket) and then with scope (IPv6 socket) collapses
+        to one entry. The scoped variant wins so parsed_scoped_addresses()
+        can return a qualified address.
+        """
+        ipv6_addresses = self._ipv6_addresses
+        existing_idx = _index_of_same_address(ipv6_addresses, ip_addr)
+        if existing_idx == -1:
+            ipv6_addresses.insert(0, ip_addr)
+            return True
+        existing = ipv6_addresses[existing_idx]
+        if _has_more_scope_info(ip_addr, existing):
+            ipv6_addresses.pop(existing_idx)
+            ipv6_addresses.insert(0, ip_addr)
+            return True
+        if existing_idx != 0:
+            ipv6_addresses.pop(existing_idx)
+            ipv6_addresses.insert(0, existing)
+        return False
 
     def _set_ipv6_addresses_from_cache(self, zc: Zeroconf, now: float_) -> None:
         """Set IPv6 addresses from the cache."""
@@ -532,19 +599,7 @@ class ServiceInfo(RecordUpdateListener):
 
             if TYPE_CHECKING:
                 assert isinstance(ip_addr, ZeroconfIPv6Address)
-            ipv6_addresses = self._ipv6_addresses
-            if ip_addr not in self._ipv6_addresses:
-                ipv6_addresses.insert(0, ip_addr)
-                return True
-            # Use int() to compare the addresses as integers
-            # since by default IPv6Address.__eq__ compares the
-            # the addresses on version and int which more than
-            # we need here since we know the version is 6.
-            if ip_addr.zc_integer != self._ipv6_addresses[0].zc_integer:
-                ipv6_addresses.remove(ip_addr)
-                ipv6_addresses.insert(0, ip_addr)
-
-            return False
+            return self._upsert_ipv6_address(ip_addr)
 
         if record_key != self.key:
             return False
