@@ -44,7 +44,6 @@ from zeroconf.const import _LISTENER_TIME
 
 from . import (
     LOOPBACK_FIND_TIMEOUT,
-    QUICK_REQUEST_TIMEOUT_MS,
     QuestionHistoryWithoutSuppression,
     _clear_cache,
     has_working_ipv6,
@@ -1191,10 +1190,12 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu(qui
     with patch.object(zeroconf_info, "async_send", send):
         aiosinfo = AsyncServiceInfo(type_, registration_name)
         # Patch _is_complete so we send multiple times. Under
-        # `quick_request_timing` both the QU query at 0ms and the QM
-        # query at ~15ms land well inside QUICK_REQUEST_TIMEOUT_MS.
+        # `quick_request_timing` the QU query fires at 0ms and the QM
+        # follow-up at ~11-15ms (10ms _LISTENER_TIME + 1-5ms jitter);
+        # 300ms absorbs macOS short-sleep quantization so the QM wake
+        # lands before the loop times out.
         with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
-            await aiosinfo.async_request(aiozc.zeroconf, QUICK_REQUEST_TIMEOUT_MS)
+            await aiosinfo.async_request(aiozc.zeroconf, 300)
         try:
             assert first_outgoing.questions[0].unicast is True  # type: ignore[union-attr]
             assert second_outgoing.questions[0].unicast is False  # type: ignore[attr-defined]
