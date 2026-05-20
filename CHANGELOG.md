@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v0.149.10 (2026-05-20)
+
+### Bug Fixes
+
+- Accept uppercase .local. trailer in service_type_name
+  ([#1747](https://github.com/python-zeroconf/python-zeroconf/pull/1747),
+  [`37edde2`](https://github.com/python-zeroconf/python-zeroconf/commit/37edde2f5d9688e9d6c6573ee41a7cd25a54111e))
+
+- Bound TC-deferral assembly window to first-arrival + max delay
+  ([#1732](https://github.com/python-zeroconf/python-zeroconf/pull/1732),
+  [`a096238`](https://github.com/python-zeroconf/python-zeroconf/commit/a0962385a5079d6204fac7744fee9a9d67233eec))
+
+### Testing
+
+- Add codspeed benchmarks for listener duplicate-packet dedup
+  ([#1744](https://github.com/python-zeroconf/python-zeroconf/pull/1744),
+  [`068c3f6`](https://github.com/python-zeroconf/python-zeroconf/commit/068c3f68aeaaaf085d5fa197f7bff304ab80f847))
+
+
 ## v0.149.9 (2026-05-20)
 
 ### Bug Fixes
