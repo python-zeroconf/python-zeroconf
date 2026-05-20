@@ -78,3 +78,58 @@ def test_question_expire():
 
     # Verify the question not longer suppressed since the cache has expired
     assert not history.suppresses(question, now, other_known_answers)
+
+
+def test_question_history_bounded():
+    """History keeps a hard cap so a LAN flood cannot grow it without bound."""
+    history = QuestionHistory()
+    now = r.current_time_millis()
+    answers: set[r.DNSRecord] = set()
+
+    cap = const._MAX_QUESTION_HISTORY_ENTRIES
+    for i in range(cap + 500):
+        q = r.DNSQuestion(f"_svc{i}._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+        history.add_question_at_time(q, now, answers)
+
+    assert len(history._history) <= cap
+
+
+def test_question_history_evicts_oldest_first():
+    """When at cap, the oldest insertion is dropped first."""
+    history = QuestionHistory()
+    now = r.current_time_millis()
+    answers: set[r.DNSRecord] = set()
+
+    cap = const._MAX_QUESTION_HISTORY_ENTRIES
+    first = r.DNSQuestion("_first._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+    history.add_question_at_time(first, now, answers)
+
+    # Add `cap` more fresh, non-expired entries — one past the cap — so the
+    # final insertion forces oldest-first eviction of `first`.
+    for i in range(cap):
+        q = r.DNSQuestion(f"_svc{i}._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+        history.add_question_at_time(q, now, answers)
+
+    assert first not in history._history
+    assert len(history._history) <= cap
+
+
+def test_question_history_opportunistic_expire():
+    """Adding past the cap first drops expired entries before evicting fresh ones."""
+    history = QuestionHistory()
+    old = r.current_time_millis()
+    answers: set[r.DNSRecord] = set()
+
+    cap = const._MAX_QUESTION_HISTORY_ENTRIES
+    for i in range(cap):
+        q = r.DNSQuestion(f"_stale{i}._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+        history.add_question_at_time(q, old, answers)
+
+    # All prior entries are now stale (>999ms old). Adding one more should
+    # trigger opportunistic expiry rather than evicting only the oldest one.
+    fresh_now = old + const._DUPLICATE_QUESTION_INTERVAL + 1
+    fresh = r.DNSQuestion("_fresh._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+    history.add_question_at_time(fresh, fresh_now, answers)
+
+    assert fresh in history._history
+    assert len(history._history) == 1
