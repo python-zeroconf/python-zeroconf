@@ -32,7 +32,13 @@ from ._logger import QuietLogger, log
 from ._protocol.incoming import DNSIncoming
 from ._transport import _WrappedTransport, make_wrapped_transport
 from ._utils.time import current_time_millis, millis_to_seconds
-from .const import _DUPLICATE_PACKET_SUPPRESSION_INTERVAL, _MAX_MSG_ABSOLUTE, _RECENT_PACKETS_MAX
+from .const import (
+    _DUPLICATE_PACKET_SUPPRESSION_INTERVAL,
+    _MAX_DEFERRED_ADDRS,
+    _MAX_DEFERRED_PER_ADDR,
+    _MAX_MSG_ABSOLUTE,
+    _RECENT_PACKETS_MAX,
+)
 
 if TYPE_CHECKING:
     from ._core import Zeroconf
@@ -240,7 +246,17 @@ class AsyncListener:
             self._respond_query(msg, addr, port, transport, v6_flow_scope)
             return
 
+        if addr not in self._deferred and len(self._deferred) >= _MAX_DEFERRED_ADDRS:
+            # Bound total deferred addrs so a spoofed-source flood
+            # cannot keep adding distinct entries; evict the oldest
+            # (insertion-order) entry and discard its in-flight queue.
+            self._evict_oldest_deferred()
+
         deferred = self._deferred.setdefault(addr, [])
+        if len(deferred) >= _MAX_DEFERRED_PER_ADDR:
+            # Bound per-addr queue length; further fragments from the
+            # same source are dropped until the timer flushes.
+            return
         # If we get the same packet we ignore it
         for incoming in reversed(deferred):
             if incoming.data == msg.data:
@@ -292,6 +308,21 @@ class AsyncListener:
         """Cancel any future truncated packet timers for the address."""
         if addr in self._timers:
             self._timers.pop(addr).cancel()
+
+    def _evict_oldest_deferred(self) -> None:
+        """Discard the oldest deferred addr's reassembly state.
+
+        Used when ``_MAX_DEFERRED_ADDRS`` would be exceeded; the
+        evicted addr's queue and timer are dropped without firing, so
+        the bound holds even when an attacker rotates source IPs.
+        Eviction is FIFO (oldest by first-seen, via dict insertion
+        order) rather than LRU so an active flooder cannot pin its
+        slots by re-sending into the same addr.
+        """
+        oldest_addr = next(iter(self._deferred))
+        self._cancel_any_timers_for_addr(oldest_addr)
+        self._deferred_deadlines.pop(oldest_addr, None)
+        del self._deferred[oldest_addr]
 
     def _respond_query(
         self,
