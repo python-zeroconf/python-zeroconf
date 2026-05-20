@@ -254,12 +254,27 @@ class DNSIncoming:
         """Reads a character string from the packet"""
         length = self.view[self.offset]
         self.offset += 1
+        # Python slicing silently truncates when indices exceed the buffer,
+        # but self.offset still advances by the declared length below; without
+        # this check a record with an inflated character-string length would
+        # land in the cache carrying a payload shorter than the wire claimed
+        # and leave the parser pointed past _data_len for the next record.
+        if self.offset + length > self._data_len:
+            raise IncomingDecodeError(
+                f"Character string length {length} at offset {self.offset} overruns "
+                f"packet of {self._data_len} bytes from {self.source}"
+            )
         info = self.data[self.offset : self.offset + length].decode("utf-8", "replace")
         self.offset += length
         return info
 
     def _read_string(self, length: _int) -> bytes:
         """Reads a string of a given length from the packet"""
+        if self.offset + length > self._data_len:
+            raise IncomingDecodeError(
+                f"String length {length} at offset {self.offset} overruns "
+                f"packet of {self._data_len} bytes from {self.source}"
+            )
         info = self.data[self.offset : self.offset + length]
         self.offset += length
         return info
@@ -297,6 +312,19 @@ class DNSIncoming:
                     self.data,
                     exc_info=True,
                 )
+            if rec is not None and self.offset != end:
+                # The decoded record consumed a different number of bytes than
+                # rdlength advertised. The record is built from a slice that
+                # straddles its rdata boundary, so drop it and resync to the
+                # declared end so the next record header lands aligned.
+                log.debug(
+                    "Record for %s with type %s did not consume exactly rdlength=%d; dropping",
+                    domain,
+                    _TYPES.get(type_, type_),
+                    length,
+                )
+                self.offset = end
+                rec = None
             if rec is not None:
                 self._answers.append(rec)
 

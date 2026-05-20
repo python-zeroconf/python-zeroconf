@@ -608,7 +608,7 @@ async def test_async_wait_unblocks_on_update(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_service_info_async_request(quick_timing: None) -> None:
+async def test_service_info_async_request(quick_timing: None, quick_request_timing: None) -> None:
     """Test registering services broadcasts and query with AsyncServceInfo.async_request."""
     if not has_working_ipv6() or os.environ.get("SKIP_IPV6"):
         pytest.skip("Requires IPv6")
@@ -710,13 +710,13 @@ async def test_service_info_async_request(quick_timing: None) -> None:
     aiozc.zeroconf.out_delay_queue.queue.clear()
     aiosinfo = AsyncServiceInfo(type_, registration_name)
     _clear_cache(aiozc.zeroconf)
-    # Generating the race condition is almost impossible
-    # without patching since its a TOCTOU race. 1500ms covers
-    # the initial _LISTENER_TIME + random delay (200-320ms) and
-    # leaves plenty of margin for the loopback response to land
+    # Generating the race condition is almost impossible without
+    # patching since it's a TOCTOU race. Under `quick_request_timing`
+    # the first QU query fires at ~10ms and the QM follow-up at ~15ms;
+    # 300ms leaves plenty of margin for the loopback response to land
     # before the loop times out.
     with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
-        await aiosinfo.async_request(aiozc.zeroconf, 1500)
+        await aiosinfo.async_request(aiozc.zeroconf, 300)
     assert aiosinfo is not None
     assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
 
