@@ -152,8 +152,7 @@ class AsyncListener:
         msg = DNSIncoming(data, addr_port, scope, now)
         # Move-to-end so a repeat payload refreshes its position and only
         # cold entries are evicted when the window is full.
-        if data in recent_packets:
-            del recent_packets[data]
+        recent_packets.pop(data, None)
         elif len(recent_packets) >= _RECENT_PACKETS_MAX:
             del recent_packets[next(iter(recent_packets))]
         recent_packets[data] = (now, msg.has_qu_question())
