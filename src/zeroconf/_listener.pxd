@@ -13,6 +13,8 @@ cdef object DEBUG_ENABLED
 cdef bint TYPE_CHECKING
 
 cdef cython.uint _MAX_MSG_ABSOLUTE
+cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
+cdef cython.uint _RECENT_PACKETS_MAX
 
 
 cdef class AsyncListener:

@@ -121,6 +121,13 @@ class AsyncListener:
             and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < recent[0]
             and not recent[1]
         ):
+            # Refresh LRU position so an actively-replayed payload is not
+            # evicted by _RECENT_PACKETS_MAX distinct neighbours arriving
+            # within the suppression interval. Preserve the original
+            # (now, qu) tuple so the suppression window stays bounded
+            # from the first observation rather than extending forever.
+            del recent_packets[data]
+            recent_packets[data] = recent
             # Guard against duplicate packets
             if debug:
                 log.debug(
