@@ -8,7 +8,6 @@ import os
 import socket
 import threading
 import unittest
-from collections.abc import Iterable
 from ipaddress import ip_address
 from threading import Event
 from unittest.mock import patch
@@ -23,7 +22,7 @@ from zeroconf._services.info import ServiceInfo
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import QUICK_REQUEST_TIMEOUT_MS, _inject_response, has_working_ipv6
+from .. import QUICK_REQUEST_TIMEOUT_MS, _inject_response, has_working_ipv6, mock_incoming_msg
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -279,14 +278,6 @@ class TestServiceInfo(unittest.TestCase):
         # patch the zeroconf send
         with patch.object(zc, "async_send", send):
 
-            def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-                generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-
-                for record in records:
-                    generated.add_answer_at_time(record, 0)
-
-                return r.DNSIncoming(generated.packets()[0])
-
             def get_service_info_helper(zc, type, name):
                 nonlocal service_info
                 service_info = zc.get_service_info(type, name)
@@ -422,14 +413,6 @@ class TestServiceInfo(unittest.TestCase):
         # patch the zeroconf send
         with patch.object(zc, "async_send", send):
 
-            def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-                generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-
-                for record in records:
-                    generated.add_answer_at_time(record, 0)
-
-                return r.DNSIncoming(generated.packets()[0])
-
             def get_service_info_helper(zc, type, name, timeout):
                 nonlocal service_info
                 service_info = zc.get_service_info(type, name, timeout)
@@ -551,12 +534,6 @@ class TestServiceInfo(unittest.TestCase):
                 socket.inet_pton(socket.AF_INET, service_address),
             ),
         ]
-
-        def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-            generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-            for record in records:
-                generated.add_answer_at_time(record, 0)
-            return r.DNSIncoming(generated.packets()[0])
 
         sent_queries: list[r.DNSOutgoing] = []
 

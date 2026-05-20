@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from unittest.mock import patch
 
 import pytest
+import pytest_asyncio
 
-from zeroconf import _core, const
+from zeroconf import Zeroconf, _core, const
 from zeroconf._handlers import query_handler
 from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
+from zeroconf.asyncio import AsyncZeroconf
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +23,36 @@ def verify_threads_ended():
     yield
     threads = frozenset(threading.enumerate()) - threads_before
     assert not threads
+
+
+@pytest.fixture
+def zc_loopback() -> Generator[Zeroconf]:
+    """Yield a loopback `Zeroconf` and close it on teardown.
+
+    Replaces the inline `zc = Zeroconf(interfaces=["127.0.0.1"])` +
+    explicit `zc.close()` pattern duplicated across the suite. Calling
+    `zc.close()` inside a test is still safe — `close()` is idempotent.
+    """
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    try:
+        yield zc
+    finally:
+        zc.close()
+
+
+@pytest_asyncio.fixture
+async def aiozc_loopback() -> AsyncGenerator[AsyncZeroconf]:
+    """Yield a loopback `AsyncZeroconf` and close it on teardown.
+
+    Replaces the inline `aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])`
+    + explicit `await aiozc.async_close()` pattern duplicated across the
+    suite. Calling `async_close()` inside a test is still safe.
+    """
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    try:
+        yield aiozc
+    finally:
+        await aiozc.async_close()
 
 
 @pytest.fixture
