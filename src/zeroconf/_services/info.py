@@ -496,8 +496,10 @@ class ServiceInfo(RecordUpdateListener):
             if existing_idx == -1:
                 address_list.append(ip_addr)
                 continue
-            if _has_more_scope_info(ip_addr, address_list[existing_idx]):
-                address_list[existing_idx] = ip_addr
+            # Move the re-seen address to the end so the later observation
+            # wins both in value (scope) and in LIFO position after reverse.
+            existing = address_list.pop(existing_idx)
+            address_list.append(ip_addr if _has_more_scope_info(ip_addr, existing) else existing)
         address_list.reverse()  # Reverse to get LIFO order
         return address_list
 
