@@ -1006,7 +1006,7 @@ async def test_integration(quick_timing: None) -> None:
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
 
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         if name == registration_name:
             if state_change is ServiceStateChange.Added:
                 service_added.set()

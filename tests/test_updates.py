@@ -55,7 +55,7 @@ def test_legacy_record_update_listener(quick_timing: None) -> None:
     zc.add_listener(listener, None)
 
     # dummy service callback
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         pass
 
     # start a browser

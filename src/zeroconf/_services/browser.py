@@ -732,10 +732,10 @@ class _ServiceBrowserBase(RecordUpdateListener):
         name_type = event[0]
         state_change = event[1]
         self._service_state_changed.fire(
-            zeroconf=self.zc,
-            service_type=name_type[1],
-            name=name_type[0],
-            state_change=state_change,
+            self.zc,
+            name_type[1],
+            name_type[0],
+            state_change,
         )
 
     def _async_cancel(self) -> None:

@@ -533,7 +533,7 @@ def test_first_query_delay():
     # patch the zeroconf send
     with patch.object(zeroconf_browser, "async_send", send):
         # dummy service callback
-        def on_service_state_change(zeroconf, service_type, state_change, name):
+        def on_service_state_change(zeroconf, service_type, name, state_change):
             pass
 
         start_time = current_time_millis()
@@ -559,7 +559,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu(quick_ti
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
 
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         if name == registration_name:
             if state_change is ServiceStateChange.Added:
                 service_added.set()
@@ -661,7 +661,7 @@ async def test_ttl_refresh_cancelled_rescue_query(quick_timing: None) -> None:
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
 
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         if name == registration_name:
             if state_change is ServiceStateChange.Added:
                 service_added.set()
@@ -782,7 +782,7 @@ async def test_asking_qm_questions():
     # patch the zeroconf send
     with patch.object(zeroconf_browser, "async_send", send):
         # dummy service callback
-        def on_service_state_change(zeroconf, service_type, state_change, name):
+        def on_service_state_change(zeroconf, service_type, name, state_change):
             pass
 
         browser = AsyncServiceBrowser(
@@ -822,7 +822,7 @@ async def test_asking_qu_questions():
     # patch the zeroconf send
     with patch.object(zeroconf_browser, "async_send", send):
         # dummy service callback
-        def on_service_state_change(zeroconf, service_type, state_change, name):
+        def on_service_state_change(zeroconf, service_type, name, state_change):
             pass
 
         browser = AsyncServiceBrowser(
@@ -865,7 +865,7 @@ def test_legacy_record_update_listener(quick_timing: None) -> None:
     zc.add_listener(listener, None)
 
     # dummy service callback
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         pass
 
     # start a browser
@@ -912,7 +912,7 @@ def test_service_browser_is_aware_of_port_changes():
     callbacks = []
 
     # dummy service callback
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         """Dummy callback."""
         if name == registration_name:
             callbacks.append((service_type, state_change, name))
@@ -961,6 +961,49 @@ def test_service_browser_is_aware_of_port_changes():
     browser.cancel()
 
     zc.close()
+
+
+def test_service_browser_handler_callback_arg_names_independent() -> None:
+    """Handler callbacks receive arguments positionally; parameter names are user choice."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    type_ = "_hap._tcp.local."
+    registration_name = f"renamed.{type_}"
+
+    callbacks: list[tuple[Zeroconf, str, str, ServiceStateChange]] = []
+
+    def on_service_state_change(zc_arg, type_arg, name_arg, change_arg):  # type: ignore[no-untyped-def]
+        if name_arg == registration_name:
+            callbacks.append((zc_arg, type_arg, name_arg, change_arg))
+
+    browser = ServiceBrowser(zc, type_, [on_service_state_change])
+
+    info = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        {"path": "/~paulsm/"},
+        "ash-2.local.",
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    _inject_response(
+        zc,
+        mock_incoming_msg(
+            [
+                info.dns_pointer(),
+                info.dns_service(),
+                info.dns_text(),
+                *info.dns_addresses(),
+            ]
+        ),
+    )
+    time.sleep(0.1)
+
+    browser.cancel()
+    zc.close()
+
+    assert callbacks == [(zc, type_, registration_name, ServiceStateChange.Added)]
 
 
 def test_service_browser_listeners_update_service():
@@ -1089,7 +1132,7 @@ def test_service_browser_uses_non_strict_names():
     """Verify we can look for technically invalid names as we cannot change what others do."""
 
     # dummy service callback
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         pass
 
     zc = r.Zeroconf(interfaces=["127.0.0.1"])
@@ -1585,7 +1628,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries(quick_timi
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
 
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         if name == registration_name and state_change is ServiceStateChange.Added:
             service_added.set()
 
@@ -1653,7 +1696,7 @@ async def test_close_zeroconf_without_browser_after_start_up_queries(quick_timin
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
 
-    def on_service_state_change(zeroconf, service_type, state_change, name):
+    def on_service_state_change(zeroconf, service_type, name, state_change):
         if name == registration_name and state_change is ServiceStateChange.Added:
             service_added.set()
 
