@@ -576,3 +576,39 @@ def test_autodetect_ip_version_includes_multicast_addresses() -> None:
         netutils.autodetect_ip_version(["127.0.0.1"], multicast_addresses=["2001:db8::"]) is r.IPVersion.All
     )
     assert netutils.autodetect_ip_version([], multicast_addresses=["2001:db8::"]) is r.IPVersion.V6Only
+
+
+def test_autodetect_ip_version_non_list_interfaces_with_multicast_addresses() -> None:
+    """autodetect_ip_version handles non-list interfaces (InterfaceChoice) with multicast_addresses."""
+    assert (
+        netutils.autodetect_ip_version(r.InterfaceChoice.Default, multicast_addresses=["2001:db8::"])
+        is r.IPVersion.V6Only
+    )
+    assert (
+        netutils.autodetect_ip_version(r.InterfaceChoice.Default, multicast_addresses=["192.168.1.5"])
+        is r.IPVersion.V4Only
+    )
+
+
+def test_create_sockets_multicast_addresses_ip_version_all() -> None:
+    """multicast_addresses works with ip_version=All (no V4Only/V6Only validation triggered)."""
+    listen_mock = Mock(spec=socket.socket)
+    respond_mock = Mock(spec=socket.socket)
+
+    def _new_socket(bind_addr, **kwargs):
+        return listen_mock if bind_addr == ("",) else respond_mock
+
+    with (
+        patch("zeroconf._utils.net.new_socket", side_effect=_new_socket),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["192.168.1.5"],
+            ip_version=r.IPVersion.All,
+        )
+
+    joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
+    assert "192.168.1.5" in joined
