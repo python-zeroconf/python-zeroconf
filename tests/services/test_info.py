@@ -18,7 +18,8 @@ import zeroconf as r
 from zeroconf import DNSAddress, RecordUpdate, const
 from zeroconf._protocol.outgoing import DNSOutgoing
 from zeroconf._services import info
-from zeroconf._services.info import ServiceInfo
+from zeroconf._services.info import ServiceInfo, _has_more_scope_info
+from zeroconf._utils.ipaddress import ZeroconfIPv4Address
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
 
@@ -875,6 +876,65 @@ async def test_scoped_address_replaces_unscoped_in_live_update():
     info.async_update_records(aiozc.zeroconf, now, [RecordUpdate(scoped, unscoped)])
     assert info.parsed_scoped_addresses() == ["fe80::52e:c2f2:bc5f:e9c6%9"]
     await aiozc.async_close()
+
+
+def test_scoped_address_kept_when_unscoped_arrives_after_in_cache():
+    """Scoped AAAA seen first in iteration keeps its scope when an unscoped duplicate follows."""
+    type_ = "_http._tcp.local."
+    registration_name = f"scoped-after.{type_}"
+    zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
+    host = "scoped-after.local."
+    packed = socket.inet_pton(socket.AF_INET6, "fe80::52e:c2f2:bc5f:e9c6")
+
+    zeroconf.cache.async_add_records(
+        [
+            r.DNSPointer(
+                type_,
+                const._TYPE_PTR,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                registration_name,
+            ),
+            r.DNSService(
+                registration_name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                80,
+                host,
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_AAAA,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                packed,
+                scope_id=5,
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_AAAA,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                packed,
+                scope_id=None,
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name)
+    info.load_from_cache(zeroconf)
+    assert info.parsed_scoped_addresses() == ["fe80::52e:c2f2:bc5f:e9c6%5"]
+    assert info.ip_addresses_by_version(r.IPVersion.V6Only) == [ip_address("fe80::52e:c2f2:bc5f:e9c6%5")]
+    zeroconf.close()
+
+
+def test_has_more_scope_info_returns_false_for_ipv4():
+    """The scope_id helper short-circuits for IPv4 since A records carry no scope."""
+    ip4 = ZeroconfIPv4Address("192.0.2.1")
+    assert _has_more_scope_info(ip4, ip4) is False
 
 
 # This test uses asyncio because it needs to access the cache directly
