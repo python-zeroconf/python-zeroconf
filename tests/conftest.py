@@ -35,7 +35,7 @@ def run_isolated():
 
 
 @pytest.fixture
-def disable_duplicate_packet_suppression():
+def disable_duplicate_packet_suppression() -> Generator[None]:
     """Disable duplicate packet suppression."""
     # _listener rebinds the interval at module scope, so const-only
     # patching does not reach the hot path.
