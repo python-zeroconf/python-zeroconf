@@ -278,7 +278,7 @@ def test_guard_against_duplicate_packets():
     zc.close()
 
 
-def test_guard_against_alternating_duplicate_packets():
+def test_guard_against_alternating_duplicate_packets() -> None:
     """Alternating two distinct payloads must not bypass duplicate suppression."""
     zc = Zeroconf(interfaces=["127.0.0.1"])
     zc.registry.async_add(
@@ -334,7 +334,7 @@ def test_guard_against_alternating_duplicate_packets():
     zc.close()
 
 
-def test_recent_packets_window_is_bounded():
+def test_recent_packets_window_is_bounded() -> None:
     """Distinct payloads beyond the recency window evict oldest entries."""
     zc = Zeroconf(interfaces=["127.0.0.1"])
     zc.registry.async_add(

@@ -32,7 +32,7 @@ cdef class AsyncListener:
     @cython.locals(now=double, debug=cython.bint)
     cpdef datagram_received(self, cython.bytes bytes, cython.tuple addrs)
 
-    @cython.locals(msg=DNSIncoming, recent_packets=cython.dict, recent=cython.tuple)
+    @cython.locals(msg=DNSIncoming, recent_packets=cython.dict, recent=cython.tuple, was_present=cython.bint)
     cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, double now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)
