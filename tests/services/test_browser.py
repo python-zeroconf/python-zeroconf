@@ -8,7 +8,6 @@ import os
 import socket
 import time
 import unittest
-from collections.abc import Iterable
 from threading import Event
 from typing import cast
 from unittest.mock import patch
@@ -36,6 +35,7 @@ from .. import (
     _inject_response,
     _wait_for_start,
     has_working_ipv6,
+    mock_incoming_msg,
     time_changed_millis,
 )
 
@@ -52,13 +52,6 @@ def setup_module():
 def teardown_module():
     if original_logging_level != logging.NOTSET:
         log.setLevel(original_logging_level)
-
-
-def mock_incoming_msg(records: Iterable[r.DNSRecord]) -> r.DNSIncoming:
-    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-    for record in records:
-        generated.add_answer_at_time(record, 0)
-    return r.DNSIncoming(generated.packets()[0])
 
 
 def test_service_browser_cancel_multiple_times():
