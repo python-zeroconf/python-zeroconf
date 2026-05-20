@@ -151,4 +151,10 @@ Changelog
 License
 =======
 
-LGPL, see COPYING file for details.
+GNU Lesser General Public License v2.1 or later (LGPL-2.1-or-later).
+
+The full text of LGPL 2.1 is included in the `COPYING <COPYING>`_ file.
+You may, at your option, use this library under the terms of any later
+version of the LGPL published by the Free Software Foundation. The
+canonical SPDX identifier for this project is ``LGPL-2.1-or-later``, as
+declared in ``pyproject.toml``.
