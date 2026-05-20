@@ -15,6 +15,8 @@ cdef bint TYPE_CHECKING
 cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 cdef cython.uint _RECENT_PACKETS_MAX
+cdef cython.uint _MAX_DEFERRED_ADDRS
+cdef cython.uint _MAX_DEFERRED_PER_ADDR
 
 
 cdef class AsyncListener:
@@ -40,6 +42,8 @@ cdef class AsyncListener:
     cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, double now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)
+
+    cdef _evict_oldest_deferred(self)
 
     @cython.locals(deadline=object, fire_at=double)
     cdef double _compute_deferred_fire_at(self, object addr, double now, double delay)

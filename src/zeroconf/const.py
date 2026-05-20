@@ -77,6 +77,20 @@ _MAX_CACHE_RECORDS = 10000
 # flooding distinct questions (RFC 6762 §7.3, defense-in-depth).
 _MAX_QUESTION_HISTORY_ENTRIES = 10000
 
+# Per-addr cap on the number of truncated (TC-bit) packets retained for
+# RFC 6762 §18.5 reassembly. The spec anticipates only a handful of
+# segments per truncated query; 16 is well above legitimate need and
+# keeps the per-arrival dedup scan a constant-time cost under a flood.
+_MAX_DEFERRED_PER_ADDR = 16
+
+# Per-listener cap on the number of distinct addrs with in-flight
+# TC-deferral state. Each entry can hold up to _MAX_DEFERRED_PER_ADDR
+# packets of up to _MAX_MSG_ABSOLUTE bytes; 512 leaves headroom for a
+# legitimate burst (LAN-wide power-resume / boot storm where many
+# devices announce at once) while bounding worst-case memory at
+# ~72 MB even when a peer floods with spoofed source IPs.
+_MAX_DEFERRED_ADDRS = 512
+
 _DNS_PACKET_HEADER_LEN = 12
 
 _MAX_MSG_TYPICAL = 1460  # unused

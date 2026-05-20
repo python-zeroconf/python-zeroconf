@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 import zeroconf as r
-from zeroconf import NotRunningException, Zeroconf, const, current_time_millis
+from zeroconf import NotRunningException, Zeroconf, _listener, const, current_time_millis
 from zeroconf._listener import _TC_DELAY_RANDOM_INTERVAL, AsyncListener, _WrappedTransport
 from zeroconf._protocol.incoming import DNSIncoming
 from zeroconf.asyncio import AsyncZeroconf
@@ -791,6 +791,101 @@ def test_tc_bit_defer_window_is_bounded():
             assert protocol._timers[source_ip].when() <= first_when
 
     zc.registry.async_remove(info)
+    zc.close()
+
+
+def _make_distinct_tc_packets(count: int, name_prefix: str = "q") -> list[bytes]:
+    """Generate ``count`` byte-distinct TC-flagged query packets for flood inputs."""
+    packets = []
+    for i in range(count):
+        out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_TC)
+        out.add_question(r.DNSQuestion(f"{name_prefix}{i}._tcp.local.", const._TYPE_PTR, const._CLASS_IN))
+        packets.append(out.packets()[0])
+    return packets
+
+
+def _synthetic_source_ip(i: int) -> str:
+    """Distinct synthetic source IPs from the documentation ranges."""
+    if i < 256:
+        return f"203.0.113.{i}"
+    if i < 512:
+        return f"198.51.100.{i - 256}"
+    return f"192.0.2.{i - 512}"
+
+
+def test_tc_bit_per_addr_queue_is_bounded(quick_timing: None) -> None:
+    """Per-addr deferred queue must not grow past ``_MAX_DEFERRED_PER_ADDR``."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    _wait_for_start(zc)
+    protocol = zc.engine.protocols[0]
+    source_ip = "203.0.113.21"
+
+    extra = 4
+    packets = _make_distinct_tc_packets(const._MAX_DEFERRED_PER_ADDR + extra)
+
+    # Push the reassembly timer well past any possible test runtime
+    # so the bound under test is the only thing that can drop entries.
+    with patch.object(_listener, "_TC_DELAY_RANDOM_INTERVAL", (60_000, 60_001)):
+        for raw in packets:
+            threadsafe_query(zc, protocol, r.DNSIncoming(raw), source_ip, const._MDNS_PORT, Mock(), ())
+
+        assert len(protocol._deferred[source_ip]) == const._MAX_DEFERRED_PER_ADDR
+        # Last ``extra`` packets must have been dropped, not displaced; the
+        # earlier ``_MAX_DEFERRED_PER_ADDR`` entries are the ones retained.
+        retained = [incoming.data for incoming in protocol._deferred[source_ip]]
+        assert retained == packets[: const._MAX_DEFERRED_PER_ADDR]
+
+    zc.close()
+
+
+def test_tc_bit_total_addrs_is_bounded(quick_timing: None) -> None:
+    """Distinct addrs with deferred state must not exceed ``_MAX_DEFERRED_ADDRS``."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    _wait_for_start(zc)
+    protocol = zc.engine.protocols[0]
+
+    raw = _make_distinct_tc_packets(1)[0]
+    extra = 4
+    addrs = [_synthetic_source_ip(i) for i in range(const._MAX_DEFERRED_ADDRS + extra)]
+
+    # Push the reassembly timer well past any possible test runtime
+    # so the bound under test is the only thing that can drop entries;
+    # without this, PyPy / slow runners can fire timers between the
+    # last enqueue and the assertion.
+    with patch.object(_listener, "_TC_DELAY_RANDOM_INTERVAL", (60_000, 60_001)):
+        for source_ip in addrs:
+            threadsafe_query(zc, protocol, r.DNSIncoming(raw), source_ip, const._MDNS_PORT, Mock(), ())
+
+        assert len(protocol._deferred) == const._MAX_DEFERRED_ADDRS
+        assert len(protocol._timers) == const._MAX_DEFERRED_ADDRS
+
+    zc.close()
+
+
+def test_tc_bit_eviction_drops_oldest_addr(quick_timing: None) -> None:
+    """Adding a new addr at capacity drops the oldest insertion (FIFO)."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    _wait_for_start(zc)
+    protocol = zc.engine.protocols[0]
+
+    raw = _make_distinct_tc_packets(1)[0]
+    fillers = [_synthetic_source_ip(i) for i in range(const._MAX_DEFERRED_ADDRS)]
+    new_addr = _synthetic_source_ip(const._MAX_DEFERRED_ADDRS)
+    oldest = fillers[0]
+
+    with patch.object(_listener, "_TC_DELAY_RANDOM_INTERVAL", (60_000, 60_001)):
+        for source_ip in fillers:
+            threadsafe_query(zc, protocol, r.DNSIncoming(raw), source_ip, const._MDNS_PORT, Mock(), ())
+        assert len(protocol._deferred) == const._MAX_DEFERRED_ADDRS
+        assert oldest in protocol._deferred
+
+        # One more distinct addr must evict the oldest insertion-order entry.
+        threadsafe_query(zc, protocol, r.DNSIncoming(raw), new_addr, const._MDNS_PORT, Mock(), ())
+        assert oldest not in protocol._deferred
+        assert oldest not in protocol._timers
+        assert new_addr in protocol._deferred
+        assert len(protocol._deferred) == const._MAX_DEFERRED_ADDRS
+
     zc.close()
 
 
