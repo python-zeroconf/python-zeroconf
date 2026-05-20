@@ -2,6 +2,27 @@
 
 <!-- version list -->
 
+## v0.149.13 (2026-05-20)
+
+### Bug Fixes
+
+- Bound record payload reads against rdlength overrun
+  ([#1756](https://github.com/python-zeroconf/python-zeroconf/pull/1756),
+  [`5444495`](https://github.com/python-zeroconf/python-zeroconf/commit/544449596e645fcaad3834fa0cb614a54f847a82))
+
+### Documentation
+
+- Clarify LGPL-2.1-or-later license in README
+  ([#1763](https://github.com/python-zeroconf/python-zeroconf/pull/1763),
+  [`28bb01f`](https://github.com/python-zeroconf/python-zeroconf/commit/28bb01f23951f7883d8c3af66b6d537c34c516c7))
+
+### Refactoring
+
+- Extract loopback Zeroconf fixtures and mock_incoming_msg helper
+  ([#1758](https://github.com/python-zeroconf/python-zeroconf/pull/1758),
+  [`cb0af4a`](https://github.com/python-zeroconf/python-zeroconf/commit/cb0af4a8f4cdaad3721a2851d9fa17709d39ae62))
+
+
 ## v0.149.12 (2026-05-20)
 
 ### Bug Fixes
