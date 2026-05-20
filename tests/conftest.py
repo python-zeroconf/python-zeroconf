@@ -99,6 +99,33 @@ def quick_timing() -> Generator[None]:
 
 
 @pytest.fixture
+def quick_aggregation_timing() -> Generator[None]:
+    """Scale multicast aggregation / network-protection delays 10x for tests.
+
+    The aggregation tests in `tests/test_handlers.py` verify timing-
+    dependent behaviour of `MulticastOutgoingQueue`: aggregation window,
+    network protection (~1s), and protected aggregation. The behaviour
+    under test is a ratio of these constants — the exact wall-clock
+    values are not the contract — so scaling them down and the test
+    sleeps in lock-step preserves what is tested while dropping each
+    test from ~3s to ~0.3s.
+
+    The patches must be in place before `AsyncZeroconf(...)` is
+    constructed because `MulticastOutgoingQueue` reads the constants at
+    init time and stashes them on the instance. The per-queue
+    `_multicast_delay_random_min` / `_max` jitter (1-5ms here) can
+    still be set on the queue instance after construction by the test
+    itself — those slots are `cdef public` in the .pxd.
+    """
+    with (
+        patch.object(_core, "_AGGREGATION_DELAY", 50),
+        patch.object(_core, "_PROTECTED_AGGREGATION_DELAY", 20),
+        patch.object(_core, "_ONE_SECOND", 100),
+    ):
+        yield
+
+
+@pytest.fixture
 def quick_request_timing() -> Generator[None]:
     """Shorten the initial-query delay used by AsyncServiceInfo.async_request.
 
