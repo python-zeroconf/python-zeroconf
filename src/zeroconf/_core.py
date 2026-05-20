@@ -106,9 +106,9 @@ _REGISTER_BROADCASTS = 3
 
 # RFC 6762 §8.1 thundering-herd avoidance: wait a random
 # 0-250ms before the first probe so simultaneously-started
-# responders don't collide. The repo enforces a 150ms floor
-# to keep the existing test deadlines comfortable; tests on
-# loopback can patch this down via the `quick_timing` fixture.
+# responders don't collide. We default to 150-250ms to
+# preserve existing timing assumptions; tests on loopback
+# may patch this lower via the `quick_timing` fixture.
 _PROBE_RANDOM_DELAY_INTERVAL = (150, 250)  # ms
 
 

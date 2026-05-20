@@ -88,8 +88,10 @@ def quick_timing() -> Generator[None]:
     probing, §5.2 for the initial-query delay). Tests on 127.0.0.1
     do not need them and pay 1-2s per register/unregister cycle,
     150-250ms per probe, and 20-120ms per ServiceBrowser startup
-    without this fixture. Opt in by adding `quick_timing` to a
-    test's argument list.
+    without this fixture. Opt in either by adding `quick_timing`
+    to a test's argument list or via
+    `@pytest.mark.usefixtures("quick_timing")` on the test or
+    its class.
     """
     with (
         patch.object(_core, "_CHECK_TIME", 10),
@@ -108,9 +110,11 @@ def quick_request_timing() -> Generator[None]:
     The 200ms `_LISTENER_TIME` and 20-120ms random jitter (RFC 6762
     §5.2) help spread queries from multiple clients on real networks.
     On loopback they're pure overhead — get_service_info-style tests
-    wait ~250ms before the first query even fires. Opt in by adding
-    `quick_request_timing` to a test's argument list, then drop the
-    test's own timeouts (which had to accommodate that delay).
+    wait ~250ms before the first query even fires. Opt in either by
+    adding `quick_request_timing` to a test's argument list or via
+    `@pytest.mark.usefixtures("quick_request_timing")` on the test
+    or its class, then drop the test's own timeouts (which had to
+    accommodate that delay).
     """
     with (
         patch.object(service_info, "_LISTENER_TIME", 10),

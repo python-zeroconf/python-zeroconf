@@ -86,19 +86,19 @@ def test_shutdown_loop() -> None:
         await asyncio.sleep(5)
 
     def _run_coro() -> None:
-        runcoro_thread_ready.set()
         assert loop is not None
+        future = asyncio.run_coroutine_threadsafe(_still_running(), loop)
+        runcoro_thread_ready.set()
         with contextlib.suppress(concurrent.futures.TimeoutError):
-            asyncio.run_coroutine_threadsafe(_still_running(), loop).result(0.1)
+            future.result(0.1)
 
     runcoro_thread = threading.Thread(target=_run_coro, daemon=True)
     runcoro_thread.start()
     runcoro_thread_ready.wait()
 
-    time.sleep(0.05)
     assert loop is not None
     # Patch _TASK_AWAIT_TIMEOUT so the inner `asyncio.wait` returns
-    # immediately instead of blocking the full 1s on the deliberately
+    # within 50ms instead of blocking the full 1s on the deliberately
     # never-completing _still_running() task.
     with patch.object(aioutils, "_TASK_AWAIT_TIMEOUT", 0.05):
         aioutils.shutdown_loop(loop)
