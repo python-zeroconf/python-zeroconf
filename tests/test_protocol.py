@@ -886,6 +886,58 @@ def test_nsec_bitmap_truncated_window_header_rejected():
     assert not any(isinstance(a, r.DNSNsec) for a in answers)
 
 
+def test_txt_rdlength_overruns_packet_rejected():
+    """A TXT record with rdlength past the buffer must not enter the cache.
+
+    Python slicing silently truncates when the slice end exceeds the buffer,
+    so without a bounds check in ``_read_string`` a malformed wire frame
+    would land in the cache carrying a payload shorter than the rdlength
+    declared, leaving the parser desynchronized for downstream records.
+    """
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00"
+        b"\x04test\x05local\x00"
+        b"\x00\x10\x80\x01"
+        b"\x00\x00\x11\x94"
+        b"\xff\xff"
+        b"\x05hello"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid
+    assert parsed.answers() == []
+
+
+def test_hinfo_character_string_length_overruns_record_rejected():
+    """A HINFO character string declaring more bytes than remain must be rejected."""
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00"
+        b"\x04test\x05local\x00"
+        b"\x00\x0d\x80\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x07"
+        b"\x03cpu"
+        b"\xff\xff\xff"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid
+    assert not any(isinstance(a, r.DNSHinfo) for a in parsed.answers())
+
+
+def test_a_record_rdlength_overruns_packet_rejected():
+    """An A record whose 4-byte address would walk past the buffer must be rejected."""
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00"
+        b"\x04test\x05local\x00"
+        b"\x00\x01\x80\x01"
+        b"\x00\x00\x11\x94"
+        b"\x00\x04"
+        b"\xc0\xa8"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid
+    assert not any(isinstance(a, r.DNSAddress) for a in parsed.answers())
+
+
 def test_records_same_packet_share_fate():
     """Test records in the same packet all have the same created time."""
     out = r.DNSOutgoing(const._FLAGS_QR_QUERY | const._FLAGS_AA)
