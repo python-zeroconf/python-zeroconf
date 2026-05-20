@@ -36,23 +36,12 @@ def run_isolated():
 
 @pytest.fixture
 def disable_duplicate_packet_suppression() -> Generator[None]:
-    """Disable duplicate packet suppression.
-
-    Wraps `_process_datagram_at_time` so the recency window is cleared
-    before each call, which reaches both pure-Python and Cython builds —
-    a const-only patch never reaches the hot path because `_listener`
-    rebinds the interval at module scope, and the rebound name is
-    cdef'd in `_listener.pxd` for the C-int compare on hot packets.
-    """
-    orig = _listener.AsyncListener._process_datagram_at_time
-
-    def _clear_then_process(self, *args, **kwargs):
-        self._recent_packets.clear()
-        return orig(self, *args, **kwargs)
-
+    """Disable duplicate packet suppression."""
+    # _listener rebinds the interval at module scope, so const-only
+    # patching does not reach the hot path.
     with (
         patch.object(const, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0),
-        patch.object(_listener.AsyncListener, "_process_datagram_at_time", _clear_then_process),
+        patch.object(_listener, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0),
     ):
         yield
 
