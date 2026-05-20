@@ -77,6 +77,21 @@ _MAX_CACHE_RECORDS = 10000
 # flooding distinct questions (RFC 6762 §7.3, defense-in-depth).
 _MAX_QUESTION_HISTORY_ENTRIES = 10000
 
+# Per-entry cap on the number of known-answer records QuestionHistory
+# will retain. Each TC-deferred reassembly can carry up to ~12k records
+# (~750 records/packet x _MAX_DEFERRED_PER_ADDR fragments), and the
+# resulting set is stored by reference under each non-unicast question
+# in the history dict; without a per-entry cap a LAN attacker can pin
+# hundreds of MB across the _MAX_QUESTION_HISTORY_ENTRIES dimension.
+# 256 is well above any RFC-realistic known-answer list for a single
+# question; oversized payloads are dropped from the history (no
+# suppression for that one query) rather than truncated, since a
+# truncated stored set would over-suppress legitimate follow-up
+# queries (`suppresses()` returns True when stored set is a subset of
+# the incoming known-answers, so a smaller stored set matches more
+# easily).
+_MAX_KNOWN_ANSWERS_PER_HISTORY_ENTRY = 256
+
 # Per-addr cap on the number of truncated (TC-bit) packets retained for
 # RFC 6762 §18.5 reassembly. The spec anticipates only a handful of
 # segments per truncated query; 16 is well above legitimate need and

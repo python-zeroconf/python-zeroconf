@@ -133,3 +133,62 @@ def test_question_history_opportunistic_expire():
 
     assert fresh in history._history
     assert len(history._history) == 1
+
+
+def _make_known_answers(count: int) -> set[r.DNSRecord]:
+    """Build a set of ``count`` distinct PTR records for use as known-answers."""
+    return {
+        r.DNSPointer(
+            "_svc._tcp.local.",
+            const._TYPE_PTR,
+            const._CLASS_IN,
+            10000,
+            f"target{i}._svc._tcp.local.",
+        )
+        for i in range(count)
+    }
+
+
+def test_question_history_oversized_known_answers_dropped():
+    """Known-answer sets above the per-entry cap are not stored."""
+    history = QuestionHistory()
+    now = r.current_time_millis()
+    question = r.DNSQuestion("_svc._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+
+    oversized = _make_known_answers(const._MAX_KNOWN_ANSWERS_PER_HISTORY_ENTRY + 1)
+    history.add_question_at_time(question, now, oversized)
+
+    assert question not in history._history
+
+
+def test_question_history_oversized_preserves_existing_entry():
+    """An oversized payload must not displace a pre-existing small entry."""
+    history = QuestionHistory()
+    now = r.current_time_millis()
+    question = r.DNSQuestion("_svc._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+
+    small = _make_known_answers(2)
+    history.add_question_at_time(question, now, small)
+    assert history.suppresses(question, now, small)
+
+    # An oversized follow-up must be ignored; the small entry stays and
+    # continues to drive suppression.
+    oversized = _make_known_answers(const._MAX_KNOWN_ANSWERS_PER_HISTORY_ENTRY + 1)
+    history.add_question_at_time(question, now, oversized)
+
+    stored_set = history._history[question][1]
+    assert stored_set is small
+    assert history.suppresses(question, now, small)
+
+
+def test_question_history_at_cap_known_answers_is_stored():
+    """A known-answer set exactly at the per-entry cap is retained."""
+    history = QuestionHistory()
+    now = r.current_time_millis()
+    question = r.DNSQuestion("_svc._tcp.local.", const._TYPE_PTR, const._CLASS_IN)
+
+    at_cap = _make_known_answers(const._MAX_KNOWN_ANSWERS_PER_HISTORY_ENTRY)
+    history.add_question_at_time(question, now, at_cap)
+
+    assert question in history._history
+    assert history._history[question][1] is at_cap
