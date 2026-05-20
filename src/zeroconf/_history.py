@@ -23,7 +23,11 @@ USA
 from __future__ import annotations
 
 from ._dns import DNSQuestion, DNSRecord
-from .const import _DUPLICATE_QUESTION_INTERVAL, _MAX_QUESTION_HISTORY_ENTRIES
+from .const import (
+    _DUPLICATE_QUESTION_INTERVAL,
+    _MAX_KNOWN_ANSWERS_PER_HISTORY_ENTRY,
+    _MAX_QUESTION_HISTORY_ENTRIES,
+)
 
 # The QuestionHistory is used to implement Duplicate Question Suppression
 # https://datatracker.ietf.org/doc/html/rfc6762#section-7.3
@@ -40,6 +44,15 @@ class QuestionHistory:
 
     def add_question_at_time(self, question: DNSQuestion, now: _float, known_answers: set[DNSRecord]) -> None:
         """Remember a question with known answers."""
+        if len(known_answers) > _MAX_KNOWN_ANSWERS_PER_HISTORY_ENTRY:
+            # Refuse to pin an attacker-sized known-answer payload.
+            # Any pre-existing entry for this question stays in place
+            # so legitimate suppression continues; the cost is missing
+            # one round of suppression for this (likely malicious)
+            # query. Truncating instead would over-suppress because
+            # `suppresses()` matches when the stored set is a subset
+            # of the incoming known-answers (smaller set, easier match).
+            return
         if question not in self._history and len(self._history) >= _MAX_QUESTION_HISTORY_ENTRIES:
             self._evict_to_make_room(now)
         self._history[question] = (now, known_answers)
