@@ -118,6 +118,14 @@ def has_working_ipv6():
 def _clear_cache(zc: Zeroconf) -> None:
     zc.cache.cache.clear()
     zc.question_history.clear()
+    # Reset per-listener dedup state so identical packets sent in the
+    # next phase of the test are not suppressed by the bounded recency
+    # window populated during the previous phase.
+    if zc.engine is not None:
+        for protocol in zc.engine.protocols:
+            protocol._recent_packets.clear()
+            protocol.data = None
+            protocol.last_time = 0
 
 
 def _backdate_cache(zc: Zeroconf, ms: int = 1100) -> None:

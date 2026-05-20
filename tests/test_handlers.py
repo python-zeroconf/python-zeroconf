@@ -1758,7 +1758,8 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
     with patch.object(aiozc.zeroconf, "async_send") as send_mock:
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol.last_time = 0  # manually reset to avoid duplicate packet suppression
+        protocol._recent_packets.clear()
         await asyncio.sleep(0.2)
         calls = send_mock.mock_calls
         assert len(calls) == 1
@@ -1769,7 +1770,8 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol.last_time = 0  # manually reset to avoid duplicate packet suppression
+        protocol._recent_packets.clear()
         await asyncio.sleep(1.2)
         calls = send_mock.mock_calls
         assert len(calls) == 1
@@ -1780,9 +1782,11 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol.last_time = 0  # manually reset to avoid duplicate packet suppression
+        protocol._recent_packets.clear()
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol.last_time = 0  # manually reset to avoid duplicate packet suppression
+        protocol._recent_packets.clear()
         # The minimum protected send_after is 1000ms + 20ms random; sleep
         # well under that so coarse timers on slow runners cannot push the
         # send into this window and flake the assertion.

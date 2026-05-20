@@ -33,6 +33,12 @@ _REGISTER_TIME = 225  # ms
 _LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 10000  # ms
 _DUPLICATE_PACKET_SUPPRESSION_INTERVAL = 1000  # ms
+# Per-listener bounded recency window. 16 is large enough to defeat
+# the alternating-payload bypass (RFC 6762 §6.2, issue #1724 — even a
+# rotation of a dozen distinct payloads still dedups), and small
+# enough that the dict bookkeeping per miss stays cheap under a
+# hostile flood.
+_RECENT_PACKETS_MAX = 16
 _DUPLICATE_QUESTION_INTERVAL = 999  # ms # Must be 1ms less than _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 _CACHE_CLEANUP_INTERVAL = 10  # s
 _LOADED_SYSTEM_TIMEOUT = 10  # s

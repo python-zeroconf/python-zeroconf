@@ -32,7 +32,7 @@ from ._logger import QuietLogger, log
 from ._protocol.incoming import DNSIncoming
 from ._transport import _WrappedTransport, make_wrapped_transport
 from ._utils.time import current_time_millis, millis_to_seconds
-from .const import _DUPLICATE_PACKET_SUPPRESSION_INTERVAL, _MAX_MSG_ABSOLUTE
+from .const import _DUPLICATE_PACKET_SUPPRESSION_INTERVAL, _MAX_MSG_ABSOLUTE, _RECENT_PACKETS_MAX
 
 if TYPE_CHECKING:
     from ._core import Zeroconf
@@ -60,6 +60,7 @@ class AsyncListener:
         "_deferred",
         "_deferred_deadlines",
         "_query_handler",
+        "_recent_packets",
         "_record_manager",
         "_registry",
         "_timers",
@@ -84,6 +85,12 @@ class AsyncListener:
         self._deferred: dict[str, list[DNSIncoming]] = {}
         self._timers: dict[str, asyncio.TimerHandle] = {}
         self._deferred_deadlines: dict[str, float] = {}
+        # Bounded recency window so an alternating (A, B, A, B, ...)
+        # flood cannot defeat single-slot dedup; relies on dict insertion
+        # order so the oldest entry is evicted first. Only payloads
+        # without a QU question are cached so unicast replies still go
+        # out on every receipt.
+        self._recent_packets: dict[bytes, float] = {}
         super().__init__()
 
     def datagram_received(self, data: _bytes, addrs: tuple[str, int] | tuple[str, int, int, int]) -> None:
@@ -130,6 +137,31 @@ class AsyncListener:
                 )
             return
 
+        # `get(data, -1e30)` keeps the suppression compare a single C
+        # double compare; the sentinel is far below any real `now -
+        # _DUPLICATE_PACKET_SUPPRESSION_INTERVAL` so a cache miss never
+        # triggers the branch even when `now` is small (time.monotonic
+        # is allowed to start near zero, leaving `now - INTERVAL`
+        # negative for the first ~1s after boot). Only non-QU payloads
+        # are cached, so any hit here is safe to suppress without re-
+        # checking has_qu_question.
+        recent_time = self._recent_packets.get(data, -1e30)
+        if (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < recent_time:
+            # No timestamp refresh on hit so the suppression window
+            # ends at first-observation + interval; one parse-and-
+            # dispatch fires per payload per interval, capping the
+            # CPU cost under a sustained alternating flood.
+            if debug:
+                log.debug(
+                    "Ignoring duplicate message with no unicast questions"
+                    " received from %s [socket %s] (%d bytes) as [%r]",
+                    addrs,
+                    self.sock_description,
+                    data_len,
+                    data,
+                )
+            return
+
         if len(addrs) == 2:
             v6_flow_scope: tuple[()] | tuple[int, int] = ()
             # https://github.com/python/mypy/issues/1178
@@ -150,6 +182,15 @@ class AsyncListener:
         self.data = data
         self.last_time = now
         self.last_message = msg
+        if not msg.has_qu_question():
+            # Refresh LRU position when an entry exists but the
+            # suppression window has expired; otherwise evict the oldest
+            # entry once the window is full.
+            if data in self._recent_packets:
+                del self._recent_packets[data]
+            elif len(self._recent_packets) >= _RECENT_PACKETS_MAX:
+                del self._recent_packets[next(iter(self._recent_packets))]
+            self._recent_packets[data] = now
         if msg.valid is True:
             if debug:
                 log.debug(
