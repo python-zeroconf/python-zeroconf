@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.9 (2026-05-20)
+
+### Bug Fixes
+
+- Bound QuestionHistory size to prevent LAN-driven OOM
+  ([#1733](https://github.com/python-zeroconf/python-zeroconf/pull/1733),
+  [`0e5e637`](https://github.com/python-zeroconf/python-zeroconf/commit/0e5e637172ab7991e8e1f13be7e4e5d228ce8b8b))
+
+
 ## v0.149.8 (2026-05-19)
 
 ### Bug Fixes
