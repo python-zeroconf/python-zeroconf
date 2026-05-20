@@ -161,9 +161,7 @@ select = [
     "SLF001",
     "PLR2004", # too many to fix right now
     "PT011", # too many to fix right now
-    "PT006", # too many to fix right now
     "PGH003", # too many to fix right now
-    "PT007", # too many to fix right now
     "PT027",  # too many to fix right now
     "PLW0603" , # too many to fix right now
     "PLR0915", # too many to fix right now
