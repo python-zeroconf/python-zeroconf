@@ -684,7 +684,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             if record_type == _TYPE_NSEC:
                 continue
 
-            if record_type is _TYPE_PTR:
+            if record_type == _TYPE_PTR:
                 if TYPE_CHECKING:
                     record = cast(DNSPointer, record)
                 pointer = record
