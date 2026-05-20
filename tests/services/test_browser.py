@@ -1085,6 +1085,68 @@ def test_service_browser_listeners_no_update_service():
     zc.close()
 
 
+def test_service_browser_nsec_record_does_not_trigger_update():
+    """NSEC records assert non-existence and must not fire ServiceStateChange.Updated."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    type_ = "_hap._tcp.local."
+    registration_name = f"xxxyyy.{type_}"
+    callbacks = []
+
+    class MyServiceListener(r.ServiceListener):
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
+            if name == registration_name:
+                callbacks.append(("add", type_, name))
+
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
+            if name == registration_name:
+                callbacks.append(("remove", type_, name))
+
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
+            if name == registration_name:
+                callbacks.append(("update", type_, name))
+
+    listener = MyServiceListener()
+    browser = r.ServiceBrowser(zc, type_, None, listener)
+
+    desc = {"path": "/~paulsm/"}
+    address = socket.inet_aton("10.0.1.2")
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+
+    _inject_response(
+        zc,
+        mock_incoming_msg(
+            [
+                info.dns_pointer(),
+                info.dns_service(),
+                info.dns_text(),
+                *info.dns_addresses(),
+            ]
+        ),
+    )
+    time.sleep(0.2)
+
+    _inject_response(
+        zc,
+        mock_incoming_msg(
+            [
+                r.DNSNsec(
+                    registration_name,
+                    const._TYPE_NSEC,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    const._DNS_OTHER_TTL,
+                    registration_name,
+                    [const._TYPE_AAAA],
+                ),
+            ]
+        ),
+    )
+    time.sleep(0.2)
+
+    assert callbacks == [("add", type_, registration_name)]
+    browser.cancel()
+    zc.close()
+
+
 def test_service_browser_uses_non_strict_names():
     """Verify we can look for technically invalid names as we cannot change what others do."""
 

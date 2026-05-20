@@ -63,6 +63,7 @@ from ..const import (
     _MDNS_ADDR,
     _MDNS_ADDR6,
     _MDNS_PORT,
+    _TYPE_NSEC,
     _TYPE_PTR,
 )
 
@@ -677,6 +678,11 @@ class _ServiceBrowserBase(RecordUpdateListener):
             record = record_update.new
             old_record = record_update.old
             record_type = record.type
+
+            # NSEC records assert non-existence of a record type
+            # (RFC 6762 §6.1); skip so we do not fire spurious updates.
+            if record_type == _TYPE_NSEC:
+                continue
 
             if record_type is _TYPE_PTR:
                 if TYPE_CHECKING:
