@@ -61,6 +61,25 @@ def test_service_type_name_non_strict_compliant_names(instance_name, service_typ
     assert instance_name_from_service_info(info, strict=False) == instance_name
 
 
+@pytest.mark.parametrize(
+    "type_, expected",
+    (
+        ("_http._tcp.LOCAL.", "_http._tcp.LOCAL."),
+        ("_http._TCP.local.", "_http._TCP.local."),
+        ("_HTTP._tcp.local.", "_HTTP._tcp.local."),
+        ("Instance._http._tcp.LOCAL.", "_http._tcp.LOCAL."),
+    ),
+)
+def test_service_type_name_uppercase_trailer(type_, expected):
+    """RFC 1035 §2.3.3 / RFC 6762 §16 — DNS names are case-insensitive."""
+    assert nameutils.service_type_name(type_) == expected
+
+
+def test_service_type_name_uppercase_local_non_strict():
+    """Non-strict mode accepts uppercase .LOCAL. trailer without a protocol label."""
+    assert nameutils.service_type_name("Localhost.LOCAL.", strict=False) == "LOCAL."
+
+
 def test_possible_types():
     """Test possible types from name."""
     assert nameutils.possible_types(".") == set()

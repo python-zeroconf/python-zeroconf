@@ -83,7 +83,9 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
         # https://datatracker.ietf.org/doc/html/rfc6763#section-7.2
         raise BadTypeInNameException(f"Full name ({type_}) must be > 256 bytes")
 
-    if type_.endswith((_TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)):
+    # RFC 1035 §2.3.3 / RFC 6762 §16 — DNS name comparisons are case-insensitive.
+    type_lower = type_.lower()
+    if type_lower.endswith((_TCP_PROTOCOL_LOCAL_TRAILER, _NONTCP_PROTOCOL_LOCAL_TRAILER)):
         remaining = type_[: -len(_TCP_PROTOCOL_LOCAL_TRAILER)].split(".")
         trailer = type_[-len(_TCP_PROTOCOL_LOCAL_TRAILER) :]
         has_protocol = True
@@ -92,7 +94,7 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
             f"Type '{type_}' must end with "
             f"'{_TCP_PROTOCOL_LOCAL_TRAILER}' or '{_NONTCP_PROTOCOL_LOCAL_TRAILER}'"
         )
-    elif type_.endswith(_LOCAL_TRAILER):
+    elif type_lower.endswith(_LOCAL_TRAILER):
         remaining = type_[: -len(_LOCAL_TRAILER)].split(".")
         trailer = type_[-len(_LOCAL_TRAILER) + 1 :]
         has_protocol = False
