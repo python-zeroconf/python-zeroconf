@@ -68,6 +68,9 @@ def test_service_type_name_non_strict_compliant_names(instance_name, service_typ
         ("_http._TCP.local.", "_http._TCP.local."),
         ("_HTTP._tcp.local.", "_HTTP._tcp.local."),
         ("Instance._http._tcp.LOCAL.", "_http._tcp.LOCAL."),
+        ("_ntp._udp.LOCAL.", "_ntp._udp.LOCAL."),
+        ("_ntp._UDP.local.", "_ntp._UDP.local."),
+        ("Instance._ntp._udp.LOCAL.", "_ntp._udp.LOCAL."),
     ),
 )
 def test_service_type_name_uppercase_trailer(type_, expected):
