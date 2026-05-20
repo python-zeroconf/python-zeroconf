@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator, Iterator
 from unittest.mock import patch
 
 import pytest
@@ -14,6 +14,52 @@ from zeroconf._handlers import query_handler
 from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
 from zeroconf.asyncio import AsyncZeroconf
+
+try:
+    from blockbuster import BlockBuster, blockbuster_ctx
+except ImportError:  # platforms without blockbuster (e.g. PyPy under QEMU)
+    BlockBuster = None  # type: ignore[assignment,misc]
+    blockbuster_ctx = None  # type: ignore[assignment]
+
+_BENCHMARKS_DIR = "tests/benchmarks"
+
+# Tests that perform sync IO inside the asyncio event loop and trip
+# blockbuster. Marked xfail so CI stays green; pop entries as they get
+# fixed so the underlying blocking call is gone for good. The single
+# entry below pins the deliberate sync-bootstrap path Zeroconf takes
+# when constructed with `use_asyncio=False` from inside a running loop
+# — that block on the loop-thread-ready event is the behavior the test
+# is documenting, so it stays xfail by design.
+_KNOWN_BLOCKING: frozenset[str] = frozenset(
+    {
+        "tests/test_core.py::Framework::test_use_asyncio_false_forces_thread_when_loop_running",
+    }
+)
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Mark known-blocking tests xfail so blockbuster doesn't fail the suite."""
+    if blockbuster_ctx is None:
+        return
+    marker = pytest.mark.xfail(
+        reason="blockbuster: blocking call in asyncio path",
+        strict=False,
+    )
+    for item in items:
+        if item.nodeid in _KNOWN_BLOCKING:
+            item.add_marker(marker)
+
+
+@pytest.fixture(autouse=True)
+def blockbuster(
+    request: pytest.FixtureRequest,
+) -> Iterator[BlockBuster | None]:
+    """Fail any test that performs a blocking call inside the asyncio loop."""
+    if blockbuster_ctx is None or _BENCHMARKS_DIR in str(request.node.fspath):
+        yield None
+        return
+    with blockbuster_ctx() as bb:
+        yield bb
 
 
 @pytest.fixture(autouse=True)
