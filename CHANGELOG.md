@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.149.12 (2026-05-20)
+
+### Bug Fixes
+
+- Bound QuestionHistory per-entry known-answer payload
+  ([#1755](https://github.com/python-zeroconf/python-zeroconf/pull/1755),
+  [`4ff6540`](https://github.com/python-zeroconf/python-zeroconf/commit/4ff65407bdc097f73a8b1f98659572e24d5c0df1))
+
+- Bound TC-deferred queues against spoofed-source flood OOM
+  ([#1751](https://github.com/python-zeroconf/python-zeroconf/pull/1751),
+  [`b22c8ff`](https://github.com/python-zeroconf/python-zeroconf/commit/b22c8ff19c66c68907d220a4823c0950f4fa93f7))
+
+
 ## v0.149.11 (2026-05-20)
 
 ### Bug Fixes
