@@ -190,7 +190,6 @@ class Framework(unittest.TestCase):
             zc = r.Zeroconf(
                 interfaces=["127.0.0.1"],
                 multicast_addresses=["192.168.1.5"],
-                unicast=True,
             )
             try:
                 _, kwargs = mock_create.call_args

@@ -195,7 +195,7 @@ class Zeroconf(QuietLogger):
             receive queries arriving on them.
         """
         if ip_version is None:
-            ip_version = autodetect_ip_version(interfaces)
+            ip_version = autodetect_ip_version(interfaces, multicast_addresses)
 
         self.done = False
 

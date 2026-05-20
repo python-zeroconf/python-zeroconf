@@ -524,3 +524,55 @@ def test_create_sockets_multicast_addresses_default_path() -> None:
     joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
     assert "0.0.0.0" in joined
     assert "192.168.1.5" in joined
+
+
+def test_create_sockets_multicast_addresses_v4_rejects_v6_entry() -> None:
+    """V4Only listen socket rejects IPv6 multicast_addresses entries."""
+    with pytest.raises(ValueError, match="IPv6"):
+        r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["2001:db8::"],
+            ip_version=r.IPVersion.V4Only,
+        )
+
+
+def test_create_sockets_multicast_addresses_v6_rejects_v4_entry() -> None:
+    """V6Only listen socket rejects IPv4 multicast_addresses entries."""
+    with pytest.raises(ValueError, match="IPv4"):
+        r.create_sockets(
+            interfaces=[1],
+            multicast_addresses=["192.168.1.5"],
+            ip_version=r.IPVersion.V6Only,
+        )
+
+
+def test_create_sockets_multicast_addresses_deduped_against_interfaces() -> None:
+    """Addresses present in both interfaces and multicast_addresses join only once."""
+    listen_mock = Mock(spec=socket.socket)
+    respond_mock = Mock(spec=socket.socket)
+
+    def _new_socket(bind_addr, **kwargs):
+        return listen_mock if bind_addr == ("",) else respond_mock
+
+    with (
+        patch("zeroconf._utils.net.new_socket", side_effect=_new_socket),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["127.0.0.1", "192.168.1.5"],
+            ip_version=r.IPVersion.V4Only,
+        )
+
+    joined_127 = [c for c in mock_add.call_args_list if c.args[0] is listen_mock and c.args[1] == "127.0.0.1"]
+    assert len(joined_127) == 1
+
+
+def test_autodetect_ip_version_includes_multicast_addresses() -> None:
+    """autodetect_ip_version sees IPv6 entries from multicast_addresses."""
+    assert (
+        netutils.autodetect_ip_version(["127.0.0.1"], multicast_addresses=["2001:db8::"]) is r.IPVersion.All
+    )
+    assert netutils.autodetect_ip_version([], multicast_addresses=["2001:db8::"]) is r.IPVersion.V6Only
