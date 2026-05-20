@@ -251,6 +251,7 @@ class TestServiceInfo(unittest.TestCase):
 
     @unittest.skipIf(not has_working_ipv6(), "Requires IPv6")
     @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
+    @pytest.mark.usefixtures("quick_request_timing")
     def test_get_info_partial(self):
         zc = r.Zeroconf(interfaces=["127.0.0.1"])
 

@@ -82,17 +82,20 @@ def quick_timing() -> Generator[None]:
     """Shorten the probe/announce/goodbye/first-query intervals for tests on loopback.
 
     The production values (_CHECK_TIME=500ms, _REGISTER_TIME=225ms,
-    _UNREGISTER_TIME=125ms, _FIRST_QUERY_DELAY_RANDOM_INTERVAL=20-120ms)
-    exist for RFC 6762 interop on real networks (§8.1 thundering-herd
-    avoidance for probing, §5.2 for the initial-query delay). Tests on
-    127.0.0.1 do not need them and pay 1-2s per register/unregister
-    cycle and 20-120ms per ServiceBrowser startup without this fixture.
-    Opt in by adding `quick_timing` to a test's argument list.
+    _UNREGISTER_TIME=125ms, _PROBE_RANDOM_DELAY_INTERVAL=150-250ms,
+    _FIRST_QUERY_DELAY_RANDOM_INTERVAL=20-120ms) exist for RFC 6762
+    interop on real networks (§8.1 thundering-herd avoidance for
+    probing, §5.2 for the initial-query delay). Tests on 127.0.0.1
+    do not need them and pay 1-2s per register/unregister cycle,
+    150-250ms per probe, and 20-120ms per ServiceBrowser startup
+    without this fixture. Opt in by adding `quick_timing` to a
+    test's argument list.
     """
     with (
         patch.object(_core, "_CHECK_TIME", 10),
         patch.object(_core, "_REGISTER_TIME", 10),
         patch.object(_core, "_UNREGISTER_TIME", 10),
+        patch.object(_core, "_PROBE_RANDOM_DELAY_INTERVAL", (1, 5)),
         patch.object(service_browser, "_FIRST_QUERY_DELAY_RANDOM_INTERVAL", (1, 5)),
     ):
         yield

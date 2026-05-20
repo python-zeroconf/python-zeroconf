@@ -33,7 +33,7 @@ def teardown_module():
 
 
 class ListenerTest(unittest.TestCase):
-    @pytest.mark.usefixtures("quick_timing")
+    @pytest.mark.usefixtures("quick_timing", "quick_request_timing")
     def test_integration_with_listener_class(self):
         sub_service_added = Event()
         service_added = Event()

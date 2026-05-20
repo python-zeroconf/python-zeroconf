@@ -104,6 +104,13 @@ _PROTECTED_AGGREGATION_DELAY = 200  # ms
 
 _REGISTER_BROADCASTS = 3
 
+# RFC 6762 §8.1 thundering-herd avoidance: wait a random
+# 0-250ms before the first probe so simultaneously-started
+# responders don't collide. The repo enforces a 150ms floor
+# to keep the existing test deadlines comfortable; tests on
+# loopback can patch this down via the `quick_timing` fixture.
+_PROBE_RANDOM_DELAY_INTERVAL = (150, 250)  # ms
+
 
 def async_send_with_transport(
     log_debug: bool,
@@ -561,7 +568,7 @@ class Zeroconf(QuietLogger):
 
         # Wait a random amount of time up avoid collisions and avoid
         # a thundering herd when multiple services are started on the network
-        await self.async_wait(random.randint(150, 250))  # noqa: S311
+        await self.async_wait(random.randint(*_PROBE_RANDOM_DELAY_INTERVAL))  # noqa: S311
 
         next_instance_number = 2
         next_time = now = current_time_millis()
