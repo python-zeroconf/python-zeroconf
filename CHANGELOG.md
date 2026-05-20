@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.11 (2026-05-20)
+
+### Bug Fixes
+
+- Bound duplicate-packet dedup against alternating-payload floods
+  ([#1750](https://github.com/python-zeroconf/python-zeroconf/pull/1750),
+  [`8c9d6ce`](https://github.com/python-zeroconf/python-zeroconf/commit/8c9d6ce0ccdb8854d14606c93f3790482363e1b9))
+
+
 ## v0.149.10 (2026-05-20)
 
 ### Bug Fixes
