@@ -14,6 +14,7 @@ cdef bint TYPE_CHECKING
 
 cdef cython.uint _MAX_MSG_ABSOLUTE
 cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
+cdef cython.uint _RECENT_PACKETS_MAX
 
 
 cdef class AsyncListener:
@@ -22,18 +23,16 @@ cdef class AsyncListener:
     cdef ServiceRegistry _registry
     cdef RecordManager _record_manager
     cdef QueryHandler _query_handler
-    cdef public cython.bytes data
-    cdef public double last_time
-    cdef public DNSIncoming last_message
     cdef public object transport
     cdef public object sock_description
     cdef public cython.dict _deferred
     cdef public cython.dict _timers
+    cdef public cython.dict _recent_packets
 
     @cython.locals(now=double, debug=cython.bint)
     cpdef datagram_received(self, cython.bytes bytes, cython.tuple addrs)
 
-    @cython.locals(msg=DNSIncoming)
+    @cython.locals(msg=DNSIncoming, recent_packets=cython.dict, recent=cython.tuple)
     cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, double now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)

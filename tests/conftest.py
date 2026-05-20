@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from zeroconf import _core, const
+from zeroconf import _core, _listener, const
 from zeroconf._handlers import query_handler
 from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
@@ -36,12 +36,13 @@ def run_isolated():
 
 @pytest.fixture
 def disable_duplicate_packet_suppression():
-    """Disable duplicate packet suppress.
-
-    Some tests run too slowly because of the duplicate
-    packet suppression.
-    """
-    with patch.object(const, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0):
+    """Disable duplicate packet suppression."""
+    # _listener rebinds the interval at module scope, so const-only
+    # patching does not reach the hot path.
+    with (
+        patch.object(const, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0),
+        patch.object(_listener, "_DUPLICATE_PACKET_SUPPRESSION_INTERVAL", 0),
+    ):
         yield
 
 

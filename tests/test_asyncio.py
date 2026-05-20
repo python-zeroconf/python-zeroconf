@@ -901,7 +901,7 @@ async def test_async_unregister_all_services(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_zeroconf_service_types(quick_timing: None) -> None:
+async def test_async_zeroconf_service_types(quick_timing: None, disable_duplicate_packet_suppression) -> None:
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"

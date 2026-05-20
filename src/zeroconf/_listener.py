@@ -39,6 +39,12 @@ if TYPE_CHECKING:
 
 _TC_DELAY_RANDOM_INTERVAL = (400, 500)
 
+# Bounded recency window so an alternating (A, B, A, B, ...) flood can't
+# slip past single-slot dedup. State lives on the listener (one per
+# interface) so a duplicate seen on one interface does not suppress a
+# legitimate QU / unicast reply that arrives on a different interface.
+_RECENT_PACKETS_MAX = 16
+
 
 _bytes = bytes
 _str = str
@@ -59,12 +65,10 @@ class AsyncListener:
     __slots__ = (
         "_deferred",
         "_query_handler",
+        "_recent_packets",
         "_record_manager",
         "_registry",
         "_timers",
-        "data",
-        "last_message",
-        "last_time",
         "sock_description",
         "transport",
         "zc",
@@ -75,13 +79,13 @@ class AsyncListener:
         self._registry = zc.registry
         self._record_manager = zc.record_manager
         self._query_handler = zc.query_handler
-        self.data: bytes | None = None
-        self.last_time: float = 0
-        self.last_message: DNSIncoming | None = None
         self.transport: _WrappedTransport | None = None
         self.sock_description: str | None = None
         self._deferred: dict[str, list[DNSIncoming]] = {}
         self._timers: dict[str, asyncio.TimerHandle] = {}
+        # data -> (arrival_time_ms, has_qu_question). Relies on dict
+        # insertion order so the oldest entry is evicted first.
+        self._recent_packets: dict[bytes, tuple[float, bool]] = {}
         super().__init__()
 
     def datagram_received(self, data: _bytes, addrs: tuple[str, int] | tuple[str, int, int, int]) -> None:
@@ -110,11 +114,12 @@ class AsyncListener:
         data: _bytes,
         addrs: tuple[str, int] | tuple[str, int, int, int],
     ) -> None:
+        recent_packets = self._recent_packets
+        recent = recent_packets.get(data)
         if (
-            self.data == data
-            and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
-            and self.last_message is not None
-            and not self.last_message.has_qu_question()
+            recent is not None
+            and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < recent[0]
+            and not recent[1]
         ):
             # Guard against duplicate packets
             if debug:
@@ -145,9 +150,13 @@ class AsyncListener:
             addr_port = (addr, port)
 
         msg = DNSIncoming(data, addr_port, scope, now)
-        self.data = data
-        self.last_time = now
-        self.last_message = msg
+        # Move-to-end so a repeat payload refreshes its position and only
+        # cold entries are evicted when the window is full.
+        if data in recent_packets:
+            del recent_packets[data]
+        elif len(recent_packets) >= _RECENT_PACKETS_MAX:
+            del recent_packets[next(iter(recent_packets))]
+        recent_packets[data] = (now, msg.has_qu_question())
         if msg.valid is True:
             if debug:
                 log.debug(

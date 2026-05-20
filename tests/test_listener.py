@@ -222,7 +222,8 @@ def test_guard_against_duplicate_packets():
         _handle_query_or_defer.assert_called_once()
         _handle_query_or_defer.reset_mock()
 
-        # Now call with the different packet and handle_query_or_defer should fire
+        # Replay the first packet — the recency window remembers more than
+        # just the most recent payload, so this is a duplicate.
         listener._process_datagram_at_time(
             False,
             len(packet_with_qm_question),
@@ -230,7 +231,7 @@ def test_guard_against_duplicate_packets():
             packet_with_qm_question,
             addrs,
         )
-        _handle_query_or_defer.assert_called_once()
+        _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 
         # Now call with the different packet with qu question and handle_query_or_defer should fire
@@ -257,18 +258,8 @@ def test_guard_against_duplicate_packets():
 
         log.setLevel(logging.WARNING)
 
-        # Call with the QM packet again
-        listener._process_datagram_at_time(
-            False,
-            len(packet_with_qm_question),
-            new_time,
-            packet_with_qm_question,
-            addrs,
-        )
-        _handle_query_or_defer.assert_called_once()
-        _handle_query_or_defer.reset_mock()
-
-        # Now call with the same packet again and handle_query_or_defer should not fire
+        # Replay the QM packet with debug disabled — suppression must hold
+        # off the debug-log path too.
         listener._process_datagram_at_time(
             False,
             len(packet_with_qm_question),
@@ -283,5 +274,112 @@ def test_guard_against_duplicate_packets():
         listener._process_datagram_at_time(False, len(b"garbage"), new_time, b"garbage", addrs)
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
+
+    zc.close()
+
+
+def test_guard_against_alternating_duplicate_packets():
+    """Alternating two distinct payloads must not bypass duplicate suppression."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    zc.registry.async_add(
+        ServiceInfo(
+            "_http._tcp.local.",
+            "Test._http._tcp.local.",
+            server="Test._http._tcp.local.",
+            port=4,
+        )
+    )
+    zc.question_history = QuestionHistoryWithoutSuppression()
+
+    class SubListener(_listener.AsyncListener):
+        def handle_query_or_defer(
+            self,
+            msg: DNSIncoming,
+            addr: str,
+            port: int,
+            transport: _engine._WrappedTransport,
+            v6_flow_scope: tuple[()] | tuple[int, int] = (),
+        ) -> None:
+            super().handle_query_or_defer(msg, addr, port, transport, v6_flow_scope)
+
+    listener = SubListener(zc)
+    listener.transport = MagicMock()
+
+    query_a = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    query_a.add_question(r.DNSQuestion("a._http._tcp.local.", const._TYPE_PTR, const._CLASS_IN))
+    packet_a = query_a.packets()[0]
+
+    query_b = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+    query_b.add_question(r.DNSQuestion("b._http._tcp.local.", const._TYPE_PTR, const._CLASS_IN))
+    packet_b = query_b.packets()[0]
+
+    assert packet_a != packet_b
+
+    addrs = ("1.2.3.4", 43)
+
+    with patch.object(listener, "handle_query_or_defer") as _handle_query_or_defer:
+        now = current_time_millis()
+
+        # Prime both payloads.
+        listener._process_datagram_at_time(False, len(packet_a), now, packet_a, addrs)
+        listener._process_datagram_at_time(False, len(packet_b), now, packet_b, addrs)
+        assert _handle_query_or_defer.call_count == 2
+        _handle_query_or_defer.reset_mock()
+
+        for _ in range(4):
+            listener._process_datagram_at_time(False, len(packet_a), now, packet_a, addrs)
+            listener._process_datagram_at_time(False, len(packet_b), now, packet_b, addrs)
+        _handle_query_or_defer.assert_not_called()
+
+    zc.close()
+
+
+def test_recent_packets_window_is_bounded():
+    """Distinct payloads beyond the recency window evict oldest entries."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    zc.registry.async_add(
+        ServiceInfo(
+            "_http._tcp.local.",
+            "Test._http._tcp.local.",
+            server="Test._http._tcp.local.",
+            port=4,
+        )
+    )
+    zc.question_history = QuestionHistoryWithoutSuppression()
+
+    class SubListener(_listener.AsyncListener):
+        def handle_query_or_defer(
+            self,
+            msg: DNSIncoming,
+            addr: str,
+            port: int,
+            transport: _engine._WrappedTransport,
+            v6_flow_scope: tuple[()] | tuple[int, int] = (),
+        ) -> None:
+            super().handle_query_or_defer(msg, addr, port, transport, v6_flow_scope)
+
+    listener = SubListener(zc)
+    listener.transport = MagicMock()
+
+    addrs = ("1.2.3.4", 43)
+    now = current_time_millis()
+
+    packets = []
+    for i in range(_listener._RECENT_PACKETS_MAX + 4):
+        query = r.DNSOutgoing(const._FLAGS_QR_QUERY, multicast=True)
+        query.add_question(r.DNSQuestion(f"n{i}._http._tcp.local.", const._TYPE_PTR, const._CLASS_IN))
+        packets.append(query.packets()[0])
+
+    with patch.object(listener, "handle_query_or_defer") as _handle_query_or_defer:
+        for packet in packets:
+            listener._process_datagram_at_time(False, len(packet), now, packet, addrs)
+        assert _handle_query_or_defer.call_count == len(packets)
+        _handle_query_or_defer.reset_mock()
+
+        # The oldest packets should have been evicted and now replay.
+        evicted = packets[: len(packets) - _listener._RECENT_PACKETS_MAX]
+        for packet in evicted:
+            listener._process_datagram_at_time(False, len(packet), now, packet, addrs)
+        assert _handle_query_or_defer.call_count == len(evicted)
 
     zc.close()

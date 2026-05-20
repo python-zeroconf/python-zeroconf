@@ -190,7 +190,7 @@ class TestRegistrar(unittest.TestCase):
             zc.register_service(conflicting_info)
         zc.close()
 
-    @pytest.mark.usefixtures("quick_timing")
+    @pytest.mark.usefixtures("quick_timing", "disable_duplicate_packet_suppression")
     def test_register_and_lookup_type_by_uppercase_name(self):
         # instantiate a zeroconf instance
         zc = Zeroconf(interfaces=["127.0.0.1"])
@@ -1758,7 +1758,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
     with patch.object(aiozc.zeroconf, "async_send") as send_mock:
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol._recent_packets.clear()  # manually reset to avoid duplicate packet suppression
         await asyncio.sleep(0.2)
         calls = send_mock.mock_calls
         assert len(calls) == 1
@@ -1769,7 +1769,7 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol._recent_packets.clear()  # manually reset to avoid duplicate packet suppression
         await asyncio.sleep(1.2)
         calls = send_mock.mock_calls
         assert len(calls) == 1
@@ -1780,9 +1780,9 @@ async def test_response_aggregation_timings_multiple(run_isolated, disable_dupli
 
         send_mock.reset_mock()
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol._recent_packets.clear()  # manually reset to avoid duplicate packet suppression
         protocol.datagram_received(query2.packets()[0], ("127.0.0.1", const._MDNS_PORT))
-        protocol.last_time = 0  # manually reset the last time to avoid duplicate packet suppression
+        protocol._recent_packets.clear()  # manually reset to avoid duplicate packet suppression
         # The minimum protected send_after is 1000ms + 20ms random; sleep
         # well under that so coarse timers on slow runners cannot push the
         # send into this window and flake the assertion.
