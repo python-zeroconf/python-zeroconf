@@ -1066,6 +1066,19 @@ async def test_integration(quick_timing: None) -> None:
             "ash-2.local.",
             addresses=[socket.inet_aton("10.0.1.2")],
         )
+        # Wait for the browser's first startup query to land (with an empty
+        # cache) before registering — otherwise on fast loopback the register
+        # may finish before the first query fires, and answers[0] picks up
+        # the known PTR via RFC 6762 §7.1 known-answer suppression.
+        await asyncio.wait_for(got_query.wait(), 1)
+        # Snapshot the first query's answers and reset the captures so the
+        # subsequent assertions don't have to predict whether further startup
+        # queries fire in real time (before the manual time_changed_millis
+        # loop) or under mock time.
+        first_answers = answers[0]
+        packets.clear()
+        answers.clear()
+        got_query.clear()
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
         loop = asyncio.get_running_loop()
@@ -1084,7 +1097,9 @@ async def test_integration(quick_timing: None) -> None:
             got_query.clear()
             assert not unexpected_ttl.is_set()
 
-            assert len(packets) == _services_browser.STARTUP_QUERIES
+            # The first startup query was captured separately, so only the
+            # remaining STARTUP_QUERIES - 1 land here.
+            assert len(packets) == _services_browser.STARTUP_QUERIES - 1
             packets.clear()
 
             # Wait for the first refresh query
@@ -1098,12 +1113,12 @@ async def test_integration(quick_timing: None) -> None:
             assert len(packets) == 1
             packets.clear()
 
-            assert len(answers) == _services_browser.STARTUP_QUERIES + 1
-            # The first question should have no known answers
-            assert len(answers[0]) == 0
+            assert len(answers) == _services_browser.STARTUP_QUERIES
+            # The first question (captured separately) should have no known answers
+            assert len(first_answers) == 0
             # The rest of the startup questions should have
             # known answers
-            for answer_list in answers[1:-2]:
+            for answer_list in answers[:-2]:
                 # Allow 0 or 1 answers due to random delays and timing
                 assert len(answer_list) <= 1
             # Once the TTL is reached, the last question should have no known answers
