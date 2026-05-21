@@ -712,43 +712,45 @@ def test_tc_bit_defers_last_response_missing():
     assert len(packets) == 4
     expected_deferred = []
 
-    # Pin per-packet delay to the minimum so each successive fire_at lands
-    # before the deadline established by the first packet — keeps the
-    # timer-replacement assertions deterministic under bounded TC-deferral.
-    min_delay_ms = _TC_DELAY_RANDOM_INTERVAL[0]
-    with patch("zeroconf._listener.random.randint", return_value=min_delay_ms):
-        next_packet = r.DNSIncoming(packets.pop(0))
-        expected_deferred.append(next_packet)
-        threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
-        assert protocol._deferred[source_ip] == expected_deferred
-        timer1 = protocol._timers[source_ip]
+    # Widen the per-packet delay so Windows scheduling jitter between
+    # assertions cannot fire the timer mid-test, while leaving plenty of
+    # headroom under the first-arrival deadline for timer-replacement to
+    # remain deterministic.
+    with patch.object(_listener, "_TC_DELAY_RANDOM_INTERVAL", (1500, 60_000)):
+        min_delay_ms = _listener._TC_DELAY_RANDOM_INTERVAL[0]
+        with patch("zeroconf._listener.random.randint", return_value=min_delay_ms):
+            next_packet = r.DNSIncoming(packets.pop(0))
+            expected_deferred.append(next_packet)
+            threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
+            assert protocol._deferred[source_ip] == expected_deferred
+            timer1 = protocol._timers[source_ip]
 
-        next_packet = r.DNSIncoming(packets.pop(0))
-        expected_deferred.append(next_packet)
-        threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
-        assert protocol._deferred[source_ip] == expected_deferred
-        timer2 = protocol._timers[source_ip]
-        assert timer1.cancelled()
-        assert timer2 != timer1
+            next_packet = r.DNSIncoming(packets.pop(0))
+            expected_deferred.append(next_packet)
+            threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
+            assert protocol._deferred[source_ip] == expected_deferred
+            timer2 = protocol._timers[source_ip]
+            assert timer1.cancelled()
+            assert timer2 != timer1
 
-        # Send the same packet again to similar multi interfaces
-        threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
-        assert protocol._deferred[source_ip] == expected_deferred
-        assert source_ip in protocol._timers
-        timer3 = protocol._timers[source_ip]
-        assert not timer3.cancelled()
-        assert timer3 == timer2
+            # Send the same packet again to similar multi interfaces
+            threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
+            assert protocol._deferred[source_ip] == expected_deferred
+            assert source_ip in protocol._timers
+            timer3 = protocol._timers[source_ip]
+            assert not timer3.cancelled()
+            assert timer3 == timer2
 
-        next_packet = r.DNSIncoming(packets.pop(0))
-        expected_deferred.append(next_packet)
-        threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
-        assert protocol._deferred[source_ip] == expected_deferred
-        assert source_ip in protocol._timers
-        timer4 = protocol._timers[source_ip]
-        assert timer3.cancelled()
-        assert timer4 != timer3
+            next_packet = r.DNSIncoming(packets.pop(0))
+            expected_deferred.append(next_packet)
+            threadsafe_query(zc, protocol, next_packet, source_ip, const._MDNS_PORT, Mock(), ())
+            assert protocol._deferred[source_ip] == expected_deferred
+            assert source_ip in protocol._timers
+            timer4 = protocol._timers[source_ip]
+            assert timer3.cancelled()
+            assert timer4 != timer3
 
-    for _ in range(8):
+    for _ in range(30):
         time.sleep(0.1)
         if source_ip not in protocol._timers and source_ip not in protocol._deferred:
             break

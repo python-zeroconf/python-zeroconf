@@ -590,6 +590,12 @@ def test_autodetect_ip_version_non_list_interfaces_with_multicast_addresses() ->
     )
 
 
+def test_autodetect_ip_version_interface_index_treated_as_v6() -> None:
+    """Interface-index (int) entries are treated as IPv6 by autodetection."""
+    assert netutils.autodetect_ip_version([1]) is r.IPVersion.V6Only
+    assert netutils.autodetect_ip_version(["1.2.3.4", 1]) is r.IPVersion.All
+
+
 def test_create_sockets_multicast_addresses_ip_version_all() -> None:
     """multicast_addresses works with ip_version=All (no V4Only/V6Only validation triggered)."""
     listen_mock = Mock(spec=socket.socket)
