@@ -65,6 +65,14 @@ _DNS_OTHER_TTL = 4500  # 75 minutes for non-host records (PTR, TXT etc) as-per R
 # level of rate limit and safe guards so we use 1/4 of the recommended value
 _DNS_PTR_MIN_TTL = 1125
 
+# RFC 6762 §10.4 cache-flush-on-failure timing.
+# Issue queries at t=0, t=1s, t=3s (intervals doubling per
+# §5.2), then flush at t=10s if the record was not refreshed
+# in the cache. Schedule is fixed by the RFC; do not tighten
+# without an interop note.
+_RECONFIRM_QUERY_INTERVALS_MS = (0, 1000, 3000)
+_RECONFIRM_TIMEOUT_MS = 10000
+
 # Upper bound on the number of records the DNSCache will hold before it
 # starts evicting the closest-to-expiration entry to make room for new
 # arrivals. Bounds the memory a malicious LAN peer can force the cache
