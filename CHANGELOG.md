@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.15 (2026-05-21)
+
+### Bug Fixes
+
+- Preserve scope_id when scoped AAAA arrives alongside unscoped
+  ([#1764](https://github.com/python-zeroconf/python-zeroconf/pull/1764),
+  [`e2352ea`](https://github.com/python-zeroconf/python-zeroconf/commit/e2352ea84437d6fca81dfbdc41116feaaf45fefc))
+
+
 ## v0.149.14 (2026-05-20)
 
 ### Bug Fixes
