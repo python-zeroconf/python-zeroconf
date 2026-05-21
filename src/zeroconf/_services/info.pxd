@@ -107,6 +107,9 @@ cdef class ServiceInfo(RecordUpdateListener):
     )
     cdef bint _process_record_threadsafe(self, object zc, DNSRecord record, double now)
 
+    @cython.locals(existing_idx=int, existing=object)
+    cdef bint _upsert_ipv6_address(self, object ip_addr)
+
     @cython.locals(cache=DNSCache)
     cdef cython.list _get_address_records_from_cache_by_type(self, object zc, object _type)
 
