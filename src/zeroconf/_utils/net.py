@@ -439,6 +439,17 @@ def new_respond_socket(
     return respond_socket
 
 
+def _entry_ip_version(entry: str | int | tuple[tuple[str, int, int], int]) -> int:
+    """Return 4 or 6 for the IP version implied by an interface / multicast entry.
+
+    ``int`` (interface index) and ``tuple`` (ifaddr IPv6 adapter tuple) entries
+    are IPv6 by construction; ``str`` entries are parsed as IP addresses.
+    """
+    if isinstance(entry, str):
+        return ipaddress.ip_address(entry).version
+    return 6
+
+
 def create_sockets(
     interfaces: InterfacesType = InterfaceChoice.All,
     unicast: bool = False,
@@ -461,16 +472,10 @@ def create_sockets(
     # Reject IP-version-incompatible entries up front so callers get a clear
     # error instead of a confusing adapter-lookup or socket-syscall failure.
     if multicast_addresses:
-        if ip_version == IPVersion.V4Only:
-            for entry in multicast_addresses:
-                if isinstance(entry, (int, tuple)) or (
-                    isinstance(entry, str) and ipaddress.ip_address(entry).version == 6
-                ):
-                    raise ValueError("multicast_addresses contains IPv6 entries but ip_version is V4Only")
-        elif ip_version == IPVersion.V6Only:
-            for entry in multicast_addresses:
-                if isinstance(entry, str) and ipaddress.ip_address(entry).version == 4:
-                    raise ValueError("multicast_addresses contains IPv4 entries but ip_version is V6Only")
+        if ip_version == IPVersion.V4Only and any(_entry_ip_version(e) == 6 for e in multicast_addresses):
+            raise ValueError("multicast_addresses contains IPv6 entries but ip_version is V4Only")
+        if ip_version == IPVersion.V6Only and any(_entry_ip_version(e) == 4 for e in multicast_addresses):
+            raise ValueError("multicast_addresses contains IPv4 entries but ip_version is V6Only")
 
     if unicast:
         listen_socket = None
@@ -534,22 +539,13 @@ def autodetect_ip_version(
     multicast_addresses: Sequence[str | int | tuple[tuple[str, int, int], int]] | None = None,
 ) -> IPVersion:
     """Auto detect the IP version when it is not provided."""
-    has_v6 = False
-    has_v4 = False
+    entries: list[str | int | tuple[tuple[str, int, int], int]] = []
     if isinstance(interfaces, list):
-        has_v6 = any(
-            isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
-            for i in interfaces
-        )
-        has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
+        entries.extend(interfaces)
     if multicast_addresses:
-        has_v6 = has_v6 or any(
-            isinstance(i, (int, tuple)) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
-            for i in multicast_addresses
-        )
-        has_v4 = has_v4 or any(
-            isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in multicast_addresses
-        )
+        entries.extend(multicast_addresses)
+    has_v6 = any(_entry_ip_version(e) == 6 for e in entries)
+    has_v4 = any(_entry_ip_version(e) == 4 for e in entries)
     if has_v4 and has_v6:
         return IPVersion.All
     if has_v6:
