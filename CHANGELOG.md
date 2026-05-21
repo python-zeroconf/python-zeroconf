@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.149.16 (2026-05-21)
+
+### Bug Fixes
+
+- Re-release for GHSA-qc2x-6f54-m6h9
+  ([#1770](https://github.com/python-zeroconf/python-zeroconf/pull/1770),
+  [`fad8646`](https://github.com/python-zeroconf/python-zeroconf/commit/fad86461630237d1f0c04e3745fef65e4cc3055c))
+
+
 ## v0.149.15 (2026-05-21)
 
 ### Bug Fixes
