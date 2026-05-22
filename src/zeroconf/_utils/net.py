@@ -152,6 +152,8 @@ def ip6_addresses_to_indexes(
             result.append((interface_index_to_ip6_address(adapters, iface), iface))  # type: ignore[arg-type]
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
             result.append(ip6_to_address_and_index(adapters, iface))  # type: ignore[arg-type]
+        elif isinstance(iface, tuple):
+            result.append(iface)
 
     return result
 

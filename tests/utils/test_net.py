@@ -618,3 +618,29 @@ def test_create_sockets_multicast_addresses_ip_version_all() -> None:
 
     joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
     assert "192.168.1.5" in joined
+
+
+def test_create_sockets_multicast_addresses_preserves_pre_normalized_tuple() -> None:
+    """Pre-normalized IPv6 adapter tuples pass through to add_multicast_member."""
+    listen_mock = Mock(spec=socket.socket)
+
+    pre_normalized = (("2001:db8::", 1, 1), 1)
+
+    with (
+        patch("zeroconf._utils.net.new_socket", return_value=listen_mock),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        r.create_sockets(
+            interfaces=[],
+            multicast_addresses=[pre_normalized],
+            ip_version=r.IPVersion.V6Only,
+        )
+
+    joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
+    assert pre_normalized in joined
