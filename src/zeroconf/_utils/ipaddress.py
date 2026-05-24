@@ -22,7 +22,7 @@ USA
 
 from __future__ import annotations
 
-from functools import cache, lru_cache
+from functools import lru_cache
 from ipaddress import AddressValueError, IPv4Address, IPv6Address, NetmaskValueError
 from typing import Any
 
@@ -34,7 +34,7 @@ int_ = int
 
 
 class ZeroconfIPv4Address(IPv4Address):
-    __slots__ = ("__hash__", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
+    __slots__ = ("_hash", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv4 address."""
@@ -43,12 +43,16 @@ class ZeroconfIPv4Address(IPv4Address):
         self._is_link_local = super().is_link_local
         self._is_unspecified = super().is_unspecified
         self._is_loopback = super().is_loopback
-        self.__hash__ = cache(lambda: IPv4Address.__hash__(self))  # type: ignore[method-assign]
+        self._hash = IPv4Address.__hash__(self)
         self.zc_integer = int(self)
 
     def __str__(self) -> str:
         """Return the string representation of the IPv4 address."""
         return self._str
+
+    def __hash__(self) -> int:
+        """Return the precomputed hash of the IPv4 address."""
+        return self._hash
 
     @property
     def is_link_local(self) -> bool:
@@ -67,7 +71,7 @@ class ZeroconfIPv4Address(IPv4Address):
 
 
 class ZeroconfIPv6Address(IPv6Address):
-    __slots__ = ("__hash__", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
+    __slots__ = ("_hash", "_is_link_local", "_is_loopback", "_is_unspecified", "_str", "zc_integer")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize a new IPv6 address."""
@@ -76,12 +80,16 @@ class ZeroconfIPv6Address(IPv6Address):
         self._is_link_local = super().is_link_local
         self._is_unspecified = super().is_unspecified
         self._is_loopback = super().is_loopback
-        self.__hash__ = cache(lambda: IPv6Address.__hash__(self))  # type: ignore[method-assign]
+        self._hash = IPv6Address.__hash__(self)
         self.zc_integer = int(self)
 
     def __str__(self) -> str:
         """Return the string representation of the IPv6 address."""
         return self._str
+
+    def __hash__(self) -> int:
+        """Return the precomputed hash of the IPv6 address."""
+        return self._hash
 
     @property
     def is_link_local(self) -> bool:

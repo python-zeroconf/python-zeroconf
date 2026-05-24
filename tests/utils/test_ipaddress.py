@@ -48,6 +48,20 @@ def test_cached_ip_addresses_wrapper():
     assert ipv6.is_unspecified is True
 
 
+def test_address_hash_matches_stdlib_and_dedups():
+    """Cached address objects hash like their stdlib equals and dedup in sets."""
+    v4 = ipaddress.cached_ip_addresses("192.168.1.1")
+    assert v4 is not None
+    assert hash(v4) == hash(ipaddress.IPv4Address("192.168.1.1"))
+    assert hash(v4) == hash(v4)
+    assert len({v4, ipaddress.ZeroconfIPv4Address("192.168.1.1")}) == 1
+
+    v6 = ipaddress.cached_ip_addresses("fe80::1")
+    assert v6 is not None
+    assert hash(v6) == hash(ipaddress.IPv6Address("fe80::1"))
+    assert len({v6, ipaddress.ZeroconfIPv6Address("fe80::1")}) == 1
+
+
 def test_get_ip_address_object_from_record():
     """Test the get_ip_address_object_from_record."""
     # not link local
