@@ -261,3 +261,76 @@ def test_signal_registration_interface():
 
     with pytest.raises(ValueError):
         interface.unregister_handler(dummy)
+
+
+def test_signal_fire_dispatches_documented_kwargs():
+    """Signal.fire forwards the four documented kwargs to handlers."""
+    signal = r.Signal()
+    captured: list[dict[str, Any]] = []
+
+    def handler(
+        *,
+        zeroconf: Any,
+        service_type: str,
+        name: str,
+        state_change: r.ServiceStateChange,
+    ) -> None:
+        captured.append(
+            {
+                "zeroconf": zeroconf,
+                "service_type": service_type,
+                "name": name,
+                "state_change": state_change,
+            }
+        )
+
+    signal.registration_interface.register_handler(handler)
+    sentinel = object()
+    signal.fire(
+        zeroconf=sentinel,  # type: ignore[arg-type]
+        service_type="_http._tcp.local.",
+        name="x._http._tcp.local.",
+        state_change=r.ServiceStateChange.Added,
+    )
+
+    assert captured == [
+        {
+            "zeroconf": sentinel,
+            "service_type": "_http._tcp.local.",
+            "name": "x._http._tcp.local.",
+            "state_change": r.ServiceStateChange.Added,
+        }
+    ]
+
+
+def test_signal_fire_rejects_unknown_kwarg():
+    """Signal.fire rejects keyword args outside the contract."""
+    signal = r.Signal()
+    signal.registration_interface.register_handler(lambda **_: None)
+
+    with pytest.raises(TypeError):
+        signal.fire(  # type: ignore[call-arg]
+            zerocnf=None,
+            service_type="_http._tcp.local.",
+            name="x._http._tcp.local.",
+            state_change=r.ServiceStateChange.Added,
+        )
+
+
+def test_signal_fire_rejects_positional_args():
+    """Signal.fire is keyword-only, so positional args are rejected."""
+    signal = r.Signal()
+    signal.registration_interface.register_handler(lambda **_: None)
+
+    with pytest.raises(TypeError):
+        signal.fire(  # type: ignore[misc]
+            None,
+            "_http._tcp.local.",
+            "x._http._tcp.local.",
+            r.ServiceStateChange.Added,
+        )
+
+
+def test_service_state_change_handler_protocol_exported():
+    """The handler Protocol is part of the public package surface."""
+    assert hasattr(r, "ServiceStateChangeHandler")
