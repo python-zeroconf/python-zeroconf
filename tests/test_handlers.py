@@ -2107,3 +2107,17 @@ async def test_async_updates_complete_iteration_safe():
     # This should not raise RuntimeError: set changed size during iteration
     zc.record_manager.async_updates_complete(False)
     await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_async_remove_listener_missing_does_not_raise():
+    """Removing a listener that was never registered must not raise."""
+
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    zc: Zeroconf = aiozc.zeroconf
+
+    listener = r.RecordUpdateListener()
+
+    zc.record_manager.async_remove_listener(listener)
+
+    await aiozc.async_close()
