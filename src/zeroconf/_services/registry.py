@@ -42,8 +42,8 @@ class ServiceRegistry:
     ) -> None:
         """Create the ServiceRegistry class."""
         self._services: dict[str, ServiceInfo] = {}
-        self.types: dict[str, list] = {}
-        self.servers: dict[str, list] = {}
+        self.types: dict[str, dict[str, None]] = {}
+        self.servers: dict[str, dict[str, None]] = {}
         self.has_entries: bool = False
 
     def async_add(self, info: ServiceInfo) -> None:
@@ -79,12 +79,12 @@ class ServiceRegistry:
         """Return all ServiceInfo matching server."""
         return self._async_get_by_index(self.servers, server)
 
-    def _async_get_by_index(self, records: dict[str, list], key: _str) -> list[ServiceInfo]:
+    def _async_get_by_index(self, records: dict[str, dict[str, None]], key: _str) -> list[ServiceInfo]:
         """Return all ServiceInfo matching the index."""
-        record_list = records.get(key)
-        if record_list is None:
+        record_keys = records.get(key)
+        if record_keys is None:
             return []
-        return [self._services[name] for name in record_list]
+        return [self._services[name] for name in record_keys]
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
@@ -94,8 +94,11 @@ class ServiceRegistry:
 
         info.async_clear_cache()
         self._services[info.key] = info
-        self.types.setdefault(info.type.lower(), []).append(info.key)
-        self.servers.setdefault(info.server_key, []).append(info.key)
+        # dict[str, None] gives O(1) add/remove while preserving insertion order
+        # so async_get_infos_type / async_get_infos_server return entries in the
+        # order they were registered.
+        self.types.setdefault(info.type.lower(), {})[info.key] = None
+        self.servers.setdefault(info.server_key, {})[info.key] = None
         self.has_entries = True
 
     def _remove(self, infos: list[ServiceInfo]) -> None:
@@ -105,8 +108,16 @@ class ServiceRegistry:
             if old_service_info is None:
                 continue
             assert old_service_info.server_key is not None
-            self.types[old_service_info.type.lower()].remove(info.key)
-            self.servers[old_service_info.server_key].remove(info.key)
+            type_key = old_service_info.type.lower()
+            server_key = old_service_info.server_key
+            type_bucket = self.types[type_key]
+            del type_bucket[info.key]
+            if not type_bucket:
+                del self.types[type_key]
+            server_bucket = self.servers[server_key]
+            del server_bucket[info.key]
+            if not server_bucket:
+                del self.servers[server_key]
             del self._services[info.key]
 
         self.has_entries = bool(self._services)
