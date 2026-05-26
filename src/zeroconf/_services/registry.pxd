@@ -12,7 +12,7 @@ cdef class ServiceRegistry:
     cdef public bint has_entries
 
     @cython.locals(
-        record_list=cython.list,
+        record_keys=cython.dict,
     )
     cdef cython.list _async_get_by_index(self, cython.dict records, str key)
 
@@ -20,7 +20,11 @@ cdef class ServiceRegistry:
 
     @cython.locals(
         info=ServiceInfo,
-        old_service_info=ServiceInfo
+        old_service_info=ServiceInfo,
+        type_bucket=cython.dict,
+        server_bucket=cython.dict,
+        type_key=str,
+        server_key=str,
     )
     cdef _remove(self, cython.list infos)
 
