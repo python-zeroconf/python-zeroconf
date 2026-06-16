@@ -720,11 +720,13 @@ def test_cache_total_records_invariant_under_mixed_ops() -> None:
         assert cache._total_records == actual()
     assert cache._total_records == const._MAX_CACHE_RECORDS
 
+
 def test_cache_async_set_created_ttl_dnsnsec():
+    from zeroconf._cache import DNSCache
     from zeroconf._dns import DNSNsec
     from zeroconf.const import _CLASS_IN
-    from zeroconf._cache import DNSCache
-    record = DNSNsec('test.local.', 47, _CLASS_IN, 100, 'next.local.', [1, 2, 3])
+
+    record = DNSNsec("test.local.", 47, _CLASS_IN, 100, "next.local.", [1, 2, 3])
     cache = DNSCache()
     cache.async_add_records([record])
     new_record = cache._async_set_created_ttl(record, 10.0, 50)
