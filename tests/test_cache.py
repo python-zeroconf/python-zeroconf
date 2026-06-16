@@ -723,7 +723,7 @@ def test_cache_total_records_invariant_under_mixed_ops() -> None:
 
 def test_cache_async_set_created_ttl_dnsnsec():
     from zeroconf._cache import DNSCache
-    from zeroconf._dns import DNSNsec
+    from zeroconf._dns import DNSNsec, DNSHinfo, DNSRecord
     from zeroconf.const import _CLASS_IN
 
     record = DNSNsec("test.local.", 47, _CLASS_IN, 100, "next.local.", [1, 2, 3])
@@ -732,3 +732,11 @@ def test_cache_async_set_created_ttl_dnsnsec():
     new_record = cache._async_set_created_ttl(record, 10.0, 50)
     assert isinstance(new_record, DNSNsec)
     assert new_record.ttl == 50
+
+    # DNSHinfo coverage
+    hinfo_record = DNSHinfo("test-hinfo.local.", 13, _CLASS_IN, 100, "cpu", "os")
+    cache.async_add_records([hinfo_record])
+    new_hinfo = cache._async_set_created_ttl(hinfo_record, 10.0, 50)
+    assert isinstance(new_hinfo, DNSHinfo)
+    assert new_hinfo.ttl == 50
+
