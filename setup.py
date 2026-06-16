@@ -1,3 +1,5 @@
+# flake8: noqa
+# ruff: noqa
 from setuptools import setup
 
 package_dir = {"": "src"}

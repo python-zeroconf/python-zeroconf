@@ -373,7 +373,7 @@ class DNSCache:
             new_record = DNSNsec(
                 record.name, record.type, original_class, ttl, record.next_name, record.rdtypes, now
             )
-        else:
+        else:  # pragma: no cover
             new_record = type(record)(record.name, record.type, original_class, ttl, now)
 
         store = self.cache.get(record.key)

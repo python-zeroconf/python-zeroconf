@@ -10,12 +10,13 @@ import threading
 import unittest
 from ipaddress import ip_address
 from threading import Event
+from typing import cast
 from unittest.mock import patch
 
 import pytest
 
 import zeroconf as r
-from zeroconf import DNSAddress, RecordUpdate, const
+from zeroconf import DNSAddress, DNSText, RecordUpdate, const
 from zeroconf._protocol.outgoing import DNSOutgoing
 from zeroconf._services import info
 from zeroconf._services.info import ServiceInfo, _has_more_scope_info
@@ -245,7 +246,7 @@ class TestServiceInfo(unittest.TestCase):
             ttl,
             b"\x04ff=0\x04ci=3\x04sf=0\x0bsh=6fLM5A==",
         )
-        expired_record = zc.cache._async_set_created_ttl(expired_record, 1000, 1)
+        expired_record = cast(DNSText, zc.cache._async_set_created_ttl(expired_record, 1000, 1))
         info.async_update_records(zc, now, [RecordUpdate(expired_record, None)])
         assert info.properties[b"ci"] == b"2"
         zc.close()

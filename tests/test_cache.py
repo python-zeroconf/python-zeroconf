@@ -722,9 +722,9 @@ def test_cache_total_records_invariant_under_mixed_ops() -> None:
 
 
 def test_cache_async_set_created_ttl_dnsnsec():
-    from zeroconf._cache import DNSCache
-    from zeroconf._dns import DNSHinfo, DNSNsec
-    from zeroconf.const import _CLASS_IN
+    from zeroconf._cache import DNSCache  # noqa: PLC0415
+    from zeroconf._dns import DNSHinfo, DNSNsec  # noqa: PLC0415
+    from zeroconf.const import _CLASS_IN  # noqa: PLC0415
 
     record = DNSNsec("test.local.", 47, _CLASS_IN, 100, "next.local.", [1, 2, 3])
     cache = DNSCache()
