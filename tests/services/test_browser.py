@@ -1562,7 +1562,7 @@ def test_service_browser_expire_callbacks():
     # Force the ttl to be 1 second
     now = current_time_millis()
     for cache_record in list(zc.cache.cache.values()):
-        for record in cache_record.values():
+        for record in list(cache_record.values()):
             zc.cache._async_set_created_ttl(record, now, 1)
 
     # Wait for the add callback to fire from the original inject_response.

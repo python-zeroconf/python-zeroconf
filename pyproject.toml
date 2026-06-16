@@ -1,5 +1,5 @@
 [build-system]
-requires = ['setuptools>=77.0', 'Cython>=3.0.8', "poetry-core>=2.1.0"]
+requires = ['setuptools>=77.0', 'Cython==3.2.5', "poetry-core>=2.1.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project]

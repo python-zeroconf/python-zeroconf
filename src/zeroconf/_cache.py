@@ -340,9 +340,29 @@ class DNSCache:
                     # Expire in 1s
                     self._async_set_created_ttl(record, now, 1)
 
-    def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _int) -> None:
+    def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _int) -> DNSRecord:
         """Set the created time and ttl of a record."""
-        # It would be better if we made a copy instead of mutating the record
-        # in place, but records currently don't have a copy method.
-        record._set_created_ttl(now, ttl)
-        self._async_add(record)
+        # The class_ attribute is stripped of the unique bit, so we must restore it
+        # 0x8000 is _CLASS_UNIQUE
+        original_class = record.class_ | (0x8000 if record.unique else 0)
+        
+        if isinstance(record, DNSAddress):
+            new_record = DNSAddress(record.name, record.type, original_class, ttl, record.address, record.scope_id, now)
+        elif isinstance(record, DNSHinfo):
+            new_record = DNSHinfo(record.name, record.type, original_class, ttl, record.cpu, record.os, now)
+        elif isinstance(record, DNSPointer):
+            new_record = DNSPointer(record.name, record.type, original_class, ttl, record.alias, now)
+        elif isinstance(record, DNSText):
+            new_record = DNSText(record.name, record.type, original_class, ttl, record.text, now)
+        elif isinstance(record, DNSService):
+            new_record = DNSService(record.name, record.type, original_class, ttl, record.priority, record.weight, record.port, record.server, now)
+        elif isinstance(record, DNSNsec):
+            new_record = DNSNsec(record.name, record.type, original_class, ttl, record.next_name, record.rdtypes, now)
+        else:
+            new_record = type(record)(record.name, record.type, original_class, ttl, now)
+            
+        store = self.cache.get(record.key)
+        if store is not None and record in store:
+            self.async_remove_records([record])
+        self._async_add(new_record)
+        return new_record
