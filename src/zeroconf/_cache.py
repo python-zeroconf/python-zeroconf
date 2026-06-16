@@ -346,6 +346,7 @@ class DNSCache:
         # 0x8000 is _CLASS_UNIQUE
         original_class = record.class_ | (0x8000 if record.unique else 0)
 
+        new_record: DNSRecord
         if isinstance(record, DNSAddress):
             new_record = DNSAddress(
                 record.name, record.type, original_class, ttl, record.address, record.scope_id, now
