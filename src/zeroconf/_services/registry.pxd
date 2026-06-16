@@ -12,7 +12,7 @@ cdef class ServiceRegistry:
     cdef public bint has_entries
 
     @cython.locals(
-        record_list=cython.list,
+        record_list=cython.dict,
     )
     cdef cython.list _async_get_by_index(self, cython.dict records, str key)
 
