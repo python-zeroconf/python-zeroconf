@@ -127,12 +127,7 @@ class AsyncEngine:
                 self._respond_sockets.remove(s)
 
     def _async_remove_listener(self, listener: AsyncListener) -> None:
-        """Drop a listener and its wrapped transports from the engine lists.
-
-        Called from ``AsyncListener.connection_lost`` so a transport that
-        dies (interface down, IP changed) stops being used as a sender
-        instead of raising ``EHOSTUNREACH`` on every send forever.
-        """
+        """Drop a listener and its wrapped transports from the engine lists."""
         wrapped = listener.transport
         transport = wrapped.transport if wrapped is not None else None
         if listener in self.protocols:

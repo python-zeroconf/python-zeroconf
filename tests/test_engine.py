@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 import zeroconf as r
-from zeroconf import _engine, const
+from zeroconf import _engine, _listener, const
 from zeroconf.asyncio import AsyncZeroconf
 
 log = logging.getLogger("zeroconf")
@@ -106,6 +106,24 @@ async def test_connection_lost_prunes_transport(aiozc_loopback: AsyncZeroconf) -
     assert all(w.transport is not dead_transport for w in engine.senders)
     assert all(w.transport is not dead_transport for w in engine.readers)
     assert protocol not in engine.protocols
+
+
+@pytest.mark.asyncio
+async def test_connection_lost_without_transport_is_noop(aiozc_loopback: AsyncZeroconf) -> None:
+    """connection_lost on a listener that never bound a transport leaves the lists intact."""
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc_loopback.zeroconf.engine
+    reader_count = len(engine.readers)
+    sender_count = len(engine.senders)
+    protocol_count = len(engine.protocols)
+
+    orphan = _listener.AsyncListener(aiozc_loopback.zeroconf)
+    assert orphan.transport is None
+    orphan.connection_lost(None)
+
+    assert len(engine.readers) == reader_count
+    assert len(engine.senders) == sender_count
+    assert len(engine.protocols) == protocol_count
 
 
 @pytest.mark.asyncio
