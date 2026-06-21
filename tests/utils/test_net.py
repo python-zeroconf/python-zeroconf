@@ -433,3 +433,214 @@ def test_create_sockets_interfaces_all() -> None:
         expected_calls_set = {call_to_tuple(c) for c in expected_calls}
 
         assert actual_calls_set == expected_calls_set
+
+
+def test_create_sockets_multicast_addresses_v4() -> None:
+    """Extra IPv4 addresses join the listen socket multicast group but get no respond socket."""
+    listen_mock = Mock(spec=socket.socket)
+    respond_mock = Mock(spec=socket.socket)
+
+    def _new_socket(bind_addr, **kwargs):
+        return listen_mock if bind_addr == ("",) else respond_mock
+
+    with (
+        patch("zeroconf._utils.net.new_socket", side_effect=_new_socket),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        listen_socket, respond_sockets = r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["192.168.1.5", "10.0.0.5"],
+            ip_version=r.IPVersion.V4Only,
+        )
+
+    assert listen_socket is listen_mock
+    assert respond_sockets == [respond_mock]
+    joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
+    assert "127.0.0.1" in joined
+    assert "192.168.1.5" in joined
+    assert "10.0.0.5" in joined
+
+
+def test_create_sockets_multicast_addresses_v6() -> None:
+    """Extra IPv6 addresses join the listen socket multicast group."""
+    listen_mock = Mock(spec=socket.socket)
+    respond_mock = Mock(spec=socket.socket)
+
+    def _new_socket(bind_addr, **kwargs):
+        return listen_mock if bind_addr == ("",) else respond_mock
+
+    with (
+        patch("zeroconf._utils.net.new_socket", side_effect=_new_socket),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        r.create_sockets(
+            interfaces=[1],
+            multicast_addresses=["2001:db8::"],
+            ip_version=r.IPVersion.V6Only,
+        )
+
+    joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
+    # Both the interface index 1 and the extra multicast address resolve to the
+    # same adapter tuple — what matters is the listen socket joined that group.
+    assert (("2001:db8::", 1, 1), 1) in joined
+
+
+def test_create_sockets_multicast_addresses_unicast_rejected() -> None:
+    """multicast_addresses is incompatible with unicast=True (there is no listen socket)."""
+    with pytest.raises(ValueError):
+        r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["192.168.1.5"],
+            unicast=True,
+        )
+
+
+def test_create_sockets_multicast_addresses_default_path() -> None:
+    """multicast_addresses also works on the InterfaceChoice.Default fast path."""
+    listen_mock = Mock(spec=socket.socket)
+
+    with (
+        patch("zeroconf._utils.net.new_socket", return_value=listen_mock),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        listen_socket, respond_sockets = r.create_sockets(
+            interfaces=r.InterfaceChoice.Default,
+            multicast_addresses=["192.168.1.5"],
+            ip_version=r.IPVersion.V4Only,
+        )
+
+    assert listen_socket is listen_mock
+    assert respond_sockets == [listen_mock]
+    joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
+    assert "0.0.0.0" in joined
+    assert "192.168.1.5" in joined
+
+
+def test_create_sockets_multicast_addresses_v4_rejects_v6_entry() -> None:
+    """V4Only listen socket rejects IPv6 multicast_addresses entries."""
+    with pytest.raises(ValueError, match="IPv6"):
+        r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["2001:db8::"],
+            ip_version=r.IPVersion.V4Only,
+        )
+
+
+def test_create_sockets_multicast_addresses_v6_rejects_v4_entry() -> None:
+    """V6Only listen socket rejects IPv4 multicast_addresses entries."""
+    with pytest.raises(ValueError, match="IPv4"):
+        r.create_sockets(
+            interfaces=[1],
+            multicast_addresses=["192.168.1.5"],
+            ip_version=r.IPVersion.V6Only,
+        )
+
+
+def test_create_sockets_multicast_addresses_deduped_against_interfaces() -> None:
+    """Addresses present in both interfaces and multicast_addresses join only once."""
+    listen_mock = Mock(spec=socket.socket)
+    respond_mock = Mock(spec=socket.socket)
+
+    def _new_socket(bind_addr, **kwargs):
+        return listen_mock if bind_addr == ("",) else respond_mock
+
+    with (
+        patch("zeroconf._utils.net.new_socket", side_effect=_new_socket),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["127.0.0.1", "192.168.1.5"],
+            ip_version=r.IPVersion.V4Only,
+        )
+
+    joined_127 = [c for c in mock_add.call_args_list if c.args[0] is listen_mock and c.args[1] == "127.0.0.1"]
+    assert len(joined_127) == 1
+
+
+def test_autodetect_ip_version_includes_multicast_addresses() -> None:
+    """autodetect_ip_version sees IPv6 entries from multicast_addresses."""
+    assert (
+        netutils.autodetect_ip_version(["127.0.0.1"], multicast_addresses=["2001:db8::"]) is r.IPVersion.All
+    )
+    assert netutils.autodetect_ip_version([], multicast_addresses=["2001:db8::"]) is r.IPVersion.V6Only
+
+
+def test_autodetect_ip_version_non_list_interfaces_with_multicast_addresses() -> None:
+    """autodetect_ip_version handles non-list interfaces (InterfaceChoice) with multicast_addresses."""
+    assert (
+        netutils.autodetect_ip_version(r.InterfaceChoice.Default, multicast_addresses=["2001:db8::"])
+        is r.IPVersion.V6Only
+    )
+    assert (
+        netutils.autodetect_ip_version(r.InterfaceChoice.Default, multicast_addresses=["192.168.1.5"])
+        is r.IPVersion.V4Only
+    )
+
+
+def test_autodetect_ip_version_interface_index_treated_as_v6() -> None:
+    """Interface-index (int) entries are treated as IPv6 by autodetection."""
+    assert netutils.autodetect_ip_version([1]) is r.IPVersion.V6Only
+    assert netutils.autodetect_ip_version(["1.2.3.4", 1]) is r.IPVersion.All
+
+
+def test_create_sockets_multicast_addresses_ip_version_all() -> None:
+    """multicast_addresses works with ip_version=All (no V4Only/V6Only validation triggered)."""
+    listen_mock = Mock(spec=socket.socket)
+    respond_mock = Mock(spec=socket.socket)
+
+    def _new_socket(bind_addr, **kwargs):
+        return listen_mock if bind_addr == ("",) else respond_mock
+
+    with (
+        patch("zeroconf._utils.net.new_socket", side_effect=_new_socket),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        r.create_sockets(
+            interfaces=["127.0.0.1"],
+            multicast_addresses=["192.168.1.5"],
+            ip_version=r.IPVersion.All,
+        )
+
+    joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
+    assert "192.168.1.5" in joined
+
+
+def test_create_sockets_multicast_addresses_preserves_pre_normalized_tuple() -> None:
+    """Pre-normalized IPv6 adapter tuples pass through to add_multicast_member."""
+    listen_mock = Mock(spec=socket.socket)
+
+    pre_normalized = (("2001:db8::", 1, 1), 1)
+
+    with (
+        patch("zeroconf._utils.net.new_socket", return_value=listen_mock),
+        patch("zeroconf._utils.net.add_multicast_member", return_value=True) as mock_add,
+        patch("zeroconf._utils.net.set_respond_socket_multicast_options"),
+        patch(
+            "zeroconf._utils.net.ifaddr.get_adapters",
+            return_value=_generate_mock_adapters(),
+        ),
+        patch("zeroconf._utils.net.socket.socket.setsockopt"),
+    ):
+        r.create_sockets(
+            interfaces=[],
+            multicast_addresses=[pre_normalized],
+            ip_version=r.IPVersion.V6Only,
+        )
+
+    joined = [c.args[1] for c in mock_add.call_args_list if c.args[0] is listen_mock]
+    assert pre_normalized in joined

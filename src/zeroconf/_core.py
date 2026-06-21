@@ -27,7 +27,7 @@ import logging
 import random
 import sys
 import threading
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Sequence
 from types import TracebackType
 
 from ._cache import DNSCache
@@ -162,6 +162,7 @@ class Zeroconf(QuietLogger):
         ip_version: IPVersion | None = None,
         apple_p2p: bool = False,
         use_asyncio: bool | None = None,
+        multicast_addresses: Sequence[str | int | tuple[tuple[str, int, int], int]] | None = None,
     ) -> None:
         """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
@@ -185,9 +186,16 @@ class Zeroconf(QuietLogger):
             already has an event loop (e.g. Jupyter) but you want blocking
             semantics. ``True`` raises :class:`RuntimeError` immediately if no
             running event loop is found, instead of falling back to the thread.
+        :param multicast_addresses: optional list of additional IP addresses to
+            add to the listen socket's multicast group. No respond socket is
+            created for these — they extend multicast membership without
+            requiring a bind on the corresponding interface. Useful on
+            sandboxed platforms (e.g. iOS) where port 5353 cannot be bound on
+            physical interfaces but multicast membership is still needed to
+            receive queries arriving on them.
         """
         if ip_version is None:
-            ip_version = autodetect_ip_version(interfaces)
+            ip_version = autodetect_ip_version(interfaces, multicast_addresses)
 
         self.done = False
 
@@ -199,7 +207,13 @@ class Zeroconf(QuietLogger):
 
         self.unicast = unicast
         self._use_asyncio = use_asyncio
-        listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
+        listen_socket, respond_sockets = create_sockets(
+            interfaces,
+            unicast,
+            ip_version,
+            apple_p2p=apple_p2p,
+            multicast_addresses=multicast_addresses,
+        )
         log.debug("Listen socket %s, respond sockets %s", listen_socket, respond_sockets)
 
         self.engine = AsyncEngine(self, listen_socket, respond_sockets)

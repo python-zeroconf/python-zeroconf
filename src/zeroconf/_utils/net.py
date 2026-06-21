@@ -152,6 +152,8 @@ def ip6_addresses_to_indexes(
             result.append((interface_index_to_ip6_address(adapters, iface), iface))  # type: ignore[arg-type]
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
             result.append(ip6_to_address_and_index(adapters, iface))  # type: ignore[arg-type]
+        elif isinstance(iface, tuple):
+            result.append(iface)
 
     return result
 
@@ -439,23 +441,65 @@ def new_respond_socket(
     return respond_socket
 
 
+def _entry_ip_version(entry: str | int | tuple[tuple[str, int, int], int]) -> int:
+    """Return 4 or 6 for the IP version implied by an interface / multicast entry.
+
+    ``int`` (interface index) and ``tuple`` (ifaddr IPv6 adapter tuple) entries
+    are IPv6 by construction; ``str`` entries are parsed as IP addresses.
+    """
+    if isinstance(entry, str):
+        return ipaddress.ip_address(entry).version
+    return 6
+
+
 def create_sockets(
     interfaces: InterfacesType = InterfaceChoice.All,
     unicast: bool = False,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
+    multicast_addresses: Sequence[str | int | tuple[tuple[str, int, int], int]] | None = None,
 ) -> tuple[socket.socket | None, list[socket.socket]]:
+    """Create the listen and respond sockets.
+
+    ``multicast_addresses`` is an optional list of additional addresses that
+    are added to the listen socket's multicast group without creating respond
+    sockets for them. This is useful on sandboxed platforms (notably iOS)
+    where binding port 5353 on a physical interface is blocked by the system
+    mDNS daemon but multicast membership on that interface is still required
+    to receive incoming queries.
+    """
+    if multicast_addresses and unicast:
+        raise ValueError("multicast_addresses is incompatible with unicast=True")
+
+    # Reject IP-version-incompatible entries up front so callers get a clear
+    # error instead of a confusing adapter-lookup or socket-syscall failure.
+    if multicast_addresses:
+        if ip_version == IPVersion.V4Only and any(_entry_ip_version(e) == 6 for e in multicast_addresses):
+            raise ValueError("multicast_addresses contains IPv6 entries but ip_version is V4Only")
+        if ip_version == IPVersion.V6Only and any(_entry_ip_version(e) == 4 for e in multicast_addresses):
+            raise ValueError("multicast_addresses contains IPv4 entries but ip_version is V6Only")
+
     if unicast:
         listen_socket = None
     else:
         listen_socket = new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
+    if multicast_addresses:
+        extra_multicast_members = normalize_interface_choice(list(multicast_addresses), ip_version)
+        # Strip entries already covered by ``interfaces`` so add_multicast_member
+        # is not called twice for the same membership.
+        interface_set = set(normalized_interfaces)
+        extra_multicast_members = [m for m in extra_multicast_members if m not in interface_set]
+    else:
+        extra_multicast_members = []
 
     # If we are using InterfaceChoice.Default with only IPv4 or only IPv6, we can use
     # a single socket to listen and respond.
     if not unicast and interfaces is InterfaceChoice.Default and ip_version != IPVersion.All:
         for interface in normalized_interfaces:
+            add_multicast_member(cast(socket.socket, listen_socket), interface)
+        for interface in extra_multicast_members:
             add_multicast_member(cast(socket.socket, listen_socket), interface)
         # Sent responder socket options to the dual-use listen socket
         set_respond_socket_multicast_options(cast(socket.socket, listen_socket), ip_version)
@@ -473,6 +517,9 @@ def create_sockets(
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
 
+    for interface in extra_multicast_members:
+        add_multicast_member(cast(socket.socket, listen_socket), interface)
+
     return listen_socket, respond_sockets
 
 
@@ -489,17 +536,20 @@ def can_send_to(ipv6_socket: bool, address: str) -> bool:
     return ":" in address if ipv6_socket else ":" not in address
 
 
-def autodetect_ip_version(interfaces: InterfacesType) -> IPVersion:
+def autodetect_ip_version(
+    interfaces: InterfacesType,
+    multicast_addresses: Sequence[str | int | tuple[tuple[str, int, int], int]] | None = None,
+) -> IPVersion:
     """Auto detect the IP version when it is not provided."""
+    entries: list[str | int | tuple[tuple[str, int, int], int]] = []
     if isinstance(interfaces, list):
-        has_v6 = any(
-            isinstance(i, int) or (isinstance(i, str) and ipaddress.ip_address(i).version == 6)
-            for i in interfaces
-        )
-        has_v4 = any(isinstance(i, str) and ipaddress.ip_address(i).version == 4 for i in interfaces)
-        if has_v4 and has_v6:
-            return IPVersion.All
-        if has_v6:
-            return IPVersion.V6Only
-
+        entries.extend(interfaces)
+    if multicast_addresses:
+        entries.extend(multicast_addresses)
+    has_v6 = any(_entry_ip_version(e) == 6 for e in entries)
+    has_v4 = any(_entry_ip_version(e) == 4 for e in entries)
+    if has_v4 and has_v6:
+        return IPVersion.All
+    if has_v6:
+        return IPVersion.V6Only
     return IPVersion.V4Only
