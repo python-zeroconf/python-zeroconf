@@ -287,6 +287,46 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
             assert "net.ipv4.igmp_max_memberships" not in caplog.text
 
 
+def test_drop_multicast_member() -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        interface = "127.0.0.1"
+
+        # No error should return True
+        with patch("socket.socket.setsockopt"):
+            assert netutils.drop_multicast_member(sock, interface) is True
+
+        # IPv6 leave should return True
+        with patch("socket.socket.setsockopt"):
+            assert netutils.drop_multicast_member(sock, (("ff02::fb", 0, 0), 1)) is True  # type: ignore[arg-type]
+
+        # Benign errnos when the interface is already gone should return False
+        for benign in (errno.EADDRNOTAVAIL, errno.EINVAL, errno.ENODEV, errno.ENOPROTOOPT):
+            with patch("socket.socket.setsockopt", side_effect=OSError(benign, None)):
+                assert netutils.drop_multicast_member(sock, interface) is False
+
+        # EPERM should always raise
+        with (
+            pytest.raises(OSError),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)),
+        ):
+            netutils.drop_multicast_member(sock, interface)
+
+        # No IPv6 support should return False for IPv6
+        with patch("socket.inet_pton", side_effect=OSError()):
+            assert netutils.drop_multicast_member(sock, (("ff02::fb", 0, 0), 1)) is False  # type: ignore[arg-type]
+
+
+def test_drop_multicast_member_wsaeinval(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On Windows, WSAEINVAL when leaving the group is treated as benign."""
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(errno, "WSAEINVAL", 10022, raising=False)
+    with (
+        socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock,
+        patch("socket.socket.setsockopt", side_effect=OSError(10022, None)),
+    ):
+        assert netutils.drop_multicast_member(sock, "127.0.0.1") is False
+
+
 def test_bind_raises_skips_address():
     """Test bind failing in new_socket returns None on EADDRNOTAVAIL."""
     err = errno.EADDRNOTAVAIL

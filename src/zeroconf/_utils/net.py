@@ -401,6 +401,43 @@ def add_multicast_member(
     return True
 
 
+def drop_multicast_member(
+    listen_socket: socket.socket,
+    interface: str | tuple[tuple[str, int, int], int],
+) -> bool:
+    """Leave the mDNS multicast group on an interface; inverse of add_multicast_member."""
+    # This is based on assumptions in normalize_interface_choice
+    is_v6 = isinstance(interface, tuple)
+    log.debug("Dropping %r (socket %d) from multicast group", interface, listen_socket.fileno())
+    try:
+        if is_v6:
+            try:
+                mdns_addr6_bytes = socket.inet_pton(socket.AF_INET6, _MDNS_ADDR6)
+            except OSError:
+                log.info(
+                    "Unable to translate IPv6 address when dropping %s from multicast group, "
+                    "this can happen if IPv6 is disabled on the system",
+                    interface,
+                )
+                return False
+            iface_bin = struct.pack("@I", cast(int, interface[1]))
+            listen_socket.setsockopt(_IPPROTO_IPV6, socket.IPV6_LEAVE_GROUP, mdns_addr6_bytes + iface_bin)
+        else:
+            _value = socket.inet_aton(_MDNS_ADDR) + socket.inet_aton(cast(str, interface))
+            listen_socket.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP, _value)
+    except OSError as e:
+        # The kernel drops memberships automatically when an interface
+        # disappears, so a stale leave is expected to fail benignly.
+        benign = {errno.EADDRNOTAVAIL, errno.EINVAL, errno.ENODEV, errno.ENOPROTOOPT}
+        if sys.platform == "win32":
+            # No WSAEINVAL definition in typeshed
+            benign.add(cast(Any, errno).WSAEINVAL)  # pylint: disable=no-member
+        if get_errno(e) in benign:
+            return False
+        raise
+    return True
+
+
 def new_respond_socket(
     interface: str | tuple[tuple[str, int, int], int],
     apple_p2p: bool = False,

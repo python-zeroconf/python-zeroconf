@@ -30,6 +30,14 @@ from typing import TYPE_CHECKING, cast
 
 from ._record_update import RecordUpdate
 from ._utils.asyncio import get_running_loop, run_coro_with_timeout
+from ._utils.net import (
+    InterfacesType,
+    IPVersion,
+    add_multicast_member,
+    drop_multicast_member,
+    new_respond_socket,
+    normalize_interface_choice,
+)
 from ._utils.time import current_time_millis
 from .const import _CACHE_CLEANUP_INTERVAL
 
@@ -38,9 +46,21 @@ if TYPE_CHECKING:
 
 
 from ._listener import AsyncListener
-from ._transport import _WrappedTransport, make_wrapped_transport
+from ._transport import _strip_zone, _WrappedTransport, make_wrapped_transport
 
 _CLOSE_TIMEOUT = 3000  # ms
+
+
+def _interface_key(interface: str | tuple[tuple[str, int, int], int]) -> tuple[str, int]:
+    """Return the (address, scope_id) an interface choice maps to, for diffing.
+
+    Must produce the same key shape as ``_WrappedTransport.interface_key`` so
+    the desired set (from ``normalize_interface_choice``) and the current set
+    (from the bound senders) diff against each other.
+    """
+    if isinstance(interface, tuple):
+        return (_strip_zone(interface[0][0]), interface[0][2])
+    return (interface, 0)
 
 
 class AsyncEngine:
@@ -49,6 +69,7 @@ class AsyncEngine:
     __slots__ = (
         "_cleanup_timer",
         "_listen_socket",
+        "_listen_transport",
         "_respond_sockets",
         "_setup_task",
         "loop",
@@ -72,6 +93,7 @@ class AsyncEngine:
         self.senders: list[_WrappedTransport] = []
         self.running_future: asyncio.Future[bool | None] | None = None
         self._listen_socket = listen_socket
+        self._listen_transport: _WrappedTransport | None = None
         self._respond_sockets = respond_sockets
         self._cleanup_timer: asyncio.TimerHandle | None = None
         self._setup_task: asyncio.Task[None] | None = None
@@ -98,8 +120,6 @@ class AsyncEngine:
 
     async def _async_create_endpoints(self) -> None:
         """Create endpoints to send and receive."""
-        assert self.loop is not None
-        loop = self.loop
         reader_sockets = []
         sender_sockets = []
         if self._listen_socket:
@@ -110,21 +130,112 @@ class AsyncEngine:
             sender_sockets.append(s)
 
         for s in reader_sockets:
-            transport, protocol = await loop.create_datagram_endpoint(  # type: ignore[type-var]
-                lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
-                sock=s,
-            )
-            # Register the wrapped transport before releasing the engine's
-            # handle so a concurrent shutdown always sees ``s`` in exactly
-            # one place; do not add an ``await`` between these two steps.
-            self.protocols.append(cast(AsyncListener, protocol))
-            self.readers.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
-            if s in sender_sockets:
-                self.senders.append(make_wrapped_transport(cast(asyncio.DatagramTransport, transport)))
+            reader = await self._async_wrap_socket(s, s in sender_sockets)
+            # The wrap above does not await before returning, so releasing
+            # the engine's pending handle here keeps ``s`` in exactly one
+            # place from a concurrent shutdown's point of view.
             if s is self._listen_socket:
+                # Keep a handle to the shared listen socket so interface
+                # rescans can add/drop multicast memberships on it.
+                self._listen_transport = reader
                 self._listen_socket = None
             if s in self._respond_sockets:
                 self._respond_sockets.remove(s)
+
+    async def _async_wrap_socket(self, sock: socket.socket, is_sender: bool) -> _WrappedTransport:
+        """Adopt a socket into a transport, register it, and return the reader wrapper."""
+        assert self.loop is not None
+        transport, protocol = await self.loop.create_datagram_endpoint(  # type: ignore[type-var]
+            lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
+            sock=sock,
+        )
+        datagram_transport = cast(asyncio.DatagramTransport, transport)
+        reader = make_wrapped_transport(datagram_transport)
+        # No ``await`` between wrapping and registering so a concurrent
+        # shutdown always sees the transport in exactly one place.
+        self.protocols.append(cast(AsyncListener, protocol))
+        self.readers.append(reader)
+        if is_sender:
+            self.senders.append(make_wrapped_transport(datagram_transport))
+        return reader
+
+    async def async_update_interfaces(
+        self,
+        interfaces: InterfacesType,
+        ip_version: IPVersion,
+        apple_p2p: bool,
+    ) -> bool:
+        """Reconcile sender/reader sockets to the live interface set.
+
+        Adds a per-interface responder socket for each interface that
+        appeared and tears down the socket for each interface that
+        disappeared, diffing on the bound address. The shared listen
+        socket (including the Default single-family dual-use socket) is
+        never torn down here. Returns whether any responder socket was
+        added, so the caller can skip re-announcing when nothing appeared.
+        """
+        assert self.loop is not None
+        normalized = normalize_interface_choice(interfaces, ip_version)
+        desired = {_interface_key(interface): interface for interface in normalized}
+        current = {wrapped.interface_key: wrapped for wrapped in self.senders}
+        listen_transport = self._listen_transport
+        listen_socket = listen_transport.sock if listen_transport is not None else None
+
+        for bind_address, wrapped in current.items():
+            if bind_address in desired:
+                continue
+            if listen_transport is not None and wrapped.transport is listen_transport.transport:
+                # The shared listen / dual-use socket is not a per-interface
+                # sender; leaving the group or closing it would break receive.
+                continue
+            self._async_close_sender(wrapped, listen_socket)
+
+        added = False
+        for bind_address, interface in desired.items():
+            if bind_address in current:
+                continue
+            if await self._async_add_interface(interface, listen_socket, apple_p2p):
+                added = True
+        return added
+
+    async def _async_add_interface(
+        self,
+        interface: str | tuple[tuple[str, int, int], int],
+        listen_socket: socket.socket | None,
+        apple_p2p: bool,
+    ) -> bool:
+        """Join the multicast group and adopt a responder socket for one interface.
+
+        Returns whether a responder socket was actually added.
+        """
+        # A unicast instance has no listen socket, so membership is only
+        # ever managed when ``listen_socket`` is present. These are
+        # user-initiated reconciles, so a requested interface that fails to
+        # come up is surfaced once at warning (deduped per interface so the
+        # polling monitor doesn't spam) rather than only at debug.
+        if listen_socket is not None and not add_multicast_member(listen_socket, interface):
+            self.zc.log_warning_once(f"Interface {interface!r} not added: could not join multicast group")
+            return False
+        respond_socket = new_respond_socket(interface, apple_p2p=apple_p2p, unicast=self.zc.unicast)
+        if respond_socket is None:
+            if listen_socket is not None:
+                drop_multicast_member(listen_socket, interface)
+            self.zc.log_warning_once(f"Interface {interface!r} not added: no responder socket")
+            return False
+        await self._async_wrap_socket(respond_socket, is_sender=True)
+        return True
+
+    def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
+        """Drop a per-interface sender's wrappers/protocol and close its transport."""
+        transport = wrapped.transport
+        self.protocols = [
+            p for p in self.protocols if p.transport is None or p.transport.transport is not transport
+        ]
+        self.readers = [w for w in self.readers if w.transport is not transport]
+        self.senders = [w for w in self.senders if w.transport is not transport]
+        if listen_socket is not None:
+            drop_multicast_member(listen_socket, wrapped.multicast_interface)
+        transport.close()
 
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
