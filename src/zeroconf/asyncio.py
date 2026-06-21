@@ -28,7 +28,7 @@ from collections.abc import Awaitable, Callable
 from types import TracebackType  # used in type hints
 
 from ._core import Zeroconf
-from ._dns import DNSQuestionType
+from ._dns import DNSQuestionType, DNSRecord
 from ._exceptions import NotRunningException
 from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
@@ -223,6 +223,19 @@ class AsyncZeroconf:
         and therefore can be awaited if necessary.
         """
         return await self.zeroconf.async_update_service(info)
+
+    def async_reconfirm_record(self, record: DNSRecord) -> bool:
+        """Hint that ``record`` may be stale (RFC 6762 §10.4).
+
+        Schedules a background reconfirmation: re-queries the record
+        and flushes it from the cache if no response is received within
+        ten seconds.
+
+        Returns ``True`` if reconfirmation was scheduled; ``False`` if
+        the record is not in the cache or a reconfirmation is already
+        in flight for it.
+        """
+        return self.zeroconf.async_reconfirm_record(record)
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from

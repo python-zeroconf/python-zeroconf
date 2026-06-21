@@ -31,7 +31,7 @@ from collections.abc import Awaitable
 from types import TracebackType
 
 from ._cache import DNSCache
-from ._dns import DNSQuestion, DNSQuestionType
+from ._dns import DNSQuestion, DNSQuestionType, DNSRecord
 from ._engine import AsyncEngine
 from ._exceptions import NonUniqueNameException, NotRunningException
 from ._handlers.multicast_outgoing_queue import MulticastOutgoingQueue
@@ -594,6 +594,37 @@ class Zeroconf(QuietLogger):
             self.async_send(self.generate_service_query(info))
             i += 1
             next_time += _CHECK_TIME
+
+    def async_reconfirm_record(self, record: DNSRecord) -> bool:
+        """Hint that ``record`` may be stale (RFC 6762 §10.4).
+
+        Schedules a background reconfirmation: re-queries the record
+        and flushes it from the cache if no response is received within
+        ten seconds, even when the TTL has not yet expired.
+
+        Returns ``True`` if reconfirmation was scheduled; ``False`` if
+        the record is not in the cache or a reconfirmation is already
+        in flight for it.
+
+        This method is not threadsafe and must be called from the
+        event loop. Use :meth:`reconfirm_record` from other threads.
+        """
+        return self.record_manager.async_reconfirm_record(record)
+
+    def reconfirm_record(self, record: DNSRecord) -> None:
+        """Hint that ``record`` may be stale (RFC 6762 §10.4).
+
+        Threadsafe variant of :meth:`async_reconfirm_record` — schedules
+        a background reconfirmation on the event loop and returns
+        immediately. Caller does not learn whether the record was
+        already absent or a reconfirmation was already in flight; use
+        :meth:`async_reconfirm_record` from the loop if that signal
+        matters.
+        """
+        if self.done:
+            return
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.record_manager.async_reconfirm_record, record)
 
     def add_listener(
         self,

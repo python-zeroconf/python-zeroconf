@@ -20,6 +20,7 @@ cdef class RecordManager:
     cdef public object zc
     cdef public DNSCache cache
     cdef public cython.set listeners
+    cdef public cython.dict _reconfirm_tasks
 
     cpdef void async_updates(self, object now, list records)
 
@@ -37,6 +38,8 @@ cdef class RecordManager:
     cpdef void async_add_listener(self, RecordUpdateListener listener, object question)
 
     cpdef void async_remove_listener(self, RecordUpdateListener listener)
+
+    cpdef bint async_reconfirm_record(self, DNSRecord record)
 
     @cython.locals(question=DNSQuestion, record=DNSRecord)
     cdef void _async_update_matching_records(self, RecordUpdateListener listener, cython.list questions)

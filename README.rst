@@ -141,6 +141,21 @@ If you don't know the name of the service you need to browse for, try:
     from zeroconf import ZeroconfServiceTypes
     print('\n'.join(ZeroconfServiceTypes.find()))
 
+If an application-level connect to a discovered service fails and you
+suspect the cached record is stale, ``reconfirm_record`` implements
+the cache-flush-on-failure hint from RFC 6762 §10.4 — it re-queries
+the record and flushes it from the cache if no response arrives
+within ten seconds:
+
+.. code-block:: python
+
+    cached = zeroconf.cache.get_by_details(name, type_, class_)
+    if cached is not None:
+        zeroconf.reconfirm_record(cached)
+
+The async API exposes the same method as
+``AsyncZeroconf.async_reconfirm_record(record)``.
+
 See examples directory for more.
 
 Changelog

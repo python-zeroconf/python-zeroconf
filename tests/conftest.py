@@ -10,7 +10,7 @@ import pytest
 import pytest_asyncio
 
 from zeroconf import Zeroconf, _core, const
-from zeroconf._handlers import query_handler
+from zeroconf._handlers import query_handler, record_manager
 from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
 from zeroconf.asyncio import AsyncZeroconf
@@ -184,6 +184,23 @@ def quick_aggregation_timing() -> Generator[None]:
         patch.object(_core, "_AGGREGATION_DELAY", 50),
         patch.object(_core, "_PROTECTED_AGGREGATION_DELAY", 20),
         patch.object(_core, "_ONE_SECOND", 100),
+    ):
+        yield
+
+
+@pytest.fixture
+def quick_reconfirm_timing() -> Generator[None]:
+    """Shrink RFC 6762 §10.4 reconfirm intervals for loopback tests.
+
+    The production values (queries at t=0/1s/3s, flush at t=10s) come
+    straight from the RFC and exist for real-network interop. Loopback
+    tests can compress them aggressively without losing what the test
+    pins. Opt in via fixture arg or
+    `@pytest.mark.usefixtures("quick_reconfirm_timing")`.
+    """
+    with (
+        patch.object(record_manager, "_RECONFIRM_QUERY_INTERVALS_MS", (0, 10, 30)),
+        patch.object(record_manager, "_RECONFIRM_TIMEOUT_MS", 100),
     ):
         yield
 
