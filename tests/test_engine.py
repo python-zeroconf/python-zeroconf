@@ -85,6 +85,30 @@ async def test_setup_releases_socket_ownership(aiozc_loopback: AsyncZeroconf) ->
 
 
 @pytest.mark.asyncio
+async def test_connection_lost_prunes_transport(aiozc_loopback: AsyncZeroconf) -> None:
+    """A lost transport is removed from the engine reader/sender/protocol lists."""
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc_loopback.zeroconf.engine
+    assert engine.senders
+    reader_count = len(engine.readers)
+    sender_count = len(engine.senders)
+    protocol_count = len(engine.protocols)
+
+    dead_transport = engine.senders[0].transport
+    protocol = next(
+        p for p in engine.protocols if p.transport is not None and p.transport.transport is dead_transport
+    )
+    protocol.connection_lost(None)
+
+    assert len(engine.senders) == sender_count - 1
+    assert len(engine.readers) == reader_count - 1
+    assert len(engine.protocols) == protocol_count - 1
+    assert all(w.transport is not dead_transport for w in engine.senders)
+    assert all(w.transport is not dead_transport for w in engine.readers)
+    assert protocol not in engine.protocols
+
+
+@pytest.mark.asyncio
 async def test_async_close_propagates_outer_cancellation(aiozc_loopback: AsyncZeroconf) -> None:
     """Outer-task cancellation while awaiting setup propagates to the caller."""
     await aiozc_loopback.zeroconf.async_wait_for_start()

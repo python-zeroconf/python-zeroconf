@@ -126,6 +126,21 @@ class AsyncEngine:
             if s in self._respond_sockets:
                 self._respond_sockets.remove(s)
 
+    def _async_remove_listener(self, listener: AsyncListener) -> None:
+        """Drop a listener and its wrapped transports from the engine lists.
+
+        Called from ``AsyncListener.connection_lost`` so a transport that
+        dies (interface down, IP changed) stops being used as a sender
+        instead of raising ``EHOSTUNREACH`` on every send forever.
+        """
+        wrapped = listener.transport
+        transport = wrapped.transport if wrapped is not None else None
+        if listener in self.protocols:
+            self.protocols.remove(listener)
+        if transport is not None:
+            self.readers = [w for w in self.readers if w.transport is not transport]
+            self.senders = [w for w in self.senders if w.transport is not transport]
+
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
         now = current_time_millis()

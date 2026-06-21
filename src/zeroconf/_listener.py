@@ -356,4 +356,5 @@ class AsyncListener:
         self.sock_description = f"{wrapped_transport.fileno} ({wrapped_transport.sock_name})"
 
     def connection_lost(self, exc: Exception | None) -> None:
-        """Handle connection lost."""
+        """Prune this transport from the engine so a dead socket is not reused."""
+        self.zc.engine._async_remove_listener(self)
