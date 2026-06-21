@@ -2,6 +2,29 @@
 
 <!-- version list -->
 
+## v0.149.17 (2026-06-21)
+
+### Performance Improvements
+
+- Precompute address hash instead of per-instance lru_cache
+  ([#1774](https://github.com/python-zeroconf/python-zeroconf/pull/1774),
+  [`868f28f`](https://github.com/python-zeroconf/python-zeroconf/commit/868f28f82eb79a01ee885819afc4309facc9168b))
+
+### Testing
+
+- Add benchmarks for cache mark-to-expire path (#1780)
+  ([#1785](https://github.com/python-zeroconf/python-zeroconf/pull/1785),
+  [`29cc405`](https://github.com/python-zeroconf/python-zeroconf/commit/29cc405045947bf121405cfbc3dbb08805a4c160))
+
+- Add benchmarks for ipaddress object creation and hashing
+  ([#1773](https://github.com/python-zeroconf/python-zeroconf/pull/1773),
+  [`bd20c8e`](https://github.com/python-zeroconf/python-zeroconf/commit/bd20c8efe320230b1dc65b45b7007a2be62e0b24))
+
+- Synchronise test_integration on browser first-query
+  ([#1771](https://github.com/python-zeroconf/python-zeroconf/pull/1771),
+  [`cb81e67`](https://github.com/python-zeroconf/python-zeroconf/commit/cb81e6768ca1d8988d2e9526157a6d731b329b22))
+
+
 ## v0.149.16 (2026-05-21)
 
 ### Bug Fixes
