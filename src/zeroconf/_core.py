@@ -59,6 +59,7 @@ from ._utils.asyncio import (
     wait_for_future_set_or_timeout,
     wait_future_or_timeout,
 )
+from ._utils.interface_monitor import _DEFAULT_INTERFACE_MONITOR_INTERVAL, InterfaceMonitor
 from ._utils.name import service_type_name
 from ._utils.net import (
     InterfaceChoice,
@@ -225,6 +226,7 @@ class Zeroconf(QuietLogger):
         # Serializes async_update_interfaces so overlapping calls (a bursty
         # adapter-change source) don't diff against a stale sender snapshot.
         self._interface_update_lock = asyncio.Lock()
+        self._interface_monitor: InterfaceMonitor | None = None
         self.loop: asyncio.AbstractEventLoop | None = None
         self._loop_thread: threading.Thread | None = None
 
@@ -499,6 +501,28 @@ class Zeroconf(QuietLogger):
                 # gather(return_exceptions=True) also captures BaseExceptions
                 # such as CancelledError; don't swallow a cancellation/interrupt.
                 raise result
+
+    async def async_start_interface_monitor(
+        self, interval: float = _DEFAULT_INTERFACE_MONITOR_INTERVAL
+    ) -> None:
+        """Start an opt-in poller that rescans interfaces when adapters change.
+
+        Interface change detection is platform specific; by default zeroconf
+        leaves it to the consumer. This polls every ``interval`` seconds and
+        calls `async_update_interfaces` when the address set changes. It is a
+        no-op if the monitor is already running.
+        """
+        await self.async_wait_for_start()
+        if self._interface_monitor is None:
+            self._interface_monitor = InterfaceMonitor(self, interval)
+            self._interface_monitor.start()
+
+    async def async_stop_interface_monitor(self) -> None:
+        """Stop the interface monitor if it is running."""
+        monitor = self._interface_monitor
+        if monitor is not None:
+            self._interface_monitor = None
+            await monitor.async_stop()
 
     async def async_get_service_info(
         self,
@@ -837,6 +861,7 @@ class Zeroconf(QuietLogger):
         before calling this function
         """
         self._close()
+        await self.async_stop_interface_monitor()
         await self.engine._async_close()  # pylint: disable=protected-access
         self._shutdown_threads()
 

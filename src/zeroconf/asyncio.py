@@ -34,6 +34,7 @@ from ._services import ServiceListener
 from ._services.browser import _ServiceBrowserBase
 from ._services.info import AsyncServiceInfo, ServiceInfo
 from ._services.types import ZeroconfServiceTypes
+from ._utils.interface_monitor import _DEFAULT_INTERFACE_MONITOR_INTERVAL
 from ._utils.net import InterfaceChoice, InterfacesType, IPVersion
 from .const import _BROWSER_TIME, _MDNS_PORT, _SERVICE_TYPE_ENUMERATION_NAME
 
@@ -239,6 +240,21 @@ class AsyncZeroconf:
         value. Raises RuntimeError if apple_p2p is set on a non-Apple platform.
         """
         await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
+
+    async def async_start_interface_monitor(
+        self, interval: float = _DEFAULT_INTERFACE_MONITOR_INTERVAL
+    ) -> None:
+        """Start an opt-in poller that rescans interfaces when adapters change.
+
+        Interface change detection is platform specific; by default zeroconf
+        leaves it to the consumer. This polls every ``interval`` seconds and
+        reconciles the sockets in use when the address set changes.
+        """
+        await self.zeroconf.async_start_interface_monitor(interval)
+
+    async def async_stop_interface_monitor(self) -> None:
+        """Stop the interface monitor if it is running."""
+        await self.zeroconf.async_stop_interface_monitor()
 
     async def async_close(self) -> None:
         """Ends the background threads, and prevent this instance from
