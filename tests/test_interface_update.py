@@ -552,6 +552,36 @@ async def test_update_interfaces_rebuild_rejoins_kept_interfaces(aiozc_loopback:
 
 
 @pytest.mark.asyncio
+async def test_update_interfaces_rebuild_rejoin_failure_warns(
+    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A staying interface that fails to re-join on the rebuilt listen socket warns."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    v6 = (("fe80::1", 0, 0), 1)
+    new_listen_sock = Mock()
+    new_listen_sock.family = socket.AF_INET6
+
+    async def fake_wrap(sock: object, is_sender: bool) -> _WrappedTransport:
+        wrapped = _make_wrapped(("wrapped", 0), transport=Mock())
+        (engine.senders if is_sender else engine.readers).append(wrapped)
+        return wrapped
+
+    with (
+        patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1", v6]),
+        patch.object(_engine, "new_listen_socket", return_value=new_listen_sock),
+        patch.object(_engine, "add_multicast_member", return_value=False),
+        patch.object(_engine, "add_interface", return_value=Mock()),
+        patch.object(_engine, "drop_multicast_member"),
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
+        caplog.at_level(logging.WARNING),
+    ):
+        await engine.async_update_interfaces(["unused"], IPVersion.All, False)
+
+    assert "could not re-join the multicast group on the rebuilt listen socket" in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_update_interfaces_rebuild_failure_raises(aiozc_loopback: AsyncZeroconf) -> None:
     """If the replacement listen socket can't be created, the rebuild raises."""
     engine = aiozc_loopback.zeroconf.engine
