@@ -24,7 +24,10 @@ from __future__ import annotations
 
 import asyncio
 import socket
+import sys
 from typing import cast
+
+from ._logger import log
 
 
 def _strip_zone(address: str) -> str:
@@ -106,7 +109,13 @@ def make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTran
         # the leave falls back to the default interface as it did before.
         try:
             multicast_index = sock.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF)
-        except OSError:
+        except OSError as exc:
+            # Windows rejects reading IPV6_MULTICAST_IF (WSAEINVAL); fall back
+            # to the default index. On other platforms this read does not
+            # fail, so log an unexpected error rather than silently masking it
+            # into a wrong-interface group leave.
+            if sys.platform != "win32":
+                log.debug("Unexpected error reading IPV6_MULTICAST_IF: %s", exc)
             multicast_index = 0
     return _WrappedTransport(
         transport=transport,

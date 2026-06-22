@@ -77,7 +77,7 @@ def test_make_wrapped_transport_reads_v6_multicast_index() -> None:
 
 
 def test_make_wrapped_transport_unreadable_multicast_index() -> None:
-    """A socket that rejects reading IPV6_MULTICAST_IF (Windows) falls back to index 0."""
+    """A socket that rejects reading IPV6_MULTICAST_IF falls back to index 0."""
     sock = Mock()
     sock.family = socket.AF_INET6
     sock.fileno.return_value = 0
@@ -85,7 +85,12 @@ def test_make_wrapped_transport_unreadable_multicast_index() -> None:
     sock.getsockopt.side_effect = OSError
     transport = Mock()
     transport.get_extra_info.return_value = sock
-    assert make_wrapped_transport(transport).multicast_index == 0
+    # Windows: expected (WSAEINVAL), silent fallback.
+    with patch("zeroconf._transport.sys.platform", "win32"):
+        assert make_wrapped_transport(transport).multicast_index == 0
+    # Other platforms: unexpected, fall back but log it.
+    with patch("zeroconf._transport.sys.platform", "linux"):
+        assert make_wrapped_transport(transport).multicast_index == 0
 
 
 @pytest.mark.asyncio
@@ -322,6 +327,61 @@ async def test_update_interfaces_respond_socket_none_rolls_back(aiozc_loopback: 
         await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
     assert engine.senders == []
     mock_drop.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
+    aiozc_loopback: AsyncZeroconf,
+) -> None:
+    """If endpoint creation raises, the interface's join and socket are rolled back."""
+    zc = aiozc_loopback.zeroconf
+    await zc.async_wait_for_start()
+    await aiozc_loopback.async_update_interfaces([])
+    await asyncio.sleep(0)
+    assert zc._interfaces == []
+
+    fake_socket = Mock()
+    with (
+        patch.object(_engine, "add_multicast_member", return_value=True),
+        patch.object(_engine, "new_respond_socket", return_value=fake_socket),
+        patch.object(_engine, "drop_multicast_member") as mock_drop,
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
+        pytest.raises(OSError),
+    ):
+        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+
+    # The just-joined membership was dropped, the socket closed, and the
+    # failed reconcile left the retained config unchanged.
+    mock_drop.assert_called_once()
+    fake_socket.close.assert_called_once()
+    assert zc._interfaces == []
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_rollback_unicast_no_membership_drop() -> None:
+    """A wrap failure in unicast mode closes the socket but has no membership to drop."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"], unicast=True)
+    try:
+        zc = aiozc.zeroconf
+        await zc.async_wait_for_start()
+        await aiozc.async_update_interfaces([])
+        await asyncio.sleep(0)
+
+        fake_socket = Mock()
+        with (
+            patch.object(_engine, "new_respond_socket", return_value=fake_socket),
+            patch.object(_engine, "drop_multicast_member") as mock_drop,
+            patch.object(
+                _engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))
+            ),
+            pytest.raises(OSError),
+        ):
+            await aiozc.async_update_interfaces(["127.0.0.1"])
+
+        fake_socket.close.assert_called_once()
+        mock_drop.assert_not_called()
+    finally:
+        await aiozc.async_close()
 
 
 @pytest.mark.asyncio

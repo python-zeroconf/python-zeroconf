@@ -238,7 +238,15 @@ class AsyncEngine:
                 drop_multicast_member(listen_socket, interface)
             self.zc.log_warning_once(f"Interface {interface!r} not added: no responder socket")
             return False
-        await self._async_wrap_socket(respond_socket, is_sender=True)
+        try:
+            await self._async_wrap_socket(respond_socket, is_sender=True)
+        except Exception:
+            # Endpoint creation failed after the join/socket succeeded; roll
+            # this interface back so it leaves no dangling group membership.
+            respond_socket.close()
+            if listen_socket is not None:
+                drop_multicast_member(listen_socket, interface)
+            raise
         return True
 
     def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
