@@ -83,6 +83,13 @@ def _listen_socket_supports(
         return True
 
 
+def _without_transport(
+    wrappers: list[_WrappedTransport], transport: asyncio.DatagramTransport
+) -> list[_WrappedTransport]:
+    """Return the wrappers whose underlying transport is not ``transport``."""
+    return [wrapped for wrapped in wrappers if wrapped.transport is not transport]
+
+
 class AsyncEngine:
     """An engine wraps sockets in the event loop."""
 
@@ -227,8 +234,8 @@ class AsyncEngine:
         ):
             listen_key = listen_transport.interface_key
             if any(key != listen_key for key in desired):
-                self.senders = [w for w in self.senders if w.transport is not listen_transport.transport]
-                current = {wrapped.interface_key: wrapped for wrapped in self.senders}
+                self.senders = _without_transport(self.senders, listen_transport.transport)
+                current.pop(listen_key, None)
                 needs_rebuild = True
 
         if needs_rebuild:
@@ -294,8 +301,8 @@ class AsyncEngine:
             else:
                 kept_protocols.append(protocol)
         self.protocols = kept_protocols
-        self.readers = [w for w in self.readers if w.transport is not transport]
-        self.senders = [w for w in self.senders if w.transport is not transport]
+        self.readers = _without_transport(self.readers, transport)
+        self.senders = _without_transport(self.senders, transport)
 
     def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
         """Drop a per-interface sender's wrappers/protocol and close its transport."""
@@ -338,8 +345,14 @@ class AsyncEngine:
             raise RuntimeError("Failed to create a listen socket for the new interface family")
         try:
             for bind_address, interface in desired.items():
-                if bind_address in current:
-                    add_multicast_member(new_listen, interface)
+                # A staying interface that can't re-join on the new socket keeps
+                # its sender but receives only via the shared socket it never
+                # joined; surface that degraded state like _async_add_interface.
+                if bind_address in current and not add_multicast_member(new_listen, interface):
+                    self.zc.log_warning_once(
+                        f"Interface {interface!r} could not re-join the multicast group "
+                        "on the rebuilt listen socket"
+                    )
             new_reader = await self._async_wrap_socket(new_listen, is_sender=False)
         except Exception:
             # Endpoint creation failed; close the unadopted socket (and its
