@@ -27,8 +27,6 @@ import socket
 import sys
 from typing import cast
 
-from ._logger import log
-
 
 def _strip_zone(address: str) -> str:
     """Drop a ``%zone`` suffix from an IPv6 address string."""
@@ -109,14 +107,13 @@ def make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTran
         # the leave falls back to the default interface as it did before.
         try:
             multicast_index = sock.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF)
-        except OSError as exc:
-            # Windows rejects reading IPV6_MULTICAST_IF (WSAEINVAL); fall back
-            # to the default index. On other platforms this read does not
-            # fail, so surface an unexpected error at warning rather than
-            # silently masking it into a wrong-interface group leave.
+        except OSError:
+            # Windows rejects reading IPV6_MULTICAST_IF (WSAEINVAL); the
+            # default index 0 set above is kept there. On other platforms this
+            # read does not fail, so re-raise rather than mask a genuine error
+            # into a wrong-interface group leave.
             if sys.platform != "win32":
-                log.warning("Unexpected error reading IPV6_MULTICAST_IF: %s", exc)
-            multicast_index = 0
+                raise
     return _WrappedTransport(
         transport=transport,
         is_ipv6=is_ipv6,

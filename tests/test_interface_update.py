@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from zeroconf import IPVersion, ServiceInfo, Zeroconf, _engine, _listener
-from zeroconf._engine import _interface_key
+from zeroconf._engine import _interface_key, _listen_socket_supports
 from zeroconf._transport import _strip_zone, _WrappedTransport, make_wrapped_transport
 from zeroconf.asyncio import AsyncZeroconf
 
@@ -84,12 +84,30 @@ def test_make_wrapped_transport_unreadable_multicast_index() -> None:
     sock.getsockopt.side_effect = OSError
     transport = Mock()
     transport.get_extra_info.return_value = sock
-    # Windows: expected (WSAEINVAL), silent fallback.
+    # Windows: expected (WSAEINVAL), silent fallback to the default index.
     with patch("zeroconf._transport.sys.platform", "win32"):
         assert make_wrapped_transport(transport).multicast_index == 0
-    # Other platforms: unexpected, fall back but log it.
-    with patch("zeroconf._transport.sys.platform", "linux"):
-        assert make_wrapped_transport(transport).multicast_index == 0
+    # Other platforms: the read does not fail there, so an error is re-raised.
+    with patch("zeroconf._transport.sys.platform", "linux"), pytest.raises(OSError):
+        make_wrapped_transport(transport)
+
+
+def test_listen_socket_supports_family() -> None:
+    """A desired interface is only supported by a listen socket of a compatible family."""
+    v4_sock = Mock()
+    v4_sock.family = socket.AF_INET
+    v6_sock = Mock()
+    v6_sock.family = socket.AF_INET6
+    v6_interface = (("fe80::1", 0, 0), 1)
+
+    assert _listen_socket_supports(v4_sock, "1.2.3.4") is True
+    assert _listen_socket_supports(v4_sock, v6_interface) is False
+    assert _listen_socket_supports(v6_sock, v6_interface) is True
+    # IPv4 on an AF_INET6 socket depends on whether it is dual-stack.
+    v6_sock.getsockopt.return_value = 0  # IPV6_V6ONLY off -> dual-stack
+    assert _listen_socket_supports(v6_sock, "1.2.3.4") is True
+    v6_sock.getsockopt.return_value = 1  # IPV6_V6ONLY on -> v6-only
+    assert _listen_socket_supports(v6_sock, "1.2.3.4") is False
 
 
 @pytest.mark.asyncio
@@ -236,6 +254,9 @@ async def test_update_interfaces_reconciles_mixed_set(aiozc_loopback: AsyncZeroc
 
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=desired),
+        # This test exercises the diff over a contrived sender set, not the
+        # listen-socket rebuild, so treat every family as supported.
+        patch.object(_engine, "_listen_socket_supports", return_value=True),
         patch.object(_engine, "add_multicast_member", return_value=True),
         patch.object(_engine, "new_respond_socket", return_value=Mock()),
         patch.object(_engine, "drop_multicast_member") as mock_drop,
@@ -429,7 +450,7 @@ async def test_update_interfaces_keeps_dual_use_listen_socket(aiozc_loopback: As
 
 @pytest.mark.asyncio
 async def test_update_interfaces_default_explicit_list_raises(aiozc_loopback: AsyncZeroconf) -> None:
-    """An explicit set on a dual-use instance raises before any state change."""
+    """An explicit set on a dual-use instance raises before any state change or rebuild."""
     engine = aiozc_loopback.zeroconf.engine
     await aiozc_loopback.zeroconf.async_wait_for_start()
     listen = engine._listen_transport
@@ -437,10 +458,108 @@ async def test_update_interfaces_default_explicit_list_raises(aiozc_loopback: As
     engine.senders = [listen]
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=["192.168.1.5"]),
+        patch.object(_engine, "new_socket") as mock_new_socket,
         pytest.raises(RuntimeError, match="Default single-family"),
     ):
         await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
     assert engine.senders == [listen]
+    # The dual-use guard takes precedence; it never falls through to a rebuild.
+    mock_new_socket.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_does_not_rebuild_when_family_supported(
+    aiozc_loopback: AsyncZeroconf,
+) -> None:
+    """Same-family rescans (and All/dual-stack) never rebuild the listen socket."""
+    zc = aiozc_loopback.zeroconf
+    await zc.async_wait_for_start()
+    listen = zc.engine._listen_transport
+    with patch.object(_engine, "new_socket") as mock_new_socket:
+        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc_loopback.async_update_interfaces([])
+        await asyncio.sleep(0)
+        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await asyncio.sleep(0)
+    mock_new_socket.assert_not_called()
+    assert zc.engine._listen_transport is listen
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_rebuilds_listen_socket_for_new_family(
+    aiozc_loopback: AsyncZeroconf,
+) -> None:
+    """Adding an interface of an unsupported family rebuilds the listen socket once."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    old_listen = engine._listen_transport
+    assert old_listen is not None
+    assert old_listen.sock.family == socket.AF_INET  # V4Only loopback instance
+    old_underlying = old_listen.transport
+
+    # Keep the existing IPv4 interface and add an IPv6 one (which the IPv4
+    # listen socket can't join, forcing a rebuild).
+    v6 = (("fe80::1", 0, 0), 1)
+    new_listen_sock = Mock()
+    new_listen_sock.family = socket.AF_INET6
+
+    async def fake_wrap(sock: object, is_sender: bool) -> _WrappedTransport:
+        wrapped = _make_wrapped(("wrapped", 0), transport=Mock())
+        (engine.senders if is_sender else engine.readers).append(wrapped)
+        return wrapped
+
+    with (
+        patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1", v6]),
+        patch.object(_engine, "new_socket", return_value=new_listen_sock) as mock_new_socket,
+        patch.object(_engine, "add_multicast_member", return_value=True) as mock_add,
+        patch.object(_engine, "new_respond_socket", return_value=Mock()),
+        patch.object(_engine, "drop_multicast_member"),
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
+    ):
+        added = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
+
+    # Rebuilt exactly once, the v6 sender added, the listen transport swapped,
+    mock_new_socket.assert_called_once()
+    assert added is True
+    assert engine._listen_transport is not old_listen
+    # the kept IPv4 interface was re-joined on the new listen socket,
+    assert any(
+        call.args[0] is new_listen_sock and call.args[1] == "127.0.0.1" for call in mock_add.call_args_list
+    )
+    # and the old listen socket closed and removed (no duplicate left behind).
+    assert old_underlying.is_closing()
+    assert old_listen not in engine.readers
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_rebuild_failure_raises(aiozc_loopback: AsyncZeroconf) -> None:
+    """If the replacement listen socket can't be created, the rebuild raises."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    with (
+        patch.object(_engine, "normalize_interface_choice", return_value=[(("fe80::1", 0, 0), 1)]),
+        patch.object(_engine, "new_socket", return_value=None),
+        pytest.raises(RuntimeError, match="listen socket"),
+    ):
+        await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
+
+
+@pytest.mark.asyncio
+async def test_close_sender_closes_transport_when_drop_raises(aiozc_loopback: AsyncZeroconf) -> None:
+    """A non-benign group-leave error still releases the transport."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    gone_transport = Mock()
+    gone = _make_wrapped(("10.0.0.5", 5353), transport=gone_transport)
+    listen_socket = Mock()
+
+    with (
+        patch.object(_engine, "drop_multicast_member", side_effect=OSError("EPERM")),
+        pytest.raises(OSError),
+    ):
+        engine._async_close_sender(gone, listen_socket)
+
+    gone_transport.close.assert_called_once()
 
 
 @pytest.mark.asyncio

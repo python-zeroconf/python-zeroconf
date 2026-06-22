@@ -36,6 +36,7 @@ from ._utils.net import (
     add_multicast_member,
     drop_multicast_member,
     new_respond_socket,
+    new_socket,
     normalize_interface_choice,
 )
 from ._utils.time import current_time_millis
@@ -61,6 +62,20 @@ def _interface_key(interface: str | tuple[tuple[str, int, int], int]) -> tuple[s
     if isinstance(interface, tuple):
         return (_strip_zone(interface[0][0]), interface[0][2])
     return (interface, 0)
+
+
+def _listen_socket_supports(
+    listen_socket: socket.socket, interface: str | tuple[tuple[str, int, int], int]
+) -> bool:
+    """Whether the fixed-family listen socket can join this interface's group."""
+    if isinstance(interface, tuple):
+        # An IPv6 interface can only be joined on an AF_INET6 socket.
+        return listen_socket.family == socket.AF_INET6
+    if listen_socket.family != socket.AF_INET6:
+        # An IPv4 interface on an AF_INET socket.
+        return True
+    # An IPv4 interface on an AF_INET6 socket: only when it is dual-stack.
+    return not listen_socket.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY)
 
 
 class AsyncEngine:
@@ -197,6 +212,17 @@ class AsyncEngine:
                 "recreate it to use an explicit interface set"
             )
 
+        # The listen socket's family is fixed at construction. If a desired
+        # interface cannot be joined on it (e.g. an IPv6 interface added to an
+        # IPv4 instance), rebuild the listen socket for the new family before
+        # reconciling senders, otherwise the current senders would be torn down
+        # with no replacements bound.
+        if listen_socket is not None and any(
+            not _listen_socket_supports(listen_socket, interface) for interface in desired.values()
+        ):
+            listen_socket = await self._async_rebuild_listen_socket(ip_version, apple_p2p, desired, current)
+            listen_transport = self._listen_transport
+
         for bind_address, wrapped in current.items():
             if bind_address in desired:
                 continue
@@ -249,9 +275,8 @@ class AsyncEngine:
             raise
         return True
 
-    def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
-        """Drop a per-interface sender's wrappers/protocol and close its transport."""
-        transport = wrapped.transport
+    def _async_remove_transport(self, transport: asyncio.DatagramTransport) -> None:
+        """Drop a transport's protocol/reader/sender wrappers, cancelling its timers."""
         kept_protocols = []
         for protocol in self.protocols:
             if protocol.transport is not None and protocol.transport.transport is transport:
@@ -263,9 +288,48 @@ class AsyncEngine:
         self.protocols = kept_protocols
         self.readers = [w for w in self.readers if w.transport is not transport]
         self.senders = [w for w in self.senders if w.transport is not transport]
-        if listen_socket is not None:
-            drop_multicast_member(listen_socket, wrapped.multicast_interface)
-        transport.close()
+
+    def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
+        """Drop a per-interface sender's wrappers/protocol and close its transport."""
+        transport = wrapped.transport
+        self._async_remove_transport(transport)
+        try:
+            if listen_socket is not None:
+                drop_multicast_member(listen_socket, wrapped.multicast_interface)
+        finally:
+            # Release the socket even if a non-benign leave (e.g. EPERM) raises.
+            transport.close()
+
+    async def _async_rebuild_listen_socket(
+        self,
+        ip_version: IPVersion,
+        apple_p2p: bool,
+        desired: dict[tuple[str, int], str | tuple[tuple[str, int, int], int]],
+        current: dict[tuple[str, int], _WrappedTransport],
+    ) -> socket.socket:
+        """Replace the listen socket with one whose family covers the desired set.
+
+        The listen socket's family is otherwise fixed at construction; this
+        lets an instance start receiving a newly added address family. Only
+        called when a desired interface cannot be joined on the current listen
+        socket. Interfaces that are staying are re-joined on the new socket,
+        and the old socket is closed (releasing its memberships).
+        """
+        new_listen = new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
+        if new_listen is None:
+            raise RuntimeError("Failed to create a listen socket for the requested interface family")
+        for bind_address, interface in desired.items():
+            if bind_address in current:
+                add_multicast_member(new_listen, interface)
+        # A rebuild is only entered with a live listen socket, so the old
+        # transport is always present.
+        old_listen_transport = self._listen_transport
+        assert old_listen_transport is not None
+        self._listen_transport = await self._async_wrap_socket(new_listen, is_sender=False)
+        old_transport = old_listen_transport.transport
+        self._async_remove_transport(old_transport)
+        old_transport.close()
+        return new_listen
 
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
