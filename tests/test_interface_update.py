@@ -432,22 +432,71 @@ async def test_update_interfaces_keeps_dual_use_listen_socket(aiozc_loopback: As
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_default_explicit_list_raises(aiozc_loopback: AsyncZeroconf) -> None:
-    """An explicit set on a dual-use instance raises before any state change or rebuild."""
+async def test_update_interfaces_default_to_explicit_reconciles(aiozc_loopback: AsyncZeroconf) -> None:
+    """Moving a dual-use instance to an explicit set demotes its socket and rebuilds clean."""
     engine = aiozc_loopback.zeroconf.engine
     await aiozc_loopback.zeroconf.async_wait_for_start()
     listen = engine._listen_transport
     assert listen is not None
+    old_underlying = listen.transport
+    # Simulate a Default single-family instance: the listen socket is the sole sender.
     engine.senders = [listen]
+    new_listen_sock = Mock()
+    new_listen_sock.family = socket.AF_INET
+
+    async def fake_wrap(sock: object, is_sender: bool) -> _WrappedTransport:
+        wrapped = _make_wrapped(("wrapped", 0), transport=Mock())
+        (engine.senders if is_sender else engine.readers).append(wrapped)
+        return wrapped
+
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=["192.168.1.5"]),
-        patch.object(_engine, "new_listen_socket") as mock_new_listen,
-        pytest.raises(RuntimeError, match="Default single-family"),
+        patch.object(_engine, "new_listen_socket", return_value=new_listen_sock) as mock_new_listen,
+        patch.object(_engine, "add_interface", return_value=Mock()),
+        patch.object(_engine, "drop_multicast_member"),
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
     ):
-        await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
-    assert engine.senders == [listen]
-    # The dual-use guard takes precedence; it never falls through to a rebuild.
-    mock_new_listen.assert_not_called()
+        added = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
+
+    # The dual-use socket is rebuilt as a pure listener (demoted and closed),
+    # a fresh listener replaces it, and the explicit interface gains a responder.
+    assert added is True
+    mock_new_listen.assert_called_once()
+    assert engine._listen_transport is not listen
+    assert listen not in engine.senders
+    assert listen not in engine.readers
+    assert old_underlying.is_closing()
+    # One brand-new responder (for 192.168.1.5) is the only sender now.
+    assert len(engine.senders) == 1
+    assert engine.senders[0] is not listen
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_default_to_explicit_real(aiozc_loopback: AsyncZeroconf) -> None:
+    """A real dual-use socket with an overlapping membership reconciles without EADDRINUSE."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    listen = engine._listen_transport
+    assert listen is not None
+    assert listen.sock.family == socket.AF_INET
+    old_underlying = listen.transport
+    # Simulate a Default dual-use instance whose listen socket already joined
+    # the loopback group, so a naive demote-and-rejoin would hit EADDRINUSE.
+    _engine.add_multicast_member(listen.sock, "127.0.0.1")
+    engine.senders = [listen]
+
+    with patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1"]):
+        added = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
+
+    assert added is True
+    new_listen = engine._listen_transport
+    assert new_listen is not None
+    assert new_listen is not listen
+    assert new_listen.sock.family == socket.AF_INET
+    assert old_underlying.is_closing()
+    # The overlapping interface got a real responder on the fresh listen socket.
+    assert len(engine.senders) == 1
+    assert engine.senders[0] is not listen
 
 
 @pytest.mark.asyncio

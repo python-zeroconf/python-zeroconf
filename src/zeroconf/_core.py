@@ -448,8 +448,9 @@ class Zeroconf(QuietLogger):
         ``ip_version`` and ``apple_p2p`` each default to the value passed at
         construction; pass a new value to switch it. When the resulting
         interface set is unchanged this is a no-op (no sockets touched,
-        nothing re-announced). The shared listen socket's family and unicast
-        mode are fixed at construction. Concurrent calls are serialized.
+        nothing re-announced). The listen socket is rebuilt if the new set
+        needs a different address family; unicast mode is fixed at
+        construction. Concurrent calls are serialized.
         """
         # Resolve against the retained config but only commit it after the
         # engine reconcile succeeds, so a failed reconcile leaves the stored

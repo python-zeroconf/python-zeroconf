@@ -189,9 +189,10 @@ class AsyncEngine:
 
         Adds a per-interface responder socket for each interface that
         appeared and tears down the socket for each interface that
-        disappeared, diffing on the bound address. The shared listen
-        socket (including the Default single-family dual-use socket) is
-        never torn down here. Returns whether any responder socket was
+        disappeared, diffing on the bound address. A Default single-family
+        instance's dual-use listen/responder socket is converted to a pure
+        listener when moving to an explicit set; otherwise the shared listen
+        socket is left intact. Returns whether any responder socket was
         added, so the caller can skip re-announcing when nothing appeared.
         """
         assert self.loop is not None
@@ -201,30 +202,35 @@ class AsyncEngine:
         listen_transport = self._listen_transport
         listen_socket = listen_transport.sock if listen_transport is not None else None
 
-        # A Default single-family instance shares the listen socket as its
-        # only sender; adding per-interface senders alongside it would double
-        # every announcement. Switching interface kind at runtime is not
-        # supported, so raise (before any state changes) rather than
-        # double-send. The no-arg refresh of a Default instance keys to the
-        # listen socket and never reaches here.
+        # The listen socket's family is fixed at construction, so a desired
+        # interface of another family (e.g. an IPv6 interface added to an IPv4
+        # instance) needs a fresh listen socket before senders are reconciled,
+        # otherwise the current senders would be torn down with no replacements
+        # bound.
+        needs_rebuild = listen_socket is not None and any(
+            not _listen_socket_supports(listen_socket, interface) for interface in desired.values()
+        )
+
+        # A Default single-family instance shares the listen socket as its only
+        # sender (the dual-use socket). Moving it to an explicit interface set
+        # abandons that optimization: demote the socket so it stops responding
+        # (otherwise it would double every announcement on the overlapping
+        # interface) and rebuild it as a pure listener (its existing group
+        # memberships would otherwise collide with the new per-interface joins).
+        # Once demoted it no longer counts as a per-interface sender, so the
+        # interface it served gets a fresh responder like any other. The no-arg
+        # refresh of a Default instance leaves desired == {its interface} and so
+        # neither demotes nor rebuilds.
         if listen_transport is not None and any(
             wrapped.transport is listen_transport.transport for wrapped in self.senders
         ):
             listen_key = listen_transport.interface_key
             if any(key != listen_key for key in desired):
-                raise RuntimeError(
-                    "Cannot change interfaces on a Default single-family Zeroconf instance; "
-                    "recreate it to use an explicit interface set"
-                )
+                self.senders = [w for w in self.senders if w.transport is not listen_transport.transport]
+                current = {wrapped.interface_key: wrapped for wrapped in self.senders}
+                needs_rebuild = True
 
-        # The listen socket's family is fixed at construction. If a desired
-        # interface cannot be joined on it (e.g. an IPv6 interface added to an
-        # IPv4 instance), rebuild the listen socket for the new family before
-        # reconciling senders, otherwise the current senders would be torn down
-        # with no replacements bound.
-        if listen_socket is not None and any(
-            not _listen_socket_supports(listen_socket, interface) for interface in desired.values()
-        ):
+        if needs_rebuild:
             await self._async_rebuild_listen_socket(apple_p2p, desired, current)
             listen_transport = self._listen_transport
             listen_socket = listen_transport.sock if listen_transport is not None else None
@@ -310,9 +316,9 @@ class AsyncEngine:
         """Replace the listen socket with one whose family covers the desired set.
 
         The listen socket's family is otherwise fixed at construction; this
-        lets an instance start receiving a newly added address family. Only
-        called when a desired interface cannot be joined on the current listen
-        socket. The replacement family is derived from the desired set (not the
+        lets an instance start receiving a newly added address family, and is
+        also used to convert a Default dual-use socket to a pure listener. The
+        replacement family is derived from the desired set (not the
         requested ip_version, which an explicit list can contradict) so it
         always covers every desired interface and never needs an immediate
         re-rebuild. Interfaces that are staying are re-joined on the new socket,
