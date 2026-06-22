@@ -181,6 +181,22 @@ class AsyncEngine:
         listen_transport = self._listen_transport
         listen_socket = listen_transport.sock if listen_transport is not None else None
 
+        # A Default single-family instance shares the listen socket as its
+        # only sender; adding per-interface senders alongside it would double
+        # every announcement. Switching interface kind at runtime is not
+        # supported, so raise (before any state changes) rather than
+        # double-send. The no-arg refresh of a Default instance keys to the
+        # listen socket and never reaches here.
+        if (
+            listen_transport is not None
+            and any(wrapped.transport is listen_transport.transport for wrapped in self.senders)
+            and any(key != listen_transport.interface_key for key in desired)
+        ):
+            raise RuntimeError(
+                "Cannot change interfaces on a Default single-family Zeroconf instance; "
+                "recreate it to use an explicit interface set"
+            )
+
         for bind_address, wrapped in current.items():
             if bind_address in desired:
                 continue

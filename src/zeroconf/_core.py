@@ -201,7 +201,8 @@ class Zeroconf(QuietLogger):
         self._use_asyncio = use_asyncio
         # Retained so async_update_interfaces can re-run create_sockets /
         # normalize_interface_choice against the live interface set later.
-        self._interfaces = interfaces
+        # Copy a mutable list so later caller mutation can't change it.
+        self._interfaces = list(interfaces) if isinstance(interfaces, list) else interfaces
         self._ip_version = ip_version
         self._apple_p2p = apple_p2p
         listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
@@ -456,26 +457,33 @@ class Zeroconf(QuietLogger):
         interfaces = self._interfaces if interfaces is None else interfaces
         ip_version = self._ip_version if ip_version is None else ip_version
         apple_p2p = self._apple_p2p if apple_p2p is None else apple_p2p
+        if apple_p2p and sys.platform != "darwin":
+            raise RuntimeError("Option `apple_p2p` is not supported on non-Apple platforms.")
         await self.async_wait_for_start()
+        # Only the reconcile mutates the sender set, so hold the lock for that
+        # alone; the multi-second re-announce runs unlocked so a bursty
+        # adapter-change source isn't blocked behind it.
         async with self._interface_update_lock:
             added = await self.engine.async_update_interfaces(interfaces, ip_version, apple_p2p)
-            self._interfaces = interfaces
+            # Copy a mutable list so later caller mutation can't change the
+            # retained configuration.
+            self._interfaces = list(interfaces) if isinstance(interfaces, list) else interfaces
             self._ip_version = ip_version
             self._apple_p2p = apple_p2p
-            if not added:
-                return
-            # Re-announce every registration; one broadcast failing must not
-            # mask the rest, so collect exceptions and log them individually.
-            results = await asyncio.gather(
-                *[
-                    self._async_broadcast_service(info, _REGISTER_TIME, None)
-                    for info in self.registry.async_get_service_infos()
-                ],
-                return_exceptions=True,
-            )
-            for result in results:
-                if isinstance(result, Exception):
-                    log.warning("Error re-announcing service after interface update: %s", result)
+        if not added:
+            return
+        # Re-announce every registration; one broadcast failing must not mask
+        # the rest, so collect exceptions and log them individually.
+        results = await asyncio.gather(
+            *[
+                self._async_broadcast_service(info, _REGISTER_TIME, None)
+                for info in self.registry.async_get_service_infos()
+            ],
+            return_exceptions=True,
+        )
+        for result in results:
+            if isinstance(result, Exception):
+                log.warning("Error re-announcing service after interface update: %s", result)
 
     async def async_get_service_info(
         self,

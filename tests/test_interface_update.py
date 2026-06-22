@@ -342,6 +342,47 @@ async def test_update_interfaces_keeps_dual_use_listen_socket() -> None:
 
 
 @pytest.mark.asyncio
+async def test_update_interfaces_default_explicit_list_raises() -> None:
+    """An explicit set on a Default single-family instance raises before any state changes."""
+    aiozc = AsyncZeroconf(interfaces=InterfaceChoice.Default, ip_version=IPVersion.V4Only)
+    try:
+        zc = aiozc.zeroconf
+        await zc.async_wait_for_start()
+        engine = zc.engine
+        sender_count = len(engine.senders)
+        original = zc._interfaces
+        with pytest.raises(RuntimeError, match="Default single-family"):
+            await aiozc.async_update_interfaces(["127.0.0.1"])
+        # No per-interface sender added, retained config unchanged.
+        assert len(engine.senders) == sender_count
+        assert zc._interfaces == original
+    finally:
+        await aiozc.async_close()
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_apple_p2p_non_darwin_raises(aiozc_loopback: AsyncZeroconf) -> None:
+    """apple_p2p=True on a non-Apple platform raises, matching __init__."""
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    with (
+        patch("zeroconf._core.sys.platform", "linux"),
+        pytest.raises(RuntimeError, match="apple_p2p"),
+    ):
+        await aiozc_loopback.async_update_interfaces(apple_p2p=True)
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_copies_interface_list(aiozc_loopback: AsyncZeroconf) -> None:
+    """A mutable interfaces list is copied so later mutation doesn't change retained config."""
+    zc = aiozc_loopback.zeroconf
+    await zc.async_wait_for_start()
+    ifaces = ["127.0.0.1"]
+    await aiozc_loopback.async_update_interfaces(ifaces)
+    ifaces.append("10.0.0.1")
+    assert zc._interfaces == ["127.0.0.1"]
+
+
+@pytest.mark.asyncio
 async def test_update_interfaces_unicast_has_no_listen_socket() -> None:
     """In unicast mode there is no listen socket, so membership ops are skipped."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"], unicast=True)
