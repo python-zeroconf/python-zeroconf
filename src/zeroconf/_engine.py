@@ -211,7 +211,16 @@ class AsyncEngine:
         added, so the caller can skip re-announcing when nothing appeared.
         """
         assert self.loop is not None
-        normalized = normalize_interface_choice(interfaces, ip_version)
+        try:
+            normalized = normalize_interface_choice(interfaces, ip_version)
+        except RuntimeError as exc:
+            # An All/Default instance can transiently resolve to zero addresses
+            # during adapter churn, where normalize_interface_choice raises
+            # instead of returning an empty set. Treat that as a logged no-op so
+            # a momentary down state doesn't crash a caller's adapter-change
+            # handler (best-effort contract); the next rescan reconciles.
+            log.warning("Skipping interface update; no interfaces available: %s", exc)
+            return False
         desired = {_interface_key(interface): interface for interface in normalized}
         current = {wrapped.interface_key: wrapped for wrapped in self.senders}
         listen_transport = self._listen_transport
@@ -291,13 +300,16 @@ class AsyncEngine:
             return False
         try:
             await self._async_wrap_socket(respond_socket, is_sender=True)
-        except Exception:
+        except Exception as exc:
             # Endpoint creation failed after the join/socket succeeded; roll
-            # this interface back so it leaves no dangling group membership.
+            # this interface back so it leaves no dangling group membership, then
+            # log and skip rather than abort the whole reconcile so the other
+            # interfaces still come up (best-effort bring-up).
             respond_socket.close()
             if listen_socket is not None:
                 drop_multicast_member(listen_socket, interface)
-            raise
+            self.zc.log_warning_once(f"Interface {interface!r} not added: {exc}")
+            return False
         return True
 
     def _async_remove_transport(self, transport: asyncio.DatagramTransport) -> None:

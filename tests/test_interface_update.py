@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from zeroconf import IPVersion, ServiceInfo, Zeroconf, _engine, _listener
+from zeroconf import InterfaceChoice, IPVersion, ServiceInfo, Zeroconf, _engine, _listener
 from zeroconf._engine import _interface_key, _listen_socket_supports
 from zeroconf._transport import _strip_zone, _WrappedTransport, make_wrapped_transport
 from zeroconf.asyncio import AsyncZeroconf
@@ -433,6 +433,34 @@ async def test_update_interfaces_ip_change_in_one_rescan(aiozc_loopback: AsyncZe
 
 
 @pytest.mark.asyncio
+async def test_update_interfaces_transient_empty_set_is_noop(
+    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An All instance that transiently resolves to zero interfaces logs and no-ops."""
+    zc = aiozc_loopback.zeroconf
+    await zc.async_wait_for_start()
+    engine = zc.engine
+    before = (len(engine.senders), len(engine.readers), len(engine.protocols))
+
+    # normalize_interface_choice raises for an All instance with no addresses
+    # (adapter churn); the rescan must not crash the caller's handler.
+    with (
+        patch.object(
+            _engine,
+            "normalize_interface_choice",
+            side_effect=RuntimeError("No interfaces to listen on"),
+        ),
+        caplog.at_level(logging.WARNING),
+    ):
+        added = await engine.async_update_interfaces(InterfaceChoice.All, IPVersion.All, False)
+
+    assert added is False
+    assert "Skipping interface update; no interfaces available" in caplog.text
+    # Current sockets are left intact rather than torn down.
+    assert (len(engine.senders), len(engine.readers), len(engine.protocols)) == before
+
+
+@pytest.mark.asyncio
 async def test_update_interfaces_add_failure_adds_no_sender(aiozc_loopback: AsyncZeroconf) -> None:
     """An interface that fails to come up adds no responder socket."""
     zc = aiozc_loopback.zeroconf
@@ -450,7 +478,7 @@ async def test_update_interfaces_add_failure_adds_no_sender(aiozc_loopback: Asyn
 async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
     aiozc_loopback: AsyncZeroconf,
 ) -> None:
-    """If endpoint creation raises, the interface's join and socket are rolled back."""
+    """Endpoint creation failing rolls the interface back and is skipped, not raised."""
     zc = aiozc_loopback.zeroconf
     await zc.async_wait_for_start()
     await aiozc_loopback.async_update_interfaces([])
@@ -462,15 +490,14 @@ async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
         patch.object(_engine, "add_interface", return_value=fake_socket),
         patch.object(_engine, "drop_multicast_member") as mock_drop,
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
-        pytest.raises(OSError),
     ):
+        # Best-effort: the failure is logged and skipped, not propagated.
         await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
 
-    # The just-joined membership was dropped, the socket closed, and the
-    # failed reconcile left the retained config unchanged.
+    # The just-joined membership was dropped, the socket closed, no sender added.
     mock_drop.assert_called_once()
     fake_socket.close.assert_called_once()
-    assert zc._interfaces == []
+    assert zc.engine.senders == []
 
 
 @pytest.mark.asyncio
@@ -484,10 +511,10 @@ async def test_add_interface_rollback_without_listen_socket(aiozc_loopback: Asyn
         patch.object(_engine, "add_interface", return_value=fake_socket),
         patch.object(_engine, "drop_multicast_member") as mock_drop,
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
-        pytest.raises(OSError),
     ):
-        await engine._async_add_interface("127.0.0.1", None, False)
+        added = await engine._async_add_interface("127.0.0.1", None, False)
 
+    assert added is False
     fake_socket.close.assert_called_once()
     mock_drop.assert_not_called()
 

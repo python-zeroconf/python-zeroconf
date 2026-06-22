@@ -23,7 +23,9 @@ USA
 from __future__ import annotations
 
 import asyncio
+import logging
 import socket
+import sys
 from typing import cast
 
 from ._logger import log
@@ -111,7 +113,12 @@ def make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTran
         try:
             multicast_index = sock.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF)
         except OSError as exc:
-            log.debug("Unable to read IPV6_MULTICAST_IF, using default index 0: %s", exc)
+            # Windows rejects this read (WSAEINVAL) for every v6 socket, so it is
+            # expected and benign there; keep it at debug. Elsewhere a failure is
+            # unexpected and means a later group leave uses the wrong index (a
+            # benign no-op that leaks the membership), so surface it at warning.
+            level = logging.DEBUG if sys.platform == "win32" else logging.WARNING
+            log.log(level, "Unable to read IPV6_MULTICAST_IF, using default index 0: %s", exc)
     return _WrappedTransport(
         transport=transport,
         is_ipv6=is_ipv6,
