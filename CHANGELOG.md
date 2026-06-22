@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.150.0 (2026-06-22)
+
+### Features
+
+- Add async_update_interfaces to rescan network interfaces at runtime
+  ([#1797](https://github.com/python-zeroconf/python-zeroconf/pull/1797),
+  [`471feb4`](https://github.com/python-zeroconf/python-zeroconf/commit/471feb490dc315578ca124411c00745028a1a736))
+
+
 ## v0.149.17 (2026-06-21)
 
 ### Performance Improvements
