@@ -261,8 +261,7 @@ async def test_update_interfaces_reconciles_mixed_set(aiozc_loopback: AsyncZeroc
         # This test exercises the diff over a contrived sender set, not the
         # listen-socket rebuild, so treat every family as supported.
         patch.object(_engine, "_listen_socket_supports", return_value=True),
-        patch.object(_engine, "add_multicast_member", return_value=True),
-        patch.object(_engine, "new_respond_socket", return_value=Mock()),
+        patch.object(_engine, "add_interface", return_value=Mock()),
         patch.object(_engine, "drop_multicast_member") as mock_drop,
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=_fake_wrap)),
     ):
@@ -360,36 +359,17 @@ async def test_update_interfaces_logs_reannounce_errors(
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_add_membership_failure(aiozc_loopback: AsyncZeroconf) -> None:
-    """A failed multicast join skips adding the responder socket."""
+async def test_update_interfaces_add_failure_adds_no_sender(aiozc_loopback: AsyncZeroconf) -> None:
+    """An interface that fails to come up adds no responder socket."""
     zc = aiozc_loopback.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     await aiozc_loopback.async_update_interfaces([])
     await asyncio.sleep(0)
 
-    with patch.object(_engine, "add_multicast_member", return_value=False):
+    with patch.object(_engine, "add_interface", return_value=None):
         await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
     assert engine.senders == []
-
-
-@pytest.mark.asyncio
-async def test_update_interfaces_respond_socket_none_rolls_back(aiozc_loopback: AsyncZeroconf) -> None:
-    """A None responder socket drops the membership just joined."""
-    zc = aiozc_loopback.zeroconf
-    await zc.async_wait_for_start()
-    engine = zc.engine
-    await aiozc_loopback.async_update_interfaces([])
-    await asyncio.sleep(0)
-
-    with (
-        patch.object(_engine, "add_multicast_member", return_value=True),
-        patch.object(_engine, "new_respond_socket", return_value=None),
-        patch.object(_engine, "drop_multicast_member") as mock_drop,
-    ):
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
-    assert engine.senders == []
-    mock_drop.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -405,8 +385,7 @@ async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
 
     fake_socket = Mock()
     with (
-        patch.object(_engine, "add_multicast_member", return_value=True),
-        patch.object(_engine, "new_respond_socket", return_value=fake_socket),
+        patch.object(_engine, "add_interface", return_value=fake_socket),
         patch.object(_engine, "drop_multicast_member") as mock_drop,
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
         pytest.raises(OSError),
@@ -428,7 +407,7 @@ async def test_add_interface_rollback_without_listen_socket(aiozc_loopback: Asyn
 
     fake_socket = Mock()
     with (
-        patch.object(_engine, "new_respond_socket", return_value=fake_socket),
+        patch.object(_engine, "add_interface", return_value=fake_socket),
         patch.object(_engine, "drop_multicast_member") as mock_drop,
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
         pytest.raises(OSError),
@@ -462,13 +441,13 @@ async def test_update_interfaces_default_explicit_list_raises(aiozc_loopback: As
     engine.senders = [listen]
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=["192.168.1.5"]),
-        patch.object(_engine, "new_socket") as mock_new_socket,
+        patch.object(_engine, "new_listen_socket") as mock_new_listen,
         pytest.raises(RuntimeError, match="Default single-family"),
     ):
         await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
     assert engine.senders == [listen]
     # The dual-use guard takes precedence; it never falls through to a rebuild.
-    mock_new_socket.assert_not_called()
+    mock_new_listen.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -479,13 +458,13 @@ async def test_update_interfaces_does_not_rebuild_when_family_supported(
     zc = aiozc_loopback.zeroconf
     await zc.async_wait_for_start()
     listen = zc.engine._listen_transport
-    with patch.object(_engine, "new_socket") as mock_new_socket:
+    with patch.object(_engine, "new_listen_socket") as mock_new_listen:
         await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
         await aiozc_loopback.async_update_interfaces([])
         await asyncio.sleep(0)
         await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
         await asyncio.sleep(0)
-    mock_new_socket.assert_not_called()
+    mock_new_listen.assert_not_called()
     assert zc.engine._listen_transport is listen
 
 
@@ -508,9 +487,9 @@ async def test_update_interfaces_rebuild_rejoins_kept_interfaces(aiozc_loopback:
 
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1", v6]),
-        patch.object(_engine, "new_socket", return_value=new_listen_sock),
+        patch.object(_engine, "new_listen_socket", return_value=new_listen_sock),
         patch.object(_engine, "add_multicast_member", return_value=True) as mock_add,
-        patch.object(_engine, "new_respond_socket", return_value=Mock()),
+        patch.object(_engine, "add_interface", return_value=Mock()),
         patch.object(_engine, "drop_multicast_member"),
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
     ):
@@ -530,7 +509,7 @@ async def test_update_interfaces_rebuild_failure_raises(aiozc_loopback: AsyncZer
     await aiozc_loopback.zeroconf.async_wait_for_start()
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=[(("fe80::1", 0, 0), 1)]),
-        patch.object(_engine, "new_socket", return_value=None),
+        patch.object(_engine, "new_listen_socket", return_value=None),
         pytest.raises(RuntimeError, match="listen socket"),
     ):
         await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
@@ -549,7 +528,7 @@ async def test_update_interfaces_rebuild_closes_socket_on_wrap_failure(
 
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=[(("fe80::1", 0, 0), 1)]),
-        patch.object(_engine, "new_socket", return_value=new_listen_sock),
+        patch.object(_engine, "new_listen_socket", return_value=new_listen_sock),
         patch.object(_engine, "add_multicast_member", return_value=True),
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
         pytest.raises(OSError),
@@ -579,9 +558,9 @@ async def test_update_interfaces_rebuild_family_matches_desired_set(
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=["192.168.1.5"]),
         patch.object(_engine, "_listen_socket_supports", return_value=False),  # force a rebuild
-        patch.object(_engine, "new_socket", return_value=new_listen_sock) as mock_new_socket,
+        patch.object(_engine, "new_listen_socket", return_value=new_listen_sock) as mock_new_listen,
         patch.object(_engine, "add_multicast_member", return_value=True),
-        patch.object(_engine, "new_respond_socket", return_value=Mock()),
+        patch.object(_engine, "add_interface", return_value=Mock()),
         patch.object(_engine, "drop_multicast_member"),
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
     ):
@@ -589,8 +568,8 @@ async def test_update_interfaces_rebuild_family_matches_desired_set(
         # rebuilt socket is IPv4 (covers the set; no immediate re-rebuild).
         await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
 
-    mock_new_socket.assert_called_once()
-    assert mock_new_socket.call_args.kwargs["ip_version"] is IPVersion.V4Only
+    mock_new_listen.assert_called_once()
+    assert mock_new_listen.call_args.args[0] is IPVersion.V4Only
 
 
 @pytest.mark.asyncio
@@ -604,12 +583,12 @@ async def test_update_interfaces_rebuilds_real_listen_socket(aiozc_loopback: Asy
     old_underlying = old_listen.transport
 
     v6 = (("fe80::1", 0, 0), 1)
-    # Real new_socket + _async_wrap_socket run; only membership joins and the
-    # (unbindable) v6 responder are stubbed so no real multicast is exercised.
+    # Real new_listen_socket + _async_wrap_socket run; only membership joins and
+    # the (unbindable) v6 responder are stubbed so no real multicast is exercised.
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1", v6]),
         patch.object(_engine, "add_multicast_member", return_value=True),
-        patch.object(_engine, "new_respond_socket", return_value=None),
+        patch.object(_engine, "add_interface", return_value=None),
     ):
         await engine.async_update_interfaces(["unused"], IPVersion.All, False)
 
@@ -677,7 +656,7 @@ async def test_update_interfaces_unicast_has_no_listen_socket() -> None:
         assert engine.senders == []
         # A None responder socket has no membership to roll back without a listen socket.
         with (
-            patch.object(_engine, "new_respond_socket", return_value=None),
+            patch.object(_engine, "add_interface", return_value=None),
             patch.object(_engine, "drop_multicast_member") as mock_drop,
         ):
             await aiozc.async_update_interfaces(["127.0.0.1"])

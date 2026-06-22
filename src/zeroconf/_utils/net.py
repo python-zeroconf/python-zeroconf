@@ -476,16 +476,41 @@ def new_respond_socket(
     return respond_socket
 
 
+def new_listen_socket(
+    ip_version: IPVersion = IPVersion.V4Only, apple_p2p: bool = False
+) -> socket.socket | None:
+    """Create the shared wildcard socket used to receive multicast queries."""
+    return new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
+
+
+def add_interface(
+    listen_socket: socket.socket | None,
+    interface: str | tuple[tuple[str, int, int], int],
+    apple_p2p: bool = False,
+    unicast: bool = False,
+) -> socket.socket | None:
+    """Join an interface's multicast group and create its responder socket.
+
+    Returns the responder socket, or None if the interface can't be brought
+    up. A group membership joined here is rolled back if the responder socket
+    cannot be created, so a failure leaves no dangling membership. Shared by
+    construction (``create_sockets``) and the runtime rescan.
+    """
+    if listen_socket is not None and not add_multicast_member(listen_socket, interface):
+        return None
+    respond_socket = new_respond_socket(interface, apple_p2p=apple_p2p, unicast=unicast)
+    if respond_socket is None and listen_socket is not None:
+        drop_multicast_member(listen_socket, interface)
+    return respond_socket
+
+
 def create_sockets(
     interfaces: InterfacesType = InterfaceChoice.All,
     unicast: bool = False,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
 ) -> tuple[socket.socket | None, list[socket.socket]]:
-    if unicast:
-        listen_socket = None
-    else:
-        listen_socket = new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
+    listen_socket = None if unicast else new_listen_socket(ip_version, apple_p2p)
 
     normalized_interfaces = normalize_interface_choice(interfaces, ip_version)
 
@@ -499,14 +524,8 @@ def create_sockets(
         return listen_socket, [cast(socket.socket, listen_socket)]
 
     respond_sockets = []
-
     for interface in normalized_interfaces:
-        # Only create response socket if unicast or becoming multicast member was successful
-        if not unicast and not add_multicast_member(cast(socket.socket, listen_socket), interface):
-            continue
-
-        respond_socket = new_respond_socket(interface, apple_p2p=apple_p2p, unicast=unicast)
-
+        respond_socket = add_interface(listen_socket, interface, apple_p2p=apple_p2p, unicast=unicast)
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
 

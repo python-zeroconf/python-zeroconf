@@ -33,10 +33,10 @@ from ._utils.asyncio import get_running_loop, run_coro_with_timeout
 from ._utils.net import (
     InterfacesType,
     IPVersion,
+    add_interface,
     add_multicast_member,
     drop_multicast_member,
-    new_respond_socket,
-    new_socket,
+    new_listen_socket,
     normalize_interface_choice,
 )
 from ._utils.time import current_time_millis
@@ -207,15 +207,15 @@ class AsyncEngine:
         # supported, so raise (before any state changes) rather than
         # double-send. The no-arg refresh of a Default instance keys to the
         # listen socket and never reaches here.
-        if (
-            listen_transport is not None
-            and any(wrapped.transport is listen_transport.transport for wrapped in self.senders)
-            and any(key != listen_transport.interface_key for key in desired)
+        if listen_transport is not None and any(
+            wrapped.transport is listen_transport.transport for wrapped in self.senders
         ):
-            raise RuntimeError(
-                "Cannot change interfaces on a Default single-family Zeroconf instance; "
-                "recreate it to use an explicit interface set"
-            )
+            listen_key = listen_transport.interface_key
+            if any(key != listen_key for key in desired):
+                raise RuntimeError(
+                    "Cannot change interfaces on a Default single-family Zeroconf instance; "
+                    "recreate it to use an explicit interface set"
+                )
 
         # The listen socket's family is fixed at construction. If a desired
         # interface cannot be joined on it (e.g. an IPv6 interface added to an
@@ -256,19 +256,14 @@ class AsyncEngine:
 
         Returns whether a responder socket was actually added.
         """
-        # A unicast instance has no listen socket, so membership is only
-        # ever managed when ``listen_socket`` is present. These are
+        # Join the group and create the responder via the same primitive
+        # construction uses, so setup and rescan stay in lockstep. These are
         # user-initiated reconciles, so a requested interface that fails to
         # come up is surfaced once at warning (deduped per interface so the
         # polling monitor doesn't spam) rather than only at debug.
-        if listen_socket is not None and not add_multicast_member(listen_socket, interface):
-            self.zc.log_warning_once(f"Interface {interface!r} not added: could not join multicast group")
-            return False
-        respond_socket = new_respond_socket(interface, apple_p2p=apple_p2p, unicast=self.zc.unicast)
+        respond_socket = add_interface(listen_socket, interface, apple_p2p=apple_p2p, unicast=self.zc.unicast)
         if respond_socket is None:
-            if listen_socket is not None:
-                drop_multicast_member(listen_socket, interface)
-            self.zc.log_warning_once(f"Interface {interface!r} not added: no responder socket")
+            self.zc.log_warning_once(f"Interface {interface!r} not added")
             return False
         try:
             await self._async_wrap_socket(respond_socket, is_sender=True)
@@ -331,7 +326,7 @@ class AsyncEngine:
             family_version = IPVersion.V6Only
         else:
             family_version = IPVersion.V4Only
-        new_listen = new_socket(bind_addr=("",), ip_version=family_version, apple_p2p=apple_p2p)
+        new_listen = new_listen_socket(family_version, apple_p2p)
         if new_listen is None:
             raise RuntimeError("Failed to create a listen socket for the new interface family")
         try:

@@ -384,6 +384,57 @@ def test_new_respond_socket_new_socket_returns_none():
         assert netutils.new_respond_socket(("0.0.0.0", 0)) is None  # type: ignore[arg-type]
 
 
+def test_add_interface_returns_responder_on_success():
+    """add_interface joins the group and returns the responder socket."""
+    listen_socket = Mock()
+    respond_socket = Mock()
+    with (
+        patch.object(netutils, "add_multicast_member", return_value=True) as mock_add,
+        patch.object(netutils, "new_respond_socket", return_value=respond_socket),
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(listen_socket, "127.0.0.1") is respond_socket
+    mock_add.assert_called_once_with(listen_socket, "127.0.0.1")
+    mock_drop.assert_not_called()
+
+
+def test_add_interface_join_failure_returns_none():
+    """A failed multicast join returns None and never creates a responder."""
+    listen_socket = Mock()
+    with (
+        patch.object(netutils, "add_multicast_member", return_value=False),
+        patch.object(netutils, "new_respond_socket") as mock_respond,
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(listen_socket, "127.0.0.1") is None
+    mock_respond.assert_not_called()
+    mock_drop.assert_not_called()
+
+
+def test_add_interface_responder_failure_rolls_back_membership():
+    """A None responder socket drops the membership just joined."""
+    listen_socket = Mock()
+    with (
+        patch.object(netutils, "add_multicast_member", return_value=True),
+        patch.object(netutils, "new_respond_socket", return_value=None),
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(listen_socket, "127.0.0.1") is None
+    mock_drop.assert_called_once_with(listen_socket, "127.0.0.1")
+
+
+def test_add_interface_no_listen_socket_skips_membership():
+    """Without a listen socket (unicast) no membership op runs and rollback is skipped."""
+    with (
+        patch.object(netutils, "add_multicast_member") as mock_add,
+        patch.object(netutils, "new_respond_socket", return_value=None),
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(None, "127.0.0.1", unicast=True) is None
+    mock_add.assert_not_called()
+    mock_drop.assert_not_called()
+
+
 def test_create_sockets_interfaces_all_unicast():
     """Test create_sockets with unicast."""
 

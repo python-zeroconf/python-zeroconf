@@ -43,6 +43,8 @@ cdef class AsyncListener:
 
     cdef _cancel_any_timers_for_addr(self, object addr)
 
+    cdef _drop_deferred(self, object addr)
+
     cdef _evict_oldest_deferred(self)
 
     @cython.locals(deadline=object, fire_at=double)
