@@ -252,9 +252,15 @@ class AsyncEngine:
     def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
         """Drop a per-interface sender's wrappers/protocol and close its transport."""
         transport = wrapped.transport
-        self.protocols = [
-            p for p in self.protocols if p.transport is None or p.transport.transport is not transport
-        ]
+        kept_protocols = []
+        for protocol in self.protocols:
+            if protocol.transport is not None and protocol.transport.transport is transport:
+                # Cancel any pending TC-reassembly timers so one can't fire a
+                # response against the transport we're about to close.
+                protocol.cancel_pending_timers()
+            else:
+                kept_protocols.append(protocol)
+        self.protocols = kept_protocols
         self.readers = [w for w in self.readers if w.transport is not transport]
         self.senders = [w for w in self.senders if w.transport is not transport]
         if listen_socket is not None:

@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from zeroconf import IPVersion, ServiceInfo, Zeroconf, _engine
+from zeroconf import IPVersion, ServiceInfo, Zeroconf, _engine, _listener
 from zeroconf._engine import _interface_key
 from zeroconf._transport import _strip_zone, _WrappedTransport, make_wrapped_transport
 from zeroconf.asyncio import AsyncZeroconf
@@ -166,6 +166,45 @@ async def test_update_interfaces_keeps_unchanged_sender_untouched(aiozc_loopback
     assert engine.senders[0].transport is kept_transport
     # The gone interface's transport was closed exactly once.
     gone_transport.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_cancels_removed_listener_timers(aiozc_loopback: AsyncZeroconf) -> None:
+    """Removing an interface cancels its listener's pending TC-reassembly timers."""
+    zc = aiozc_loopback.zeroconf
+    await zc.async_wait_for_start()
+    engine = zc.engine
+    sender = engine.senders[0]
+    protocol = next(
+        p for p in engine.protocols if p.transport is not None and p.transport.transport is sender.transport
+    )
+    timer = Mock()
+    protocol._timers["1.2.3.4"] = timer
+    protocol._deferred["1.2.3.4"] = []
+    protocol._deferred_deadlines["1.2.3.4"] = 0.0
+
+    await aiozc_loopback.async_update_interfaces([])
+    await asyncio.sleep(0)
+
+    timer.cancel.assert_called_once()
+    assert protocol._timers == {}
+    assert protocol._deferred == {}
+
+
+@pytest.mark.asyncio
+async def test_close_sender_keeps_protocol_without_transport(aiozc_loopback: AsyncZeroconf) -> None:
+    """A protocol that never bound a transport is left in place when a sender is closed."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    sender = engine.senders[0]
+    orphan = _listener.AsyncListener(aiozc_loopback.zeroconf)
+    assert orphan.transport is None
+    engine.protocols.append(orphan)
+
+    with patch.object(_engine, "drop_multicast_member"):
+        engine._async_close_sender(sender, None)
+
+    assert orphan in engine.protocols
 
 
 @pytest.mark.asyncio

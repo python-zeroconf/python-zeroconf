@@ -112,10 +112,10 @@ def make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTran
         except OSError as exc:
             # Windows rejects reading IPV6_MULTICAST_IF (WSAEINVAL); fall back
             # to the default index. On other platforms this read does not
-            # fail, so log an unexpected error rather than silently masking it
-            # into a wrong-interface group leave.
+            # fail, so surface an unexpected error at warning rather than
+            # silently masking it into a wrong-interface group leave.
             if sys.platform != "win32":
-                log.debug("Unexpected error reading IPV6_MULTICAST_IF: %s", exc)
+                log.warning("Unexpected error reading IPV6_MULTICAST_IF: %s", exc)
             multicast_index = 0
     return _WrappedTransport(
         transport=transport,

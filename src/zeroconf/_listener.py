@@ -309,6 +309,18 @@ class AsyncListener:
         if addr in self._timers:
             self._timers.pop(addr).cancel()
 
+    def cancel_pending_timers(self) -> None:
+        """Cancel all pending TC-reassembly timers and drop deferred state.
+
+        Called when this listener's transport is removed so a timer cannot
+        fire a response against an already-closed transport.
+        """
+        for timer in self._timers.values():
+            timer.cancel()
+        self._timers.clear()
+        self._deferred.clear()
+        self._deferred_deadlines.clear()
+
     def _evict_oldest_deferred(self) -> None:
         """Discard the oldest deferred addr's reassembly state.
 
