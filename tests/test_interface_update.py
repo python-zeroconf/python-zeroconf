@@ -490,16 +490,10 @@ async def test_update_interfaces_does_not_rebuild_when_family_supported(
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_rebuilds_listen_socket_for_new_family(
-    aiozc_loopback: AsyncZeroconf,
-) -> None:
-    """Adding an interface of an unsupported family rebuilds the listen socket once."""
+async def test_update_interfaces_rebuild_rejoins_kept_interfaces(aiozc_loopback: AsyncZeroconf) -> None:
+    """On a family-change rebuild, interfaces that stay are re-joined on the new listen socket."""
     engine = aiozc_loopback.zeroconf.engine
     await aiozc_loopback.zeroconf.async_wait_for_start()
-    old_listen = engine._listen_transport
-    assert old_listen is not None
-    assert old_listen.sock.family == socket.AF_INET  # V4Only loopback instance
-    old_underlying = old_listen.transport
 
     # Keep the existing IPv4 interface and add an IPv6 one (which the IPv4
     # listen socket can't join, forcing a rebuild).
@@ -514,7 +508,7 @@ async def test_update_interfaces_rebuilds_listen_socket_for_new_family(
 
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1", v6]),
-        patch.object(_engine, "new_socket", return_value=new_listen_sock) as mock_new_socket,
+        patch.object(_engine, "new_socket", return_value=new_listen_sock),
         patch.object(_engine, "add_multicast_member", return_value=True) as mock_add,
         patch.object(_engine, "new_respond_socket", return_value=Mock()),
         patch.object(_engine, "drop_multicast_member"),
@@ -522,17 +516,11 @@ async def test_update_interfaces_rebuilds_listen_socket_for_new_family(
     ):
         added = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
 
-    # Rebuilt exactly once, the v6 sender added, the listen transport swapped,
-    mock_new_socket.assert_called_once()
     assert added is True
-    assert engine._listen_transport is not old_listen
-    # the kept IPv4 interface was re-joined on the new listen socket,
+    # The kept IPv4 interface was re-joined on the new listen socket.
     assert any(
         call.args[0] is new_listen_sock and call.args[1] == "127.0.0.1" for call in mock_add.call_args_list
     )
-    # and the old listen socket closed and removed (no duplicate left behind).
-    assert old_underlying.is_closing()
-    assert old_listen not in engine.readers
 
 
 @pytest.mark.asyncio

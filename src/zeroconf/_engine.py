@@ -225,8 +225,9 @@ class AsyncEngine:
         if listen_socket is not None and any(
             not _listen_socket_supports(listen_socket, interface) for interface in desired.values()
         ):
-            listen_socket = await self._async_rebuild_listen_socket(apple_p2p, desired, current)
+            await self._async_rebuild_listen_socket(apple_p2p, desired, current)
             listen_transport = self._listen_transport
+            listen_socket = listen_transport.sock if listen_transport is not None else None
 
         for bind_address, wrapped in current.items():
             if bind_address in desired:
@@ -310,7 +311,7 @@ class AsyncEngine:
         apple_p2p: bool,
         desired: dict[tuple[str, int], str | tuple[tuple[str, int, int], int]],
         current: dict[tuple[str, int], _WrappedTransport],
-    ) -> socket.socket:
+    ) -> None:
         """Replace the listen socket with one whose family covers the desired set.
 
         The listen socket's family is otherwise fixed at construction; this
@@ -351,7 +352,6 @@ class AsyncEngine:
         old_transport = old_listen_transport.transport
         self._async_remove_transport(old_transport)
         old_transport.close()
-        return new_listen
 
     def _async_cache_cleanup(self) -> None:
         """Periodic cache cleanup."""
