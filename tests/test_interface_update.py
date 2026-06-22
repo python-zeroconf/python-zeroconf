@@ -359,7 +359,8 @@ async def test_update_interfaces_logs_reannounce_errors(
         await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
         await asyncio.sleep(0)
 
-    assert "Error re-announcing service after interface update" in caplog.text
+    # The failing service is named so a partial failure is actionable.
+    assert "Error re-announcing Test._test._tcp.local. after interface update" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -399,7 +400,9 @@ async def test_update_interfaces_reannounces_all_services_one_failing(
     # and the second still ran despite the first raising.
     announced = {call.args[0] for call in mock.call_args_list}
     assert announced == set(infos)
-    assert "Error re-announcing service after interface update" in caplog.text
+    # Only the failing service is named in the warning.
+    assert f"Error re-announcing {infos[0].name} after interface update" in caplog.text
+    assert infos[1].name not in caplog.text
 
 
 @pytest.mark.asyncio

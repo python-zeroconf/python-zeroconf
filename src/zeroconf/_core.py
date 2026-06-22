@@ -428,10 +428,14 @@ class Zeroconf(QuietLogger):
         call to `async_update_interfaces` cannot be completed.
         """
         assert self.loop is not None
+        # Unlike register/update, the re-announce is awaited inline (to log
+        # per-service failures), so the budget must cover the full announce
+        # window ((_REGISTER_BROADCASTS - 1) * _REGISTER_TIME) plus the reconcile
+        # and wait-for-start overhead; double the register budget for headroom.
         run_coro_with_timeout(
             self.async_update_interfaces(interfaces, ip_version, apple_p2p),
             self.loop,
-            _REGISTER_TIME * _REGISTER_BROADCASTS,
+            _REGISTER_TIME * _REGISTER_BROADCASTS * 2,
         )
 
     async def async_update_interfaces(
@@ -476,17 +480,16 @@ class Zeroconf(QuietLogger):
         if not added:
             return
         # Re-announce every registration; one broadcast failing must not mask
-        # the rest, so collect exceptions and log them individually.
+        # the rest, so collect exceptions and log them individually, naming the
+        # service so a partial failure is actionable.
+        infos = self.registry.async_get_service_infos()
         results = await asyncio.gather(
-            *[
-                self._async_broadcast_service(info, _REGISTER_TIME, None)
-                for info in self.registry.async_get_service_infos()
-            ],
+            *[self._async_broadcast_service(info, _REGISTER_TIME, None) for info in infos],
             return_exceptions=True,
         )
-        for result in results:
+        for info, result in zip(infos, results, strict=True):
             if isinstance(result, Exception):
-                log.warning("Error re-announcing service after interface update: %s", result)
+                log.warning("Error re-announcing %s after interface update: %s", info.name, result)
 
     async def async_get_service_info(
         self,
