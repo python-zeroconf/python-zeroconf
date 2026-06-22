@@ -151,9 +151,10 @@ class AsyncEngine:
 
         for s in reader_sockets:
             reader = await self._async_wrap_socket(s, s in sender_sockets)
-            # The wrap above does not await before returning, so releasing
-            # the engine's pending handle here keeps ``s`` in exactly one
-            # place from a concurrent shutdown's point of view.
+            # _async_wrap_socket registers the transport with no await between
+            # creating and registering it, and the pending-handle cleanup below
+            # adds no await either, so a concurrent shutdown always sees ``s``
+            # in exactly one place.
             if s is self._listen_socket:
                 # Keep a handle to the shared listen socket so interface
                 # rescans can add/drop multicast memberships on it.
