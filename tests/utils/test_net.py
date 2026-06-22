@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import errno
 import socket
+import struct
 import sys
 import unittest
 import warnings
@@ -287,6 +288,57 @@ def test_add_multicast_member(caplog: pytest.LogCaptureFixture) -> None:
             assert "net.ipv4.igmp_max_memberships" not in caplog.text
 
 
+def test_drop_multicast_member() -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        interface = "127.0.0.1"
+
+        # No error should return True
+        with patch("socket.socket.setsockopt"):
+            assert netutils.drop_multicast_member(sock, interface) is True
+
+        # IPv6 leave should return True
+        with patch("socket.socket.setsockopt"):
+            assert netutils.drop_multicast_member(sock, (("ff02::fb", 0, 0), 1)) is True  # type: ignore[arg-type]
+
+        # Benign errnos when the interface is already gone should return False
+        for benign in (errno.EADDRNOTAVAIL, errno.EINVAL, errno.ENODEV, errno.ENOPROTOOPT):
+            with patch("socket.socket.setsockopt", side_effect=OSError(benign, None)):
+                assert netutils.drop_multicast_member(sock, interface) is False
+
+        # EPERM should always raise
+        with (
+            pytest.raises(OSError),
+            patch("socket.socket.setsockopt", side_effect=OSError(errno.EPERM, None)),
+        ):
+            netutils.drop_multicast_member(sock, interface)
+
+        # No IPv6 support should return False for IPv6
+        with patch("socket.inet_pton", side_effect=OSError()):
+            assert netutils.drop_multicast_member(sock, (("ff02::fb", 0, 0), 1)) is False  # type: ignore[arg-type]
+
+
+def test_drop_multicast_member_v6_uses_join_index() -> None:
+    """The IPv6 group leave packs the join interface index, not the bound scope_id."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        with patch("socket.socket.setsockopt") as mock_set:
+            assert netutils.drop_multicast_member(sock, (("ff02::fb", 0, 0), 7)) is True  # type: ignore[arg-type]
+        _level, optname, value = mock_set.call_args.args
+        assert optname == socket.IPV6_LEAVE_GROUP
+        # Trailing 4 bytes are the interface index the join used.
+        assert value[-4:] == struct.pack("@I", 7)
+
+
+def test_drop_multicast_member_wsaeinval(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On Windows, WSAEINVAL when leaving the group is treated as benign."""
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(errno, "WSAEINVAL", 10022, raising=False)
+    with (
+        socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock,
+        patch("socket.socket.setsockopt", side_effect=OSError(10022, None)),
+    ):
+        assert netutils.drop_multicast_member(sock, "127.0.0.1") is False
+
+
 def test_bind_raises_skips_address():
     """Test bind failing in new_socket returns None on EADDRNOTAVAIL."""
     err = errno.EADDRNOTAVAIL
@@ -342,6 +394,57 @@ def test_new_respond_socket_new_socket_returns_none():
     """Test new_respond_socket returns None if new_socket returns None."""
     with patch.object(netutils, "new_socket", return_value=None):
         assert netutils.new_respond_socket(("0.0.0.0", 0)) is None  # type: ignore[arg-type]
+
+
+def test_add_interface_returns_responder_on_success():
+    """add_interface joins the group and returns the responder socket."""
+    listen_socket = Mock()
+    respond_socket = Mock()
+    with (
+        patch.object(netutils, "add_multicast_member", return_value=True) as mock_add,
+        patch.object(netutils, "new_respond_socket", return_value=respond_socket),
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(listen_socket, "127.0.0.1") is respond_socket
+    mock_add.assert_called_once_with(listen_socket, "127.0.0.1")
+    mock_drop.assert_not_called()
+
+
+def test_add_interface_join_failure_returns_none():
+    """A failed multicast join returns None and never creates a responder."""
+    listen_socket = Mock()
+    with (
+        patch.object(netutils, "add_multicast_member", return_value=False),
+        patch.object(netutils, "new_respond_socket") as mock_respond,
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(listen_socket, "127.0.0.1") is None
+    mock_respond.assert_not_called()
+    mock_drop.assert_not_called()
+
+
+def test_add_interface_responder_failure_rolls_back_membership():
+    """A None responder socket drops the membership just joined."""
+    listen_socket = Mock()
+    with (
+        patch.object(netutils, "add_multicast_member", return_value=True),
+        patch.object(netutils, "new_respond_socket", return_value=None),
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(listen_socket, "127.0.0.1") is None
+    mock_drop.assert_called_once_with(listen_socket, "127.0.0.1")
+
+
+def test_add_interface_no_listen_socket_skips_membership():
+    """Without a listen socket (unicast) no membership op runs and rollback is skipped."""
+    with (
+        patch.object(netutils, "add_multicast_member") as mock_add,
+        patch.object(netutils, "new_respond_socket", return_value=None),
+        patch.object(netutils, "drop_multicast_member") as mock_drop,
+    ):
+        assert netutils.add_interface(None, "127.0.0.1", unicast=True) is None
+    mock_add.assert_not_called()
+    mock_drop.assert_not_called()
 
 
 def test_create_sockets_interfaces_all_unicast():

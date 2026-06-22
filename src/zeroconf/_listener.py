@@ -309,6 +309,23 @@ class AsyncListener:
         if addr in self._timers:
             self._timers.pop(addr).cancel()
 
+    def _drop_deferred(self, addr: _str) -> None:
+        """Cancel an address's timer and discard its reassembly state."""
+        self._cancel_any_timers_for_addr(addr)
+        self._deferred_deadlines.pop(addr, None)
+        self._deferred.pop(addr, None)
+
+    def cancel_pending_timers(self) -> None:
+        """Cancel all pending TC-reassembly timers and drop deferred state.
+
+        Called when this listener's transport is removed so a timer cannot
+        fire a response against an already-closed transport. Every timer's
+        addr also has a deferred entry, so dropping each deferred addr
+        cancels its timer too.
+        """
+        for addr in list(self._deferred):
+            self._drop_deferred(addr)
+
     def _evict_oldest_deferred(self) -> None:
         """Discard the oldest deferred addr's reassembly state.
 
@@ -319,10 +336,7 @@ class AsyncListener:
         order) rather than LRU so an active flooder cannot pin its
         slots by re-sending into the same addr.
         """
-        oldest_addr = next(iter(self._deferred))
-        self._cancel_any_timers_for_addr(oldest_addr)
-        self._deferred_deadlines.pop(oldest_addr, None)
-        del self._deferred[oldest_addr]
+        self._drop_deferred(next(iter(self._deferred)))
 
     def _respond_query(
         self,

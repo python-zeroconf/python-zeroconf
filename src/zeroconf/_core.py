@@ -199,6 +199,12 @@ class Zeroconf(QuietLogger):
 
         self.unicast = unicast
         self._use_asyncio = use_asyncio
+        # Retained so async_update_interfaces can re-run create_sockets /
+        # normalize_interface_choice against the live interface set later.
+        # Copy a mutable list so later caller mutation can't change it.
+        self._interfaces = list(interfaces) if isinstance(interfaces, list) else interfaces
+        self._ip_version = ip_version
+        self._apple_p2p = apple_p2p
         listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
         log.debug("Listen socket %s, respond sockets %s", listen_socket, respond_sockets)
 
@@ -216,6 +222,9 @@ class Zeroconf(QuietLogger):
         self.record_manager = RecordManager(self)
 
         self._notify_futures: set[asyncio.Future] = set()
+        # Serializes async_update_interfaces so overlapping calls (a bursty
+        # adapter-change source) don't diff against a stale sender snapshot.
+        self._interface_update_lock = asyncio.Lock()
         self.loop: asyncio.AbstractEventLoop | None = None
         self._loop_thread: threading.Thread | None = None
 
@@ -405,6 +414,91 @@ class Zeroconf(QuietLogger):
         service."""
         self.registry.async_update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
+
+    def update_interfaces(
+        self,
+        interfaces: InterfacesType | None = None,
+        ip_version: IPVersion | None = None,
+        apple_p2p: bool | None = None,
+    ) -> None:
+        """Rescan network interfaces and reconcile the sockets in use.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_update_interfaces` cannot be completed. Raises
+        RuntimeError if apple_p2p is set on a non-Apple platform.
+        """
+        assert self.loop is not None
+        # Unlike register/update, the re-announce is awaited inline (to log
+        # per-service failures), so the budget must cover the full announce
+        # window ((_REGISTER_BROADCASTS - 1) * _REGISTER_TIME) plus the reconcile
+        # and wait-for-start overhead; double the register budget for headroom.
+        run_coro_with_timeout(
+            self.async_update_interfaces(interfaces, ip_version, apple_p2p),
+            self.loop,
+            _REGISTER_TIME * _REGISTER_BROADCASTS * 2,
+        )
+
+    async def async_update_interfaces(
+        self,
+        interfaces: InterfacesType | None = None,
+        ip_version: IPVersion | None = None,
+        apple_p2p: bool | None = None,
+    ) -> None:
+        """Rescan network interfaces and reconcile the sockets in use.
+
+        Adds sockets for interfaces that appeared, drops sockets for
+        interfaces that disappeared, and re-announces existing
+        registrations when a new sender appeared. ``interfaces``,
+        ``ip_version`` and ``apple_p2p`` each default to the value passed at
+        construction; pass a new value to switch it. When the resulting
+        interface set is unchanged this is a no-op (no sockets touched,
+        nothing re-announced). The listen socket is rebuilt if the new set
+        needs a different address family; unicast mode is fixed at
+        construction. Concurrent calls are serialized. Bringing up interfaces
+        is best-effort: a requested interface that fails to bind, or fails to
+        re-join after a rebuild, is logged rather than raised, and likewise a
+        registration that fails to re-announce is logged so one failure cannot
+        block the others. Raises RuntimeError if apple_p2p is set on a non-Apple
+        platform (input validation, matching the constructor).
+        """
+        # Resolve against the retained config but only commit it after the
+        # engine reconcile succeeds, so a failed reconcile leaves the stored
+        # config unchanged rather than recording a set that never fully bound
+        # (a mid-reconcile failure may still have changed some sockets).
+        interfaces = self._interfaces if interfaces is None else interfaces
+        ip_version = self._ip_version if ip_version is None else ip_version
+        apple_p2p = self._apple_p2p if apple_p2p is None else apple_p2p
+        if apple_p2p and sys.platform != "darwin":
+            raise RuntimeError("Option `apple_p2p` is not supported on non-Apple platforms.")
+        await self.async_wait_for_start()
+        # Only the reconcile mutates the sender set, so hold the lock for that
+        # alone; the multi-second re-announce runs unlocked so a bursty
+        # adapter-change source isn't blocked behind it.
+        async with self._interface_update_lock:
+            added = await self.engine.async_update_interfaces(interfaces, ip_version, apple_p2p)
+            # Copy a mutable list so later caller mutation can't change the
+            # retained configuration.
+            self._interfaces = list(interfaces) if isinstance(interfaces, list) else interfaces
+            self._ip_version = ip_version
+            self._apple_p2p = apple_p2p
+        if not added:
+            return
+        # Re-announce every registration; one broadcast failing must not mask
+        # the rest, so collect exceptions and log them individually, naming the
+        # service so a partial failure is actionable.
+        infos = self.registry.async_get_service_infos()
+        results = await asyncio.gather(
+            *[self._async_broadcast_service(info, _REGISTER_TIME, None) for info in infos],
+            return_exceptions=True,
+        )
+        for info, result in zip(infos, results, strict=True):
+            if isinstance(result, Exception):
+                log.warning("Error re-announcing %s after interface update: %s", info.name, result)
+            elif isinstance(result, BaseException):
+                # gather(return_exceptions=True) also captures BaseExceptions
+                # such as CancelledError; don't swallow a cancellation/interrupt.
+                raise result
 
     async def async_get_service_info(
         self,
