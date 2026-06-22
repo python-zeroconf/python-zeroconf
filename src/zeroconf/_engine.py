@@ -74,8 +74,13 @@ def _listen_socket_supports(
     if listen_socket.family != socket.AF_INET6:
         # An IPv4 interface on an AF_INET socket.
         return True
-    # An IPv4 interface on an AF_INET6 socket: only when it is dual-stack.
-    return not listen_socket.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY)
+    # An IPv4 interface on an AF_INET6 socket: only when it is dual-stack. If
+    # the option can't be read (as Windows rejects some IPv6 getsockopts),
+    # assume supported so a read failure can't drive a rebuild loop.
+    try:
+        return not listen_socket.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY)
+    except OSError:
+        return True
 
 
 class AsyncEngine:
@@ -220,7 +225,7 @@ class AsyncEngine:
         if listen_socket is not None and any(
             not _listen_socket_supports(listen_socket, interface) for interface in desired.values()
         ):
-            listen_socket = await self._async_rebuild_listen_socket(ip_version, apple_p2p, desired, current)
+            listen_socket = await self._async_rebuild_listen_socket(apple_p2p, desired, current)
             listen_transport = self._listen_transport
 
         for bind_address, wrapped in current.items():
@@ -302,7 +307,6 @@ class AsyncEngine:
 
     async def _async_rebuild_listen_socket(
         self,
-        ip_version: IPVersion,
         apple_p2p: bool,
         desired: dict[tuple[str, int], str | tuple[tuple[str, int, int], int]],
         current: dict[tuple[str, int], _WrappedTransport],
@@ -312,20 +316,38 @@ class AsyncEngine:
         The listen socket's family is otherwise fixed at construction; this
         lets an instance start receiving a newly added address family. Only
         called when a desired interface cannot be joined on the current listen
-        socket. Interfaces that are staying are re-joined on the new socket,
+        socket. The replacement family is derived from the desired set (not the
+        requested ip_version, which an explicit list can contradict) so it
+        always covers every desired interface and never needs an immediate
+        re-rebuild. Interfaces that are staying are re-joined on the new socket,
         and the old socket is closed (releasing its memberships).
         """
-        new_listen = new_socket(bind_addr=("",), ip_version=ip_version, apple_p2p=apple_p2p)
+        has_v6 = any(isinstance(interface, tuple) for interface in desired.values())
+        has_v4 = any(not isinstance(interface, tuple) for interface in desired.values())
+        if has_v4 and has_v6:
+            family_version = IPVersion.All
+        elif has_v6:
+            family_version = IPVersion.V6Only
+        else:
+            family_version = IPVersion.V4Only
+        new_listen = new_socket(bind_addr=("",), ip_version=family_version, apple_p2p=apple_p2p)
         if new_listen is None:
-            raise RuntimeError("Failed to create a listen socket for the requested interface family")
-        for bind_address, interface in desired.items():
-            if bind_address in current:
-                add_multicast_member(new_listen, interface)
+            raise RuntimeError("Failed to create a listen socket for the new interface family")
+        try:
+            for bind_address, interface in desired.items():
+                if bind_address in current:
+                    add_multicast_member(new_listen, interface)
+            new_reader = await self._async_wrap_socket(new_listen, is_sender=False)
+        except Exception:
+            # Endpoint creation failed; close the unadopted socket (and its
+            # joins) rather than leak it, mirroring _async_add_interface.
+            new_listen.close()
+            raise
         # A rebuild is only entered with a live listen socket, so the old
         # transport is always present.
         old_listen_transport = self._listen_transport
         assert old_listen_transport is not None
-        self._listen_transport = await self._async_wrap_socket(new_listen, is_sender=False)
+        self._listen_transport = new_reader
         old_transport = old_listen_transport.transport
         self._async_remove_transport(old_transport)
         old_transport.close()
