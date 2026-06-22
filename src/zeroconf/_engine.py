@@ -80,11 +80,13 @@ def _listen_socket_supports(
     try:
         supported = not listen_socket.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY)
     except OSError as exc:
-        # Reading IPV6_V6ONLY can fail (Windows rejects it on some sockets;
-        # other platforms shouldn't). Assume dual-stack so a read failure can't
-        # abort the rescan; at worst this skips a rebuild the next reconcile
-        # re-evaluates, consistent with make_wrapped_transport's fallback.
-        log.debug("Unable to read IPV6_V6ONLY, assuming dual-stack: %s", exc)
+        # Reading IPV6_V6ONLY essentially never fails on a valid AF_INET6
+        # socket. Assume dual-stack rather than abort the rescan; returning
+        # False instead could loop rebuilds if the rebuilt socket's read also
+        # fails. Log at warning, not debug, because if the socket really were
+        # v6-only this skips a needed rebuild and leaves an added IPv4 family
+        # unreceivable, which is worth surfacing.
+        log.warning("Unable to read IPV6_V6ONLY, assuming dual-stack: %s", exc)
     return supported
 
 
@@ -255,6 +257,9 @@ class AsyncEngine:
                 # The shared listen / dual-use socket is not a per-interface
                 # sender; leaving the group or closing it would break receive.
                 continue
+            # After a rebuild, listen_socket is the new socket, which this gone
+            # interface never joined (its membership died with the old socket);
+            # the leave is then a benign no-op that drop_multicast_member swallows.
             self._async_close_sender(wrapped, listen_socket)
 
         added = False
