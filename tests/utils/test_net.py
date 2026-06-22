@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import errno
 import socket
+import struct
 import sys
 import unittest
 import warnings
@@ -314,6 +315,17 @@ def test_drop_multicast_member() -> None:
         # No IPv6 support should return False for IPv6
         with patch("socket.inet_pton", side_effect=OSError()):
             assert netutils.drop_multicast_member(sock, (("ff02::fb", 0, 0), 1)) is False  # type: ignore[arg-type]
+
+
+def test_drop_multicast_member_v6_uses_join_index() -> None:
+    """The IPv6 group leave packs the join interface index, not the bound scope_id."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        with patch("socket.socket.setsockopt") as mock_set:
+            assert netutils.drop_multicast_member(sock, (("ff02::fb", 0, 0), 7)) is True  # type: ignore[arg-type]
+        _level, optname, value = mock_set.call_args.args
+        assert optname == socket.IPV6_LEAVE_GROUP
+        # Trailing 4 bytes are the interface index the join used.
+        assert value[-4:] == struct.pack("@I", 7)
 
 
 def test_drop_multicast_member_wsaeinval(monkeypatch: pytest.MonkeyPatch) -> None:

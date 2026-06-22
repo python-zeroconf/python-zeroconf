@@ -359,6 +359,78 @@ async def test_update_interfaces_logs_reannounce_errors(
 
 
 @pytest.mark.asyncio
+async def test_update_interfaces_reannounces_all_services_one_failing(
+    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Every registration is re-announced on add; one failing does not stop the rest."""
+    zc = aiozc_loopback.zeroconf
+    await zc.async_wait_for_start()
+    infos = [
+        ServiceInfo(
+            "_test._tcp.local.",
+            f"T{n}._test._tcp.local.",
+            addresses=[b"\x7f\x00\x00\x01"],
+            port=80 + n,
+            server=f"t{n}.local.",
+        )
+        for n in range(2)
+    ]
+    for info in infos:
+        await aiozc_loopback.async_register_service(info)
+    await aiozc_loopback.async_update_interfaces([])
+    await asyncio.sleep(0)
+
+    async def broadcast(info: ServiceInfo, *args: object) -> None:
+        if info is infos[0]:
+            raise ValueError("boom")
+
+    with (
+        patch.object(zc, "_async_broadcast_service", new_callable=AsyncMock, side_effect=broadcast) as mock,
+        caplog.at_level(logging.WARNING),
+    ):
+        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await asyncio.sleep(0)
+
+    # Both services were attempted (the gather fans out over all registrations)
+    # and the second still ran despite the first raising.
+    announced = {call.args[0] for call in mock.call_args_list}
+    assert announced == set(infos)
+    assert "Error re-announcing service after interface update" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_ip_change_in_one_rescan(aiozc_loopback: AsyncZeroconf) -> None:
+    """An interface whose address changes is removed and re-added in a single rescan."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    old_transport = Mock()
+    old = _make_wrapped(("10.0.0.5", 5353), transport=old_transport)
+    engine.senders = [old]
+
+    async def fake_wrap(sock: object, is_sender: bool) -> _WrappedTransport:
+        wrapped = _make_wrapped(("10.0.0.9", 5353), transport=Mock())
+        (engine.senders if is_sender else engine.readers).append(wrapped)
+        return wrapped
+
+    with (
+        patch.object(_engine, "normalize_interface_choice", return_value=["10.0.0.9"]),
+        patch.object(_engine, "_listen_socket_supports", return_value=True),
+        patch.object(_engine, "add_interface", return_value=Mock()),
+        patch.object(_engine, "drop_multicast_member") as mock_drop,
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
+    ):
+        added = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
+
+    assert added is True
+    # The old address left its group and was closed; exactly the new one remains.
+    assert {call.args[1] for call in mock_drop.call_args_list} == {"10.0.0.5"}
+    old_transport.close.assert_called_once()
+    assert old not in engine.senders
+    assert len(engine.senders) == 1
+    assert engine.senders[0].interface_key == ("10.0.0.9", 0)
+
+
+@pytest.mark.asyncio
 async def test_update_interfaces_add_failure_adds_no_sender(aiozc_loopback: AsyncZeroconf) -> None:
     """An interface that fails to come up adds no responder socket."""
     zc = aiozc_loopback.zeroconf

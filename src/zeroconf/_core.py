@@ -450,7 +450,9 @@ class Zeroconf(QuietLogger):
         interface set is unchanged this is a no-op (no sockets touched,
         nothing re-announced). The listen socket is rebuilt if the new set
         needs a different address family; unicast mode is fixed at
-        construction. Concurrent calls are serialized.
+        construction. Concurrent calls are serialized. Re-announcement is
+        best-effort: a registration that fails to re-announce is logged, not
+        raised, so one failure cannot block the others.
         """
         # Resolve against the retained config but only commit it after the
         # engine reconcile succeeds, so a failed reconcile leaves the stored
