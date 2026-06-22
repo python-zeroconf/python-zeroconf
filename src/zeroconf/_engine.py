@@ -237,25 +237,32 @@ class AsyncEngine:
 
         # A Default single-family instance shares the listen socket as its only
         # sender (the dual-use socket). Moving it to an explicit interface set
-        # abandons that optimization: demote the socket so it stops responding
-        # (otherwise it would double every announcement on the overlapping
-        # interface) and rebuild it as a pure listener (its existing group
-        # memberships would otherwise collide with the new per-interface joins).
-        # Once demoted it no longer counts as a per-interface sender, so the
-        # interface it served gets a fresh responder like any other. The no-arg
-        # refresh of a Default instance leaves desired == {its interface} and so
-        # neither demotes nor rebuilds.
+        # abandons that optimization: rebuild it as a pure listener (its existing
+        # group memberships would otherwise collide with the new per-interface
+        # joins), which also stops it responding so it can't double-announce on
+        # the overlapping interface. Drop it from the diff's view so the desired
+        # interfaces are added fresh; the actual sender removal is done by the
+        # rebuild once it succeeds (so a failed rebuild leaves senders intact).
+        # The no-arg refresh of a Default instance leaves desired == {its
+        # interface} and so neither converts nor rebuilds.
         if listen_transport is not None and any(
             wrapped.transport is listen_transport.transport for wrapped in self.senders
         ):
             listen_key = listen_transport.interface_key
             if any(key != listen_key for key in desired):
-                self.senders = _without_transport(self.senders, listen_transport.transport)
                 current.pop(listen_key, None)
                 needs_rebuild = True
 
         if needs_rebuild:
-            await self._async_rebuild_listen_socket(apple_p2p, desired, current)
+            try:
+                await self._async_rebuild_listen_socket(apple_p2p, desired, current)
+            except (OSError, RuntimeError) as exc:
+                # A fresh wildcard bind / endpoint creation can transiently fail
+                # during adapter churn. The rebuild raises before tearing down
+                # the old listen socket, so state is unchanged; log and no-op
+                # rather than crash the caller's handler (best-effort contract).
+                log.warning("Skipping interface update; listen socket rebuild failed: %s", exc)
+                return False
             listen_transport = self._listen_transport
             listen_socket = listen_transport.sock if listen_transport is not None else None
 

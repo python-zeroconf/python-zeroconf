@@ -704,16 +704,50 @@ async def test_update_interfaces_rebuild_rejoin_failure_warns(
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_rebuild_failure_raises(aiozc_loopback: AsyncZeroconf) -> None:
-    """If the replacement listen socket can't be created, the rebuild raises."""
+async def test_update_interfaces_rebuild_failure_is_noop(
+    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+) -> None:
+    """If the replacement listen socket can't be created, the rescan logs and no-ops."""
     engine = aiozc_loopback.zeroconf.engine
     await aiozc_loopback.zeroconf.async_wait_for_start()
+    old_listen = engine._listen_transport
+    before = (list(engine.senders), list(engine.readers))
     with (
         patch.object(_engine, "normalize_interface_choice", return_value=[(("fe80::1", 0, 0), 1)]),
         patch.object(_engine, "new_listen_socket", return_value=None),
-        pytest.raises(RuntimeError, match="listen socket"),
+        caplog.at_level(logging.WARNING),
     ):
-        await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
+        added = await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
+
+    # Best-effort: no raise into the caller, state left untouched.
+    assert added is False
+    assert "listen socket rebuild failed" in caplog.text
+    assert engine._listen_transport is old_listen
+    assert (list(engine.senders), list(engine.readers)) == before
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_default_rebuild_failure_keeps_dual_use(
+    aiozc_loopback: AsyncZeroconf,
+) -> None:
+    """A failed rebuild during a dual-use conversion leaves the dual-use sender intact."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    listen = engine._listen_transport
+    assert listen is not None
+    # Simulate a Default single-family instance: the listen socket is the sole sender.
+    engine.senders = [listen]
+    with (
+        patch.object(_engine, "normalize_interface_choice", return_value=["192.168.1.5"]),
+        patch.object(_engine, "new_listen_socket", return_value=None),
+    ):
+        added = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
+
+    # The dual-use socket was not demoted before the (failed) rebuild, so the
+    # instance still responds on its interface rather than going silent.
+    assert added is False
+    assert engine.senders == [listen]
+    assert engine._listen_transport is listen
 
 
 @pytest.mark.asyncio
@@ -732,11 +766,12 @@ async def test_update_interfaces_rebuild_closes_socket_on_wrap_failure(
         patch.object(_engine, "new_listen_socket", return_value=new_listen_sock),
         patch.object(_engine, "add_multicast_member", return_value=True),
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
-        pytest.raises(OSError),
     ):
-        await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
+        added = await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
 
-    # The unadopted socket was closed, and the old listen socket is untouched.
+    # Best-effort no-op: the unadopted socket was closed (not leaked) and the
+    # old listen socket is untouched.
+    assert added is False
     new_listen_sock.close.assert_called_once()
     assert engine._listen_transport is old_listen
 
