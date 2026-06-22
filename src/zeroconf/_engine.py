@@ -25,10 +25,10 @@ from __future__ import annotations
 import asyncio
 import itertools
 import socket
-import sys
 import threading
 from typing import TYPE_CHECKING, cast
 
+from ._logger import log
 from ._record_update import RecordUpdate
 from ._utils.asyncio import get_running_loop, run_coro_with_timeout
 from ._utils.net import (
@@ -79,13 +79,12 @@ def _listen_socket_supports(
     supported = True
     try:
         supported = not listen_socket.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY)
-    except OSError:
-        # Windows rejects reading IPV6_V6ONLY on some sockets; assume supported
-        # there (consistent with make_wrapped_transport) so a read failure can't
-        # drive a rebuild loop. Elsewhere the read does not fail, so surface a
-        # genuine error rather than mask an unreceivable family as supported.
-        if sys.platform != "win32":
-            raise
+    except OSError as exc:
+        # Reading IPV6_V6ONLY can fail (Windows rejects it on some sockets;
+        # other platforms shouldn't). Assume dual-stack so a read failure can't
+        # abort the rescan; at worst this skips a rebuild the next reconcile
+        # re-evaluates, consistent with make_wrapped_transport's fallback.
+        log.debug("Unable to read IPV6_V6ONLY, assuming dual-stack: %s", exc)
     return supported
 
 

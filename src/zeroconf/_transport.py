@@ -24,8 +24,9 @@ from __future__ import annotations
 
 import asyncio
 import socket
-import sys
 from typing import cast
+
+from ._logger import log
 
 
 def _strip_zone(address: str) -> str:
@@ -103,17 +104,14 @@ def make_wrapped_transport(transport: asyncio.DatagramTransport) -> _WrappedTran
     if is_ipv6:
         # IPV6_MULTICAST_IF holds the interface index new_respond_socket
         # joined the group with; capture it so a later group leave uses the
-        # same index. Windows rejects reading the option (WSAEINVAL); there
-        # the leave falls back to the default interface as it did before.
+        # same index. This is on the startup/connection path, and the index
+        # only selects the interface for a future (benign) group leave, so a
+        # read failure (Windows rejects it with WSAEINVAL; other platforms
+        # shouldn't) keeps the default index 0 rather than aborting setup.
         try:
             multicast_index = sock.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF)
-        except OSError:
-            # Windows rejects reading IPV6_MULTICAST_IF (WSAEINVAL); the
-            # default index 0 set above is kept there. On other platforms this
-            # read does not fail, so re-raise rather than mask a genuine error
-            # into a wrong-interface group leave.
-            if sys.platform != "win32":
-                raise
+        except OSError as exc:
+            log.debug("Unable to read IPV6_MULTICAST_IF, using default index 0: %s", exc)
     return _WrappedTransport(
         transport=transport,
         is_ipv6=is_ipv6,

@@ -76,7 +76,11 @@ def test_make_wrapped_transport_reads_v6_multicast_index() -> None:
 
 
 def test_make_wrapped_transport_unreadable_multicast_index() -> None:
-    """A socket that rejects reading IPV6_MULTICAST_IF falls back to index 0."""
+    """A socket that rejects reading IPV6_MULTICAST_IF falls back to index 0.
+
+    This runs on the startup/connection path, so a read failure must not abort
+    setup; it degrades to the default index (only a future group leave cares).
+    """
     sock = Mock()
     sock.family = socket.AF_INET6
     sock.fileno.return_value = 0
@@ -84,12 +88,7 @@ def test_make_wrapped_transport_unreadable_multicast_index() -> None:
     sock.getsockopt.side_effect = OSError
     transport = Mock()
     transport.get_extra_info.return_value = sock
-    # Windows: expected (WSAEINVAL), silent fallback to the default index.
-    with patch("zeroconf._transport.sys.platform", "win32"):
-        assert make_wrapped_transport(transport).multicast_index == 0
-    # Other platforms: the read does not fail there, so an error is re-raised.
-    with patch("zeroconf._transport.sys.platform", "linux"), pytest.raises(OSError):
-        make_wrapped_transport(transport)
+    assert make_wrapped_transport(transport).multicast_index == 0
 
 
 def test_listen_socket_supports_family() -> None:
@@ -108,14 +107,10 @@ def test_listen_socket_supports_family() -> None:
     assert _listen_socket_supports(v6_sock, "1.2.3.4") is True
     v6_sock.getsockopt.return_value = 1  # IPV6_V6ONLY on -> v6-only
     assert _listen_socket_supports(v6_sock, "1.2.3.4") is False
-    # An unreadable option is expected only on Windows (WSAEINVAL); treat as
-    # supported there so it can't drive a rebuild loop, but surface a genuine
-    # read failure on other platforms rather than mask an unreceivable family.
+    # An unreadable option degrades to "assume dual-stack" rather than aborting
+    # the rescan; at worst it skips a rebuild the next reconcile re-evaluates.
     v6_sock.getsockopt.side_effect = OSError
-    with patch("zeroconf._engine.sys.platform", "win32"):
-        assert _listen_socket_supports(v6_sock, "1.2.3.4") is True
-    with patch("zeroconf._engine.sys.platform", "linux"), pytest.raises(OSError):
-        _listen_socket_supports(v6_sock, "1.2.3.4")
+    assert _listen_socket_supports(v6_sock, "1.2.3.4") is True
 
 
 @pytest.mark.asyncio

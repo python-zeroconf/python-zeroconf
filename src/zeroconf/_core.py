@@ -460,7 +460,8 @@ class Zeroconf(QuietLogger):
         """
         # Resolve against the retained config but only commit it after the
         # engine reconcile succeeds, so a failed reconcile leaves the stored
-        # values matching the sockets actually bound.
+        # config unchanged rather than recording a set that never fully bound
+        # (a mid-reconcile failure may still have changed some sockets).
         interfaces = self._interfaces if interfaces is None else interfaces
         ip_version = self._ip_version if ip_version is None else ip_version
         apple_p2p = self._apple_p2p if apple_p2p is None else apple_p2p
