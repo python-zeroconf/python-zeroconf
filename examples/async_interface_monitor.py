@@ -23,13 +23,16 @@ import asyncio
 import contextlib
 import logging
 
-from zeroconf import get_all_addresses, get_all_addresses_v6
+import ifaddr
+
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
+_LOGGER = logging.getLogger("interface_monitor")
 
-def address_snapshot() -> set[object]:
-    """A hashable snapshot of the host's current IPv4 and IPv6 addresses."""
-    return {*get_all_addresses(), *get_all_addresses_v6()}
+
+def address_snapshot() -> set[tuple[str, int]]:
+    """A snapshot of the host's current addresses; a change triggers a reconcile."""
+    return {(str(ip.ip), ip.network_prefix) for adapter in ifaddr.get_adapters() for ip in adapter.ips}
 
 
 async def monitor_interfaces(aiozc: AsyncZeroconf, interval: float) -> None:
@@ -38,10 +41,17 @@ async def monitor_interfaces(aiozc: AsyncZeroconf, interval: float) -> None:
     while True:
         await asyncio.sleep(interval)
         current = address_snapshot()
-        if current != previous:
-            previous = current
+        if current == previous:
+            continue
+        try:
             print("Interfaces changed, reconciling sockets...")
             await aiozc.async_update_interfaces()
+        except Exception:
+            # Log and retry on the next tick rather than letting the monitor
+            # die; leave ``previous`` unchanged so the change is re-attempted.
+            _LOGGER.exception("Interface reconcile failed; will retry")
+        else:
+            previous = current
 
 
 class AsyncRunner:
@@ -63,7 +73,8 @@ class AsyncRunner:
             self.monitor.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self.monitor
-        await self.aiozc.async_unregister_service(info)
+        # Await the goodbye broadcast so the TTL-0 records are actually sent.
+        await (await self.aiozc.async_unregister_service(info))
         await self.aiozc.async_close()
 
 
