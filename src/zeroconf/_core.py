@@ -425,7 +425,8 @@ class Zeroconf(QuietLogger):
 
         While it is not expected during normal operation,
         this function may raise EventLoopBlocked if the underlying
-        call to `async_update_interfaces` cannot be completed.
+        call to `async_update_interfaces` cannot be completed. Raises
+        RuntimeError if apple_p2p is set on a non-Apple platform.
         """
         assert self.loop is not None
         # Unlike register/update, the re-announce is awaited inline (to log
@@ -458,7 +459,8 @@ class Zeroconf(QuietLogger):
         is best-effort: a requested interface that fails to bind, or fails to
         re-join after a rebuild, is logged rather than raised, and likewise a
         registration that fails to re-announce is logged so one failure cannot
-        block the others.
+        block the others. Raises RuntimeError if apple_p2p is set on a non-Apple
+        platform (input validation, matching the constructor).
         """
         # Resolve against the retained config but only commit it after the
         # engine reconcile succeeds, so a failed reconcile leaves the stored
@@ -493,6 +495,10 @@ class Zeroconf(QuietLogger):
         for info, result in zip(infos, results, strict=True):
             if isinstance(result, Exception):
                 log.warning("Error re-announcing %s after interface update: %s", info.name, result)
+            elif isinstance(result, BaseException):
+                # gather(return_exceptions=True) also captures BaseExceptions
+                # such as CancelledError; don't swallow a cancellation/interrupt.
+                raise result
 
     async def async_get_service_info(
         self,

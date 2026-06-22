@@ -401,6 +401,31 @@ async def test_update_interfaces_reannounces_all_services_one_failing(
 
 
 @pytest.mark.asyncio
+async def test_update_interfaces_reannounce_cancellation_propagates(aiozc_loopback: AsyncZeroconf) -> None:
+    """A cancelled re-announce propagates rather than being silently dropped as a non-Exception."""
+    zc = aiozc_loopback.zeroconf
+    await zc.async_wait_for_start()
+    info = ServiceInfo(
+        "_test._tcp.local.",
+        "Test._test._tcp.local.",
+        addresses=[b"\x7f\x00\x00\x01"],
+        port=80,
+        server="test.local.",
+    )
+    await aiozc_loopback.async_register_service(info)
+    await aiozc_loopback.async_update_interfaces([])
+    await asyncio.sleep(0)
+
+    with (
+        patch.object(
+            zc, "_async_broadcast_service", new_callable=AsyncMock, side_effect=asyncio.CancelledError
+        ),
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+
+
+@pytest.mark.asyncio
 async def test_update_interfaces_ip_change_in_one_rescan(aiozc_loopback: AsyncZeroconf) -> None:
     """An interface whose address changes is removed and re-added in a single rescan."""
     engine = aiozc_loopback.zeroconf.engine

@@ -236,7 +236,7 @@ class AsyncZeroconf:
         interfaces that disappeared, and re-announces existing
         registrations on the resulting senders. ``interfaces``,
         ``ip_version`` and ``apple_p2p`` each default to the construction-time
-        value.
+        value. Raises RuntimeError if apple_p2p is set on a non-Apple platform.
         """
         await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
 
