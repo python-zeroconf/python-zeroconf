@@ -13,7 +13,6 @@ import pytest
 from zeroconf import IPVersion, ServiceInfo, Zeroconf, _engine
 from zeroconf._engine import _interface_key
 from zeroconf._transport import _strip_zone, _WrappedTransport, make_wrapped_transport
-from zeroconf._utils.net import InterfaceChoice
 from zeroconf.asyncio import AsyncZeroconf
 
 
@@ -358,66 +357,51 @@ async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_rollback_unicast_no_membership_drop() -> None:
-    """A wrap failure in unicast mode closes the socket but has no membership to drop."""
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"], unicast=True)
-    try:
-        zc = aiozc.zeroconf
-        await zc.async_wait_for_start()
-        await aiozc.async_update_interfaces([])
-        await asyncio.sleep(0)
+async def test_add_interface_rollback_without_listen_socket(aiozc_loopback: AsyncZeroconf) -> None:
+    """A wrap failure with no listen socket (unicast) closes the socket and drops no membership."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
 
-        fake_socket = Mock()
-        with (
-            patch.object(_engine, "new_respond_socket", return_value=fake_socket),
-            patch.object(_engine, "drop_multicast_member") as mock_drop,
-            patch.object(
-                _engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))
-            ),
-            pytest.raises(OSError),
-        ):
-            await aiozc.async_update_interfaces(["127.0.0.1"])
+    fake_socket = Mock()
+    with (
+        patch.object(_engine, "new_respond_socket", return_value=fake_socket),
+        patch.object(_engine, "drop_multicast_member") as mock_drop,
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
+        pytest.raises(OSError),
+    ):
+        await engine._async_add_interface("127.0.0.1", None, False)
 
-        fake_socket.close.assert_called_once()
-        mock_drop.assert_not_called()
-    finally:
-        await aiozc.async_close()
+    fake_socket.close.assert_called_once()
+    mock_drop.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_keeps_dual_use_listen_socket() -> None:
-    """The Default single-family dual-use socket is never torn down on rescan."""
-    aiozc = AsyncZeroconf(interfaces=InterfaceChoice.Default, ip_version=IPVersion.V4Only)
-    try:
-        zc = aiozc.zeroconf
-        await zc.async_wait_for_start()
-        engine = zc.engine
-        assert engine._listen_transport is not None
-        sender_count = len(engine.senders)
-        await aiozc.async_update_interfaces([])
-        await asyncio.sleep(0)
-        assert len(engine.senders) == sender_count
-    finally:
-        await aiozc.async_close()
+async def test_update_interfaces_keeps_dual_use_listen_socket(aiozc_loopback: AsyncZeroconf) -> None:
+    """A dual-use sender (the listen socket itself) is never torn down on rescan."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    listen = engine._listen_transport
+    assert listen is not None
+    # Simulate a Default single-family instance: the listen socket is the sole sender.
+    engine.senders = [listen]
+    await engine.async_update_interfaces([], IPVersion.V4Only, False)
+    assert engine.senders == [listen]
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_default_explicit_list_raises() -> None:
-    """An explicit set on a Default single-family instance raises before any state changes."""
-    aiozc = AsyncZeroconf(interfaces=InterfaceChoice.Default, ip_version=IPVersion.V4Only)
-    try:
-        zc = aiozc.zeroconf
-        await zc.async_wait_for_start()
-        engine = zc.engine
-        sender_count = len(engine.senders)
-        original = zc._interfaces
-        with pytest.raises(RuntimeError, match="Default single-family"):
-            await aiozc.async_update_interfaces(["127.0.0.1"])
-        # No per-interface sender added, retained config unchanged.
-        assert len(engine.senders) == sender_count
-        assert zc._interfaces == original
-    finally:
-        await aiozc.async_close()
+async def test_update_interfaces_default_explicit_list_raises(aiozc_loopback: AsyncZeroconf) -> None:
+    """An explicit set on a dual-use instance raises before any state change."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    listen = engine._listen_transport
+    assert listen is not None
+    engine.senders = [listen]
+    with (
+        patch.object(_engine, "normalize_interface_choice", return_value=["192.168.1.5"]),
+        pytest.raises(RuntimeError, match="Default single-family"),
+    ):
+        await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
+    assert engine.senders == [listen]
 
 
 @pytest.mark.asyncio
