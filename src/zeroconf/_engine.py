@@ -301,13 +301,18 @@ class AsyncEngine:
         try:
             await self._async_wrap_socket(respond_socket, is_sender=True)
         except Exception as exc:
-            # Endpoint creation failed after the join/socket succeeded; roll
-            # this interface back so it leaves no dangling group membership, then
-            # log and skip rather than abort the whole reconcile so the other
-            # interfaces still come up (best-effort bring-up).
+            # Roll back the socket + group join on any failure so nothing is left
+            # dangling.
             respond_socket.close()
             if listen_socket is not None:
                 drop_multicast_member(listen_socket, interface)
+            if not isinstance(exc, OSError):
+                # Only an expected socket-level failure is best-effort; a real
+                # bug (e.g. TypeError) must propagate rather than be downgraded
+                # to a one-time "interface not added" warning.
+                raise
+            # Log and skip rather than abort the whole reconcile so the other
+            # interfaces still come up (best-effort bring-up).
             self.zc.log_warning_once(f"Interface {interface!r} not added: {exc}")
             return False
         return True

@@ -520,6 +520,27 @@ async def test_add_interface_rollback_without_listen_socket(aiozc_loopback: Asyn
 
 
 @pytest.mark.asyncio
+async def test_add_interface_propagates_non_oserror(aiozc_loopback: AsyncZeroconf) -> None:
+    """A non-OSError (a real bug) propagates after rollback, not downgraded to a warning."""
+    engine = aiozc_loopback.zeroconf.engine
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+
+    fake_socket = Mock()
+    listen_socket = Mock()
+    with (
+        patch.object(_engine, "add_interface", return_value=fake_socket),
+        patch.object(_engine, "drop_multicast_member") as mock_drop,
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=TypeError("bug"))),
+        pytest.raises(TypeError),
+    ):
+        await engine._async_add_interface("127.0.0.1", listen_socket, False)
+
+    # Rolled back (socket closed, membership dropped) even though it propagates.
+    fake_socket.close.assert_called_once()
+    mock_drop.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_update_interfaces_keeps_dual_use_listen_socket(aiozc_loopback: AsyncZeroconf) -> None:
     """A dual-use sender (the listen socket itself) is never torn down on rescan."""
     engine = aiozc_loopback.zeroconf.engine
