@@ -52,7 +52,7 @@ class AsyncRunner:
     async def run(self, info: AsyncServiceInfo, interval: float) -> None:
         self.aiozc = AsyncZeroconf()
         await self.aiozc.async_register_service(info)
-        self.monitor = asyncio.ensure_future(monitor_interfaces(self.aiozc, interval))
+        self.monitor = asyncio.create_task(monitor_interfaces(self.aiozc, interval))
         print("Registered; monitoring interfaces. Press Ctrl-C to exit...")
         await asyncio.Event().wait()
 
