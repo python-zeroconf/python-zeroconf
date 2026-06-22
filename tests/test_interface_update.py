@@ -108,10 +108,14 @@ def test_listen_socket_supports_family() -> None:
     assert _listen_socket_supports(v6_sock, "1.2.3.4") is True
     v6_sock.getsockopt.return_value = 1  # IPV6_V6ONLY on -> v6-only
     assert _listen_socket_supports(v6_sock, "1.2.3.4") is False
-    # An unreadable option (some platforms) is treated as supported so it
-    # can't drive a rebuild loop.
+    # An unreadable option is expected only on Windows (WSAEINVAL); treat as
+    # supported there so it can't drive a rebuild loop, but surface a genuine
+    # read failure on other platforms rather than mask an unreceivable family.
     v6_sock.getsockopt.side_effect = OSError
-    assert _listen_socket_supports(v6_sock, "1.2.3.4") is True
+    with patch("zeroconf._engine.sys.platform", "win32"):
+        assert _listen_socket_supports(v6_sock, "1.2.3.4") is True
+    with patch("zeroconf._engine.sys.platform", "linux"), pytest.raises(OSError):
+        _listen_socket_supports(v6_sock, "1.2.3.4")
 
 
 @pytest.mark.asyncio

@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import socket
+import sys
 import threading
 from typing import TYPE_CHECKING, cast
 
@@ -74,13 +75,18 @@ def _listen_socket_supports(
     if listen_socket.family != socket.AF_INET6:
         # An IPv4 interface on an AF_INET socket.
         return True
-    # An IPv4 interface on an AF_INET6 socket: only when it is dual-stack. If
-    # the option can't be read (as Windows rejects some IPv6 getsockopts),
-    # assume supported so a read failure can't drive a rebuild loop.
+    # An IPv4 interface on an AF_INET6 socket: only when it is dual-stack.
+    supported = True
     try:
-        return not listen_socket.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY)
+        supported = not listen_socket.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY)
     except OSError:
-        return True
+        # Windows rejects reading IPV6_V6ONLY on some sockets; assume supported
+        # there (consistent with make_wrapped_transport) so a read failure can't
+        # drive a rebuild loop. Elsewhere the read does not fail, so surface a
+        # genuine error rather than mask an unreceivable family as supported.
+        if sys.platform != "win32":
+            raise
+    return supported
 
 
 def _without_transport(
