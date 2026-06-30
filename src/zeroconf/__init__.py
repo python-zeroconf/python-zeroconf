@@ -54,6 +54,7 @@ from ._record_update import RecordUpdate
 from ._services import (  # noqa # import needed for backwards compat
     ServiceListener,
     ServiceStateChange,
+    ServiceStateChangeHandler,
     Signal,
     SignalRegistrationInterface,
 )
@@ -112,6 +113,7 @@ __all__ = [
     "ServiceListener",
     "ServiceNameAlreadyRegistered",
     "ServiceStateChange",
+    "ServiceStateChangeHandler",
     "Zeroconf",
     "ZeroconfServiceTypes",
     "__version__",
