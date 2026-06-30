@@ -214,8 +214,6 @@ class RecordManager:
 
         This function is not threadsafe and must be called in the eventloop.
         """
-        try:
-            self.listeners.remove(listener)
+        if listener in self.listeners:
+            self.listeners.discard(listener)
             self.zc.async_notify_all()
-        except ValueError as e:
-            log.exception("Failed to remove listener: %r", e)
