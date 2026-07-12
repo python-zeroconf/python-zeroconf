@@ -239,7 +239,14 @@ class ServiceInfo(RecordUpdateListener):
         if isinstance(properties, bytes):
             self._set_text(properties)
         else:
-            self._set_properties(properties)
+              # Guard against oversized TXT records
+        if properties:
+            for key, value in properties.items():
+                 if value is not None:
+                    val_bytes = value if isinstance(value, bytes) else str(value).encode("utf-8")
+                    if len(val_bytes) > 255:  # DNS TXT record limit
+                       raise ValueError("TXT record too large")
+        self._set_properties(properties or {})
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self._new_records_futures: set[asyncio.Future] | None = None
@@ -411,16 +418,20 @@ class ServiceInfo(RecordUpdateListener):
             if isinstance(key, str):
                 key = key.encode("utf-8")  # noqa: PLW2901
                 properties_contain_str = True
-
             record = key
             if value is not None:
                 if not isinstance(value, bytes):
                     value = str(value).encode("utf-8")  # noqa: PLW2901
                     properties_contain_str = True
                 record += b"=" + value
+              if len(record) > 255:
+                     raise ValueError("TXT record too large")
+
             list_.append(record)
-        for item in list_:
-            result = b"".join((result, bytes((len(item),)), item))
+
+         for item in list_:
+    # Safe encoding only runs if guard passes
+             result += bytes((len(item),)) + item
         if not properties_contain_str:
             # If there are no str keys or values, we can use the properties
             # as-is, without decoding them, otherwise calling
@@ -429,6 +440,7 @@ class ServiceInfo(RecordUpdateListener):
                 self._properties = cast(dict[bytes, bytes | None], properties)
             else:
                 self._properties = properties
+
         self.text = result
 
     def _set_text(self, text: bytes) -> None:

@@ -1,7 +1,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 exclude: "CHANGELOG.md"
-default_stages: [pre-commit]
+default_stages: [commit]
 
 ci:
   autofix_commit_msg: "chore(pre-commit.ci): auto fixes"
@@ -58,3 +58,10 @@ repos:
     hooks:
       - id: cython-lint
       - id: double-quote-cython-strings
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        stages: [commit]
+
