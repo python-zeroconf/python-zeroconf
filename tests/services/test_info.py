@@ -630,6 +630,69 @@ class TestServiceInfo(unittest.TestCase):
         assert info.properties[b"ci"] == b"2"
         zc.close()
 
+    def test_service_info_empty_value_txt_record(self):
+        """Verify `key=` stays distinct from a valueless `key`.
+
+        RFC 6763 section 6.4 defines a key with no '=' as a boolean attribute
+        (present, no value), and `key=` as present with an empty value. If both
+        decode to None they are indistinguishable, and re-encoding a received
+        `key=` emits a bare `key` -- a different record than the one received.
+        """
+        zc = r.Zeroconf(interfaces=["127.0.0.1"])
+        service_name = "name._type._tcp.local."
+        service_type = "_type._tcp.local."
+        service_server = "ash-1.local."
+        text = b"\x03rm=\x02rs\x05ve=05"
+        info = ServiceInfo(
+            service_type,
+            service_name,
+            22,
+            0,
+            0,
+            {"path": "/~paulsm/"},
+            service_server,
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        info.async_update_records(
+            zc,
+            r.current_time_millis(),
+            [
+                r.RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        120,
+                        text,
+                    ),
+                    None,
+                )
+            ],
+        )
+        assert info.properties[b"rm"] == b""
+        assert info.properties[b"rs"] is None
+        assert info.properties[b"ve"] == b"05"
+
+        # The string-facing API must preserve the distinction too.
+        assert info.decoded_properties["rm"] == ""
+        assert info.decoded_properties["rs"] is None
+        assert info.decoded_properties["ve"] == "05"
+
+        # Re-encoding the decoded properties must reproduce the received rdata.
+        assert (
+            ServiceInfo(
+                service_type,
+                service_name,
+                22,
+                0,
+                0,
+                info.properties,
+                service_server,
+            ).text
+            == text
+        )
+        zc.close()
+
 
 def test_multiple_addresses():
     type_ = "_http._tcp.local."

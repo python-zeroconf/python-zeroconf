@@ -463,10 +463,15 @@ class ServiceInfo(RecordUpdateListener):
             length = text[index]
             index += 1
             key_value = text[index : index + length]
-            key_sep_value = key_value.partition(b"=")
-            key = key_sep_value[0]
+            key, sep, value = key_value.partition(b"=")
             if key not in properties:
-                properties[key] = key_sep_value[2] or None
+                # RFC 6763 section 6.4 distinguishes a key with no '=' (a
+                # boolean attribute: present, no value) from `key=` (present
+                # with an empty value). Testing the separator rather than the
+                # value keeps them apart; `value or None` collapsed both to
+                # None, so re-serialising a received `key=` emitted a bare
+                # `key`.
+                properties[key] = value if sep else None
             index += length
 
         self._properties = properties
