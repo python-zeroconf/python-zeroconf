@@ -1,4 +1,4 @@
-"""Benchmark for bulk ServiceRegistry add/remove under a shared type and server."""
+"""Benchmarks for ServiceRegistry add/remove/read under a shared type and server."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def test_registry_bulk_add(benchmark: BenchmarkFixture) -> None:
 
 
 def test_registry_bulk_remove(benchmark: BenchmarkFixture) -> None:
-    """Unregistering many services sharing one type and server in a single call."""
+    """Registration plus bulk unregistration; subtract test_registry_bulk_add for the removal cost."""
     infos = _make_infos(_COUNT)
 
     @benchmark
@@ -51,3 +51,14 @@ def test_registry_bulk_remove(benchmark: BenchmarkFixture) -> None:
         for info in infos:
             registry.async_add(info)
         registry.async_remove(infos)
+
+
+def test_registry_get_infos_type(benchmark: BenchmarkFixture) -> None:
+    """Reading back every entry indexed under one shared type."""
+    registry = ServiceRegistry()
+    for info in _make_infos(_COUNT):
+        registry.async_add(info)
+
+    @benchmark
+    def _get() -> None:
+        registry.async_get_infos_type(_TYPE)
