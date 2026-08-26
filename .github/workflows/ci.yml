@@ -171,10 +171,19 @@ jobs:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: git switch -C "$BRANCH"
 
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      # Run semantic-release directly instead of through its action: the
+      # action resolves its dependencies when the runner builds its image,
+      # so it picks up GitPython >= 3.1.60, which dropped
+      # Actor.name_email_regex and breaks every semantic-release command
+      # (python-semantic-release#1476). Nothing the action exposes can
+      # constrain that; pinning here can. Drop once upstream releases a fix.
       - name: Test release
-        uses: python-semantic-release/python-semantic-release@350c48fcb3ffcdfd2e0a235206bc2ecea6b69df0 # v10.5.3
-        with:
-          no_operation_mode: true
+        run: >
+          uvx --from 'python-semantic-release==10.5.3'
+          --with 'gitpython<3.1.60'
+          semantic-release -v --noop version
 
   # Real release, only on master. The release environment and write/OIDC
   # permissions are scoped to this job so they never apply to PR runs.
