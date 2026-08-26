@@ -108,6 +108,7 @@ ignore = [
     "PLR0912", # too many to fix right now
     "TID252", # skip
     "PLR0913", # too late to make changes here
+    "PLR0917", # too late to make changes here
     "PLR0911", # would be breaking change
     "TRY003", # too many to fix
     "SLF001", # design choice
