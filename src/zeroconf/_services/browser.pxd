@@ -56,7 +56,7 @@ cpdef list generate_service_query(
 )
 
 
-@cython.locals(answer=DNSPointer, query_buckets=list, question=DNSQuestion, max_compressed_size=cython.uint, max_bucket_size=cython.uint, query_bucket=_DNSPointerOutgoingBucket)
+@cython.locals(answer=DNSPointer, question=DNSQuestion, max_compressed_size=cython.uint, max_bucket_size=cython.uint, query_bucket=_DNSPointerOutgoingBucket)
 cdef list _group_ptr_queries_with_known_answers(double now_millis, bint multicast, cython.dict question_with_known_answers)
 
 
@@ -92,7 +92,7 @@ cdef class QueryScheduler:
 
     cpdef void _process_startup_queries(self)
 
-    @cython.locals(query=_ScheduledPTRQuery, next_scheduled=_ScheduledPTRQuery, next_when=double)
+    @cython.locals(query=_ScheduledPTRQuery, next_when=double)
     cpdef void _process_ready_types(self)
 
     cpdef void async_send_ready_queries(self, bint first_request, double now_millis, set ready_types)
