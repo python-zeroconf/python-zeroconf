@@ -27,6 +27,7 @@ from .info import ServiceInfo
 
 _str = str
 _ServiceInfo = ServiceInfo
+_ServiceIndex = dict[str, dict[str, None]]
 
 
 class ServiceRegistry:
@@ -43,8 +44,8 @@ class ServiceRegistry:
     ) -> None:
         """Create the ServiceRegistry class."""
         self._services: dict[str, ServiceInfo] = {}
-        self.types: dict[str, dict[str, None]] = {}
-        self.servers: dict[str, dict[str, None]] = {}
+        self.types: _ServiceIndex = {}
+        self.servers: _ServiceIndex = {}
         self.has_entries: bool = False
 
     def async_add(self, info: ServiceInfo) -> None:
@@ -80,7 +81,7 @@ class ServiceRegistry:
         """Return all ServiceInfo matching server."""
         return self._async_get_by_index(self.servers, server)
 
-    def _async_get_by_index(self, records: dict[_str, dict[_str, None]], key: _str) -> list[_ServiceInfo]:
+    def _async_get_by_index(self, records: _ServiceIndex, key: _str) -> list[_ServiceInfo]:
         """Return all ServiceInfo matching the index."""
         record_keys = records.get(key)
         if record_keys is None:
