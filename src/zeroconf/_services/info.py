@@ -206,7 +206,7 @@ class ServiceInfo(RecordUpdateListener):
         port: int | None = None,
         weight: int = 0,
         priority: int = 0,
-        properties: bytes | dict = b"",
+        properties: bytes | dict | None = None,
         server: str | None = None,
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
@@ -238,11 +238,14 @@ class ServiceInfo(RecordUpdateListener):
         self.server_key = server.lower() if server else None
         self._properties: dict[bytes, bytes | None] | None = None
         self._decoded_properties: dict[str, str | None] | None = None
-        if isinstance(properties, bytes):
-            self._set_text(properties)
+        if properties is None:
+            self._txt_seen = False
         else:
-            self._set_properties(properties)
-        self._txt_seen = bool(self.text)
+            self._txt_seen = True
+            if isinstance(properties, bytes):
+                self._set_text(properties)
+            else:
+                self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self._new_records_futures: set[asyncio.Future] | None = None
