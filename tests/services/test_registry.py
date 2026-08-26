@@ -175,7 +175,7 @@ class TestServiceRegistry(unittest.TestCase):
         assert "ash-2.local." not in registry.servers
         assert registry.async_get_types() == []
 
-    def test_bulk_remove_preserves_remaining_insertion_order(self):
+    def test_bulk_remove_preserves_order_of_survivors(self):
         type_ = "_test-srvc-type._tcp.local."
         server = "shared.local."
         desc = {"path": "/~paulsm/"}

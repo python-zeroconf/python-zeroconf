@@ -95,9 +95,7 @@ class ServiceRegistry:
 
         info.async_clear_cache()
         self._services[info.key] = info
-        # dict[str, None] gives O(1) add/remove while preserving insertion order
-        # so async_get_infos_type / async_get_infos_server return entries in the
-        # order they were registered.
+        # insertion order matters: async_get_infos_type/server return registration order
         self.types.setdefault(info.type.lower(), {})[info.key] = None
         self.servers.setdefault(info.server_key, {})[info.key] = None
         self.has_entries = True
