@@ -162,7 +162,9 @@ class ServiceInfo(RecordUpdateListener):
     * `priority`: priority of the service
     * `properties`: dictionary of properties (or a bytes object holding the contents of the `text` field).
       converted to str and then encoded to bytes using UTF-8. Keys with `None` values are converted to
-      value-less attributes.
+      value-less attributes. Any supplied value, including an empty `{}` or `b""`, counts as a seen TXT
+      record; omitting the parameter means the TXT record is not yet known, so `request()` and
+      `load_from_cache()` will not report the service as complete until one arrives.
     * `server`: fully qualified name for service host (defaults to name)
     * `host_ttl`: ttl used for A/SRV records
     * `other_ttl`: ttl used for PTR/TXT records
