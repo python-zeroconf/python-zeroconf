@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import enum
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -48,24 +48,11 @@ class ServiceListener:
         raise NotImplementedError
 
 
-class ServiceStateChangeHandler(Protocol):
-    """Callback contract dispatched by :class:`Signal` to service-state listeners."""
-
-    def __call__(
-        self,
-        *,
-        zeroconf: Zeroconf,
-        service_type: str,
-        name: str,
-        state_change: ServiceStateChange,
-    ) -> None: ...
-
-
 class Signal:
     __slots__ = ("_handlers",)
 
     def __init__(self) -> None:
-        self._handlers: list[ServiceStateChangeHandler] = []
+        self._handlers: list[Callable[..., None]] = []
 
     def fire(
         self,
@@ -91,13 +78,13 @@ class Signal:
 class SignalRegistrationInterface:
     __slots__ = ("_handlers",)
 
-    def __init__(self, handlers: list[ServiceStateChangeHandler]) -> None:
+    def __init__(self, handlers: list[Callable[..., None]]) -> None:
         self._handlers = handlers
 
     def register_handler(self, handler: Callable[..., None]) -> SignalRegistrationInterface:
-        self._handlers.append(cast("ServiceStateChangeHandler", handler))
+        self._handlers.append(handler)
         return self
 
     def unregister_handler(self, handler: Callable[..., None]) -> SignalRegistrationInterface:
-        self._handlers.remove(cast("ServiceStateChangeHandler", handler))
+        self._handlers.remove(handler)
         return self

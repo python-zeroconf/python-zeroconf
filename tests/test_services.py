@@ -329,8 +329,3 @@ def test_signal_fire_rejects_positional_args():
             "x._http._tcp.local.",
             r.ServiceStateChange.Added,
         )
-
-
-def test_service_state_change_handler_protocol_exported():
-    """The handler Protocol is part of the public package surface."""
-    assert hasattr(r, "ServiceStateChangeHandler")
