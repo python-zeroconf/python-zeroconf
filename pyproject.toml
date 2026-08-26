@@ -1,5 +1,8 @@
 [build-system]
-requires = ['setuptools>=77.0', 'Cython>=3.0.8', "poetry-core>=2.1.0"]
+# Cython 3.3.0 rejects a .pxd declaration whose .py counterpart annotates the
+# same argument with a subscripted builtin generic (``set[tuple[str, int, int]]``
+# vs ``cython.set``) with "Signature not compatible with previous declaration".
+requires = ['setuptools>=77.0', 'Cython>=3.0.8,<3.3', "poetry-core>=2.1.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project]
