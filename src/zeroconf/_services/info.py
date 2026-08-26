@@ -185,6 +185,7 @@ class ServiceInfo(RecordUpdateListener):
         "_new_records_futures",
         "_properties",
         "_query_record_types",
+        "_txt_seen",
         "host_ttl",
         "interface_index",
         "key",
@@ -241,6 +242,7 @@ class ServiceInfo(RecordUpdateListener):
             self._set_text(properties)
         else:
             self._set_properties(properties)
+        self._txt_seen = bool(self.text)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self._new_records_futures: set[asyncio.Future] | None = None
@@ -614,6 +616,7 @@ class ServiceInfo(RecordUpdateListener):
             if TYPE_CHECKING:
                 assert isinstance(dns_text_record, DNSText)
             self._set_text(dns_text_record.text)
+            self._txt_seen = True
             return True
 
         if record_type is DNSService:
@@ -832,8 +835,13 @@ class ServiceInfo(RecordUpdateListener):
 
     @property
     def _is_complete(self) -> bool:
-        """The ServiceInfo has all expected properties."""
-        return bool(self.text is not None and (self._ipv4_addresses or self._ipv6_addresses))
+        """The ServiceInfo has all expected properties.
+
+        RFC 6763 section 6 requires every DNS-SD service to have a TXT record,
+        so a service is not complete until one has been seen. An empty TXT
+        record counts as seen; a missing one does not.
+        """
+        return bool(self._txt_seen and (self._ipv4_addresses or self._ipv6_addresses))
 
     def request(
         self,
