@@ -324,7 +324,7 @@ def test_signal_fire_rejects_positional_args():
 
     with pytest.raises(TypeError):
         signal.fire(  # type: ignore[misc]
-            None,
+            None,  # type: ignore[arg-type]
             "_http._tcp.local.",
             "x._http._tcp.local.",
             r.ServiceStateChange.Added,
