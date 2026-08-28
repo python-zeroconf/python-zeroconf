@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import platform
 import socket
+import sys
 import time
 from collections.abc import Iterable
 from functools import cache
@@ -38,6 +39,7 @@ from zeroconf._history import QuestionHistory
 _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
 _IS_PYPY = platform.python_implementation() == "PyPy"
+_IS_MACOS = sys.platform == "darwin"
 
 # get_service_info / async_request timeout for tests using the
 # `quick_request_timing` fixture. The fixture cuts the initial-query
@@ -55,7 +57,10 @@ QUICK_REQUEST_TIMEOUT_MS = 50
 # the registrar's response lands inside ~10ms and 75ms is ~7x headroom.
 # PyPy's JIT is still warming up the first time this path runs early in
 # the suite, so the round trip is too slow for 75ms; give it more room.
-LOOPBACK_FIND_TIMEOUT = 0.3 if _IS_PYPY else 0.075
+# GitHub's macOS runners stall the whole process for longer than 75ms
+# often enough that the response lands after `find()` has already
+# cancelled the browser, so they get the same room.
+LOOPBACK_FIND_TIMEOUT = 0.3 if _IS_PYPY or _IS_MACOS else 0.075
 
 # IPv6-only `find()` on Linux GitHub runners can hit `[Errno 101] Network
 # is unreachable` on the `::1` socket and falls back to the `fe80::` link-
