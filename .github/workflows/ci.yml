@@ -46,6 +46,27 @@ jobs:
             didn't match the configured pattern. Please ensure that the subject
             starts with a lowercase character.
 
+  # The ASan fuzz workflow only runs on manual dispatch; this gate keeps a
+  # failed run from rotting silently by blocking CI until it is green again.
+  asan-status:
+    name: Last ASan fuzz run
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Fail if the most recent ASan fuzz run on master failed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          conclusion=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/asan.yml/runs?branch=master&status=completed&per_page=1" \
+            --jq '.workflow_runs[0].conclusion // "none"')
+          echo "Most recent ASan fuzz run on master: $conclusion"
+          if [ "$conclusion" = "failure" ]; then
+            echo "The most recent ASan fuzz run failed; fix the regression or re-run the workflow." >&2
+            exit 1
+          fi
+
   test:
     strategy:
       fail-fast: false
