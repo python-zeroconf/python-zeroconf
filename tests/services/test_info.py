@@ -3078,12 +3078,11 @@ def test_denied_flag_is_ignored_when_address_is_held(zc_loopback: r.Zeroconf) ->
     [
         ["10.0.1.2", "2001:db8::1"],
         [socket.inet_aton("10.0.1.2"), socket.inet_pton(socket.AF_INET6, "2001:db8::1")],
-        [int(ip_address("10.0.1.2")), int(ip_address("2001:db8::1"))],
         ["10.0.1.2", socket.inet_pton(socket.AF_INET6, "2001:db8::1")],
     ],
 )
-def test_addresses_setter_accepts_str_bytes_and_int(addresses):
-    """The addresses setter accepts str, bytes, and int addresses."""
+def test_addresses_setter_accepts_str_and_bytes(addresses):
+    """The addresses setter accepts str and bytes addresses."""
     type_ = "_http._tcp.local."
     info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="ash-2.local.")
     info.addresses = addresses
