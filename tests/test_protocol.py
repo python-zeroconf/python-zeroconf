@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import logging
 import os
+import pickle
 import socket
 import struct
 import unittest.mock
@@ -1336,12 +1337,18 @@ def test_identical_names_share_string_object():
     assert nsec.next_name is srv.name
 
 
+_A_RECORD_TAIL = b"\x00\x01\x00\x01\x00\x00\x00\x78\x00\x04\x7f\x00\x00\x01"
+
+
+def _response_header(answer_count: int) -> bytes:
+    return b"\x00\x00\x84\x00\x00\x00" + bytes([answer_count >> 8, answer_count & 0xFF]) + b"\x00\x00\x00\x00"
+
+
 def test_name_string_cache_pointer_flows():
     """Prefix plus tail, pure pointer, and mid-name pointer names all decode and share."""
-    header = b"\x00\x00\x84\x00\x00\x00\x00\x05\x00\x00\x00\x00"
-    record_tail = b"\x00\x01\x00\x01\x00\x00\x00\x78\x00\x04\x7f\x00\x00\x01"
+    record_tail = _A_RECORD_TAIL
     # offset 12: a.local.
-    packet = header + b"\x01a\x05local\x00" + record_tail
+    packet = _response_header(5) + b"\x01a\x05local\x00" + record_tail
     # offset 35: b + pointer to "local" tail at offset 14
     packet += b"\x01b\xc0\x0e" + record_tail
     # offset 53: pure pointer to b.local. at offset 35
@@ -1363,14 +1370,30 @@ def test_name_string_cache_pointer_flows():
     assert answers[4].name is answers[3].name
 
 
-def test_pure_pointer_does_not_bypass_max_name_length():
-    """A pointer to an overlong name is rejected along with the rest of the packet."""
+def test_overlong_name_rejects_packet():
+    """An overlong name aborts the parse before anything is cached for pointers to hit."""
     labels = b"".join(b"\x3f" + b"a" * 63 for _ in range(4))
-    header = b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
-    record_tail = b"\x00\x01\x00\x01\x00\x00\x00\x78\x00\x04\x7f\x00\x00\x01"
-    packet = header + labels + b"\x00" + record_tail
-    # pure pointer back to the overlong name at offset 12
-    packet += b"\xc0\x0c" + record_tail
+    packet = _response_header(2) + labels + b"\x00" + _A_RECORD_TAIL
+    # pure pointer back to the overlong name at offset 12; unreachable because
+    # the overlong name aborts the parse, which is what keeps the name string
+    # cache free of unvalidated entries
+    packet += b"\xc0\x0c" + _A_RECORD_TAIL
     parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_dns_incoming_is_not_picklable():
+    """The compiled build holds a borrowed C pointer that cannot survive pickling."""
+    parsed = r.DNSIncoming(bytes(12))
+    with pytest.raises(TypeError):
+        pickle.dumps(parsed)
+    with pytest.raises(TypeError):
+        copy.deepcopy(parsed)
+
+
+def test_oversized_message_is_rejected():
+    """Anything beyond the 64 KiB DNS limit is invalid without raising."""
+    parsed = r.DNSIncoming(bytes(0x10000))
     assert parsed.valid is False
     assert parsed.answers() == []

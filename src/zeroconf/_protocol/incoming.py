@@ -59,6 +59,9 @@ DNS_COMPRESSION_HEADER_LEN = 1
 DNS_COMPRESSION_POINTER_LEN = 2
 MAX_DNS_LABELS = 128
 MAX_NAME_LENGTH = 253
+# DNS messages are hard-limited to 64 KiB; rejecting anything larger also
+# keeps every unsigned `offset + length` comparison far from wrapping.
+MAX_MSG_LEN = 0xFFFF
 
 DECODE_EXCEPTIONS = (IndexError, struct.error, IncomingDecodeError, RecursionError)
 
@@ -92,7 +95,6 @@ class DNSIncoming:
         "scope_id",
         "source",
         "valid",
-        "view",
     )
 
     def __init__(
@@ -134,6 +136,11 @@ class DNSIncoming:
                 self.offset,
                 self.data,
             )
+
+    def __reduce__(self) -> tuple:
+        # The compiled build holds a borrowed C pointer into `data` that
+        # cannot survive pickling.
+        raise TypeError(f"cannot pickle {type(self).__name__!r} object")
 
     def is_query(self) -> bool:
         """Returns true if this is a query."""
@@ -179,6 +186,11 @@ class DNSIncoming:
 
     def _initial_parse(self) -> None:
         """Parse the data needed to initialize the packet object."""
+        if len(self.data) > MAX_MSG_LEN:
+            raise IncomingDecodeError(
+                f"Packet of {len(self.data)} bytes exceeds the {MAX_MSG_LEN} byte DNS limit "
+                f"from {self.source}"
+            )
         self._read_header()
         self._read_questions()
         if not self._num_questions:
@@ -230,7 +242,7 @@ class DNSIncoming:
         offset = self.offset
         if offset + 12 > self._data_len:
             raise IncomingDecodeError(
-                f"Packet of {self._data_len} bytes is too short for a DNS header from {self.source}"
+                f"DNS header at offset {offset} overruns packet of {self._data_len} bytes from {self.source}"
             )
         buf = self._buf
         self.offset += 12
@@ -462,7 +474,6 @@ class DNSIncoming:
                 raise IncomingDecodeError(
                     f"NSEC bitmap window header truncated at offset {offset} from {self.source}"
                 )
-            window = buf[offset]
             bitmap_length = buf[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
             if bitmap_length == 0 or bitmap_length > 32 or bitmap_end > end:
@@ -470,7 +481,7 @@ class DNSIncoming:
                     f"NSEC bitmap length {bitmap_length} invalid or overruns record end "
                     f"at offset {offset} from {self.source}"
                 )
-            window_base = window * 256
+            window_base = buf[offset] * 256
             for i in range(bitmap_length):
                 byte = buf[offset_plus_two + i]
                 if byte == 0:
@@ -488,10 +499,9 @@ class DNSIncoming:
         name_str_cache = self._name_str_cache
         is_pure_pointer = False
         link = 0
-        # Fast path: a name that is a single compression pointer to an
-        # already-decoded name returns the cached finished string. A cache
-        # hit needs no re-validation because entries are only written after
-        # a decode passed every check (bounds, loops, depth, name length).
+        # A cache hit needs no re-validation because entries are only
+        # written after a decode passed every check (bounds, loops, depth,
+        # name length).
         if original_offset + DNS_COMPRESSION_POINTER_LEN <= self._data_len:
             length = self._buf[original_offset]
             if length >= 0xC0:
@@ -532,6 +542,8 @@ class DNSIncoming:
 
             if length < 0x40:
                 label_idx = off + DNS_COMPRESSION_HEADER_LEN
+                # Sliced from `data`, not `_buf`: a label running past the end
+                # truncates here and the loop raises corrupt-packet below.
                 labels.append(self.data[label_idx : label_idx + length].decode("utf-8", "replace"))
                 off += DNS_COMPRESSION_HEADER_LEN + length
                 continue
@@ -547,7 +559,7 @@ class DNSIncoming:
             link_data = buf[off + 1]
             link = (length & 0x3F) * 256 + link_data
             link_py_int = link
-            if link > self._data_len:
+            if link >= self._data_len:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} points to {link} beyond packet from {self.source}"
                 )

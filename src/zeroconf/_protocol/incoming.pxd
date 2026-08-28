@@ -6,6 +6,7 @@ cdef cython.uint DNS_COMPRESSION_HEADER_LEN
 cdef cython.uint MAX_DNS_LABELS
 cdef cython.uint DNS_COMPRESSION_POINTER_LEN
 cdef cython.uint MAX_NAME_LENGTH
+cdef cython.uint MAX_MSG_LEN
 
 cdef cython.uint _TYPE_A
 cdef cython.uint _TYPE_CNAME
@@ -43,7 +44,7 @@ cdef class DNSIncoming:
     cdef bint _did_read_others
     cdef public unsigned int flags
     cdef cython.uint offset
-    cdef public bytes data
+    cdef readonly bytes data
     cdef const unsigned char* _buf
     cdef unsigned int _data_len
     cdef cython.dict _name_cache
@@ -133,7 +134,6 @@ cdef class DNSIncoming:
         offset="unsigned int",
         offset_plus_one="unsigned int",
         offset_plus_two="unsigned int",
-        window="unsigned int",
         bit="unsigned int",
         byte="unsigned int",
         i="unsigned int",
