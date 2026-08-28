@@ -27,7 +27,7 @@ from .info import ServiceInfo
 
 _str = str
 _ServiceInfo = ServiceInfo
-_ServiceIndex = dict[str, dict[str, None]]
+_ServiceIndex = dict[str, dict[str, ServiceInfo]]
 
 
 class ServiceRegistry:
@@ -83,10 +83,10 @@ class ServiceRegistry:
 
     def _async_get_by_index(self, records: _ServiceIndex, key: _str) -> list[_ServiceInfo]:
         """Return all ServiceInfo matching the index."""
-        record_keys = records.get(key)
-        if record_keys is None:
+        record_infos = records.get(key)
+        if record_infos is None:
             return []
-        return [self._services[name] for name in record_keys]
+        return list(record_infos.values())
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
@@ -97,8 +97,8 @@ class ServiceRegistry:
         info.async_clear_cache()
         self._services[info.key] = info
         # insertion order matters: async_get_infos_type/server return registration order
-        self.types.setdefault(info.type.lower(), {})[info.key] = None
-        self.servers.setdefault(info.server_key, {})[info.key] = None
+        self.types.setdefault(info.type.lower(), {})[info.key] = info
+        self.servers.setdefault(info.server_key, {})[info.key] = info
         self.has_entries = True
 
     def _remove(self, infos: list[_ServiceInfo]) -> None:

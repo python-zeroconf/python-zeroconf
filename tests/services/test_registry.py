@@ -228,3 +228,35 @@ class TestServiceRegistry(unittest.TestCase):
         registry.async_add(info)
         assert registry.async_get_infos_type(type_) == [info]
         assert registry.async_get_infos_server(server) == [info]
+
+    def test_update_replaces_indexed_info(self):
+        type_ = "_test-srvc-type._tcp.local."
+        server = "ash-2.local."
+        registration_name = f"xxxyyy.{type_}"
+        info = ServiceInfo(
+            type_,
+            registration_name,
+            80,
+            0,
+            0,
+            {"path": "/~paulsm/"},
+            server,
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        updated = ServiceInfo(
+            type_,
+            registration_name,
+            81,
+            0,
+            0,
+            {"path": "/~paulsm/"},
+            server,
+            addresses=[socket.inet_aton("10.0.1.3")],
+        )
+
+        registry = r.ServiceRegistry()
+        registry.async_add(info)
+        registry.async_update(updated)
+
+        assert registry.async_get_infos_type(type_)[0] is updated
+        assert registry.async_get_infos_server(server)[0] is updated
