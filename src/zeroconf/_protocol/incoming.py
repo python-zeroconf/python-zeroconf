@@ -73,10 +73,12 @@ class DNSIncoming:
 
     __slots__ = (
         "_answers",
+        "_buf",
         "_data_len",
         "_did_read_others",
         "_has_qu_question",
         "_name_cache",
+        "_name_str_cache",
         "_num_additionals",
         "_num_answers",
         "_num_authorities",
@@ -105,8 +107,12 @@ class DNSIncoming:
         self.offset = 0
         self.data = data
         self.view = data
+        # Borrowed pointer into `data`; only ever sliced after an explicit
+        # bounds check against _data_len (see _read_string).
+        self._buf = data
         self._data_len = len(data)
         self._name_cache: dict[int, list[str]] = {}
+        self._name_str_cache: dict[int, str] = {}
         self._questions: list[DNSQuestion] = []
         self._answers: list[DNSRecord] = []
         self.id = 0
@@ -253,30 +259,33 @@ class DNSIncoming:
     def _read_character_string(self) -> str:
         """Reads a character string from the packet"""
         length = self.view[self.offset]
-        self.offset += 1
+        start = self.offset + 1
+        end = start + length
         # Python slicing silently truncates when indices exceed the buffer,
         # but self.offset still advances by the declared length below; without
         # this check a record with an inflated character-string length would
         # land in the cache carrying a payload shorter than the wire claimed
         # and leave the parser pointed past _data_len for the next record.
-        if self.offset + length > self._data_len:
+        if end > self._data_len:
             raise IncomingDecodeError(
-                f"Character string length {length} at offset {self.offset} overruns "
+                f"Character string length {length} at offset {start} overruns "
                 f"packet of {self._data_len} bytes from {self.source}"
             )
-        info = self.data[self.offset : self.offset + length].decode("utf-8", "replace")
-        self.offset += length
+        info = self._buf[start:end].decode("utf-8", "replace")
+        self.offset = end
         return info
 
     def _read_string(self, length: _int) -> bytes:
         """Reads a string of a given length from the packet"""
-        if self.offset + length > self._data_len:
+        start = self.offset
+        end = start + length
+        if end > self._data_len:
             raise IncomingDecodeError(
-                f"String length {length} at offset {self.offset} overruns "
+                f"String length {length} at offset {start} overruns "
                 f"packet of {self._data_len} bytes from {self.source}"
             )
-        info = self.data[self.offset : self.offset + length]
-        self.offset += length
+        info = self._buf[start:end]
+        self.offset = end
         return info
 
     def _read_others(self) -> None:
@@ -284,6 +293,7 @@ class DNSIncoming:
         packet"""
         self._did_read_others = True
         view = self.view
+        answers = self._answers
         n = self._num_answers + self._num_authorities + self._num_additionals
         for _ in range(n):
             domain = self._read_name()
@@ -326,7 +336,7 @@ class DNSIncoming:
                 self.offset = end
                 rec = None
             if rec is not None:
-                self._answers.append(rec)
+                answers.append(rec)
 
     def _read_record(
         self, domain: _str, type_: _int, class_: _int, ttl: _int, length: _int
@@ -433,29 +443,54 @@ class DNSIncoming:
                     f"NSEC bitmap length {bitmap_length} invalid or overruns record end "
                     f"at offset {offset} from {self.source}"
                 )
-            for i, byte in enumerate(self.data[offset_plus_two:bitmap_end]):
+            window_base = window * 256
+            for i in range(bitmap_length):
+                byte = view[offset_plus_two + i]
+                if byte == 0:
+                    continue
+                bit_base = window_base + i * 8
                 for bit in range(8):
                     if byte & (0x80 >> bit):
-                        rdtypes.append(bit + window * 256 + i * 8)
-            self.offset += 2 + bitmap_length
+                        rdtypes.append(bit_base + bit)
+            self.offset = bitmap_end
         return rdtypes
 
     def _read_name(self) -> str:
         """Reads a domain name from the packet."""
-        labels: list[str] = []
-        seen_pointers: set[int] = set()
         original_offset = self.offset
-        self.offset = self._decode_labels_at_offset(original_offset, labels, seen_pointers, 0)
+        name_str_cache = self._name_str_cache
+        is_pure_pointer = False
+        link = 0
+        # Fast path: a name that is a single compression pointer to an
+        # already-decoded name returns the cached finished string. A cache
+        # hit needs no re-validation because entries are only written after
+        # a decode passed every check (bounds, loops, depth, name length).
+        if original_offset + DNS_COMPRESSION_POINTER_LEN <= self._data_len:
+            length = self.view[original_offset]
+            if length >= 0xC0:
+                is_pure_pointer = True
+                link = (length & 0x3F) * 256 + self.view[original_offset + 1]
+                cached_name = name_str_cache.get(link)
+                if cached_name is not None:
+                    self.offset = original_offset + DNS_COMPRESSION_POINTER_LEN
+                    return cached_name
+        labels: list[str] = []
+        self.offset = self._decode_labels_at_offset(original_offset, labels, None, 0)
         self._name_cache[original_offset] = labels
         name = ".".join(labels) + "."
         if len(name) > MAX_NAME_LENGTH:
             raise IncomingDecodeError(
                 f"DNS name {name} exceeds maximum length of {MAX_NAME_LENGTH} from {self.source}"
             )
+        name_str_cache[original_offset] = name
+        if is_pure_pointer:
+            # The whole name was one pointer, so the finished string is
+            # also the name that starts at the pointer target.
+            name_str_cache[link] = name
         return name
 
     def _decode_labels_at_offset(
-        self, off: _int, labels: list[_str], seen_pointers: set[_int], depth: _int
+        self, off: _int, labels: list[_str], seen_pointers: set[_int] | None, depth: _int
     ) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
         if depth > MAX_DNS_LABELS:
@@ -491,14 +526,18 @@ class DNSIncoming:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} points to itself from {self.source}"
                 )
-            if link_py_int in seen_pointers:
+            if seen_pointers is not None and link_py_int in seen_pointers:
                 raise IncomingDecodeError(
                     f"DNS compression pointer at {off} was seen again from {self.source}"
                 )
             linked_labels = self._name_cache.get(link_py_int)
             if not linked_labels:
-                linked_labels = []
+                if seen_pointers is None:
+                    # Deferred allocation: only names that follow an
+                    # uncached pointer pay for loop detection.
+                    seen_pointers = set()
                 seen_pointers.add(link_py_int)
+                linked_labels = []
                 self._decode_labels_at_offset(link, linked_labels, seen_pointers, depth + 1)
                 self._name_cache[link_py_int] = linked_labels
             labels.extend(linked_labels)

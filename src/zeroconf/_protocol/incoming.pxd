@@ -16,7 +16,6 @@ cdef cython.uint _TYPE_HINFO
 cdef cython.uint _TYPE_AAAA
 cdef cython.uint _TYPE_NSEC
 cdef cython.uint _FLAGS_QR_MASK
-cdef cython.uint _FLAGS_QR_MASK
 cdef cython.uint _FLAGS_TC
 cdef cython.uint _FLAGS_QR_QUERY
 cdef cython.uint _FLAGS_QR_RESPONSE
@@ -46,8 +45,10 @@ cdef class DNSIncoming:
     cdef cython.uint offset
     cdef public bytes data
     cdef const unsigned char [:] view
+    cdef const unsigned char* _buf
     cdef unsigned int _data_len
     cdef cython.dict _name_cache
+    cdef cython.dict _name_str_cache
     cdef cython.list _questions
     cdef cython.list _answers
     cdef public cython.uint id
@@ -93,7 +94,8 @@ cdef class DNSIncoming:
     @cython.locals(
         end="unsigned int",
         length="unsigned int",
-        offset="unsigned int"
+        offset="unsigned int",
+        answers=cython.list,
     )
     cdef void _read_others(self)
 
@@ -102,9 +104,15 @@ cdef class DNSIncoming:
 
     @cython.locals(
         length="unsigned int",
+        start="unsigned int",
+        end="unsigned int",
     )
     cdef str _read_character_string(self)
 
+    @cython.locals(
+        start="unsigned int",
+        end="unsigned int",
+    )
     cdef bytes _read_string(self, unsigned int length)
 
     @cython.locals(
@@ -129,7 +137,18 @@ cdef class DNSIncoming:
         i="unsigned int",
         bitmap_length="unsigned int",
         bitmap_end="unsigned int",
+        window_base="unsigned int",
+        bit_base="unsigned int",
     )
     cdef list _read_bitmap(self, unsigned int end)
 
+    @cython.locals(
+        original_offset="unsigned int",
+        length="unsigned int",
+        link="unsigned int",
+        is_pure_pointer=cython.bint,
+        name=str,
+        cached_name=str,
+        name_str_cache=cython.dict,
+    )
     cdef str _read_name(self)
