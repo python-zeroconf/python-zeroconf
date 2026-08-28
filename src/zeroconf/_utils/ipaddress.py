@@ -137,7 +137,7 @@ def get_ip_address_object_from_record(
 
 
 def ip_bytes_and_scope_to_address(
-    address: bytes_, scope: int_
+    address: bytes_ | str, scope: int_
 ) -> ZeroconfIPv4Address | ZeroconfIPv6Address | None:
     """Convert the bytes and scope to an IP address object."""
     base_address = cached_ip_addresses_wrapper(address)
