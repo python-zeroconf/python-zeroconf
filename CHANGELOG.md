@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v0.151.0 (2026-08-28)
+
+### Features
+
+- Speed up incoming packet parsing
+  ([#1830](https://github.com/python-zeroconf/python-zeroconf/pull/1830),
+  [`b3634f2`](https://github.com/python-zeroconf/python-zeroconf/commit/b3634f2c3ed39ffaa8e64f5175b09335c3e13343))
+
+### Testing
+
+- Add fuzzing coverage for incoming packet parsing
+  ([#1829](https://github.com/python-zeroconf/python-zeroconf/pull/1829),
+  [`868391c`](https://github.com/python-zeroconf/python-zeroconf/commit/868391cbde5da7a63001b6867e42768c45199919))
+
+- Widen loopback find timeout on macos
+  ([#1832](https://github.com/python-zeroconf/python-zeroconf/pull/1832),
+  [`9e732c5`](https://github.com/python-zeroconf/python-zeroconf/commit/9e732c56bd8242d94b3a26ec2a160b85c192e5cf))
+
+
 ## v0.150.5 (2026-08-28)
 
 ### Bug Fixes
