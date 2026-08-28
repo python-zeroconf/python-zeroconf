@@ -630,6 +630,64 @@ class TestServiceInfo(unittest.TestCase):
         assert info.properties[b"ci"] == b"2"
         zc.close()
 
+    def test_service_info_empty_value_txt_record(self):
+        """Verify `key=` decodes to an empty value, not to a valueless `key`."""
+        zc = r.Zeroconf(interfaces=["127.0.0.1"])
+        service_name = "name._type._tcp.local."
+        service_type = "_type._tcp.local."
+        service_server = "ash-1.local."
+        text = b"\x03rm=\x02rs\x05ve=05"
+        info = ServiceInfo(
+            service_type,
+            service_name,
+            22,
+            0,
+            0,
+            {"path": "/~paulsm/"},
+            service_server,
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        info.async_update_records(
+            zc,
+            r.current_time_millis(),
+            [
+                r.RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        120,
+                        text,
+                    ),
+                    None,
+                )
+            ],
+        )
+        assert info.properties[b"rm"] == b""
+        assert info.properties[b"rs"] is None
+        assert info.properties[b"ve"] == b"05"
+
+        # The string-facing API must preserve the distinction too.
+        assert info.decoded_properties["rm"] == ""
+        assert info.decoded_properties["rs"] is None
+        assert info.decoded_properties["ve"] == "05"
+
+        # Re-encoding either view of the properties must reproduce the received rdata.
+        for properties in (info.properties, info.decoded_properties):
+            assert (
+                ServiceInfo(
+                    service_type,
+                    service_name,
+                    22,
+                    0,
+                    0,
+                    properties,
+                    service_server,
+                ).text
+                == text
+            )
+        zc.close()
+
 
 def test_multiple_addresses():
     type_ = "_http._tcp.local."
