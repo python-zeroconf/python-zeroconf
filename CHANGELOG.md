@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.151.1 (2026-08-28)
+
+### Bug Fixes
+
+- Accept str addresses in ServiceInfo.addresses under cython
+  ([#1836](https://github.com/python-zeroconf/python-zeroconf/pull/1836),
+  [`c0b2d50`](https://github.com/python-zeroconf/python-zeroconf/commit/c0b2d5018b2946eee89ca584c377fa00870b32b6))
+
+
 ## v0.151.0 (2026-08-28)
 
 ### Features
