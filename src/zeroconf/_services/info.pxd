@@ -45,8 +45,6 @@ cdef object QM_QUESTION
 cdef object _IPVersion_All_value
 cdef object _IPVersion_V4Only_value
 
-cdef cython.set _ADDRESS_RECORD_TYPES
-
 cdef unsigned int _DUPLICATE_QUESTION_INTERVAL
 
 cdef bint TYPE_CHECKING
@@ -77,6 +75,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public DNSService _dns_service_cache
     cdef public DNSText _dns_text_cache
     cdef public cython.list _dns_address_cache
+    cdef public DNSNsec _dns_address_nsec_cache
     cdef public cython.set _get_address_and_nsec_records_cache
     cdef public cython.set _query_record_types
     cdef public bint _txt_seen
@@ -111,9 +110,13 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(
         dns_service_record=DNSService,
         dns_text_record=DNSText,
-        dns_address_record=DNSAddress
+        dns_address_record=DNSAddress,
+        dns_nsec_record=DNSNsec
     )
     cdef bint _process_record_threadsafe(self, object zc, DNSRecord record, double now)
+
+    @cython.locals(rdtypes=cython.list)
+    cdef bint _process_nsec_record(self, DNSNsec record)
 
     @cython.locals(existing_idx=int, existing=object)
     cdef bint _upsert_ipv6_address(self, object ip_addr)
@@ -143,7 +146,8 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(cacheable=cython.bint)
     cdef DNSText _dns_text(self, object override_ttl)
 
-    cdef DNSNsec _dns_nsec(self, cython.list missing_types, object override_ttl)
+    @cython.locals(cacheable=cython.bint, has_v4=cython.bint, has_v6=cython.bint)
+    cdef DNSNsec _dns_address_nsec(self, object override_ttl)
 
     @cython.locals(cacheable=cython.bint)
     cdef cython.set _get_address_and_nsec_records(self, object override_ttl)

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+import warnings
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
@@ -62,7 +63,6 @@ from .._utils.name import service_type_name
 from .._utils.net import IPVersion, _encode_address
 from .._utils.time import current_time_millis
 from ..const import (
-    _ADDRESS_RECORD_TYPES,
     _CLASS_IN,
     _CLASS_IN_UNIQUE,
     _DNS_HOST_TTL,
@@ -180,6 +180,7 @@ class ServiceInfo(RecordUpdateListener):
     __slots__ = (
         "_decoded_properties",
         "_dns_address_cache",
+        "_dns_address_nsec_cache",
         "_dns_pointer_cache",
         "_dns_service_cache",
         "_dns_text_cache",
@@ -255,6 +256,7 @@ class ServiceInfo(RecordUpdateListener):
         self.other_ttl = other_ttl
         self._new_records_futures: set[asyncio.Future] | None = None
         self._dns_address_cache: list[DNSAddress] | None = None
+        self._dns_address_nsec_cache: DNSNsec | None = None
         self._dns_pointer_cache: DNSPointer | None = None
         self._dns_service_cache: DNSService | None = None
         self._dns_text_cache: DNSText | None = None
@@ -294,6 +296,7 @@ class ServiceInfo(RecordUpdateListener):
         self._ipv4_addresses.clear()
         self._ipv6_addresses.clear()
         self._dns_address_cache = None
+        self._dns_address_nsec_cache = None
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
@@ -336,6 +339,7 @@ class ServiceInfo(RecordUpdateListener):
     def async_clear_cache(self) -> None:
         """Clear the cache for this service info."""
         self._dns_address_cache = None
+        self._dns_address_nsec_cache = None
         self._dns_pointer_cache = None
         self._dns_service_cache = None
         self._dns_text_cache = None
@@ -644,7 +648,25 @@ class ServiceInfo(RecordUpdateListener):
                 self._set_ipv6_addresses_from_cache(zc, now)
             return True
 
+        if record_type is DNSNsec:
+            dns_nsec_record = record
+            if TYPE_CHECKING:
+                assert isinstance(dns_nsec_record, DNSNsec)
+            return self._process_nsec_record(dns_nsec_record)
+
         return False
+
+    def _process_nsec_record(self, record: DNSNsec) -> bool:
+        """Record a TXT denial from an NSEC record at the service name."""
+        rdtypes = record.rdtypes
+        # RFC 6762 §6.1: the type bitmap lists the rrtypes that exist, so SRV
+        # present with TXT absent denies the TXT record. Requiring the SRV bit
+        # also keeps older python-zeroconf NSECs, which listed the missing
+        # address types, from being misread as a TXT denial.
+        if self._txt_seen or _TYPE_SRV not in rdtypes or _TYPE_TXT in rdtypes:
+            return False
+        self._txt_seen = True
+        return True
 
     def dns_addresses(
         self,
@@ -751,39 +773,58 @@ class ServiceInfo(RecordUpdateListener):
             self._dns_text_cache = record
         return record
 
-    def dns_nsec(self, missing_types: list[int], override_ttl: int_ | None = None) -> DNSNsec:
-        """Return DNSNsec from ServiceInfo."""
-        return self._dns_nsec(missing_types, override_ttl)
+    def dns_nsec(self, missing_types: list[int], override_ttl: int_ | None = None) -> DNSNsec | None:
+        """Deprecated: use dns_address_nsec instead; missing_types is ignored."""
+        warnings.warn(
+            "dns_nsec is deprecated, and will be removed in a future version. "
+            "Use dns_address_nsec instead; missing_types is ignored.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._dns_address_nsec(override_ttl)
 
-    def _dns_nsec(self, missing_types: list[int_], override_ttl: int_ | None) -> DNSNsec:
-        """Return DNSNsec from ServiceInfo."""
-        return DNSNsec(
-            self._name,
+    def dns_address_nsec(self, override_ttl: int_ | None = None) -> DNSNsec | None:
+        """Return DNSNsec asserting which address types exist, or None if not applicable."""
+        return self._dns_address_nsec(override_ttl)
+
+    def _dns_address_nsec(self, override_ttl: int_ | None) -> DNSNsec | None:
+        cacheable = override_ttl is None
+        if self._dns_address_nsec_cache is not None and cacheable:
+            return self._dns_address_nsec_cache
+        # RFC 6762 §6.1: the type bitmap lists the rrtypes that exist at the
+        # name. Both families present leaves nothing to deny; neither leaves
+        # nothing to assert (an empty bitmap is unencodable).
+        has_v4 = bool(self._ipv4_addresses)
+        has_v6 = bool(self._ipv6_addresses)
+        if has_v4 == has_v6:
+            return None
+        assert self.server is not None, "Service server must be set for NSEC record."
+        record = DNSNsec(
+            self.server,
             _TYPE_NSEC,
             _CLASS_IN_UNIQUE,
             override_ttl if override_ttl is not None else self.host_ttl,
-            self._name,
-            missing_types,
+            self.server,
+            [_TYPE_A] if has_v4 else [_TYPE_AAAA],
             0.0,
         )
+        if cacheable:
+            self._dns_address_nsec_cache = record
+        return record
 
     def get_address_and_nsec_records(self, override_ttl: int_ | None = None) -> set[DNSRecord]:
-        """Build a set of address records and NSEC records for non-present record types."""
+        """Build a set of address records plus an NSEC asserting which address types exist."""
         return self._get_address_and_nsec_records(override_ttl)
 
     def _get_address_and_nsec_records(self, override_ttl: int_ | None) -> set[DNSRecord]:
-        """Build a set of address records and NSEC records for non-present record types."""
+        """Build a set of address records plus an NSEC asserting which address types exist."""
         cacheable = override_ttl is None
         if self._get_address_and_nsec_records_cache is not None and cacheable:
             return self._get_address_and_nsec_records_cache
-        missing_types: set[int] = _ADDRESS_RECORD_TYPES.copy()
-        records: set[DNSRecord] = set()
-        for dns_address in self._dns_addresses(override_ttl, IPVersion.All):
-            missing_types.discard(dns_address.type)
-            records.add(dns_address)
-        if missing_types:
-            assert self.server is not None, "Service server must be set for NSEC record."
-            records.add(self._dns_nsec(list(missing_types), override_ttl))
+        records: set[DNSRecord] = set(self._dns_addresses(override_ttl, IPVersion.All))
+        nsec = self._dns_address_nsec(override_ttl)
+        if nsec is not None:
+            records.add(nsec)
         if cacheable:
             self._get_address_and_nsec_records_cache = records
         return records
@@ -831,6 +872,10 @@ class ServiceInfo(RecordUpdateListener):
         cached_txt_record = cache.get_by_details(self._name, _TYPE_TXT, _CLASS_IN)
         if cached_txt_record:
             self._process_record_threadsafe(zc, cached_txt_record, now)
+        if not self._txt_seen:
+            cached_nsec_record = cache.get_by_details(self._name, _TYPE_NSEC, _CLASS_IN)
+            if cached_nsec_record:
+                self._process_record_threadsafe(zc, cached_nsec_record, now)
         if original_server_key == self.server_key:
             # If there is a srv which changes the server_key,
             # A and AAAA will already be loaded from the cache
@@ -847,7 +892,8 @@ class ServiceInfo(RecordUpdateListener):
 
         RFC 6763 section 6 requires every DNS-SD service to have a TXT record,
         so a service is not complete until one has been seen. An empty TXT
-        record counts as seen; a missing one does not.
+        record counts as seen, as does an NSEC record denying its existence
+        (RFC 6762 section 6.1); a missing one does not.
         """
         return bool(self._txt_seen and (self._ipv4_addresses or self._ipv6_addresses))
 

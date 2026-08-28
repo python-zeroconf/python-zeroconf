@@ -811,8 +811,12 @@ def test_known_answer_supression():
     assert question_answers
     assert not question_answers.ucast
     expected_nsec_record = cast(r.DNSNsec, next(iter(question_answers.mcast_now)))
-    assert const._TYPE_A not in expected_nsec_record.rdtypes
-    assert const._TYPE_AAAA in expected_nsec_record.rdtypes
+    # RFC 6762 §6.1: the bitmap lists the types that exist at the server name
+    assert expected_nsec_record.name == server_name
+    assert expected_nsec_record.next_name == server_name
+    assert const._TYPE_A in expected_nsec_record.rdtypes
+    assert const._TYPE_AAAA not in expected_nsec_record.rdtypes
+    assert const._TYPE_NSEC not in expected_nsec_record.rdtypes
     assert not question_answers.mcast_aggregate
     assert not question_answers.mcast_aggregate_last_second
 
@@ -865,6 +869,31 @@ def test_known_answer_supression():
     assert not question_answers.mcast_aggregate_last_second
 
     # unregister
+    zc.registry.async_remove(info)
+    zc.close()
+
+
+def test_no_nsec_answer_for_service_without_addresses() -> None:
+    """A service with no address records cannot assert which types exist, so no NSEC is sent."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    type_ = "_noaddrnsec._tcp.local."
+    registration_name = f"noaddr.{type_}"
+    server_name = "noaddr-host.local."
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/~paulsm/"}, server_name)
+    zc.registry.async_add(info)
+    _clear_cache(zc)
+
+    generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    question = r.DNSQuestion(server_name, const._TYPE_AAAA, const._CLASS_IN)
+    generated.add_question(question)
+    packets = generated.packets()
+    question_answers = zc.query_handler.async_response([r.DNSIncoming(packet) for packet in packets], False)
+    assert question_answers
+    assert not question_answers.ucast
+    assert not question_answers.mcast_now
+    assert not question_answers.mcast_aggregate
+    assert not question_answers.mcast_aggregate_last_second
+
     zc.registry.async_remove(info)
     zc.close()
 
