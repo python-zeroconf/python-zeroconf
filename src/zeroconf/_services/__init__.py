@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import enum
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -61,6 +61,7 @@ class Signal:
         service_type: str,
         name: str,
         state_change: ServiceStateChange,
+        **kwargs: Any,
     ) -> None:
         for h in self._handlers[:]:
             h(

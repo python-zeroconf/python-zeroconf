@@ -303,19 +303,28 @@ def test_signal_fire_dispatches_documented_kwargs():
     ]
 
 
-def test_signal_fire_rejects_unknown_kwarg():
-    """Signal.fire rejects keyword args outside the contract."""
+def test_signal_fire_discards_unknown_kwarg():
+    """Signal.fire accepts extra keyword args and does not forward them."""
     signal = r.Signal()
-    signal.registration_interface.register_handler(lambda **_: None)
+    captured: list[dict[str, Any]] = []
+    signal.registration_interface.register_handler(lambda **kw: captured.append(kw))
 
-    with pytest.raises(TypeError, match="unexpected keyword argument"):
-        signal.fire(
-            zeroconf=None,  # type: ignore[arg-type]
-            service_type="_http._tcp.local.",
-            name="x._http._tcp.local.",
-            state_change=r.ServiceStateChange.Added,
-            bogus=1,  # type: ignore[call-arg]
-        )
+    signal.fire(
+        zeroconf=None,  # type: ignore[arg-type]
+        service_type="_http._tcp.local.",
+        name="x._http._tcp.local.",
+        state_change=r.ServiceStateChange.Added,
+        bogus=1,
+    )
+
+    assert captured == [
+        {
+            "zeroconf": None,
+            "service_type": "_http._tcp.local.",
+            "name": "x._http._tcp.local.",
+            "state_change": r.ServiceStateChange.Added,
+        }
+    ]
 
 
 def test_signal_fire_rejects_positional_args():
