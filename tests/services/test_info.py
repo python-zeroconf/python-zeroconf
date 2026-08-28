@@ -2262,6 +2262,30 @@ def test_load_from_cache_complete_with_empty_locally_set_properties():
     zc.close()
 
 
+def test_load_from_cache_complete_with_empty_locally_set_text():
+    """An explicitly supplied empty text blob counts as the TXT data."""
+    type_ = "_http._tcp.local."
+    registration_name = f"emptylocaltext.{type_}"
+    host = "emptylocaltext.local."
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
+    zc.cache.async_add_records(
+        [
+            r.DNSAddress(
+                host,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_aton("127.0.0.1"),
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, b"", host)
+    assert info.load_from_cache(zc) is True
+    assert info.properties == {}
+    zc.close()
+
+
 @pytest.mark.asyncio
 async def test_async_request_incomplete_without_txt_record(quick_request_timing):
     """async_request fails while the responder sends no TXT record, and succeeds once it does."""
