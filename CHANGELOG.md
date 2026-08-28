@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.150.5 (2026-08-28)
+
+### Bug Fixes
+
+- Fail service resolution fast when nsec denies the needed address types
+  ([#1827](https://github.com/python-zeroconf/python-zeroconf/pull/1827),
+  [`77f8cf0`](https://github.com/python-zeroconf/python-zeroconf/commit/77f8cf0ccd0c55427a768c403382b82e560f6255))
+
+### Testing
+
+- Allow coverage data lock in blockbuster
+  ([#1828](https://github.com/python-zeroconf/python-zeroconf/pull/1828),
+  [`ca9d027`](https://github.com/python-zeroconf/python-zeroconf/commit/ca9d02709dd4ccfe7ae6fc6a9f12ea76fdb9691b))
+
+
 ## v0.150.4 (2026-08-28)
 
 ### Bug Fixes
