@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.150.2 (2026-08-28)
+
+### Bug Fixes
+
+- Keep `key=` distinct from a valueless `key` in TXT records
+  ([#1813](https://github.com/python-zeroconf/python-zeroconf/pull/1813),
+  [`899eaaa`](https://github.com/python-zeroconf/python-zeroconf/commit/899eaaa8a11c3d63b8325f73c9968a270e1e72f2))
+
+
 ## v0.150.1 (2026-08-28)
 
 ### Bug Fixes
