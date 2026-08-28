@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v0.150.1 (2026-08-28)
+
+### Bug Fixes
+
+- Build with cython 3.3.0 ([#1820](https://github.com/python-zeroconf/python-zeroconf/pull/1820),
+  [`df947b2`](https://github.com/python-zeroconf/python-zeroconf/commit/df947b2f4df94950e272fe09dc9d48ad18411743))
+
+### Documentation
+
+- Add an example for re-announcing on interface changes
+  ([#1803](https://github.com/python-zeroconf/python-zeroconf/pull/1803),
+  [`c690b78`](https://github.com/python-zeroconf/python-zeroconf/commit/c690b78cbd8d54df9847e8873cf5edce80e70b8d))
+
+
 ## v0.150.0 (2026-06-22)
 
 ### Features
