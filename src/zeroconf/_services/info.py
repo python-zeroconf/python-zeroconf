@@ -467,10 +467,7 @@ class ServiceInfo(RecordUpdateListener):
             if key not in properties:
                 # RFC 6763 section 6.4 distinguishes a key with no '=' (a
                 # boolean attribute: present, no value) from `key=` (present
-                # with an empty value). Testing the separator rather than the
-                # value keeps them apart; `value or None` collapsed both to
-                # None, so re-serialising a received `key=` emitted a bare
-                # `key`.
+                # with an empty value), so test the separator, not the value.
                 properties[key] = value if sep else None
             index += length
 

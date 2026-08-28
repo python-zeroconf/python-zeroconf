@@ -631,13 +631,7 @@ class TestServiceInfo(unittest.TestCase):
         zc.close()
 
     def test_service_info_empty_value_txt_record(self):
-        """Verify `key=` stays distinct from a valueless `key`.
-
-        RFC 6763 section 6.4 defines a key with no '=' as a boolean attribute
-        (present, no value), and `key=` as present with an empty value. If both
-        decode to None they are indistinguishable, and re-encoding a received
-        `key=` emits a bare `key` -- a different record than the one received.
-        """
+        """Verify `key=` decodes to an empty value, not to a valueless `key`."""
         zc = r.Zeroconf(interfaces=["127.0.0.1"])
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
@@ -678,19 +672,20 @@ class TestServiceInfo(unittest.TestCase):
         assert info.decoded_properties["rs"] is None
         assert info.decoded_properties["ve"] == "05"
 
-        # Re-encoding the decoded properties must reproduce the received rdata.
-        assert (
-            ServiceInfo(
-                service_type,
-                service_name,
-                22,
-                0,
-                0,
-                info.properties,
-                service_server,
-            ).text
-            == text
-        )
+        # Re-encoding either view of the properties must reproduce the received rdata.
+        for properties in (info.properties, info.decoded_properties):
+            assert (
+                ServiceInfo(
+                    service_type,
+                    service_name,
+                    22,
+                    0,
+                    0,
+                    properties,
+                    service_server,
+                ).text
+                == text
+            )
         zc.close()
 
 
