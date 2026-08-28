@@ -264,23 +264,24 @@ class QueryHandler:
         for service in services:
             answers: list[DNSAddress] = []
             additionals: set[DNSRecord] = set()
-            seen_types: set[int] = set()
+            type_seen = False
             for dns_address in service._dns_addresses(None, _IPVersion_ALL):
-                seen_types.add(dns_address.type)
                 if dns_address.type != type_:
                     additionals.add(dns_address)
-                elif not known_answers.suppresses(dns_address):
-                    answers.append(dns_address)
-            missing_types: set[int] = _ADDRESS_RECORD_TYPES - seen_types
+                else:
+                    type_seen = True
+                    if not known_answers.suppresses(dns_address):
+                        answers.append(dns_address)
             if answers:
-                if missing_types:
-                    assert service.server is not None, "Service server must be set for NSEC record."
-                    additionals.add(service._dns_nsec(list(missing_types), None))
+                nsec = service._dns_address_nsec(None)
+                if nsec is not None:
+                    additionals.add(nsec)
                 for answer in answers:
                     answer_set[answer] = additionals
-            elif type_ in missing_types:
-                assert service.server is not None, "Service server must be set for NSEC record."
-                answer_set[service._dns_nsec(list(missing_types), None)] = set()
+            elif not type_seen and type_ in _ADDRESS_RECORD_TYPES:
+                nsec = service._dns_address_nsec(None)
+                if nsec is not None:
+                    answer_set[nsec] = set()
 
     def _answer_question(
         self,

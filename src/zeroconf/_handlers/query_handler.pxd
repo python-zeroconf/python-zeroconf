@@ -2,7 +2,7 @@
 import cython
 
 from .._cache cimport DNSCache
-from .._dns cimport DNSAddress, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
+from .._dns cimport DNSAddress, DNSNsec, DNSPointer, DNSQuestion, DNSRecord, DNSRRSet
 from .._history cimport QuestionHistory
 from .._protocol.incoming cimport DNSIncoming
 from .._services.info cimport ServiceInfo
@@ -83,7 +83,12 @@ cdef class QueryHandler:
     @cython.locals(service=ServiceInfo)
     cdef void _add_pointer_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers)
 
-    @cython.locals(service=ServiceInfo, dns_address=DNSAddress)
+    @cython.locals(
+        service=ServiceInfo,
+        dns_address=DNSAddress,
+        type_seen=cython.bint,
+        nsec=DNSNsec,
+    )
     cdef void _add_address_answers(self, list services, cython.dict answer_set, DNSRRSet known_answers, cython.uint type_)
 
     @cython.locals(question_lower_name=str, type_=cython.uint, service=ServiceInfo)

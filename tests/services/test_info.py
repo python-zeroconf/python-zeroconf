@@ -2029,18 +2029,45 @@ async def test_release_wait_when_new_recorded_added_concurrency():
 
 
 @pytest.mark.asyncio
-async def test_service_info_nsec_records():
-    """Test we can generate nsec records from ServiceInfo."""
+async def test_service_info_address_nsec_records() -> None:
+    """Test we can generate address nsec records from ServiceInfo."""
     type_ = "_http._tcp.local."
     registration_name = f"multiareccon.{type_}"
     desc = {"path": "/~paulsm/"}
     host = "multahostcon.local."
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
-    nsec_record = info.dns_nsec([const._TYPE_A, const._TYPE_AAAA], 50)
-    assert nsec_record.name == registration_name
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host, addresses=[b"\x7f\x00\x00\x01"])
+    nsec_record = info.dns_address_nsec(50)
+    assert nsec_record is not None
+    assert nsec_record.name == host
+    assert nsec_record.next_name == host
     assert nsec_record.type == const._TYPE_NSEC
     assert nsec_record.ttl == 50
-    assert nsec_record.rdtypes == [const._TYPE_A, const._TYPE_AAAA]
+    assert nsec_record.rdtypes == [const._TYPE_A]
+
+    # the no-override call is memoized; mutating addresses must drop the cache
+    assert info.dns_address_nsec() is not None
+    assert info.dns_address_nsec() is info.dns_address_nsec()
+    info.addresses = []
+    assert info.dns_address_nsec() is None
+
+    v6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
+    info.addresses = [b"\x7f\x00\x00\x01", v6]
+    assert info.dns_address_nsec() is None
+
+
+def test_service_info_dns_nsec_deprecated() -> None:
+    """dns_nsec warns and delegates to dns_address_nsec, ignoring missing_types."""
+    type_ = "_http._tcp.local."
+    registration_name = f"depnsec.{type_}"
+    host = "depnsec-host.local."
+    info = ServiceInfo(
+        type_, registration_name, 80, 0, 0, {"path": "/~paulsm/"}, host, addresses=[b"\x7f\x00\x00\x01"]
+    )
+    with pytest.warns(DeprecationWarning, match="dns_address_nsec"):
+        record = info.dns_nsec([const._TYPE_AAAA], 50)
+    assert record == info.dns_address_nsec(50)
+    assert record is not None
+    assert record.rdtypes == [const._TYPE_A]
 
 
 @pytest.mark.asyncio
@@ -2339,3 +2366,229 @@ async def test_async_request_incomplete_without_txt_record(quick_request_timing)
     assert info.properties == {b"ttl": b"2"}
 
     await aiozc.async_close()
+
+
+@pytest.mark.parametrize(
+    ("nsec_rdtypes", "expected_complete"),
+    [
+        # SRV bit set with TXT absent is a TXT denial (RFC 6762 §6.1)
+        ([const._TYPE_SRV], True),
+        # no SRV bit: the inverted bitmap older releases emitted, not a denial
+        ([const._TYPE_AAAA], False),
+    ],
+)
+def test_load_from_cache_with_nsec(
+    zc_loopback: r.Zeroconf, nsec_rdtypes: list[int], expected_complete: bool
+) -> None:
+    """An NSEC listing SRV but not TXT denies the TXT record and completes the service."""
+    type_ = "_http._tcp.local."
+    registration_name = f"nsecdenial.{type_}"
+    host = "nsecdenial.local."
+    zc = zc_loopback
+    zc.cache.async_add_records(
+        [
+            r.DNSService(
+                registration_name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                80,
+                host,
+            ),
+            r.DNSNsec(
+                registration_name,
+                const._TYPE_NSEC,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                registration_name,
+                nsec_rdtypes,
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_aton("127.0.0.1"),
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name)
+    assert info.load_from_cache(zc) is expected_complete
+    if expected_complete:
+        assert info.properties == {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("quick_request_timing")
+async def test_async_request_completes_on_nsec_txt_denial(aiozc_loopback: AsyncZeroconf) -> None:
+    """async_request succeeds promptly when the responder denies the TXT record via NSEC."""
+    type_ = "_http._tcp.local."
+    registration_name = f"nsecrequest.{type_}"
+    host = "nsecrequest.local."
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    zc = aiozc_loopback.zeroconf
+
+    zc.record_manager.async_updates_from_response(
+        mock_incoming_msg(
+            [
+                r.DNSService(
+                    registration_name,
+                    const._TYPE_SRV,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    0,
+                    0,
+                    80,
+                    host,
+                ),
+                r.DNSAddress(
+                    host,
+                    const._TYPE_A,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    socket.inet_aton("127.0.0.1"),
+                ),
+            ]
+        )
+    )
+
+    info = ServiceInfo(type_, registration_name)
+    with patch.object(zc, "async_send"):
+        assert await info.async_request(zc, QUICK_REQUEST_TIMEOUT_MS) is False
+
+    zc.record_manager.async_updates_from_response(
+        mock_incoming_msg(
+            [
+                r.DNSNsec(
+                    registration_name,
+                    const._TYPE_NSEC,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    registration_name,
+                    [const._TYPE_SRV],
+                )
+            ]
+        )
+    )
+    with patch.object(zc, "async_send"):
+        assert await info.async_request(zc, QUICK_REQUEST_TIMEOUT_MS) is True
+    assert info.properties == {}
+
+    zc.record_manager.async_updates_from_response(
+        mock_incoming_msg(
+            [
+                r.DNSText(
+                    registration_name,
+                    const._TYPE_TXT,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    b"\x05ttl=2",
+                )
+            ]
+        )
+    )
+    assert info.load_from_cache(zc) is True
+    assert info.properties == {b"ttl": b"2"}
+
+
+@pytest.mark.asyncio
+async def test_nsec_after_txt_record_is_ignored(aiozc_loopback: AsyncZeroconf) -> None:
+    """An NSEC arriving after a real TXT record does not clear the properties."""
+    type_ = "_http._tcp.local."
+    registration_name = f"nsecaftertxt.{type_}"
+    host = "nsecaftertxt.local."
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    zc = aiozc_loopback.zeroconf
+
+    zc.record_manager.async_updates_from_response(
+        mock_incoming_msg(
+            [
+                r.DNSService(
+                    registration_name,
+                    const._TYPE_SRV,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    0,
+                    0,
+                    80,
+                    host,
+                ),
+                r.DNSText(
+                    registration_name,
+                    const._TYPE_TXT,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    b"\x05ttl=2",
+                ),
+                r.DNSAddress(
+                    host,
+                    const._TYPE_A,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    socket.inet_aton("127.0.0.1"),
+                ),
+            ]
+        )
+    )
+
+    info = ServiceInfo(type_, registration_name)
+    assert info.load_from_cache(zc) is True
+
+    nsec_record = r.DNSNsec(
+        registration_name,
+        const._TYPE_NSEC,
+        const._CLASS_IN | const._CLASS_UNIQUE,
+        120,
+        registration_name,
+        [const._TYPE_SRV],
+    )
+    info.async_update_records(zc, r.current_time_millis(), [RecordUpdate(nsec_record, None)])
+    assert info.properties == {b"ttl": b"2"}
+    assert info._is_complete
+
+
+def test_unhandled_record_type_at_service_name_is_ignored(zc_loopback: r.Zeroconf) -> None:
+    """A record type with no handler at the service name does not change state."""
+    type_ = "_http._tcp.local."
+    registration_name = f"unhandledrec.{type_}"
+    info = ServiceInfo(type_, registration_name)
+    ptr_record = r.DNSPointer(
+        registration_name,
+        const._TYPE_PTR,
+        const._CLASS_IN,
+        120,
+        f"other.{type_}",
+    )
+    info.async_update_records(zc_loopback, r.current_time_millis(), [RecordUpdate(ptr_record, None)])
+    assert info._txt_seen is False
+    assert info._is_complete is False
+
+
+@pytest.mark.asyncio
+async def test_own_nsec_response_does_not_complete_service(aiozc_loopback: AsyncZeroconf) -> None:
+    """The NSEC our own responder emits for a missing address type must not deny the TXT record."""
+    type_ = "_http._tcp.local."
+    registration_name = f"ownnsec.{type_}"
+    host = "ownnsec.local."
+    await aiozc_loopback.zeroconf.async_wait_for_start()
+    zc = aiozc_loopback.zeroconf
+
+    registered = ServiceInfo(
+        type_,
+        registration_name,
+        80,
+        0,
+        0,
+        {"path": "/~paulsm/"},
+        host,
+        addresses=[socket.inet_aton("10.0.1.2")],
+    )
+    zc.record_manager.async_updates_from_response(
+        mock_incoming_msg([registered.dns_service(), *registered.get_address_and_nsec_records()])
+    )
+
+    info = ServiceInfo(type_, registration_name)
+    assert info.load_from_cache(zc) is False
