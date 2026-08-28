@@ -172,6 +172,9 @@ class ServiceInfo(RecordUpdateListener):
       or in parsed form as text; at most one of those parameters can be provided)
     * interface_index: scope_id or zone_id for IPv6 link-local addresses i.e. an identifier of the interface
       where the peer is connected to
+
+    Assigning the `text` attribute directly does not mark the TXT record as seen; pass `properties`
+    to the constructor instead.
     """
 
     __slots__ = (
