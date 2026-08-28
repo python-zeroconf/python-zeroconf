@@ -308,12 +308,13 @@ def test_signal_fire_rejects_unknown_kwarg():
     signal = r.Signal()
     signal.registration_interface.register_handler(lambda **_: None)
 
-    with pytest.raises(TypeError):
-        signal.fire(  # type: ignore[call-arg]
-            zerocnf=None,
+    with pytest.raises(TypeError, match="unexpected keyword argument"):
+        signal.fire(
+            zeroconf=None,  # type: ignore[arg-type]
             service_type="_http._tcp.local.",
             name="x._http._tcp.local.",
             state_change=r.ServiceStateChange.Added,
+            bogus=1,  # type: ignore[call-arg]
         )
 
 
