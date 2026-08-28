@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import socket
 
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from zeroconf import DNSIncoming, DNSNsec, DNSOutgoing, const
@@ -154,9 +154,12 @@ def test_nsec_bitmap_mutations_never_raise(
 
 @given(
     tail_room=st.integers(min_value=0, max_value=32),
-    rdlength=st.integers(min_value=0, max_value=0xFFFF),
+    # 8 is the one rdlength that decodes cleanly; draw it regularly so the
+    # fast path also runs against the cap, not just the record-drop resync
+    rdlength=st.one_of(st.just(8), st.integers(min_value=0, max_value=0xFFFF)),
     pointer_target=st.integers(min_value=0, max_value=0x3FFF),
 )
+@example(tail_room=0, rdlength=8, pointer_target=0x0C)
 def test_records_near_the_size_cap_never_raise(tail_room: int, rdlength: int, pointer_target: int) -> None:
     """Record headers and pointers in the last bytes below 64 KiB cannot wrap the guards."""
     tail_record = (
@@ -179,4 +182,6 @@ def test_records_near_the_size_cap_never_raise(tail_room: int, rdlength: int, po
         + tail_record
     )
     assert len(packet) == total
-    _parse(packet)
+    answers = _parse(packet)
+    if rdlength == 8 and pointer_target == 0x0C:
+        assert len(answers) == 1
