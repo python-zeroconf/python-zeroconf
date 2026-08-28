@@ -6,22 +6,18 @@ packet that fails to decode sets ``valid = False`` instead.
 
 from __future__ import annotations
 
-import os
 import socket
 
-from hypothesis import given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 
 from zeroconf import DNSIncoming, DNSNsec, DNSOutgoing, const
+from zeroconf._dns import DNSRecord
 
 from .benchmarks.test_incoming import generate_packets
 
-# Deterministic in CI; set HYPOTHESIS_PROFILE=long for a deep local run.
-settings.register_profile("ci", derandomize=True, max_examples=200, deadline=None)
-settings.register_profile("long", max_examples=50000, deadline=None)
-settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "ci"))
-
-MAX_PACKET_SIZE = 9194
+# Slack past the codec's cap so the fuzzer also probes oversized input
+MAX_PACKET_SIZE = const._MAX_MSG_ABSOLUTE + 256
 
 
 def _nsec_packet() -> bytes:
@@ -43,7 +39,7 @@ def _nsec_packet() -> bytes:
 CORPUS = [*generate_packets(), _nsec_packet()]
 
 
-def _parse(data: bytes) -> list:
+def _parse(data: bytes) -> list[DNSRecord]:
     """Parse and touch every public surface; any exception is a bug."""
     incoming = DNSIncoming(data)
     assert isinstance(incoming.valid, bool)
@@ -53,7 +49,18 @@ def _parse(data: bytes) -> list:
     assert incoming.questions is not None
     answers = incoming.answers()
     assert isinstance(answers, list)
+    for record in answers:
+        repr(record)
+        hash(record)
     return answers
+
+
+def test_corpus_parses_cleanly() -> None:
+    """Positive control: the fuzz corpus itself must parse fully."""
+    for packet in CORPUS:
+        incoming = DNSIncoming(packet)
+        assert incoming.valid
+        assert incoming.answers()
 
 
 @given(data=st.binary(max_size=MAX_PACKET_SIZE))
