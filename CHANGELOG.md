@@ -2,6 +2,44 @@
 
 <!-- version list -->
 
+## v0.150.3 (2026-08-28)
+
+### Bug Fixes
+
+- Require a TXT record before a service is considered complete
+  ([#1821](https://github.com/python-zeroconf/python-zeroconf/pull/1821),
+  [`32d963b`](https://github.com/python-zeroconf/python-zeroconf/commit/32d963bd4a401c098ff518d3b1e78b091f1f9c9c))
+
+### Performance Improvements
+
+- **registry**: Use insertion-ordered dicts for O(1) removal
+  ([#1786](https://github.com/python-zeroconf/python-zeroconf/pull/1786),
+  [`1216f59`](https://github.com/python-zeroconf/python-zeroconf/commit/1216f59b1113d01d3241904f11e6d05dde654c6d))
+
+
+## v0.150.2 (2026-08-28)
+
+### Bug Fixes
+
+- Keep `key=` distinct from a valueless `key` in TXT records
+  ([#1813](https://github.com/python-zeroconf/python-zeroconf/pull/1813),
+  [`899eaaa`](https://github.com/python-zeroconf/python-zeroconf/commit/899eaaa8a11c3d63b8325f73c9968a270e1e72f2))
+
+
+## v0.150.1 (2026-08-28)
+
+### Bug Fixes
+
+- Build with cython 3.3.0 ([#1820](https://github.com/python-zeroconf/python-zeroconf/pull/1820),
+  [`df947b2`](https://github.com/python-zeroconf/python-zeroconf/commit/df947b2f4df94950e272fe09dc9d48ad18411743))
+
+### Documentation
+
+- Add an example for re-announcing on interface changes
+  ([#1803](https://github.com/python-zeroconf/python-zeroconf/pull/1803),
+  [`c690b78`](https://github.com/python-zeroconf/python-zeroconf/commit/c690b78cbd8d54df9847e8873cf5edce80e70b8d))
+
+
 ## v0.150.0 (2026-06-22)
 
 ### Features

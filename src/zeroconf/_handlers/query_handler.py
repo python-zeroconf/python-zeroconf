@@ -61,6 +61,8 @@ _IPVersion_ALL = IPVersion.All
 
 _int = int
 _str = str
+_ServiceInfo = ServiceInfo
+_DNSIncoming = DNSIncoming
 
 _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION = 0
 _ANSWER_STRATEGY_POINTER = 1
@@ -212,7 +214,7 @@ class QueryHandler:
 
     def _add_service_type_enumeration_query_answers(
         self,
-        types: list[str],
+        types: list[_str],
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
     ) -> None:
@@ -234,7 +236,7 @@ class QueryHandler:
 
     def _add_pointer_answers(
         self,
-        services: list[ServiceInfo],
+        services: list[_ServiceInfo],
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
     ) -> None:
@@ -253,7 +255,7 @@ class QueryHandler:
 
     def _add_address_answers(
         self,
-        services: list[ServiceInfo],
+        services: list[_ServiceInfo],
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
         type_: _int,
@@ -284,8 +286,8 @@ class QueryHandler:
         self,
         question: DNSQuestion,
         strategy_type: _int,
-        types: list[str],
-        services: list[ServiceInfo],
+        types: list[_str],
+        services: list[_ServiceInfo],
         known_answers: DNSRRSet,
     ) -> _AnswerWithAdditionalsType:
         """Answer a question."""
@@ -313,7 +315,7 @@ class QueryHandler:
         return answer_set
 
     def async_response(  # pylint: disable=unused-argument
-        self, msgs: list[DNSIncoming], ucast_source: bool
+        self, msgs: list[_DNSIncoming], ucast_source: bool
     ) -> QuestionAnswers | None:
         """Deal with incoming query packets. Provides a response if possible.
 
@@ -435,7 +437,7 @@ class QueryHandler:
 
     def handle_assembled_query(
         self,
-        packets: list[DNSIncoming],
+        packets: list[_DNSIncoming],
         addr: _str,
         port: _int,
         transport: _WrappedTransport,

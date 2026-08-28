@@ -630,6 +630,64 @@ class TestServiceInfo(unittest.TestCase):
         assert info.properties[b"ci"] == b"2"
         zc.close()
 
+    def test_service_info_empty_value_txt_record(self):
+        """Verify `key=` decodes to an empty value, not to a valueless `key`."""
+        zc = r.Zeroconf(interfaces=["127.0.0.1"])
+        service_name = "name._type._tcp.local."
+        service_type = "_type._tcp.local."
+        service_server = "ash-1.local."
+        text = b"\x03rm=\x02rs\x05ve=05"
+        info = ServiceInfo(
+            service_type,
+            service_name,
+            22,
+            0,
+            0,
+            {"path": "/~paulsm/"},
+            service_server,
+            addresses=[socket.inet_aton("10.0.1.2")],
+        )
+        info.async_update_records(
+            zc,
+            r.current_time_millis(),
+            [
+                r.RecordUpdate(
+                    r.DNSText(
+                        service_name,
+                        const._TYPE_TXT,
+                        const._CLASS_IN | const._CLASS_UNIQUE,
+                        120,
+                        text,
+                    ),
+                    None,
+                )
+            ],
+        )
+        assert info.properties[b"rm"] == b""
+        assert info.properties[b"rs"] is None
+        assert info.properties[b"ve"] == b"05"
+
+        # The string-facing API must preserve the distinction too.
+        assert info.decoded_properties["rm"] == ""
+        assert info.decoded_properties["rs"] is None
+        assert info.decoded_properties["ve"] == "05"
+
+        # Re-encoding either view of the properties must reproduce the received rdata.
+        for properties in (info.properties, info.decoded_properties):
+            assert (
+                ServiceInfo(
+                    service_type,
+                    service_name,
+                    22,
+                    0,
+                    0,
+                    properties,
+                    service_server,
+                ).text
+                == text
+            )
+        zc.close()
+
 
 def test_multiple_addresses():
     type_ = "_http._tcp.local."
@@ -2078,5 +2136,206 @@ async def test_unicast_flag_if_requested() -> None:
         await aiozc.async_get_service_info(
             f"willnotbefound.{type_}", type_, timeout=200, question_type=r.DNSQuestionType.QU
         )
+
+    await aiozc.async_close()
+
+
+def test_load_from_cache_incomplete_without_txt_record():
+    """A service with addresses but no TXT record is not complete (RFC 6763 section 6)."""
+    type_ = "_http._tcp.local."
+    registration_name = f"notxt.{type_}"
+    host = "notxt.local."
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
+    zc.cache.async_add_records(
+        [
+            r.DNSService(
+                registration_name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                80,
+                host,
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_aton("127.0.0.1"),
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name)
+    assert info.load_from_cache(zc) is False
+    assert info.addresses == [socket.inet_aton("127.0.0.1")]
+    zc.close()
+
+
+def test_load_from_cache_complete_with_empty_txt_record():
+    """An empty TXT record still completes the service; only a missing one does not."""
+    type_ = "_http._tcp.local."
+    registration_name = f"emptytxt.{type_}"
+    host = "emptytxt.local."
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
+    zc.cache.async_add_records(
+        [
+            r.DNSService(
+                registration_name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                80,
+                host,
+            ),
+            r.DNSText(
+                registration_name,
+                const._TYPE_TXT,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                b"",
+            ),
+            r.DNSAddress(
+                host,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_aton("127.0.0.1"),
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name)
+    assert info.load_from_cache(zc) is True
+    assert info.properties == {}
+    zc.close()
+
+
+def test_load_from_cache_complete_with_locally_set_properties():
+    """Properties supplied by the caller count as the TXT data for completeness."""
+    type_ = "_http._tcp.local."
+    registration_name = f"localtxt.{type_}"
+    host = "localtxt.local."
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
+    zc.cache.async_add_records(
+        [
+            r.DNSAddress(
+                host,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_aton("127.0.0.1"),
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/~paulsm/"}, host)
+    assert info.load_from_cache(zc) is True
+    zc.close()
+
+
+def test_load_from_cache_complete_with_empty_locally_set_properties():
+    """An explicitly supplied empty properties dict counts as the TXT data."""
+    type_ = "_http._tcp.local."
+    registration_name = f"emptylocaltxt.{type_}"
+    host = "emptylocaltxt.local."
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
+    zc.cache.async_add_records(
+        [
+            r.DNSAddress(
+                host,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_aton("127.0.0.1"),
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, {}, host)
+    assert info.load_from_cache(zc) is True
+    assert info.properties == {}
+    zc.close()
+
+
+def test_load_from_cache_complete_with_empty_locally_set_text():
+    """An explicitly supplied empty text blob counts as the TXT data."""
+    type_ = "_http._tcp.local."
+    registration_name = f"emptylocaltext.{type_}"
+    host = "emptylocaltext.local."
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
+    zc.cache.async_add_records(
+        [
+            r.DNSAddress(
+                host,
+                const._TYPE_A,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_aton("127.0.0.1"),
+            ),
+        ]
+    )
+
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, b"", host)
+    assert info.load_from_cache(zc) is True
+    assert info.properties == {}
+    zc.close()
+
+
+@pytest.mark.asyncio
+async def test_async_request_incomplete_without_txt_record(quick_request_timing):
+    """async_request fails while the responder sends no TXT record, and succeeds once it does."""
+    type_ = "_http._tcp.local."
+    registration_name = f"notxtrequest.{type_}"
+    host = "notxtrequest.local."
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
+
+    address_records = [
+        r.DNSService(
+            registration_name,
+            const._TYPE_SRV,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            120,
+            0,
+            0,
+            80,
+            host,
+        ),
+        r.DNSAddress(
+            host,
+            const._TYPE_A,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            120,
+            socket.inet_aton("127.0.0.1"),
+        ),
+    ]
+    zc.record_manager.async_updates_from_response(mock_incoming_msg(address_records))
+
+    info = ServiceInfo(type_, registration_name)
+    with patch.object(zc, "async_send"):
+        assert await info.async_request(zc, QUICK_REQUEST_TIMEOUT_MS) is False
+
+    zc.record_manager.async_updates_from_response(
+        mock_incoming_msg(
+            [
+                r.DNSText(
+                    registration_name,
+                    const._TYPE_TXT,
+                    const._CLASS_IN | const._CLASS_UNIQUE,
+                    120,
+                    b"\x05ttl=2",
+                )
+            ]
+        )
+    )
+    with patch.object(zc, "async_send"):
+        assert await info.async_request(zc, QUICK_REQUEST_TIMEOUT_MS) is True
+    assert info.properties == {b"ttl": b"2"}
 
     await aiozc.async_close()

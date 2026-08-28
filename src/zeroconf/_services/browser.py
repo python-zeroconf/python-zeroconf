@@ -95,6 +95,9 @@ bool_ = bool
 str_ = str
 
 _QuestionWithKnownAnswers = dict[DNSQuestion, set[DNSPointer]]
+DNSPointer_ = DNSPointer
+DNSOutgoing_ = DNSOutgoing
+RecordUpdate_ = RecordUpdate
 
 heappop = heapq.heappop
 heappush = heapq.heappush
@@ -193,7 +196,7 @@ class _DNSPointerOutgoingBucket:
         self.out = DNSOutgoing(_FLAGS_QR_QUERY, multicast)
         self.bytes = 0
 
-    def add(self, max_compressed_size: int_, question: DNSQuestion, answers: set[DNSPointer]) -> None:
+    def add(self, max_compressed_size: int_, question: DNSQuestion, answers: set[DNSPointer_]) -> None:
         """Add a new set of questions and known answers to the outgoing."""
         self.out.add_question(question)
         for answer in answers:
@@ -259,10 +262,10 @@ def _group_ptr_queries_with_known_answers(
 def generate_service_query(
     zc: Zeroconf,
     now_millis: float_,
-    types_: set[str],
+    types_: set[str_],
     multicast: bool,
     question_type: DNSQuestionType | None,
-) -> list[DNSOutgoing]:
+) -> list[DNSOutgoing_]:
     """Generate a service query for sending with zeroconf.send."""
     questions_with_known_answers: _QuestionWithKnownAnswers = {}
     qu_question = not multicast if question_type is None else question_type is QU_QUESTION
@@ -533,7 +536,7 @@ class QueryScheduler:
         self._next_run = self._loop.call_at(millis_to_seconds(next_when_millis), self._process_ready_types)
 
     def async_send_ready_queries(
-        self, first_request: bool, now_millis: float_, ready_types: set[str]
+        self, first_request: bool, now_millis: float_, ready_types: set[str_]
     ) -> None:
         """Send any ready queries."""
         # If they did not specify and this is the first request, ask QU questions
@@ -665,7 +668,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
         ):
             self._pending_handlers[key] = state_change
 
-    def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate]) -> None:
+    def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate_]) -> None:
         """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache.

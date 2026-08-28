@@ -455,7 +455,7 @@ class DNSIncoming:
         return name
 
     def _decode_labels_at_offset(
-        self, off: _int, labels: list[str], seen_pointers: set[int], depth: _int
+        self, off: _int, labels: list[_str], seen_pointers: set[_int], depth: _int
     ) -> int:
         # This is a tight loop that is called frequently, small optimizations can make a difference.
         if depth > MAX_DNS_LABELS:

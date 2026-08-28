@@ -42,6 +42,7 @@ from .const import _MAX_CACHE_RECORDS, _ONE_SECOND, _TYPE_PTR
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = DNSAddress | DNSHinfo | DNSPointer | DNSText | DNSService
 _DNSRecordCacheType = dict[str, dict[DNSRecord, DNSRecord]]
+_UniqueType = tuple[str, int, int]
 _DNSRecord = DNSRecord
 _str = str
 _float = float
@@ -324,7 +325,7 @@ class DNSCache:
 
     def async_mark_unique_records_older_than_1s_to_expire(
         self,
-        unique_types: set[tuple[_str, _int, _int]],
+        unique_types: set[_UniqueType],
         answers: Iterable[DNSRecord],
         now: _float,
     ) -> None:
