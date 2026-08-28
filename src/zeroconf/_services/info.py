@@ -162,7 +162,9 @@ class ServiceInfo(RecordUpdateListener):
     * `priority`: priority of the service
     * `properties`: dictionary of properties (or a bytes object holding the contents of the `text` field).
       converted to str and then encoded to bytes using UTF-8. Keys with `None` values are converted to
-      value-less attributes.
+      value-less attributes. Any supplied value, including an empty `{}` or `b""`, counts as a seen TXT
+      record; omitting the parameter means the TXT record is not yet known, so `request()` and
+      `load_from_cache()` will not report the service as complete until one arrives.
     * `server`: fully qualified name for service host (defaults to name)
     * `host_ttl`: ttl used for A/SRV records
     * `other_ttl`: ttl used for PTR/TXT records
@@ -170,6 +172,9 @@ class ServiceInfo(RecordUpdateListener):
       or in parsed form as text; at most one of those parameters can be provided)
     * interface_index: scope_id or zone_id for IPv6 link-local addresses i.e. an identifier of the interface
       where the peer is connected to
+
+    Assigning the `text` attribute directly does not mark the TXT record as seen; pass `properties`
+    to the constructor instead.
     """
 
     __slots__ = (
@@ -185,6 +190,7 @@ class ServiceInfo(RecordUpdateListener):
         "_new_records_futures",
         "_properties",
         "_query_record_types",
+        "_txt_seen",
         "host_ttl",
         "interface_index",
         "key",
@@ -205,7 +211,7 @@ class ServiceInfo(RecordUpdateListener):
         port: int | None = None,
         weight: int = 0,
         priority: int = 0,
-        properties: bytes | dict = b"",
+        properties: bytes | dict | None = None,
         server: str | None = None,
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
@@ -237,10 +243,14 @@ class ServiceInfo(RecordUpdateListener):
         self.server_key = server.lower() if server else None
         self._properties: dict[bytes, bytes | None] | None = None
         self._decoded_properties: dict[str, str | None] | None = None
-        if isinstance(properties, bytes):
-            self._set_text(properties)
+        if properties is None:
+            self._txt_seen = False
         else:
-            self._set_properties(properties)
+            self._txt_seen = True
+            if isinstance(properties, bytes):
+                self._set_text(properties)
+            else:
+                self._set_properties(properties)
         self.host_ttl = host_ttl
         self.other_ttl = other_ttl
         self._new_records_futures: set[asyncio.Future] | None = None
@@ -614,6 +624,7 @@ class ServiceInfo(RecordUpdateListener):
             if TYPE_CHECKING:
                 assert isinstance(dns_text_record, DNSText)
             self._set_text(dns_text_record.text)
+            self._txt_seen = True
             return True
 
         if record_type is DNSService:
@@ -832,8 +843,13 @@ class ServiceInfo(RecordUpdateListener):
 
     @property
     def _is_complete(self) -> bool:
-        """The ServiceInfo has all expected properties."""
-        return bool(self.text is not None and (self._ipv4_addresses or self._ipv6_addresses))
+        """The ServiceInfo has all expected properties.
+
+        RFC 6763 section 6 requires every DNS-SD service to have a TXT record,
+        so a service is not complete until one has been seen. An empty TXT
+        record counts as seen; a missing one does not.
+        """
+        return bool(self._txt_seen and (self._ipv4_addresses or self._ipv6_addresses))
 
     def request(
         self,

@@ -79,6 +79,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public cython.list _dns_address_cache
     cdef public cython.set _get_address_and_nsec_records_cache
     cdef public cython.set _query_record_types
+    cdef public bint _txt_seen
 
     @cython.locals(record_update=RecordUpdate, update=bint, cache=DNSCache)
     cpdef void async_update_records(self, object zc, double now, cython.list records)
