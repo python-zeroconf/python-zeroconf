@@ -1397,3 +1397,19 @@ def test_oversized_message_is_rejected():
     parsed = r.DNSIncoming(bytes(0x10000))
     assert parsed.valid is False
     assert parsed.answers() == []
+
+
+def test_truncated_question_rejects_packet():
+    """A question whose fixed fields run past the packet end fails the parse."""
+    packet = b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00" + b"\x04fuzz\x05local\x00"
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+    assert parsed.questions == []
+
+
+def test_hinfo_character_string_at_packet_end_skips_record():
+    """An HINFO whose character string starts at the packet end drops only that record."""
+    packet = _response_header(1) + b"\x04fuzz\x05local\x00" + b"\x00\x0d\x00\x01\x00\x00\x00\x78\x00\x00"
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is True
+    assert parsed.answers() == []
