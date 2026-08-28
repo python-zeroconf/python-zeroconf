@@ -1,9 +1,5 @@
 [build-system]
-# Cython 3.3 started feeding declared container item types into its type
-# system, so a ``set[tuple[str, int, int]]`` annotation no longer matches the
-# ``cython.set`` declaration in the sibling .pxd. Cap until the .pxd files
-# carry item types too.
-requires = ['setuptools>=77.0', 'Cython>=3.0.8,<3.3', "poetry-core>=2.1.0"]
+requires = ['setuptools>=77.0', 'Cython>=3.0.8', "poetry-core>=2.1.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project]
