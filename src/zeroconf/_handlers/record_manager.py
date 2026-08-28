@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from .._core import Zeroconf
 
 _float = float
+_RecordUpdate = RecordUpdate
+_DNSQuestion = DNSQuestion
 
 
 class RecordManager:
@@ -50,7 +52,7 @@ class RecordManager:
         self.cache = zeroconf.cache
         self.listeners: set[RecordUpdateListener] = set()
 
-    def async_updates(self, now: _float, records: list[RecordUpdate]) -> None:
+    def async_updates(self, now: _float, records: list[_RecordUpdate]) -> None:
         """Used to notify listeners of new information that has updated
         a record.
 
@@ -190,7 +192,7 @@ class RecordManager:
         self._async_update_matching_records(listener, questions)
 
     def _async_update_matching_records(
-        self, listener: RecordUpdateListener, questions: list[DNSQuestion]
+        self, listener: RecordUpdateListener, questions: list[_DNSQuestion]
     ) -> None:
         """Calls back any existing entries in the cache that answer the question.
 

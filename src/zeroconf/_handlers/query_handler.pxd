@@ -96,7 +96,6 @@ cdef class QueryHandler:
         question=DNSQuestion,
         answer_set=cython.dict,
         known_answers=DNSRRSet,
-        known_answers_set=cython.set,
         is_unicast=bint,
         is_probe=object,
         now=double

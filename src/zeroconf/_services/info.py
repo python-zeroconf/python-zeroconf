@@ -99,6 +99,7 @@ bytes_ = bytes
 float_ = float
 int_ = int
 str_ = str
+RecordUpdate_ = RecordUpdate
 
 QU_QUESTION = DNSQuestionType.QU
 QM_QUESTION = DNSQuestionType.QM
@@ -549,7 +550,7 @@ class ServiceInfo(RecordUpdateListener):
         else:
             self._ipv4_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
 
-    def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate]) -> None:
+    def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate_]) -> None:
         """Updates service information from a DNS record.
 
         This method will be run in the event loop.
@@ -743,7 +744,7 @@ class ServiceInfo(RecordUpdateListener):
         """Return DNSNsec from ServiceInfo."""
         return self._dns_nsec(missing_types, override_ttl)
 
-    def _dns_nsec(self, missing_types: list[int], override_ttl: int_ | None) -> DNSNsec:
+    def _dns_nsec(self, missing_types: list[int_], override_ttl: int_ | None) -> DNSNsec:
         """Return DNSNsec from ServiceInfo."""
         return DNSNsec(
             self._name,
