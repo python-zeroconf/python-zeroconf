@@ -186,7 +186,9 @@ class ServiceInfo(RecordUpdateListener):
         "_dns_text_cache",
         "_get_address_and_nsec_records_cache",
         "_ipv4_addresses",
+        "_ipv4_denied",
         "_ipv6_addresses",
+        "_ipv6_denied",
         "_name",
         "_new_records_futures",
         "_properties",
@@ -233,6 +235,8 @@ class ServiceInfo(RecordUpdateListener):
         self.key = name.lower()
         self._ipv4_addresses: list[ZeroconfIPv4Address] = []
         self._ipv6_addresses: list[ZeroconfIPv6Address] = []
+        self._ipv4_denied = False
+        self._ipv6_denied = False
         if addresses is not None:
             self.addresses = addresses
         elif parsed_addresses is not None:
@@ -571,8 +575,21 @@ class ServiceInfo(RecordUpdateListener):
         """
         new_records_futures = self._new_records_futures
         updated: bool = False
+        nsec_records = None
         for record_update in records:
-            updated |= self._process_record_threadsafe(zc, record_update.new, now)
+            record = record_update.new
+            # NSEC records are processed last so a denial for an SRV target
+            # learned later in the same batch is not discarded (wire order of
+            # records in a response is not guaranteed).
+            if type(record) is DNSNsec:
+                if nsec_records is None:
+                    nsec_records = []
+                nsec_records.append(record)
+                continue
+            updated |= self._process_record_threadsafe(zc, record, now)
+        if nsec_records is not None:
+            for record in nsec_records:
+                updated |= self._process_record_threadsafe(zc, record, now)
         if updated and new_records_futures:
             _resolve_all_futures_to_none(new_records_futures)
 
@@ -620,6 +637,14 @@ class ServiceInfo(RecordUpdateListener):
                 assert isinstance(ip_addr, ZeroconfIPv6Address)
             return self._upsert_ipv6_address(ip_addr)
 
+        if record_type is DNSNsec:
+            if record_key not in (self.server_key, self.key):
+                return False
+            dns_nsec_record = record
+            if TYPE_CHECKING:
+                assert isinstance(dns_nsec_record, DNSNsec)
+            return self._process_nsec_record(dns_nsec_record, record_key)
+
         if record_key != self.key:
             return False
 
@@ -644,29 +669,48 @@ class ServiceInfo(RecordUpdateListener):
             self.weight = dns_service_record.weight
             self.priority = dns_service_record.priority
             if old_server_key != self.server_key:
-                self._set_ipv4_addresses_from_cache(zc, now)
-                self._set_ipv6_addresses_from_cache(zc, now)
+                self._load_records_for_new_server_from_cache(zc, now)
             return True
-
-        if record_type is DNSNsec:
-            dns_nsec_record = record
-            if TYPE_CHECKING:
-                assert isinstance(dns_nsec_record, DNSNsec)
-            return self._process_nsec_record(dns_nsec_record)
 
         return False
 
-    def _process_nsec_record(self, record: DNSNsec) -> bool:
-        """Record a TXT denial from an NSEC record at the service name."""
+    def _load_records_for_new_server_from_cache(self, zc: Zeroconf, now: float_) -> None:
+        """Re-derive per-host state, denials included, after the SRV target changed."""
+        self._ipv4_denied = False
+        self._ipv6_denied = False
+        self._set_ipv4_addresses_from_cache(zc, now)
+        self._set_ipv6_addresses_from_cache(zc, now)
+        if TYPE_CHECKING:
+            assert self.server_key is not None
+        cache = zc.cache
+        cached_server_nsec_record = cache.get_by_details(self.server_key, _TYPE_NSEC, _CLASS_IN)
+        if cached_server_nsec_record:
+            self._process_record_threadsafe(zc, cached_server_nsec_record, now)
+
+    def _process_nsec_record(self, record: DNSNsec, record_key: str_) -> bool:
+        """Record the denials asserted by an NSEC record (RFC 6762 §6.1)."""
         rdtypes = record.rdtypes
-        # RFC 6762 §6.1: the type bitmap lists the rrtypes that exist, so SRV
-        # present with TXT absent denies the TXT record. Requiring the SRV bit
-        # also keeps older python-zeroconf NSECs, which listed the missing
-        # address types, from being misread as a TXT denial.
-        if self._txt_seen or _TYPE_SRV not in rdtypes or _TYPE_TXT in rdtypes:
-            return False
-        self._txt_seen = True
-        return True
+        updated = False
+        if record_key == self.server_key:
+            # Each NSEC is an authoritative snapshot of what exists at the
+            # host, so recompute both flags instead of accumulating denials.
+            ipv4_denied = _TYPE_A not in rdtypes
+            ipv6_denied = _TYPE_AAAA not in rdtypes
+            if ipv4_denied != self._ipv4_denied or ipv6_denied != self._ipv6_denied:
+                self._ipv4_denied = ipv4_denied
+                self._ipv6_denied = ipv6_denied
+                updated = True
+        if (
+            record_key == self.key
+            and not self._txt_seen
+            and _TYPE_SRV in rdtypes
+            and _TYPE_TXT not in rdtypes
+        ):
+            # Requiring the SRV bit keeps older python-zeroconf NSECs, which listed the
+            # missing address types, from being misread as a TXT denial.
+            self._txt_seen = True
+            updated = True
+        return updated
 
     def dns_addresses(
         self,
@@ -866,6 +910,9 @@ class ServiceInfo(RecordUpdateListener):
         """
         cache = zc.cache
         original_server_key = self.server_key
+        # Denials are only trusted until the next cache load re-derives them.
+        self._ipv4_denied = False
+        self._ipv6_denied = False
         cached_srv_record = cache.get_by_details(self._name, _TYPE_SRV, _CLASS_IN)
         if cached_srv_record:
             self._process_record_threadsafe(zc, cached_srv_record, now)
@@ -878,12 +925,16 @@ class ServiceInfo(RecordUpdateListener):
                 self._process_record_threadsafe(zc, cached_nsec_record, now)
         if original_server_key == self.server_key:
             # If there is a srv which changes the server_key,
-            # A and AAAA will already be loaded from the cache
-            # and we do not want to do it twice
+            # A, AAAA, and the server NSEC will already be loaded
+            # from the cache and we do not want to do it twice
             for record in self._get_address_records_from_cache_by_type(zc, _TYPE_A):
                 self._process_record_threadsafe(zc, record, now)
             for record in self._get_address_records_from_cache_by_type(zc, _TYPE_AAAA):
                 self._process_record_threadsafe(zc, record, now)
+            if self.server_key and not self._is_complete:
+                cached_server_nsec_record = cache.get_by_details(self.server_key, _TYPE_NSEC, _CLASS_IN)
+                if cached_server_nsec_record:
+                    self._process_record_threadsafe(zc, cached_server_nsec_record, now)
         return self._is_complete
 
     @property
@@ -896,6 +947,14 @@ class ServiceInfo(RecordUpdateListener):
         (RFC 6762 section 6.1); a missing one does not.
         """
         return bool(self._txt_seen and (self._ipv4_addresses or self._ipv6_addresses))
+
+    @property
+    def _is_denied(self) -> bool:
+        """Every address type this request needs was denied via NSEC (RFC 6762 section 6.1)."""
+        query_types = self._query_record_types
+        return (_TYPE_A not in query_types or (self._ipv4_denied and not self._ipv4_addresses)) and (
+            _TYPE_AAAA not in query_types or (self._ipv6_denied and not self._ipv6_addresses)
+        )
 
     def request(
         self,
@@ -978,7 +1037,7 @@ class ServiceInfo(RecordUpdateListener):
         try:
             zc.async_add_listener(self, None)
             while not self._is_complete:
-                if last <= now:
+                if last <= now or self._is_denied:
                     return False
                 if next_ <= now:
                     this_question_type = question_type or (QU_QUESTION if first_request else QM_QUESTION)

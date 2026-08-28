@@ -60,6 +60,8 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public str key
     cdef public cython.list _ipv4_addresses
     cdef public cython.list _ipv6_addresses
+    cdef public bint _ipv4_denied
+    cdef public bint _ipv6_denied
     cdef public object port
     cdef public object weight
     cdef public object priority
@@ -80,7 +82,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     cdef public cython.set _query_record_types
     cdef public bint _txt_seen
 
-    @cython.locals(record_update=RecordUpdate, update=bint, cache=DNSCache)
+    @cython.locals(record_update=RecordUpdate, record=DNSRecord, nsec_records=list)
     cpdef void async_update_records(self, object zc, double now, cython.list records)
 
     @cython.locals(cache=DNSCache)
@@ -115,8 +117,16 @@ cdef class ServiceInfo(RecordUpdateListener):
     )
     cdef bint _process_record_threadsafe(self, object zc, DNSRecord record, double now)
 
-    @cython.locals(rdtypes=cython.list)
-    cdef bint _process_nsec_record(self, DNSNsec record)
+    @cython.locals(cache=DNSCache)
+    cdef void _load_records_for_new_server_from_cache(self, object zc, double now)
+
+    @cython.locals(
+        rdtypes=cython.list,
+        updated=cython.bint,
+        ipv4_denied=cython.bint,
+        ipv6_denied=cython.bint,
+    )
+    cdef bint _process_nsec_record(self, DNSNsec record, str record_key)
 
     @cython.locals(existing_idx=int, existing=object)
     cdef bint _upsert_ipv6_address(self, object ip_addr)
