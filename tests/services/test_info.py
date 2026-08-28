@@ -3007,11 +3007,7 @@ async def test_v4_only_host_with_nsec_still_resolves(aiozc_loopback: AsyncZeroco
 
 
 def test_legacy_inverted_nsec_at_own_name_does_not_fail_request(zc_loopback: r.Zeroconf) -> None:
-    """A pre-0.150.4 inverted NSEC from a service with server == name never denies the request.
-
-    Legacy responders listed the missing address types, so the snapshot records
-    the wrong family; a single wrong flag must never make _is_denied true.
-    """
+    """A pre-0.150.4 inverted NSEC from a service with server == name never denies the request."""
     type_ = "_http._tcp.local."
     registration_name = f"legacyownname.{type_}"
     info = ServiceInfo(type_, registration_name)
