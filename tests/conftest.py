@@ -71,6 +71,11 @@ def blockbuster(
         yield None
         return
     with blockbuster_ctx() as bb:
+        # coverage's C tracer acquires its data lock from whatever frame
+        # is running when tracing starts on a new thread, which can be an
+        # event-loop callback and is not a blocking call zeroconf makes.
+        for func in ("threading.Lock.acquire", "threading.Lock.acquire_lock"):
+            bb.functions[func].can_block_in("coverage/collector.py", "lock_data")
         yield bb
 
 
