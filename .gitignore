@@ -18,3 +18,4 @@ docs/_build/
 /dist/
 /zeroconf.egg-info/
 /src/**/*.c
+.hypothesis/

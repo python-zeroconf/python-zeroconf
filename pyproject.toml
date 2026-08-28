@@ -92,6 +92,7 @@ setuptools = ">=83.0.0,<84.0.0"
 pytest-timeout = "^2.1.0"
 pytest-codspeed = ">=5.0.3,<6.0"
 blockbuster = ">=1.5.27,<2.0.0"
+hypothesis = {version = "^6.165.10", markers = "implementation_name == 'cpython'"}
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.4.7 || ^8.1.3"

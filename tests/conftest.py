@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.util
+import os
 import threading
 from collections.abc import AsyncGenerator, Generator, Iterator
 from unittest.mock import patch
@@ -14,6 +16,20 @@ from zeroconf._handlers import query_handler
 from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
 from zeroconf.asyncio import AsyncZeroconf
+
+# The dev dependency group only installs hypothesis on CPython (the CI
+# matrix pins pypy-3.10 and hypothesis ships no pp310 wheels), and a
+# non-dev install has no hypothesis at all.
+collect_ignore: list[str] = []
+if importlib.util.find_spec("hypothesis") is None:
+    collect_ignore.append("test_fuzz_incoming.py")
+else:
+    from hypothesis import settings as _hypothesis_settings
+
+    # Deterministic in CI; set HYPOTHESIS_PROFILE=long for a deep local run.
+    _hypothesis_settings.register_profile("ci", derandomize=True, max_examples=200, deadline=None)
+    _hypothesis_settings.register_profile("long", max_examples=50000, deadline=None)
+    _hypothesis_settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "ci"))
 
 try:
     from blockbuster import BlockBuster, blockbuster_ctx
