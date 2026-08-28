@@ -28,16 +28,12 @@ jobs:
         with:
           python-version: "3.13"
           cache: "poetry"
-      - name: Install dependencies
-        env:
-          REQUIRE_CYTHON: 1
-        run: poetry install --only=main,dev
-      - name: Rebuild the extensions with AddressSanitizer
+      - name: Install dependencies with AddressSanitizer instrumentation
         env:
           REQUIRE_CYTHON: 1
           CFLAGS: "-fsanitize=address -g -O1"
           LDFLAGS: "-fsanitize=address"
-        run: poetry run python setup.py build_ext --inplace --force
+        run: poetry install --only=main,dev
       - name: Fuzz the parser under ASan
         env:
           HYPOTHESIS_PROFILE: ${{ inputs.profile }}
