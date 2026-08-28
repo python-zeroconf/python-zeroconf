@@ -219,7 +219,7 @@ class ServiceInfo(RecordUpdateListener):
         host_ttl: int = _DNS_HOST_TTL,
         other_ttl: int = _DNS_OTHER_TTL,
         *,
-        addresses: list[bytes] | None = None,
+        addresses: Sequence[bytes | str | int] | None = None,
         parsed_addresses: list[str] | None = None,
         interface_index: int | None = None,
     ) -> None:
@@ -292,7 +292,7 @@ class ServiceInfo(RecordUpdateListener):
         return self.addresses_by_version(IPVersion.V4Only)
 
     @addresses.setter
-    def addresses(self, value: list[bytes]) -> None:
+    def addresses(self, value: Sequence[bytes | str | int]) -> None:
         """Replace the addresses list.
 
         This replaces all currently stored addresses, both IPv4 and IPv6.
@@ -304,7 +304,7 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
         for address in value:
-            if len(address) == 16 and self.interface_index is not None:
+            if self.interface_index is not None and isinstance(address, bytes) and len(address) == 16:
                 addr = ip_bytes_and_scope_to_address(address, self.interface_index)
             else:
                 addr = cached_ip_addresses(address)
