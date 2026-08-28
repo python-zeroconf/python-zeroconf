@@ -44,7 +44,6 @@ cdef class DNSIncoming:
     cdef public unsigned int flags
     cdef cython.uint offset
     cdef public bytes data
-    cdef const unsigned char [:] view
     cdef const unsigned char* _buf
     cdef unsigned int _data_len
     cdef cython.dict _name_cache
@@ -82,11 +81,12 @@ cdef class DNSIncoming:
         link="unsigned int",
         link_data="unsigned int",
         link_py_int=object,
-        linked_labels=cython.list
+        linked_labels=cython.list,
+        buf="const unsigned char *",
     )
     cdef unsigned int _decode_labels_at_offset(self, unsigned int off, cython.list labels, cython.set seen_pointers, unsigned int depth)
 
-    @cython.locals(offset="unsigned int")
+    @cython.locals(offset="unsigned int", buf="const unsigned char *")
     cdef void _read_header(self)
 
     cdef void _initial_parse(self)
@@ -96,10 +96,11 @@ cdef class DNSIncoming:
         length="unsigned int",
         offset="unsigned int",
         answers=cython.list,
+        buf="const unsigned char *",
     )
     cdef void _read_others(self)
 
-    @cython.locals(offset="unsigned int", question=DNSQuestion)
+    @cython.locals(offset="unsigned int", question=DNSQuestion, buf="const unsigned char *")
     cdef _read_questions(self)
 
     @cython.locals(
@@ -124,6 +125,7 @@ cdef class DNSIncoming:
         srv_rec=DNSService,
         hinfo_rec=DNSHinfo,
         nsec_rec=DNSNsec,
+        buf="const unsigned char *",
     )
     cdef _read_record(self, str domain, unsigned int type_, unsigned int class_, unsigned int ttl, unsigned int length)
 
@@ -139,6 +141,7 @@ cdef class DNSIncoming:
         bitmap_end="unsigned int",
         window_base="unsigned int",
         bit_base="unsigned int",
+        buf="const unsigned char *",
     )
     cdef list _read_bitmap(self, unsigned int end)
 

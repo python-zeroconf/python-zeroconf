@@ -106,9 +106,8 @@ class DNSIncoming:
         self.flags = 0
         self.offset = 0
         self.data = data
-        self.view = data
-        # Borrowed pointer into `data`; only ever sliced after an explicit
-        # bounds check against _data_len (see _read_string).
+        # Borrowed pointer into `data`; every read and slice must be
+        # preceded by an explicit bounds check against _data_len.
         self._buf = data
         self._data_len = len(data)
         self._name_cache: dict[int, list[str]] = {}
@@ -228,28 +227,37 @@ class DNSIncoming:
 
     def _read_header(self) -> None:
         """Reads header portion of packet"""
-        view = self.view
         offset = self.offset
+        if offset + 12 > self._data_len:
+            raise IncomingDecodeError(
+                f"Packet of {self._data_len} bytes is too short for a DNS header from {self.source}"
+            )
+        buf = self._buf
         self.offset += 12
         # The header has 6 unsigned shorts in network order
-        self.id = view[offset] << 8 | view[offset + 1]
-        self.flags = view[offset + 2] << 8 | view[offset + 3]
-        self._num_questions = view[offset + 4] << 8 | view[offset + 5]
-        self._num_answers = view[offset + 6] << 8 | view[offset + 7]
-        self._num_authorities = view[offset + 8] << 8 | view[offset + 9]
-        self._num_additionals = view[offset + 10] << 8 | view[offset + 11]
+        self.id = buf[offset] << 8 | buf[offset + 1]
+        self.flags = buf[offset + 2] << 8 | buf[offset + 3]
+        self._num_questions = buf[offset + 4] << 8 | buf[offset + 5]
+        self._num_answers = buf[offset + 6] << 8 | buf[offset + 7]
+        self._num_authorities = buf[offset + 8] << 8 | buf[offset + 9]
+        self._num_additionals = buf[offset + 10] << 8 | buf[offset + 11]
 
     def _read_questions(self) -> None:
         """Reads questions section of packet"""
-        view = self.view
+        buf = self._buf
         questions = self._questions
         for _ in range(self._num_questions):
             name = self._read_name()
             offset = self.offset
+            if offset + 4 > self._data_len:
+                raise IncomingDecodeError(
+                    f"Question at offset {offset} overruns packet of "
+                    f"{self._data_len} bytes from {self.source}"
+                )
             self.offset += 4
             # The question has 2 unsigned shorts in network order
-            type_ = view[offset] << 8 | view[offset + 1]
-            class_ = view[offset + 2] << 8 | view[offset + 3]
+            type_ = buf[offset] << 8 | buf[offset + 1]
+            class_ = buf[offset + 2] << 8 | buf[offset + 3]
             question = DNSQuestion.__new__(DNSQuestion)
             question._fast_init(name, type_, class_)
             if question.unique:  # QU questions use the same bit as unique
@@ -258,7 +266,12 @@ class DNSIncoming:
 
     def _read_character_string(self) -> str:
         """Reads a character string from the packet"""
-        length = self.view[self.offset]
+        if self.offset >= self._data_len:
+            raise IncomingDecodeError(
+                f"Character string at offset {self.offset} overruns packet of "
+                f"{self._data_len} bytes from {self.source}"
+            )
+        length = self._buf[self.offset]
         start = self.offset + 1
         end = start + length
         # Python slicing silently truncates when indices exceed the buffer,
@@ -292,19 +305,24 @@ class DNSIncoming:
         """Reads the answers, authorities and additionals section of the
         packet"""
         self._did_read_others = True
-        view = self.view
+        buf = self._buf
         answers = self._answers
         n = self._num_answers + self._num_authorities + self._num_additionals
         for _ in range(n):
             domain = self._read_name()
             offset = self.offset
+            if offset + 10 > self._data_len:
+                raise IncomingDecodeError(
+                    f"Record header at offset {offset} overruns packet of "
+                    f"{self._data_len} bytes from {self.source}"
+                )
             self.offset += 10
             # type_, class_ and length are unsigned shorts in network order
             # ttl is an unsigned long in network order https://www.rfc-editor.org/errata/eid2130
-            type_ = view[offset] << 8 | view[offset + 1]
-            class_ = view[offset + 2] << 8 | view[offset + 3]
-            ttl = view[offset + 4] << 24 | view[offset + 5] << 16 | view[offset + 6] << 8 | view[offset + 7]
-            length = view[offset + 8] << 8 | view[offset + 9]
+            type_ = buf[offset] << 8 | buf[offset + 1]
+            class_ = buf[offset + 2] << 8 | buf[offset + 3]
+            ttl = buf[offset + 4] << 24 | buf[offset + 5] << 16 | buf[offset + 6] << 8 | buf[offset + 7]
+            length = buf[offset + 8] << 8 | buf[offset + 9]
             end = self.offset + length
             rec = None
             try:
@@ -355,13 +373,18 @@ class DNSIncoming:
             text_rec._fast_init(domain, type_, class_, ttl, self._read_string(length), self.now)
             return text_rec
         if type_ == _TYPE_SRV:
-            view = self.view
             offset = self.offset
+            if offset + 6 > self._data_len:
+                raise IncomingDecodeError(
+                    f"SRV record at offset {offset} overruns packet of "
+                    f"{self._data_len} bytes from {self.source}"
+                )
+            buf = self._buf
             self.offset += 6
             # The SRV record has 3 unsigned shorts in network order
-            priority = view[offset] << 8 | view[offset + 1]
-            weight = view[offset + 2] << 8 | view[offset + 3]
-            port = view[offset + 4] << 8 | view[offset + 5]
+            priority = buf[offset] << 8 | buf[offset + 1]
+            weight = buf[offset + 2] << 8 | buf[offset + 3]
+            port = buf[offset + 4] << 8 | buf[offset + 5]
             srv_rec = DNSService.__new__(DNSService)
             srv_rec._fast_init(
                 domain,
@@ -421,7 +444,11 @@ class DNSIncoming:
     def _read_bitmap(self, end: _int) -> list[int]:
         """Reads an NSEC bitmap from the packet."""
         rdtypes = []
-        view = self.view
+        if end > self._data_len:
+            raise IncomingDecodeError(
+                f"NSEC record end {end} overruns packet of {self._data_len} bytes from {self.source}"
+            )
+        buf = self._buf
         while self.offset < end:
             offset = self.offset
             offset_plus_one = offset + 1
@@ -435,8 +462,8 @@ class DNSIncoming:
                 raise IncomingDecodeError(
                     f"NSEC bitmap window header truncated at offset {offset} from {self.source}"
                 )
-            window = view[offset]
-            bitmap_length = view[offset_plus_one]
+            window = buf[offset]
+            bitmap_length = buf[offset_plus_one]
             bitmap_end = offset_plus_two + bitmap_length
             if bitmap_length == 0 or bitmap_length > 32 or bitmap_end > end:
                 raise IncomingDecodeError(
@@ -445,7 +472,7 @@ class DNSIncoming:
                 )
             window_base = window * 256
             for i in range(bitmap_length):
-                byte = view[offset_plus_two + i]
+                byte = buf[offset_plus_two + i]
                 if byte == 0:
                     continue
                 bit_base = window_base + i * 8
@@ -466,10 +493,10 @@ class DNSIncoming:
         # hit needs no re-validation because entries are only written after
         # a decode passed every check (bounds, loops, depth, name length).
         if original_offset + DNS_COMPRESSION_POINTER_LEN <= self._data_len:
-            length = self.view[original_offset]
+            length = self._buf[original_offset]
             if length >= 0xC0:
                 is_pure_pointer = True
-                link = (length & 0x3F) * 256 + self.view[original_offset + 1]
+                link = (length & 0x3F) * 256 + self._buf[original_offset + 1]
                 cached_name = name_str_cache.get(link)
                 if cached_name is not None:
                     self.offset = original_offset + DNS_COMPRESSION_POINTER_LEN
@@ -497,9 +524,9 @@ class DNSIncoming:
             raise IncomingDecodeError(
                 f"DNS compression pointer chain exceeds {MAX_DNS_LABELS} at {off} from {self.source}"
             )
-        view = self.view
+        buf = self._buf
         while off < self._data_len:
-            length = view[off]
+            length = buf[off]
             if length == 0:
                 return off + DNS_COMPRESSION_HEADER_LEN
 
@@ -515,7 +542,9 @@ class DNSIncoming:
                 )
 
             # We have a DNS compression pointer
-            link_data = view[off + 1]
+            if off + 1 >= self._data_len:
+                raise IncomingDecodeError(f"DNS compression pointer at {off} is truncated from {self.source}")
+            link_data = buf[off + 1]
             link = (length & 0x3F) * 256 + link_data
             link_py_int = link
             if link > self._data_len:

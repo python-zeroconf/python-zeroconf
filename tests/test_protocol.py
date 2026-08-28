@@ -1299,3 +1299,78 @@ def test_parse_matter_packet():
     )
     parsed = r.DNSIncoming(bytes.fromhex(packet_hex))
     assert len(parsed.answers()) == 10
+
+
+def test_identical_names_share_string_object():
+    """Repeated compressed names decode to the same str object within one packet."""
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    name = "sharing._hap._tcp.local."
+    generated.add_answer_at_time(
+        r.DNSService(name, const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, name),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(name, const._TYPE_TXT, const._CLASS_IN, const._DNS_OTHER_TTL, b"\x04a=bb"),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            name,
+            const._TYPE_NSEC,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            name,
+            [const._TYPE_TXT, const._TYPE_SRV],
+        ),
+        0,
+    )
+    parsed = r.DNSIncoming(generated.packets()[0])
+    answers = parsed.answers()
+    assert len(answers) == 3
+    srv, txt, nsec = answers
+    assert isinstance(srv, r.DNSService)
+    assert isinstance(nsec, r.DNSNsec)
+    assert txt.name is srv.name
+    assert nsec.name is srv.name
+    assert srv.server is srv.name
+    assert nsec.next_name is srv.name
+
+
+def test_name_string_cache_pointer_flows():
+    """Prefix plus tail, pure pointer, and mid-name pointer names all decode and share."""
+    header = b"\x00\x00\x84\x00\x00\x00\x00\x05\x00\x00\x00\x00"
+    record_tail = b"\x00\x01\x00\x01\x00\x00\x00\x78\x00\x04\x7f\x00\x00\x01"
+    # offset 12: a.local.
+    packet = header + b"\x01a\x05local\x00" + record_tail
+    # offset 35: b + pointer to "local" tail at offset 14
+    packet += b"\x01b\xc0\x0e" + record_tail
+    # offset 53: pure pointer to b.local. at offset 35
+    packet += b"\xc0\x23" + record_tail
+    # offset 69: pure pointer to the mid-name offset 14 -> local.
+    packet += b"\xc0\x0e" + record_tail
+    # offset 85: the same mid-name pointer again
+    packet += b"\xc0\x0e" + record_tail
+    parsed = r.DNSIncoming(packet)
+    answers = parsed.answers()
+    assert [record.name for record in answers] == [
+        "a.local.",
+        "b.local.",
+        "b.local.",
+        "local.",
+        "local.",
+    ]
+    assert answers[2].name is answers[1].name
+    assert answers[4].name is answers[3].name
+
+
+def test_pure_pointer_does_not_bypass_max_name_length():
+    """A pointer to an overlong name is rejected along with the rest of the packet."""
+    labels = b"".join(b"\x3f" + b"a" * 63 for _ in range(4))
+    header = b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
+    record_tail = b"\x00\x01\x00\x01\x00\x00\x00\x78\x00\x04\x7f\x00\x00\x01"
+    packet = header + labels + b"\x00" + record_tail
+    # pure pointer back to the overlong name at offset 12
+    packet += b"\xc0\x0c" + record_tail
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+    assert parsed.answers() == []
