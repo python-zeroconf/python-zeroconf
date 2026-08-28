@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.150.4 (2026-08-28)
+
+### Bug Fixes
+
+- Correct nsec bitmap semantics and resolve txt denials
+  ([#1825](https://github.com/python-zeroconf/python-zeroconf/pull/1825),
+  [`b37155e`](https://github.com/python-zeroconf/python-zeroconf/commit/b37155e0175b9e2e3beb06a1780da22f04d06d68))
+
+### Testing
+
+- Fix race in test_get_info_partial
+  ([#1826](https://github.com/python-zeroconf/python-zeroconf/pull/1826),
+  [`7635d45`](https://github.com/python-zeroconf/python-zeroconf/commit/7635d458e348903420db42421500cd545ab41b92))
+
+
 ## v0.150.3 (2026-08-28)
 
 ### Bug Fixes
