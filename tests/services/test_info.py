@@ -282,7 +282,7 @@ class TestServiceInfo(unittest.TestCase):
 
             def get_service_info_helper(zc, type, name):
                 nonlocal service_info
-                service_info = zc.get_service_info(type, name)
+                service_info = zc.get_service_info(type, name, timeout=10000)
                 service_info_event.set()
 
             try:
@@ -292,7 +292,9 @@ class TestServiceInfo(unittest.TestCase):
                     args=(zc, service_type, service_name),
                 )
                 helper_thread.start()
-                wait_time = 1
+                # Covers the ~1s duplicate-question interval when a query
+                # generated from the pre-inject cache burns a slot.
+                wait_time = 2
 
                 # Expect query for SRV, TXT, A, AAAA
                 send_event.wait(wait_time)
@@ -305,8 +307,6 @@ class TestServiceInfo(unittest.TestCase):
                 assert service_info is None
 
                 # Expect query for SRV, A, AAAA
-                last_sent = None
-                send_event.clear()
                 _inject_response(
                     zc,
                     mock_incoming_msg(
@@ -321,6 +321,11 @@ class TestServiceInfo(unittest.TestCase):
                         ]
                     ),
                 )
+                # Clear only after the inject has been processed on the
+                # loop so a query built from the pre-inject cache cannot
+                # satisfy the wait below.
+                last_sent = None
+                send_event.clear()
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 3  # type: ignore[unreachable]
@@ -330,8 +335,6 @@ class TestServiceInfo(unittest.TestCase):
                 assert service_info is None
 
                 # Expect query for A, AAAA
-                last_sent = None
-                send_event.clear()
                 _inject_response(
                     zc,
                     mock_incoming_msg(
@@ -349,6 +352,8 @@ class TestServiceInfo(unittest.TestCase):
                         ]
                     ),
                 )
+                last_sent = None
+                send_event.clear()
                 send_event.wait(wait_time)
                 assert last_sent is not None
                 assert len(last_sent.questions) == 2
@@ -358,8 +363,6 @@ class TestServiceInfo(unittest.TestCase):
                 assert service_info is None
 
                 # Expect no further queries
-                last_sent = None
-                send_event.clear()
                 _inject_response(
                     zc,
                     mock_incoming_msg(
@@ -382,7 +385,9 @@ class TestServiceInfo(unittest.TestCase):
                         ]
                     ),
                 )
-                send_event.wait(wait_time)
+                last_sent = None
+                send_event.clear()
+                service_info_event.wait(wait_time)
                 assert last_sent is None
                 assert service_info is not None
 
