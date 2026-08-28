@@ -26,6 +26,7 @@ from .._exceptions import ServiceNameAlreadyRegistered
 from .info import ServiceInfo
 
 _str = str
+_ServiceInfo = ServiceInfo
 
 
 class ServiceRegistry:
@@ -79,7 +80,7 @@ class ServiceRegistry:
         """Return all ServiceInfo matching server."""
         return self._async_get_by_index(self.servers, server)
 
-    def _async_get_by_index(self, records: dict[str, list], key: _str) -> list[ServiceInfo]:
+    def _async_get_by_index(self, records: dict[_str, list], key: _str) -> list[_ServiceInfo]:
         """Return all ServiceInfo matching the index."""
         record_list = records.get(key)
         if record_list is None:
@@ -98,7 +99,7 @@ class ServiceRegistry:
         self.servers.setdefault(info.server_key, []).append(info.key)
         self.has_entries = True
 
-    def _remove(self, infos: list[ServiceInfo]) -> None:
+    def _remove(self, infos: list[_ServiceInfo]) -> None:
         """Remove a services under the lock."""
         for info in infos:
             old_service_info = self._services.get(info.key)
