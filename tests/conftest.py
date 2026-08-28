@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 from collections.abc import AsyncGenerator, Generator, Iterator
 from unittest.mock import patch
@@ -14,6 +15,11 @@ from zeroconf._handlers import query_handler
 from zeroconf._services import browser as service_browser
 from zeroconf._services import info as service_info
 from zeroconf.asyncio import AsyncZeroconf
+
+# hypothesis is not installed on PyPy (no wheels for its native module)
+collect_ignore: list[str] = []
+if sys.implementation.name != "cpython":
+    collect_ignore.append("test_fuzz_incoming.py")
 
 try:
     from blockbuster import BlockBuster, blockbuster_ctx
