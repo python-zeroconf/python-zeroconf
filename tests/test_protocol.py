@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import logging
 import os
+import pickle
 import socket
 import struct
 import unittest.mock
@@ -1299,3 +1300,223 @@ def test_parse_matter_packet():
     )
     parsed = r.DNSIncoming(bytes.fromhex(packet_hex))
     assert len(parsed.answers()) == 10
+
+
+def test_identical_names_share_string_object() -> None:
+    """Repeated compressed names decode to the same str object within one packet."""
+    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    name = "sharing._hap._tcp.local."
+    generated.add_answer_at_time(
+        r.DNSService(name, const._TYPE_SRV, const._CLASS_IN, const._DNS_HOST_TTL, 0, 0, 80, name),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSText(name, const._TYPE_TXT, const._CLASS_IN, const._DNS_OTHER_TTL, b"\x04a=bb"),
+        0,
+    )
+    generated.add_answer_at_time(
+        r.DNSNsec(
+            name,
+            const._TYPE_NSEC,
+            const._CLASS_IN,
+            const._DNS_OTHER_TTL,
+            name,
+            [const._TYPE_TXT, const._TYPE_SRV],
+        ),
+        0,
+    )
+    parsed = r.DNSIncoming(generated.packets()[0])
+    answers = parsed.answers()
+    assert len(answers) == 3
+    srv, txt, nsec = answers
+    assert isinstance(srv, r.DNSService)
+    assert isinstance(nsec, r.DNSNsec)
+    assert txt.name is srv.name
+    assert nsec.name is srv.name
+    assert srv.server is srv.name
+    assert nsec.next_name is srv.name
+
+
+_A_RECORD_TAIL = b"\x00\x01\x00\x01\x00\x00\x00\x78\x00\x04\x7f\x00\x00\x01"
+
+
+def _response_header(answer_count: int) -> bytes:
+    return b"\x00\x00\x84\x00\x00\x00" + bytes([answer_count >> 8, answer_count & 0xFF]) + b"\x00\x00\x00\x00"
+
+
+def test_name_string_cache_pointer_flows() -> None:
+    """Prefix plus tail, pure pointer, and mid-name pointer names all decode and share."""
+    record_tail = _A_RECORD_TAIL
+    # offset 12: a.local.
+    packet = _response_header(5) + b"\x01a\x05local\x00" + record_tail
+    # offset 35: b + pointer to "local" tail at offset 14
+    packet += b"\x01b\xc0\x0e" + record_tail
+    # offset 53: pure pointer to b.local. at offset 35
+    packet += b"\xc0\x23" + record_tail
+    # offset 69: pure pointer to the mid-name offset 14 -> local.
+    packet += b"\xc0\x0e" + record_tail
+    # offset 85: the same mid-name pointer again
+    packet += b"\xc0\x0e" + record_tail
+    parsed = r.DNSIncoming(packet)
+    answers = parsed.answers()
+    assert [record.name for record in answers] == [
+        "a.local.",
+        "b.local.",
+        "b.local.",
+        "local.",
+        "local.",
+    ]
+    assert answers[2].name is answers[1].name
+    assert answers[4].name is answers[3].name
+
+
+def test_overlong_name_rejects_packet() -> None:
+    """An overlong name aborts the parse before anything is cached for pointers to hit."""
+    labels = b"".join(b"\x3f" + b"a" * 63 for _ in range(4))
+    packet = _response_header(2) + labels + b"\x00" + _A_RECORD_TAIL
+    # pure pointer back to the overlong name at offset 12; unreachable because
+    # the overlong name aborts the parse, which is what keeps the name string
+    # cache free of unvalidated entries
+    packet += b"\xc0\x0c" + _A_RECORD_TAIL
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_dns_incoming_is_not_picklable() -> None:
+    """The compiled build holds a borrowed C pointer that cannot survive pickling."""
+    parsed = r.DNSIncoming(bytes(12))
+    with pytest.raises(TypeError):
+        pickle.dumps(parsed)
+    with pytest.raises(TypeError):
+        copy.deepcopy(parsed)
+
+
+def test_oversized_message_is_rejected() -> None:
+    """Anything beyond the 64 KiB DNS limit is invalid without raising."""
+    parsed = r.DNSIncoming(bytes(0x10000))
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_truncated_question_rejects_packet() -> None:
+    """A question whose fixed fields run past the packet end fails the parse."""
+    packet = b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00" + b"\x04fuzz\x05local\x00"
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+    assert parsed.questions == []
+
+
+def test_hinfo_character_string_at_packet_end_skips_record() -> None:
+    """An HINFO whose character string starts at the packet end drops only that record."""
+    packet = _response_header(1) + b"\x04fuzz\x05local\x00" + b"\x00\x0d\x00\x01\x00\x00\x00\x78\x00\x00"
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is True
+    assert parsed.answers() == []
+
+
+def test_truncated_header_rejects_packet() -> None:
+    """A packet shorter than the 12 byte DNS header fails the parse."""
+    parsed = r.DNSIncoming(bytes(11))
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_truncated_record_header_rejects_packet() -> None:
+    """A record whose fixed 10 byte header runs past the packet end fails the parse."""
+    packet = _response_header(1) + b"\x04fuzz\x05local\x00" + b"\x00\x01\x00\x01\x00"
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_truncated_srv_fixed_fields_skips_record() -> None:
+    """An SRV whose six fixed bytes run past the packet end drops only that record."""
+    packet = (
+        _response_header(1)
+        + b"\x04fuzz\x05local\x00"
+        + b"\x00\x21\x00\x01\x00\x00\x00\x78\x00\x08"
+        + b"\x00\x00\x00"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is True
+    assert parsed.answers() == []
+
+
+def test_nsec_record_end_beyond_packet_skips_record() -> None:
+    """An NSEC whose rdlength extends past the packet end drops only that record."""
+    packet = (
+        _response_header(1)
+        + b"\x04fuzz\x05local\x00"
+        + b"\x00\x2f\x00\x01\x00\x00\x00\x78\x00\x40"
+        + b"\xc0\x0c\x00\x01\x40"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is True
+    assert parsed.answers() == []
+
+
+def test_truncated_compression_pointer_rejects_packet() -> None:
+    """A name whose final byte is a pointer high byte with no low byte fails the parse."""
+    packet = _response_header(1) + b"\x04fuzz\xc0"
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_name_at_packet_end_rejects_packet() -> None:
+    """A record count pointing past the last byte fails the parse."""
+    parsed = r.DNSIncoming(_response_header(1))
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_pure_pointer_in_final_two_bytes_parses() -> None:
+    """A compression pointer occupying the last two packet bytes is fully readable."""
+    packet = (
+        _response_header(1)
+        + b"\x04fuzz\x05local\x00"
+        + b"\x00\x21\x00\x01\x00\x00\x00\x78\x00\x08"
+        + b"\x00\x00\x00\x00\x00\x50"
+        + b"\xc0\x0c"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is True
+    answers = parsed.answers()
+    assert len(answers) == 1
+    assert isinstance(answers[0], r.DNSService)
+    assert answers[0].server == "fuzz.local."
+
+
+def test_truncated_label_rejects_packet() -> None:
+    """A label length byte claiming more bytes than remain fails the parse."""
+    parsed = r.DNSIncoming(_response_header(1) + b"\x3fab")
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_pointer_to_exact_packet_end_rejects_packet() -> None:
+    """A pointer whose target equals the packet length is beyond the last byte."""
+    parsed = r.DNSIncoming(_response_header(1) + b"\xc0\x0e")
+    assert parsed.valid is False
+    assert parsed.answers() == []
+
+
+def test_max_size_message_parses() -> None:
+    """A message of exactly the 64 KiB DNS limit is accepted."""
+    parsed = r.DNSIncoming(bytes(0xFFFF))
+    assert parsed.valid is True
+    assert parsed.answers() == []
+
+
+def test_hinfo_second_character_string_missing_skips_record() -> None:
+    """An HINFO whose second character string starts at the packet end drops only that record."""
+    packet = (
+        _response_header(1)
+        + b"\x04fuzz\x05local\x00"
+        + b"\x00\x0d\x00\x01\x00\x00\x00\x78\x00\x02"
+        + b"\x01a"
+    )
+    parsed = r.DNSIncoming(packet)
+    assert parsed.valid is True
+    assert parsed.answers() == []
