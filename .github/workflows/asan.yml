@@ -1,0 +1,47 @@
+name: ASan fuzz
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Hypothesis profile"
+        default: "long"
+        type: choice
+        options:
+          - ci
+          - long
+
+jobs:
+  asan-fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - name: Install poetry
+        run: uv tool install poetry
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v5
+        with:
+          python-version: "3.13"
+          cache: "poetry"
+      - name: Install dependencies
+        env:
+          REQUIRE_CYTHON: 1
+        run: poetry install --only=main,dev
+      - name: Rebuild the extensions with AddressSanitizer
+        env:
+          REQUIRE_CYTHON: 1
+          CFLAGS: "-fsanitize=address -g -O1"
+          LDFLAGS: "-fsanitize=address"
+        run: poetry run python setup.py build_ext --inplace --force
+      - name: Fuzz the parser under ASan
+        env:
+          HYPOTHESIS_PROFILE: ${{ inputs.profile }}
+        run: |
+          export LD_PRELOAD=$(gcc -print-file-name=libasan.so)
+          export ASAN_OPTIONS=detect_leaks=0:halt_on_error=1
+          poetry run pytest --timeout=1800 -v --no-cov tests/test_fuzz_incoming.py tests/test_protocol.py
