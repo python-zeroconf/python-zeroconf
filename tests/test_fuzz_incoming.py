@@ -150,3 +150,33 @@ def test_nsec_bitmap_mutations_never_raise(
     header = b"\x00\x00\x84\x00\x00\x00\x00\x01\x00\x00\x00\x00"
     record = name + b"\x00\x2f\x00\x01\x00\x00\x00\x78" + bytes([rdlength >> 8, rdlength & 0xFF])
     _parse(header + record + rdata)
+
+
+@given(
+    tail_room=st.integers(min_value=0, max_value=32),
+    rdlength=st.integers(min_value=0, max_value=0xFFFF),
+    pointer_target=st.integers(min_value=0, max_value=0x3FFF),
+)
+def test_records_near_the_size_cap_never_raise(tail_room: int, rdlength: int, pointer_target: int) -> None:
+    """Record headers and pointers in the last bytes below 64 KiB cannot wrap the guards."""
+    tail_record = (
+        b"\xc0\x0c"
+        + b"\x00\x21\x00\x01\x00\x00\x00\x78"
+        + bytes([rdlength >> 8, rdlength & 0xFF])
+        + bytes(6)
+        + bytes([0xC0 | (pointer_target >> 8), pointer_target & 0xFF])
+    )
+    total = 0xFFFF - tail_room
+    skip_len = total - 12 - 11 - len(tail_record)
+    # record 1 is an unknown type whose rdlength skips to the end region,
+    # so record 2 is parsed with all offset arithmetic near the size cap
+    packet = (
+        b"\x00\x00\x84\x00\x00\x00\x00\x02\x00\x00\x00\x00"
+        + b"\x00"
+        + b"\x00\x00\x00\x01\x00\x00\x00\x00"
+        + skip_len.to_bytes(2, "big")
+        + bytes(skip_len)
+        + tail_record
+    )
+    assert len(packet) == total
+    _parse(packet)

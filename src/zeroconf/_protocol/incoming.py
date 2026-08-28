@@ -501,7 +501,8 @@ class DNSIncoming:
         link = 0
         # A cache hit needs no re-validation because entries are only
         # written after a decode passed every check (bounds, loops, depth,
-        # name length).
+        # name length), and only at offsets inside the packet, so an
+        # out-of-range link can only miss.
         if original_offset + DNS_COMPRESSION_POINTER_LEN <= self._data_len:
             length = self._buf[original_offset]
             if length >= 0xC0:
