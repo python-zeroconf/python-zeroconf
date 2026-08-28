@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.150.3 (2026-08-28)
+
+### Bug Fixes
+
+- Require a TXT record before a service is considered complete
+  ([#1821](https://github.com/python-zeroconf/python-zeroconf/pull/1821),
+  [`32d963b`](https://github.com/python-zeroconf/python-zeroconf/commit/32d963bd4a401c098ff518d3b1e78b091f1f9c9c))
+
+### Performance Improvements
+
+- **registry**: Use insertion-ordered dicts for O(1) removal
+  ([#1786](https://github.com/python-zeroconf/python-zeroconf/pull/1786),
+  [`1216f59`](https://github.com/python-zeroconf/python-zeroconf/commit/1216f59b1113d01d3241904f11e6d05dde654c6d))
+
+
 ## v0.150.2 (2026-08-28)
 
 ### Bug Fixes
