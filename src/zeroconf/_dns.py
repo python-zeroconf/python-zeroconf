@@ -58,24 +58,6 @@ class DNSEntry:  # noqa: PLW1641
         """Equal when key, type and class match."""
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
-    def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
-        return "{}[{},{}{},{}]{}".format(
-            hdr,
-            self.get_type(self.type),
-            self.get_class_(self.class_),
-            "-unique" if self.unique else "",
-            self.name,
-            f"={cast(Any, other)}" if other is not None else "",
-        )
-
-    @staticmethod
-    def get_class_(class_: int) -> str:
-        return _CLASSES.get(class_, f"?({class_})")
-
-    @staticmethod
-    def get_type(t: int) -> str:
-        return _TYPES.get(t, f"?({t})")
-
     def _dns_entry_matches(self, other: DNSEntry) -> bool:
         return self.key == other.key and self.type == other.type and self.class_ == other.class_
 
@@ -190,10 +172,6 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
                 return True
         return False
 
-    def to_string(self, other: bytes | str) -> str:
-        arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"
-        return DNSEntry.entry_to_string(self, "record", arg)
-
     def write(self, out: DNSOutgoing) -> None:
         raise AbstractMethodException(f"{type(self).__name__} is missing write")
 
@@ -302,9 +280,6 @@ class DNSHinfo(DNSRecord):
     def __hash__(self) -> int:
         """Hash to compare like DNSHinfo."""
         return self._hash
-
-    def __repr__(self) -> str:
-        return self.to_string(self.cpu + " " + self.os)
 
     def write(self, out: DNSOutgoing) -> None:
         """Write the rdata to an outgoing packet."""
@@ -477,9 +452,6 @@ class DNSService(DNSRecord):
     def __hash__(self) -> int:
         """Hash to compare like DNSService."""
         return self._hash
-
-    def __repr__(self) -> str:
-        return self.to_string(f"{self.server}:{self.port}")
 
     def write(self, out: DNSOutgoing) -> None:
         out.write_short(self.priority)
