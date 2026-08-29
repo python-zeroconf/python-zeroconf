@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-"""Example of announcing 250 services (in this case, a fake HTTP server)."""
 
 from __future__ import annotations
 

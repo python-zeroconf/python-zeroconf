@@ -576,23 +576,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         delay: int = _BROWSER_TIME,
         question_type: DNSQuestionType | None = None,
     ) -> None:
-        """Used to browse for a service for specific type(s).
-
-        Constructor parameters are as follows:
-
-        * `zc`: A Zeroconf instance
-        * `type_`: fully qualified service type name
-        * `handler`: ServiceListener or Callable that knows how to process ServiceStateChange events
-        * `listener`: ServiceListener
-        * `addr`: address to send queries (will default to multicast)
-        * `port`: port to send queries (will default to mdns 5353)
-        * `delay`: The initial delay between answering questions
-        * `question_type`: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
-
-        The listener object will have its add_service() and
-        remove_service() methods called when this browser
-        discovers changes in the services availability.
-        """
         assert handlers or listener, "You need to specify at least one handler"
         self.types: set[str] = set(type_ if isinstance(type_, list) else [type_])
         for check_type_ in self.types:

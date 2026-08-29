@@ -140,11 +140,9 @@ class DNSIncoming:
         raise TypeError(f"cannot pickle {type(self).__name__!r} object")
 
     def is_query(self) -> bool:
-        """Returns true if this is a query."""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
 
     def is_response(self) -> bool:
-        """Returns true if this is a response."""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
     def has_qu_question(self) -> bool:
@@ -153,7 +151,6 @@ class DNSIncoming:
 
     @property
     def truncated(self) -> bool:
-        """Returns true if this is a truncated."""
         return (self.flags & _FLAGS_TC) == _FLAGS_TC
 
     @property
@@ -214,7 +211,6 @@ class DNSIncoming:
         return self._answers
 
     def is_probe(self) -> bool:
-        """Returns true if this is a probe."""
         return self._num_authorities > 0
 
     def __repr__(self) -> str:
@@ -274,7 +270,6 @@ class DNSIncoming:
             questions.append(question)
 
     def _read_character_string(self) -> str:
-        """Reads a character string from the packet"""
         if self.offset >= self._data_len:
             raise IncomingDecodeError(
                 f"Character string at offset {self.offset} overruns packet of "
@@ -298,7 +293,6 @@ class DNSIncoming:
         return info
 
     def _read_string(self, length: _int) -> bytes:
-        """Reads a string of a given length from the packet"""
         start = self.offset
         end = start + length
         if end > self._data_len:
@@ -487,7 +481,6 @@ class DNSIncoming:
         return rdtypes
 
     def _read_name(self) -> str:
-        """Reads a domain name from the packet."""
         original_offset = self.offset
         name_str_cache = self._name_str_cache
         is_pure_pointer = False

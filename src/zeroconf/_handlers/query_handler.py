@@ -318,11 +318,6 @@ class QueryHandler:
     def async_response(  # pylint: disable=unused-argument
         self, msgs: list[_DNSIncoming], ucast_source: bool
     ) -> QuestionAnswers | None:
-        """Deal with incoming query packets. Provides a response if possible.
-
-        This function must be run in the event loop as it is not
-        threadsafe.
-        """
         strategies: list[_AnswerStrategy] = []
         for msg in msgs:
             for question in msg._questions:

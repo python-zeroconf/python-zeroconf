@@ -280,7 +280,6 @@ class Zeroconf(QuietLogger):
         return self.record_manager.listeners
 
     async def async_wait(self, timeout: float) -> None:
-        """Calling task waits for a given number of milliseconds or until notified."""
         loop = self.loop
         assert loop is not None
         await wait_for_future_set_or_timeout(loop, self._notify_futures, timeout)
@@ -303,15 +302,6 @@ class Zeroconf(QuietLogger):
         timeout: int = 3000,
         question_type: DNSQuestionType | None = None,
     ) -> ServiceInfo | None:
-        """Returns network's service information for a particular
-        name and type, or None if no service matches by the timeout,
-        which defaults to 3 seconds.
-
-        :param type_: fully qualified service type name
-        :param name: the name of the service
-        :param timeout: milliseconds to wait for a response
-        :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
-        """
         info = ServiceInfo(type_, name)
         if info.request(self, timeout, question_type):
             return info
@@ -341,17 +331,6 @@ class Zeroconf(QuietLogger):
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> None:
-        """Registers service information to the network with a default TTL.
-        Zeroconf will then respond to requests for information for that
-        service.  The name of the service may be changed if needed to make
-        it unique on the network. Additionally multiple cooperating responders
-        can register the same service on the network for resilience
-        (if you want this behavior set `cooperating_responders` to `True`).
-
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `register_service` cannot be completed.
-        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(
@@ -369,12 +348,6 @@ class Zeroconf(QuietLogger):
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> Awaitable:
-        """Registers service information to the network with a default TTL.
-        Zeroconf will then respond to requests for information for that
-        service.  The name of the service may be changed if needed to make
-        it unique on the network. Additionally multiple cooperating responders
-        can register the same service on the network for resilience
-        (if you want this behavior set `cooperating_responders` to `True`)."""
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
             # Setting TTLs via ServiceInfo is preferred
@@ -388,14 +361,6 @@ class Zeroconf(QuietLogger):
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     def update_service(self, info: ServiceInfo) -> None:
-        """Registers service information to the network with a default TTL.
-        Zeroconf will then respond to requests for information for that
-        service.
-
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `async_update_service` cannot be completed.
-        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(self.async_update_service(info)),
@@ -404,9 +369,6 @@ class Zeroconf(QuietLogger):
         )
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
-        """Registers service information to the network with a default TTL.
-        Zeroconf will then respond to requests for information for that
-        service."""
         self.registry.async_update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
@@ -502,15 +464,6 @@ class Zeroconf(QuietLogger):
         timeout: int = 3000,
         question_type: DNSQuestionType | None = None,
     ) -> AsyncServiceInfo | None:
-        """Returns network's service information for a particular
-        name and type, or None if no service matches by the timeout,
-        which defaults to 3 seconds.
-
-        :param type_: fully qualified service type name
-        :param name: the name of the service
-        :param timeout: milliseconds to wait for a response
-        :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
-        """
         info = AsyncServiceInfo(type_, name)
         if await info.async_request(self, timeout, question_type):
             return info

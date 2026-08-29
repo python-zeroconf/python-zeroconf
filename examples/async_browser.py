@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 
-"""Example of browsing for a service.
-
-The default is HTTP and HAP; use --find to search for all available services in the network
-"""
 
 from __future__ import annotations
 

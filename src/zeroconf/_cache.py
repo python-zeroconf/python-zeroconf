@@ -210,12 +210,6 @@ class DNSCache:
         return expired
 
     def async_get_unique(self, entry: _UniqueRecordsType) -> DNSRecord | None:
-        """Gets a unique entry by key.  Will return None if there is no
-        matching entry.
-
-        This function is not threadsafe and must be called from
-        the event loop.
-        """
         store = self.cache.get(entry.key)
         if store is None:
             return None
@@ -238,19 +232,9 @@ class DNSCache:
         return matches
 
     def async_entries_with_name(self, name: str) -> list[DNSRecord]:
-        """Returns a dict of entries whose key matches the name.
-
-        This function is not threadsafe and must be called from
-        the event loop.
-        """
         return self.entries_with_name(name)
 
     def async_entries_with_server(self, name: str) -> list[DNSRecord]:
-        """Returns a dict of entries whose key matches the server.
-
-        This function is not threadsafe and must be called from
-        the event loop.
-        """
         return self.entries_with_server(name)
 
     # The below functions are threadsafe and do not need to be run in the
@@ -295,7 +279,6 @@ class DNSCache:
         return [entry for entry in list(records.values()) if type_ == entry.type and class_ == entry.class_]
 
     def entries_with_server(self, server: str) -> list[DNSRecord]:
-        """Returns a list of entries whose server matches the name."""
         if entries := self.service_cache.get(server.lower()):
             return list(entries.values())
         return []
