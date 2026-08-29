@@ -122,7 +122,7 @@ Here's how to discover services:
     If you want to customize that you need to specify ``interfaces`` argument when
     constructing ``Zeroconf`` object (see the code for details).
 
-If you don't know which service type to browse for, try:
+To see which service types are present on the network, try:
 
 .. code-block:: python
 
