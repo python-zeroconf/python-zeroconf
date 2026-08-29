@@ -72,7 +72,6 @@ class TestRegistrar(unittest.TestCase):
             return const._DNS_OTHER_TTL
 
         def _process_outgoing_packet(out):
-            """Sends an outgoing packet."""
             nonlocal nbr_answers, nbr_additionals, nbr_authorities
 
             for answer, _ in out.answers:

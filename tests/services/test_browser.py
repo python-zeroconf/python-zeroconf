@@ -524,7 +524,6 @@ def test_first_query_delay():
     first_query_time = None
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-        """Sends an outgoing packet."""
         nonlocal first_query_time
         if first_query_time is None:
             first_query_time = current_time_millis()
@@ -578,7 +577,6 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu(quick_ti
     questions: list[list[DNSQuestion]] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packets()[0])
         questions.append(pout.questions)
         got_query.set()
@@ -680,7 +678,6 @@ async def test_ttl_refresh_cancelled_rescue_query(quick_timing: None) -> None:
     packets = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packets()[0])
         packets.append(pout)
         got_query.set()
@@ -773,7 +770,6 @@ async def test_asking_qm_questions():
     first_outgoing = None
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-        """Sends an outgoing packet."""
         nonlocal first_outgoing
         if first_outgoing is None:
             first_outgoing = out
@@ -813,7 +809,6 @@ async def test_asking_qu_questions():
     first_outgoing = None
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-        """Sends an outgoing packet."""
         nonlocal first_outgoing
         if first_outgoing is None:
             first_outgoing = out
@@ -1257,7 +1252,6 @@ async def test_query_scheduler():
     sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packets()[0])
         sends.append(pout)
 
@@ -1350,7 +1344,6 @@ async def test_query_scheduler_rescue_records():
     sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packets()[0])
         sends.append(pout)
 
@@ -1664,7 +1657,6 @@ async def test_close_zeroconf_without_browser_before_start_up_queries(quick_timi
     sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packets()[0])
         sends.append(pout)
 
@@ -1732,7 +1724,6 @@ async def test_close_zeroconf_without_browser_after_start_up_queries(quick_timin
     sends: list[r.DNSIncoming] = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
         pout = r.DNSIncoming(out.packets()[0])
         sends.append(pout)
 
