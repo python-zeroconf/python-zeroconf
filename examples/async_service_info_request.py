@@ -27,6 +27,8 @@ async def resolve_all(zeroconf: Zeroconf, names: set[str]) -> None:
         print(f"    reachable at: {', '.join(info.parsed_scoped_addresses())}")
         print(f"    host {info.server} port {info.port} (priority {info.priority}, weight {info.weight})")
         for key, value in info.decoded_properties.items():
+            if not key:
+                continue
             print(f"    txt {key} = {value}")
 
 
