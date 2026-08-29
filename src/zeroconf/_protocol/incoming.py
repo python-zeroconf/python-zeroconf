@@ -311,8 +311,6 @@ class DNSIncoming:
         return info
 
     def _read_others(self) -> None:
-        """Reads the answers, authorities and additionals section of the
-        packet"""
         self._did_read_others = True
         buf = self._buf
         answers = self._answers
