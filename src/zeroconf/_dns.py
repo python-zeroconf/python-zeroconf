@@ -26,7 +26,6 @@ import enum
 import socket
 from typing import TYPE_CHECKING, Any, cast
 
-from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
 from ._utils.time import current_time_millis
 from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
@@ -157,7 +156,7 @@ class DNSQuestion(DNSEntry):
         )
 
 
-class DNSRecord(DNSEntry):  # noqa: PLW1641
+class DNSRecord(DNSEntry):
     """A DNS record - like a DNS entry, but has a TTL"""
 
     __slots__ = ("created", "ttl")
