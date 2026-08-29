@@ -158,35 +158,36 @@ _TYPE_ANY = 255
 
 # Wire values mapped to short human readable names, used only for reprs
 # and debug logging; lookups fall back to "?(value)" at the call sites.
+# Sorted by mnemonic.
 _CLASSES = {
-    _CLASS_IN: "in",
-    _CLASS_CS: "cs",
-    _CLASS_CH: "ch",
-    _CLASS_HS: "hs",
-    _CLASS_NONE: "none",
     _CLASS_ANY: "any",
+    _CLASS_CH: "ch",
+    _CLASS_CS: "cs",
+    _CLASS_HS: "hs",
+    _CLASS_IN: "in",
+    _CLASS_NONE: "none",
 }
 _TYPES = {
     _TYPE_A: "a",
-    _TYPE_NS: "ns",
+    _TYPE_AAAA: "aaaa",
+    _TYPE_ANY: "any",
+    _TYPE_CNAME: "cname",
+    _TYPE_HINFO: "hinfo",
+    _TYPE_MB: "mb",
     _TYPE_MD: "md",
     _TYPE_MF: "mf",
-    _TYPE_CNAME: "cname",
-    _TYPE_SOA: "soa",
-    _TYPE_MB: "mb",
     _TYPE_MG: "mg",
-    _TYPE_MR: "mr",
-    _TYPE_NULL: "null",
-    _TYPE_WKS: "wks",
-    _TYPE_PTR: "ptr",
-    _TYPE_HINFO: "hinfo",
     _TYPE_MINFO: "minfo",
+    _TYPE_MR: "mr",
     _TYPE_MX: "mx",
-    _TYPE_TXT: "txt",
-    _TYPE_AAAA: "aaaa",
-    _TYPE_SRV: "srv",
+    _TYPE_NS: "ns",
     _TYPE_NSEC: "nsec",
-    _TYPE_ANY: "any",
+    _TYPE_NULL: "null",
+    _TYPE_PTR: "ptr",
+    _TYPE_SOA: "soa",
+    _TYPE_SRV: "srv",
+    _TYPE_TXT: "txt",
+    _TYPE_WKS: "wks",
 }
 
 _ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
