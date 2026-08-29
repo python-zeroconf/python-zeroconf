@@ -61,6 +61,22 @@ class QuestionHistoryWithoutSuppression(QuestionHistory):
         return False
 
 
+def add_question_batch(
+    out: DNSOutgoing, count: int, *, stem: str = "specimen", type_: int = const._TYPE_SRV
+) -> list[DNSQuestion]:
+    """Add count questions named <stem><i>.local. and return them.
+
+    Packet count assertions in the protocol tests depend on the encoded
+    name length, so the default stem must stay eight characters.
+    """
+    questions = []
+    for i in range(count):
+        question = DNSQuestion(f"{stem}{i}.local.", type_, const._CLASS_IN)
+        out.add_question(question)
+        questions.append(question)
+    return questions
+
+
 def make_service_info(
     type_: str,
     name: str,

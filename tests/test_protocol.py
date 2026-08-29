@@ -16,7 +16,7 @@ from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
 from zeroconf._logger import _MAX_SEEN_LOGS
 from zeroconf._protocol import incoming as _incoming_module
 
-from . import has_working_ipv6
+from . import add_question_batch, has_working_ipv6
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -282,11 +282,7 @@ def test_dns_hinfo():
 def test_many_questions():
     """Test many questions get separated into multiple packets."""
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-    questions = []
-    for i in range(100):
-        question = r.DNSQuestion(f"specimen{i}.local.", const._TYPE_SRV, const._CLASS_IN)
-        generated.add_question(question)
-        questions.append(question)
+    add_question_batch(generated, 100)
     assert len(generated.questions) == 100
 
     packets = generated.packets()
@@ -445,11 +441,9 @@ def test_questions_do_not_end_up_every_packet():
     """
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-    for i in range(35):
-        question = r.DNSQuestion(f"specimen{i}.local.", const._TYPE_SRV, const._CLASS_IN)
-        generated.add_question(question)
+    for i, question in enumerate(add_question_batch(generated, 35)):
         answer = r.DNSService(
-            f"specimen{i}.local.",
+            question.name,
             const._TYPE_SRV,
             const._CLASS_IN | const._CLASS_UNIQUE,
             const._DNS_HOST_TTL,
