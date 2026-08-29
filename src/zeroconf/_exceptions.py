@@ -10,28 +10,12 @@ class Error(Exception):
     """Base class for all zeroconf exceptions."""
 
 
-class IncomingDecodeError(Error):
-    """Exception when there is invalid data in an incoming packet."""
-
-
-class NonUniqueNameException(Error):
-    """Exception when the name is already registered."""
-
-
-class NamePartTooLongException(Error):
-    """Exception when the name is too long."""
-
-
 class AbstractMethodException(Error):
     """Exception when a required method is not implemented."""
 
 
 class BadTypeInNameException(Error):
     """Exception when the type in a name is invalid."""
-
-
-class ServiceNameAlreadyRegistered(Error):
-    """Exception when a service name is already registered."""
 
 
 class EventLoopBlocked(Error):
@@ -44,9 +28,25 @@ class EventLoopBlocked(Error):
     """
 
 
+class IncomingDecodeError(Error):
+    """Exception when there is invalid data in an incoming packet."""
+
+
+class NamePartTooLongException(Error):
+    """Exception when the name is too long."""
+
+
+class NonUniqueNameException(Error):
+    """Exception when the name is already registered."""
+
+
 class NotRunningException(Error):
     """Exception when an action is called with a zeroconf instance that is not running.
 
     The instance may not be running because it was already shutdown
     or startup has failed in some unexpected way.
     """
+
+
+class ServiceNameAlreadyRegistered(Error):
+    """Exception when a service name is already registered."""
