@@ -54,28 +54,9 @@ class DNSEntry:  # noqa: PLW1641
     def __init__(self, name: str, type_: int, class_: int) -> None:
         self._fast_init_entry(name, type_, class_)
 
-    def _fast_init_entry(self, name: str, type_: _int, class_: _int) -> None:
-        """Fast init for reuse."""
-        self.name = name
-        self.key = name.lower()
-        self.type = type_
-        self.class_ = class_ & _CLASS_MASK
-        self.unique = (class_ & _CLASS_UNIQUE) != 0
-
-    def _dns_entry_matches(self, other: DNSEntry) -> bool:
-        return self.key == other.key and self.type == other.type and self.class_ == other.class_
-
     def __eq__(self, other: Any) -> bool:
         """Equal when key, type and class match."""
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
-
-    @staticmethod
-    def get_class_(class_: int) -> str:
-        return _CLASSES.get(class_, f"?({class_})")
-
-    @staticmethod
-    def get_type(t: int) -> str:
-        return _TYPES.get(t, f"?({t})")
 
     def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
         return "{}[{},{}{},{}]{}".format(
@@ -87,6 +68,25 @@ class DNSEntry:  # noqa: PLW1641
             f"={cast(Any, other)}" if other is not None else "",
         )
 
+    @staticmethod
+    def get_class_(class_: int) -> str:
+        return _CLASSES.get(class_, f"?({class_})")
+
+    @staticmethod
+    def get_type(t: int) -> str:
+        return _TYPES.get(t, f"?({t})")
+
+    def _dns_entry_matches(self, other: DNSEntry) -> bool:
+        return self.key == other.key and self.type == other.type and self.class_ == other.class_
+
+    def _fast_init_entry(self, name: str, type_: _int, class_: _int) -> None:
+        """Fast init for reuse."""
+        self.name = name
+        self.key = name.lower()
+        self.type = type_
+        self.class_ = class_ & _CLASS_MASK
+        self.unique = (class_ & _CLASS_UNIQUE) != 0
+
 
 class DNSQuestion(DNSEntry):
     """A question a resolver asks about a name."""
@@ -96,20 +96,23 @@ class DNSQuestion(DNSEntry):
     def __init__(self, name: str, type_: int, class_: int) -> None:
         self._fast_init(name, type_, class_)
 
-    def _fast_init(self, name: str, type_: _int, class_: _int) -> None:
-        """Fast init for reuse."""
-        self._fast_init_entry(name, type_, class_)
-        self._hash = hash((self.key, type_, self.class_))
-
-    def answered_by(self, rec: DNSRecord) -> bool:
-        return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
+    def __eq__(self, other: Any) -> bool:
+        """Equal when the entry fields match a question."""
+        return isinstance(other, DNSQuestion) and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
         return self._hash
 
-    def __eq__(self, other: Any) -> bool:
-        """Equal when the entry fields match a question."""
-        return isinstance(other, DNSQuestion) and self._dns_entry_matches(other)
+    def __repr__(self) -> str:
+        return "{}[question,{},{},{}]".format(
+            self.get_type(self.type),
+            "QU" if self.unicast else "QM",
+            self.get_class_(self.class_),
+            self.name,
+        )
+
+    def answered_by(self, rec: DNSRecord) -> bool:
+        return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
 
     @property
     def max_size(self) -> int:
@@ -130,13 +133,10 @@ class DNSQuestion(DNSEntry):
         """Sets the QU bit (not QM)."""
         self.unique = value
 
-    def __repr__(self) -> str:
-        return "{}[question,{},{},{}]".format(
-            self.get_type(self.type),
-            "QU" if self.unicast else "QM",
-            self.get_class_(self.class_),
-            self.name,
-        )
+    def _fast_init(self, name: str, type_: _int, class_: _int) -> None:
+        """Fast init for reuse."""
+        self._fast_init_entry(name, type_, class_)
+        self._hash = hash((self.key, type_, self.class_))
 
 
 class DNSRecord(DNSEntry):  # noqa: PLW1641
@@ -154,28 +154,11 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created or current_time_millis())
 
-    def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _int, created: _float) -> None:
-        """Fast init for reuse."""
-        self._fast_init_entry(name, type_, class_)
-        self.ttl = ttl
-        self.created = created
-
     def __eq__(self, other: Any) -> bool:
         raise AbstractMethodException(f"{type(self).__name__} is missing __eq__")
 
     def __lt__(self, other: DNSRecord) -> bool:
         return self.ttl < other.ttl
-
-    def suppressed_by(self, msg: DNSIncoming) -> bool:
-        answers = msg.answers()
-        for record in answers:
-            if self._suppressed_by_answer(record):
-                return True
-        return False
-
-    def _suppressed_by_answer(self, answer: DNSRecord) -> bool:
-        """True when the answer matches this record with at least half its TTL left."""
-        return self == answer and self.ttl / 2 < answer.ttl
 
     def get_expiration_time(self, percent: _int) -> float:
         """Return the moment when the given percentage of the TTL has elapsed."""
@@ -193,12 +176,32 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         """True once the full TTL has elapsed."""
         return self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) <= now
 
-    def is_stale(self, now: _float) -> bool:
-        return self.created + (_EXPIRE_STALE_TIME_MS * self.ttl) <= now
-
     def is_recent(self, now: _float) -> bool:
         """Returns true if the record more than one quarter of its TTL remaining."""
         return self.created + (_RECENT_TIME_MS * self.ttl) > now
+
+    def is_stale(self, now: _float) -> bool:
+        return self.created + (_EXPIRE_STALE_TIME_MS * self.ttl) <= now
+
+    def suppressed_by(self, msg: DNSIncoming) -> bool:
+        answers = msg.answers()
+        for record in answers:
+            if self._suppressed_by_answer(record):
+                return True
+        return False
+
+    def to_string(self, other: bytes | str) -> str:
+        arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"
+        return DNSEntry.entry_to_string(self, "record", arg)
+
+    def write(self, out: DNSOutgoing) -> None:
+        raise AbstractMethodException(f"{type(self).__name__} is missing write")
+
+    def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _int, created: _float) -> None:
+        """Fast init for reuse."""
+        self._fast_init_entry(name, type_, class_)
+        self.ttl = ttl
+        self.created = created
 
     def _set_created_ttl(self, created: _float, ttl: _int) -> None:
         """Set the created and ttl of a record."""
@@ -207,12 +210,9 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         self.created = created
         self.ttl = ttl
 
-    def write(self, out: DNSOutgoing) -> None:
-        raise AbstractMethodException(f"{type(self).__name__} is missing write")
-
-    def to_string(self, other: bytes | str) -> str:
-        arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"
-        return DNSEntry.entry_to_string(self, "record", arg)
+    def _suppressed_by_answer(self, answer: DNSRecord) -> bool:
+        """True when the answer matches this record with at least half its TTL left."""
+        return self == answer and self.ttl / 2 < answer.ttl
 
 
 class DNSAddress(DNSRecord):
@@ -232,35 +232,9 @@ class DNSAddress(DNSRecord):
     ) -> None:
         self._fast_init(name, type_, class_, ttl, address, scope_id, created or current_time_millis())
 
-    def _fast_init(
-        self,
-        name: str,
-        type_: _int,
-        class_: _int,
-        ttl: _int,
-        address: bytes,
-        scope_id: _int | None,
-        created: _float,
-    ) -> None:
-        """Fast init for reuse."""
-        self._fast_init_record(name, type_, class_, ttl, created)
-        self.address = address
-        self.scope_id = scope_id
-        self._hash = hash((self.key, type_, self.class_, address, scope_id))
-
-    def write(self, out: DNSOutgoing) -> None:
-        out.write_string(self.address)
-
     def __eq__(self, other: Any) -> bool:
         """Equal when address and the entry fields match."""
         return isinstance(other, DNSAddress) and self._eq(other)
-
-    def _eq(self, other: DNSAddress) -> bool:
-        return (
-            self.address == other.address
-            and self.scope_id == other.scope_id
-            and self._dns_entry_matches(other)
-        )
 
     def __hash__(self) -> int:
         """Hash to compare like DNSAddresses."""
@@ -276,6 +250,32 @@ class DNSAddress(DNSRecord):
             )
         except (ValueError, OSError):
             return self.to_string(str(self.address))
+
+    def write(self, out: DNSOutgoing) -> None:
+        out.write_string(self.address)
+
+    def _eq(self, other: DNSAddress) -> bool:
+        return (
+            self.address == other.address
+            and self.scope_id == other.scope_id
+            and self._dns_entry_matches(other)
+        )
+
+    def _fast_init(
+        self,
+        name: str,
+        type_: _int,
+        class_: _int,
+        ttl: _int,
+        address: bytes,
+        scope_id: _int | None,
+        created: _float,
+    ) -> None:
+        """Fast init for reuse."""
+        self._fast_init_record(name, type_, class_, ttl, created)
+        self.address = address
+        self.scope_id = scope_id
+        self._hash = hash((self.key, type_, self.class_, address, scope_id))
 
 
 class DNSHinfo(DNSRecord):
@@ -295,6 +295,25 @@ class DNSHinfo(DNSRecord):
     ) -> None:
         self._fast_init(name, type_, class_, ttl, cpu, os, created or current_time_millis())
 
+    def __eq__(self, other: Any) -> bool:
+        """Equal when cpu, os and the entry fields match."""
+        return isinstance(other, DNSHinfo) and self._eq(other)
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSHinfo."""
+        return self._hash
+
+    def __repr__(self) -> str:
+        return self.to_string(self.cpu + " " + self.os)
+
+    def write(self, out: DNSOutgoing) -> None:
+        """Write the rdata to an outgoing packet."""
+        out.write_character_string(self.cpu.encode("utf-8"))
+        out.write_character_string(self.os.encode("utf-8"))
+
+    def _eq(self, other: DNSHinfo) -> bool:
+        return self.cpu == other.cpu and self.os == other.os and self._dns_entry_matches(other)
+
     def _fast_init(
         self, name: str, type_: _int, class_: _int, ttl: _int, cpu: str, os: str, created: _float
     ) -> None:
@@ -304,24 +323,78 @@ class DNSHinfo(DNSRecord):
         self.os = os
         self._hash = hash((self.key, type_, self.class_, cpu, os))
 
-    def write(self, out: DNSOutgoing) -> None:
-        """Write the rdata to an outgoing packet."""
-        out.write_character_string(self.cpu.encode("utf-8"))
-        out.write_character_string(self.os.encode("utf-8"))
+
+class DNSNsec(DNSRecord):
+    """NSEC record asserting which record types exist for a name."""
+
+    __slots__ = ("_hash", "next_name", "rdtypes")
+
+    def __init__(
+        self,
+        name: str,
+        type_: int,
+        class_: int,
+        ttl: _int,
+        next_name: str,
+        rdtypes: list[int],
+        created: float | None = None,
+    ) -> None:
+        self._fast_init(name, type_, class_, ttl, next_name, rdtypes, created or current_time_millis())
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when cpu, os and the entry fields match."""
-        return isinstance(other, DNSHinfo) and self._eq(other)
-
-    def _eq(self, other: DNSHinfo) -> bool:
-        return self.cpu == other.cpu and self.os == other.os and self._dns_entry_matches(other)
+        """Equal when next_name, rdtypes and the entry fields match."""
+        return isinstance(other, DNSNsec) and self._eq(other)
 
     def __hash__(self) -> int:
-        """Hash to compare like DNSHinfo."""
+        """Hash to compare like DNSNSec."""
         return self._hash
 
     def __repr__(self) -> str:
-        return self.to_string(self.cpu + " " + self.os)
+        return self.to_string(
+            self.next_name + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes])
+        )
+
+    def write(self, out: DNSOutgoing) -> None:
+        """Write the rdata to an outgoing packet."""
+        bitmap = bytearray(b"\0" * 32)
+        total_octets = 0
+        for rdtype in self.rdtypes:
+            if rdtype > 255:  # mDNS only supports window 0
+                raise ValueError(f"rdtype {rdtype} is too large for NSEC")
+            byte = rdtype // 8
+            total_octets = byte + 1
+            bitmap[byte] |= 0x80 >> (rdtype % 8)
+        if total_octets == 0:
+            # NSEC must have at least one rdtype
+            # Writing an empty bitmap is not allowed
+            raise ValueError("NSEC must have at least one rdtype")
+        out_bytes = bytes(bitmap[0:total_octets])
+        out.write_name(self.next_name)
+        out._write_byte(0)  # Always window 0
+        out._write_byte(len(out_bytes))
+        out.write_string(out_bytes)
+
+    def _eq(self, other: DNSNsec) -> bool:
+        return (
+            self.next_name == other.next_name
+            and self.rdtypes == other.rdtypes
+            and self._dns_entry_matches(other)
+        )
+
+    def _fast_init(
+        self,
+        name: str,
+        type_: _int,
+        class_: _int,
+        ttl: _int,
+        next_name: str,
+        rdtypes: list[_int],
+        created: _float,
+    ) -> None:
+        self._fast_init_record(name, type_, class_, ttl, created)
+        self.next_name = next_name
+        self.rdtypes = sorted(rdtypes)
+        self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
 
 
 class DNSPointer(DNSRecord):
@@ -340,13 +413,16 @@ class DNSPointer(DNSRecord):
     ) -> None:
         self._fast_init(name, type_, class_, ttl, alias, created or current_time_millis())
 
-    def _fast_init(
-        self, name: str, type_: _int, class_: _int, ttl: _int, alias: str, created: _float
-    ) -> None:
-        self._fast_init_record(name, type_, class_, ttl, created)
-        self.alias = alias
-        self.alias_key = alias.lower()
-        self._hash = hash((self.key, type_, self.class_, self.alias_key))
+    def __eq__(self, other: Any) -> bool:
+        """Equal when alias and the entry fields match."""
+        return isinstance(other, DNSPointer) and self._eq(other)
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSPointer."""
+        return self._hash
+
+    def __repr__(self) -> str:
+        return self.to_string(self.alias)
 
     @property
     def max_size_compressed(self) -> int:
@@ -361,62 +437,16 @@ class DNSPointer(DNSRecord):
     def write(self, out: DNSOutgoing) -> None:
         out.write_name(self.alias)
 
-    def __eq__(self, other: Any) -> bool:
-        """Equal when alias and the entry fields match."""
-        return isinstance(other, DNSPointer) and self._eq(other)
-
     def _eq(self, other: DNSPointer) -> bool:
         return self.alias_key == other.alias_key and self._dns_entry_matches(other)
 
-    def __hash__(self) -> int:
-        """Hash to compare like DNSPointer."""
-        return self._hash
-
-    def __repr__(self) -> str:
-        return self.to_string(self.alias)
-
-
-class DNSText(DNSRecord):
-    """TXT record carrying the service properties."""
-
-    __slots__ = ("_hash", "text")
-
-    def __init__(
-        self,
-        name: str,
-        type_: int,
-        class_: int,
-        ttl: int,
-        text: bytes,
-        created: float | None = None,
-    ) -> None:
-        self._fast_init(name, type_, class_, ttl, text, created or current_time_millis())
-
     def _fast_init(
-        self, name: str, type_: _int, class_: _int, ttl: _int, text: bytes, created: _float
+        self, name: str, type_: _int, class_: _int, ttl: _int, alias: str, created: _float
     ) -> None:
         self._fast_init_record(name, type_, class_, ttl, created)
-        self.text = text
-        self._hash = hash((self.key, type_, self.class_, text))
-
-    def write(self, out: DNSOutgoing) -> None:
-        out.write_string(self.text)
-
-    def __hash__(self) -> int:
-        """Hash to compare like DNSText."""
-        return self._hash
-
-    def __eq__(self, other: Any) -> bool:
-        """Equal when text and the entry fields match."""
-        return isinstance(other, DNSText) and self._eq(other)
-
-    def _eq(self, other: DNSText) -> bool:
-        return self.text == other.text and self._dns_entry_matches(other)
-
-    def __repr__(self) -> str:
-        if len(self.text) > 10:
-            return self.to_string(self.text[:7]) + "..."
-        return self.to_string(self.text)
+        self.alias = alias
+        self.alias_key = alias.lower()
+        self._hash = hash((self.key, type_, self.class_, self.alias_key))
 
 
 class DNSService(DNSRecord):
@@ -440,6 +470,32 @@ class DNSService(DNSRecord):
             name, type_, class_, ttl, priority, weight, port, server, created or current_time_millis()
         )
 
+    def __eq__(self, other: Any) -> bool:
+        """Equal when priority, weight, port, server and the entry fields match."""
+        return isinstance(other, DNSService) and self._eq(other)
+
+    def __hash__(self) -> int:
+        """Hash to compare like DNSService."""
+        return self._hash
+
+    def __repr__(self) -> str:
+        return self.to_string(f"{self.server}:{self.port}")
+
+    def write(self, out: DNSOutgoing) -> None:
+        out.write_short(self.priority)
+        out.write_short(self.weight)
+        out.write_short(self.port)
+        out.write_name(self.server)
+
+    def _eq(self, other: DNSService) -> bool:
+        return (
+            self.priority == other.priority
+            and self.weight == other.weight
+            and self.port == other.port
+            and self.server_key == other.server_key
+            and self._dns_entry_matches(other)
+        )
+
     def _fast_init(
         self,
         name: str,
@@ -460,104 +516,48 @@ class DNSService(DNSRecord):
         self.server_key = server.lower()
         self._hash = hash((self.key, type_, self.class_, priority, weight, port, self.server_key))
 
-    def write(self, out: DNSOutgoing) -> None:
-        out.write_short(self.priority)
-        out.write_short(self.weight)
-        out.write_short(self.port)
-        out.write_name(self.server)
 
-    def __eq__(self, other: Any) -> bool:
-        """Equal when priority, weight, port, server and the entry fields match."""
-        return isinstance(other, DNSService) and self._eq(other)
+class DNSText(DNSRecord):
+    """TXT record carrying the service properties."""
 
-    def _eq(self, other: DNSService) -> bool:
-        return (
-            self.priority == other.priority
-            and self.weight == other.weight
-            and self.port == other.port
-            and self.server_key == other.server_key
-            and self._dns_entry_matches(other)
-        )
-
-    def __hash__(self) -> int:
-        """Hash to compare like DNSService."""
-        return self._hash
-
-    def __repr__(self) -> str:
-        return self.to_string(f"{self.server}:{self.port}")
-
-
-class DNSNsec(DNSRecord):
-    """NSEC record asserting which record types exist for a name."""
-
-    __slots__ = ("_hash", "next_name", "rdtypes")
+    __slots__ = ("_hash", "text")
 
     def __init__(
         self,
         name: str,
         type_: int,
         class_: int,
-        ttl: _int,
-        next_name: str,
-        rdtypes: list[int],
+        ttl: int,
+        text: bytes,
         created: float | None = None,
     ) -> None:
-        self._fast_init(name, type_, class_, ttl, next_name, rdtypes, created or current_time_millis())
-
-    def _fast_init(
-        self,
-        name: str,
-        type_: _int,
-        class_: _int,
-        ttl: _int,
-        next_name: str,
-        rdtypes: list[_int],
-        created: _float,
-    ) -> None:
-        self._fast_init_record(name, type_, class_, ttl, created)
-        self.next_name = next_name
-        self.rdtypes = sorted(rdtypes)
-        self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
-
-    def write(self, out: DNSOutgoing) -> None:
-        """Write the rdata to an outgoing packet."""
-        bitmap = bytearray(b"\0" * 32)
-        total_octets = 0
-        for rdtype in self.rdtypes:
-            if rdtype > 255:  # mDNS only supports window 0
-                raise ValueError(f"rdtype {rdtype} is too large for NSEC")
-            byte = rdtype // 8
-            total_octets = byte + 1
-            bitmap[byte] |= 0x80 >> (rdtype % 8)
-        if total_octets == 0:
-            # NSEC must have at least one rdtype
-            # Writing an empty bitmap is not allowed
-            raise ValueError("NSEC must have at least one rdtype")
-        out_bytes = bytes(bitmap[0:total_octets])
-        out.write_name(self.next_name)
-        out._write_byte(0)  # Always window 0
-        out._write_byte(len(out_bytes))
-        out.write_string(out_bytes)
+        self._fast_init(name, type_, class_, ttl, text, created or current_time_millis())
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when next_name, rdtypes and the entry fields match."""
-        return isinstance(other, DNSNsec) and self._eq(other)
-
-    def _eq(self, other: DNSNsec) -> bool:
-        return (
-            self.next_name == other.next_name
-            and self.rdtypes == other.rdtypes
-            and self._dns_entry_matches(other)
-        )
+        """Equal when text and the entry fields match."""
+        return isinstance(other, DNSText) and self._eq(other)
 
     def __hash__(self) -> int:
-        """Hash to compare like DNSNSec."""
+        """Hash to compare like DNSText."""
         return self._hash
 
     def __repr__(self) -> str:
-        return self.to_string(
-            self.next_name + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes])
-        )
+        if len(self.text) > 10:
+            return self.to_string(self.text[:7]) + "..."
+        return self.to_string(self.text)
+
+    def write(self, out: DNSOutgoing) -> None:
+        out.write_string(self.text)
+
+    def _eq(self, other: DNSText) -> bool:
+        return self.text == other.text and self._dns_entry_matches(other)
+
+    def _fast_init(
+        self, name: str, type_: _int, class_: _int, ttl: _int, text: bytes, created: _float
+    ) -> None:
+        self._fast_init_record(name, type_, class_, ttl, created)
+        self.text = text
+        self._hash = hash((self.key, type_, self.class_, text))
 
 
 _DNSRecord = DNSRecord
