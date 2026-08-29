@@ -95,14 +95,6 @@ def blockbuster(
         yield bb
 
 
-@pytest.fixture
-def zc() -> Iterator[Zeroconf]:
-    """A running Zeroconf bound to loopback, closed after the test."""
-    instance = Zeroconf(interfaces=["127.0.0.1"])
-    yield instance
-    instance.close()
-
-
 @pytest.fixture(autouse=True)
 def verify_threads_ended():
     """Verify that the threads are not running after the test."""
@@ -113,7 +105,7 @@ def verify_threads_ended():
 
 
 @pytest.fixture
-def zc_loopback() -> Generator[Zeroconf]:
+def zc() -> Generator[Zeroconf]:
     """Yield a loopback `Zeroconf` and close it on teardown.
 
     Replaces the inline `zc = Zeroconf(interfaces=["127.0.0.1"])` +
@@ -128,7 +120,7 @@ def zc_loopback() -> Generator[Zeroconf]:
 
 
 @pytest_asyncio.fixture
-async def aiozc_loopback() -> AsyncGenerator[AsyncZeroconf]:
+async def aiozc() -> AsyncGenerator[AsyncZeroconf]:
     """Yield a loopback `AsyncZeroconf` and close it on teardown.
 
     Replaces the inline `aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])`

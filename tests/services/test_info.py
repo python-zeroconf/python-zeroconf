@@ -2378,14 +2378,11 @@ async def test_async_request_incomplete_without_txt_record(quick_request_timing)
         ([const._TYPE_AAAA], False),
     ],
 )
-def test_load_from_cache_with_nsec(
-    zc_loopback: r.Zeroconf, nsec_rdtypes: list[int], expected_complete: bool
-) -> None:
+def test_load_from_cache_with_nsec(zc: r.Zeroconf, nsec_rdtypes: list[int], expected_complete: bool) -> None:
     """An NSEC listing SRV but not TXT denies the TXT record and completes the service."""
     type_ = "_http._tcp.local."
     registration_name = f"nsecdenial.{type_}"
     host = "nsecdenial.local."
-    zc = zc_loopback
     zc.cache.async_add_records(
         [
             r.DNSService(
@@ -2424,13 +2421,13 @@ def test_load_from_cache_with_nsec(
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("quick_request_timing")
-async def test_async_request_completes_on_nsec_txt_denial(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_async_request_completes_on_nsec_txt_denial(aiozc: AsyncZeroconf) -> None:
     """async_request succeeds promptly when the responder denies the TXT record via NSEC."""
     type_ = "_http._tcp.local."
     registration_name = f"nsecrequest.{type_}"
     host = "nsecrequest.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -2496,13 +2493,13 @@ async def test_async_request_completes_on_nsec_txt_denial(aiozc_loopback: AsyncZ
 
 
 @pytest.mark.asyncio
-async def test_nsec_after_txt_record_is_ignored(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_nsec_after_txt_record_is_ignored(aiozc: AsyncZeroconf) -> None:
     """An NSEC arriving after a real TXT record does not clear the properties."""
     type_ = "_http._tcp.local."
     registration_name = f"nsecaftertxt.{type_}"
     host = "nsecaftertxt.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -2551,7 +2548,7 @@ async def test_nsec_after_txt_record_is_ignored(aiozc_loopback: AsyncZeroconf) -
     assert info._is_complete
 
 
-def test_unhandled_record_type_at_service_name_is_ignored(zc_loopback: r.Zeroconf) -> None:
+def test_unhandled_record_type_at_service_name_is_ignored(zc: r.Zeroconf) -> None:
     """A record type with no handler at the service name does not change state."""
     type_ = "_http._tcp.local."
     registration_name = f"unhandledrec.{type_}"
@@ -2563,19 +2560,19 @@ def test_unhandled_record_type_at_service_name_is_ignored(zc_loopback: r.Zerocon
         120,
         f"other.{type_}",
     )
-    info.async_update_records(zc_loopback, r.current_time_millis(), [RecordUpdate(ptr_record, None)])
+    info.async_update_records(zc, r.current_time_millis(), [RecordUpdate(ptr_record, None)])
     assert info._txt_seen is False
     assert info._is_complete is False
 
 
 @pytest.mark.asyncio
-async def test_own_nsec_response_does_not_complete_service(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_own_nsec_response_does_not_complete_service(aiozc: AsyncZeroconf) -> None:
     """The NSEC our own responder emits for a missing address type must not deny the TXT record."""
     type_ = "_http._tcp.local."
     registration_name = f"ownnsec.{type_}"
     host = "ownnsec.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     registered = ServiceInfo(
         type_,
@@ -2604,14 +2601,14 @@ async def test_own_nsec_response_does_not_complete_service(aiozc_loopback: Async
     ],
 )
 async def test_address_resolver_bails_on_nsec_denial(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
     resolver_class: Callable[[str], ServiceInfo],
     nsec_rdtypes: list[int],
 ) -> None:
     """A cached NSEC denying the wanted address type fails the request without waiting."""
     host = "nsec-addr-denial.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -2638,11 +2635,11 @@ async def test_address_resolver_bails_on_nsec_denial(
 
 
 @pytest.mark.asyncio
-async def test_address_resolver_bails_on_live_nsec_denial(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_address_resolver_bails_on_live_nsec_denial(aiozc: AsyncZeroconf) -> None:
     """An NSEC denial arriving mid request wakes the waiter and fails it early."""
     host = "nsec-live-denial.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     resolver = r.AddressResolverIPv6(host)
     start = time.monotonic()
@@ -2670,12 +2667,12 @@ async def test_address_resolver_bails_on_live_nsec_denial(aiozc_loopback: AsyncZ
 
 @pytest.mark.asyncio
 async def test_address_resolver_succeeds_despite_partial_denial(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """Denial of one address family does not fail a resolver that accepts either."""
     host = "nsec-partial-denial.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -2707,12 +2704,12 @@ async def test_address_resolver_succeeds_despite_partial_denial(
 
 @pytest.mark.asyncio
 async def test_address_resolver_bails_when_other_family_is_present(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """A cached NSEC denial bails a single family resolver even when the other family resolved."""
     host = "nsec-mixed-denial.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -2744,11 +2741,11 @@ async def test_address_resolver_bails_when_other_family_is_present(
 
 
 @pytest.mark.asyncio
-async def test_address_denial_cleared_on_new_request(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_address_denial_cleared_on_new_request(aiozc: AsyncZeroconf) -> None:
     """A denial only lasts one request; a host that gains the record resolves again."""
     host = "nsec-denial-reset.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -2790,14 +2787,14 @@ async def test_address_denial_cleared_on_new_request(aiozc_loopback: AsyncZeroco
 
 @pytest.mark.asyncio
 async def test_service_info_bails_when_all_address_types_denied(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """An NSEC denying both address families at the host fails the request early."""
     type_ = "_http._tcp.local."
     registration_name = f"alldenied.{type_}"
     host = "alldenied-host.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -2838,7 +2835,7 @@ async def test_service_info_bails_when_all_address_types_denied(
     assert time.monotonic() - start < 2
 
 
-def test_nsec_for_unrelated_name_is_ignored(zc_loopback: r.Zeroconf) -> None:
+def test_nsec_for_unrelated_name_is_ignored(zc: r.Zeroconf) -> None:
     """An NSEC for a name that is neither the service nor the server changes nothing."""
     type_ = "_http._tcp.local."
     registration_name = f"unrelatednsec.{type_}"
@@ -2851,7 +2848,7 @@ def test_nsec_for_unrelated_name_is_ignored(zc_loopback: r.Zeroconf) -> None:
         "other-host.local.",
         [const._TYPE_A],
     )
-    info.async_update_records(zc_loopback, r.current_time_millis(), [RecordUpdate(foreign_nsec, None)])
+    info.async_update_records(zc, r.current_time_millis(), [RecordUpdate(foreign_nsec, None)])
     assert info._ipv4_denied is False
     assert info._ipv6_denied is False
     assert info._txt_seen is False
@@ -2882,7 +2879,7 @@ def _srv(name: str, host: str) -> r.DNSService:
 
 
 @pytest.mark.parametrize("nsec_first", [False, True])
-def test_nsec_and_srv_in_same_batch_record_denial(zc_loopback: r.Zeroconf, nsec_first: bool) -> None:
+def test_nsec_and_srv_in_same_batch_record_denial(zc: r.Zeroconf, nsec_first: bool) -> None:
     """A batch with an SRV and an NSEC for its target records the denial in either order."""
     type_ = "_http._tcp.local."
     registration_name = f"nsecfirst.{type_}"
@@ -2892,11 +2889,11 @@ def test_nsec_and_srv_in_same_batch_record_denial(zc_loopback: r.Zeroconf, nsec_
     records = [_nsec(host, [const._TYPE_TXT]), _srv(registration_name, host)]
     if not nsec_first:
         records.reverse()
-    info.async_update_records(zc_loopback, now, [RecordUpdate(record, None) for record in records])
+    info.async_update_records(zc, now, [RecordUpdate(record, None) for record in records])
     assert (info._ipv4_denied, info._ipv6_denied) == (True, True)
 
 
-def test_denial_is_reset_when_srv_changes_server(zc_loopback: r.Zeroconf) -> None:
+def test_denial_is_reset_when_srv_changes_server(zc: r.Zeroconf) -> None:
     """A denial learned for the old SRV target does not apply to a new target."""
     type_ = "_http._tcp.local."
     registration_name = f"srvmove.{type_}"
@@ -2907,7 +2904,7 @@ def test_denial_is_reset_when_srv_changes_server(zc_loopback: r.Zeroconf) -> Non
     now = r.current_time_millis()
 
     info.async_update_records(
-        zc_loopback,
+        zc,
         now,
         [
             RecordUpdate(_srv(registration_name, old_host), None),
@@ -2917,34 +2914,32 @@ def test_denial_is_reset_when_srv_changes_server(zc_loopback: r.Zeroconf) -> Non
     assert (info._ipv4_denied, info._ipv6_denied) == (True, True)
 
     # moving to a host with no cached NSEC clears the denial
-    info.async_update_records(zc_loopback, now, [RecordUpdate(_srv(registration_name, new_host), None)])
+    info.async_update_records(zc, now, [RecordUpdate(_srv(registration_name, new_host), None)])
     assert (info._ipv4_denied, info._ipv6_denied) == (False, False)
 
     # moving to a host with a cached NSEC re-establishes it from the cache
-    zc_loopback.cache.async_add_records([_nsec(denied_host, [const._TYPE_TXT])])
-    info.async_update_records(zc_loopback, now, [RecordUpdate(_srv(registration_name, denied_host), None)])
+    zc.cache.async_add_records([_nsec(denied_host, [const._TYPE_TXT])])
+    info.async_update_records(zc, now, [RecordUpdate(_srv(registration_name, denied_host), None)])
     assert (info._ipv4_denied, info._ipv6_denied) == (True, True)
 
 
-def test_newer_nsec_clears_previous_denial(zc_loopback: r.Zeroconf) -> None:
+def test_newer_nsec_clears_previous_denial(zc: r.Zeroconf) -> None:
     """A later NSEC whose bitmap includes a previously denied type clears that denial."""
     type_ = "_http._tcp.local."
     registration_name = f"nsecrefresh.{type_}"
     host = "nsecrefresh-host.local."
     info = ServiceInfo(type_, registration_name)
     now = r.current_time_millis()
-    info.async_update_records(zc_loopback, now, [RecordUpdate(_srv(registration_name, host), None)])
+    info.async_update_records(zc, now, [RecordUpdate(_srv(registration_name, host), None)])
 
-    info.async_update_records(zc_loopback, now, [RecordUpdate(_nsec(host, [const._TYPE_A]), None)])
+    info.async_update_records(zc, now, [RecordUpdate(_nsec(host, [const._TYPE_A]), None)])
     assert (info._ipv4_denied, info._ipv6_denied) == (False, True)
 
-    info.async_update_records(
-        zc_loopback, now, [RecordUpdate(_nsec(host, [const._TYPE_A, const._TYPE_AAAA]), None)]
-    )
+    info.async_update_records(zc, now, [RecordUpdate(_nsec(host, [const._TYPE_A, const._TYPE_AAAA]), None)])
     assert (info._ipv4_denied, info._ipv6_denied) == (False, False)
 
 
-def test_multiple_nsec_records_in_one_batch(zc_loopback: r.Zeroconf) -> None:
+def test_multiple_nsec_records_in_one_batch(zc: r.Zeroconf) -> None:
     """A batch with more than one NSEC processes every denial it carries."""
     type_ = "_http._tcp.local."
     registration_name = f"multinsec.{type_}"
@@ -2956,19 +2951,19 @@ def test_multiple_nsec_records_in_one_batch(zc_loopback: r.Zeroconf) -> None:
         _nsec(registration_name, [const._TYPE_SRV]),
         _nsec(host, [const._TYPE_TXT]),
     ]
-    info.async_update_records(zc_loopback, now, [RecordUpdate(record, None) for record in records])
+    info.async_update_records(zc, now, [RecordUpdate(record, None) for record in records])
     assert info._txt_seen is True
     assert (info._ipv4_denied, info._ipv6_denied) == (True, True)
 
 
 @pytest.mark.asyncio
-async def test_v4_only_host_with_nsec_still_resolves(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_v4_only_host_with_nsec_still_resolves(aiozc: AsyncZeroconf) -> None:
     """The common case: a v4 only host denying AAAA via NSEC still resolves the service."""
     type_ = "_http._tcp.local."
     registration_name = f"v4onlynsec.{type_}"
     host = "v4onlynsec-host.local."
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    zc = aiozc_loopback.zeroconf
+    await aiozc.zeroconf.async_wait_for_start()
+    zc = aiozc.zeroconf
 
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg(
@@ -3000,7 +2995,7 @@ async def test_v4_only_host_with_nsec_still_resolves(aiozc_loopback: AsyncZeroco
     assert info.addresses == [socket.inet_aton("127.0.0.1")]
 
 
-def test_legacy_inverted_nsec_at_own_name_does_not_fail_request(zc_loopback: r.Zeroconf) -> None:
+def test_legacy_inverted_nsec_at_own_name_does_not_fail_request(zc: r.Zeroconf) -> None:
     """A pre-0.150.4 inverted NSEC from a service with server == name never denies the request."""
     type_ = "_http._tcp.local."
     registration_name = f"legacyownname.{type_}"
@@ -3009,7 +3004,7 @@ def test_legacy_inverted_nsec_at_own_name_does_not_fail_request(zc_loopback: r.Z
     # legacy v4 only responder registered without server=: NSEC at its own
     # name with the inverted bitmap listing the missing AAAA
     info.async_update_records(
-        zc_loopback,
+        zc,
         now,
         [
             RecordUpdate(_srv(registration_name, registration_name), None),
@@ -3020,7 +3015,7 @@ def test_legacy_inverted_nsec_at_own_name_does_not_fail_request(zc_loopback: r.Z
     assert info._is_denied is False
 
     info.async_update_records(
-        zc_loopback,
+        zc,
         now,
         [
             RecordUpdate(
@@ -3039,12 +3034,12 @@ def test_legacy_inverted_nsec_at_own_name_does_not_fail_request(zc_loopback: r.Z
     assert info._is_denied is False
 
 
-def test_denied_flag_is_ignored_when_address_is_held(zc_loopback: r.Zeroconf) -> None:
+def test_denied_flag_is_ignored_when_address_is_held(zc: r.Zeroconf) -> None:
     """A denial never vetoes an address the client already holds."""
     type_ = "_http._tcp.local."
     registration_name = f"guardednsec.{type_}"
     host = "guardednsec-host.local."
-    zc_loopback.cache.async_add_records(
+    zc.cache.async_add_records(
         [
             _srv(registration_name, host),
             r.DNSAddress(
@@ -3060,7 +3055,7 @@ def test_denied_flag_is_ignored_when_address_is_held(zc_loopback: r.Zeroconf) ->
 
     info = ServiceInfo(type_, registration_name)
     # incomplete only because the TXT record is still missing
-    assert info.load_from_cache(zc_loopback) is False
+    assert info.load_from_cache(zc) is False
     assert (info._ipv4_denied, info._ipv6_denied) == (True, True)
     assert info.addresses == [socket.inet_aton("127.0.0.1")]
     # the held A record keeps the request querying instead of fast failing

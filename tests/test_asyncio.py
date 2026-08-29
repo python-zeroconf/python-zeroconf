@@ -82,18 +82,13 @@ def verify_threads_ended():
 
 
 @pytest.mark.asyncio
-async def test_async_basic_usage() -> None:
+async def test_async_basic_usage(aiozc: AsyncZeroconf) -> None:
     """Test we can create and close the instance."""
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
 async def test_async_close_twice() -> None:
     """Test we can close twice."""
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
-    await aiozc.async_close()
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -102,7 +97,6 @@ async def test_async_with_sync_passed_in() -> None:
     zc = Zeroconf(interfaces=["127.0.0.1"])
     aiozc = AsyncZeroconf(zc=zc)
     assert aiozc.zeroconf is zc
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -112,7 +106,6 @@ async def test_async_with_sync_passed_in_closed_in_async() -> None:
     aiozc = AsyncZeroconf(zc=zc)
     assert aiozc.zeroconf is zc
     zc.close()
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -360,9 +353,8 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
 
 
 @pytest.mark.asyncio
-async def test_async_service_registration_name_conflict(quick_timing: None) -> None:
+async def test_async_service_registration_name_conflict(aiozc: AsyncZeroconf, quick_timing: None) -> None:
     """Test registering services throws on name conflict."""
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc2-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -395,13 +387,10 @@ async def test_async_service_registration_name_conflict(quick_timing: None) -> N
         task = await aiozc.async_register_service(conflicting_info)
         await task
 
-    await aiozc.async_close()
-
 
 @pytest.mark.asyncio
-async def test_async_service_registration_name_does_not_match_type() -> None:
+async def test_async_service_registration_name_does_not_match_type(aiozc: AsyncZeroconf) -> None:
     """Test registering services throws when the name does not match the type."""
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc3-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -412,7 +401,6 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
     with pytest.raises(BadTypeInNameException):
         task = await aiozc.async_register_service(info)
         await task
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -500,10 +488,9 @@ async def test_async_tasks(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_wait_unblocks_on_update(quick_timing: None) -> None:
+async def test_async_wait_unblocks_on_update(aiozc: AsyncZeroconf, quick_timing: None) -> None:
     """Test async_wait will unblock on update."""
 
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test-srvc4-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
@@ -523,16 +510,15 @@ async def test_async_wait_unblocks_on_update(quick_timing: None) -> None:
     await aiozc.zeroconf.async_wait(50)
     assert current_time_millis() - now < 1000
 
-    await aiozc.async_close()
-
 
 @pytest.mark.asyncio
-async def test_service_info_async_request(quick_timing: None, quick_request_timing: None) -> None:
+async def test_service_info_async_request(
+    aiozc: AsyncZeroconf, quick_timing: None, quick_request_timing: None
+) -> None:
     """Test registering services broadcasts and query with AsyncServceInfo.async_request."""
     if not has_working_ipv6() or os.environ.get("SKIP_IPV6"):
         pytest.skip("Requires IPv6")
 
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "abc"
@@ -647,8 +633,6 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
     aiosinfo = await aiozc.async_get_service_info(type_, registration_name, timeout=200)
     assert aiosinfo is None
 
-    await aiozc.async_close()
-
 
 @pytest.mark.asyncio
 async def test_async_service_browser(quick_timing: None) -> None:
@@ -726,11 +710,10 @@ async def test_async_context_manager(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_service_browser_cancel_async_context_manager():
+async def test_service_browser_cancel_async_context_manager(aiozc: AsyncZeroconf) -> None:
     """Test we can cancel an AsyncServiceBrowser with it being used as an async context manager."""
 
     # instantiate a zeroconf instance
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_hap._tcp.local."
 
@@ -748,13 +731,10 @@ async def test_service_browser_cancel_async_context_manager():
 
     assert cast(bool, browser.done) is True
 
-    await aiozc.async_close()
-
 
 @pytest.mark.asyncio
-async def test_async_unregister_all_services(quick_timing: None) -> None:
+async def test_async_unregister_all_services(aiozc: AsyncZeroconf, quick_timing: None) -> None:
     """Test unregistering all services."""
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     type_ = "_test1-srvc-type._tcp.local."
     name = "xxxyyy"
     name2 = "abc"
@@ -807,8 +787,6 @@ async def test_async_unregister_all_services(quick_timing: None) -> None:
     # Verify we can call again
     await aiozc.async_unregister_all_services()
 
-    await aiozc.async_close()
-
 
 @pytest.mark.asyncio
 async def test_async_zeroconf_service_types(quick_timing: None) -> None:
@@ -842,22 +820,18 @@ async def test_async_zeroconf_service_types(quick_timing: None) -> None:
 
 
 @pytest.mark.asyncio
-async def test_guard_against_running_serviceinfo_request_event_loop() -> None:
+async def test_guard_against_running_serviceinfo_request_event_loop(aiozc: AsyncZeroconf) -> None:
     """Test that running ServiceInfo.request from the event loop throws."""
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
-
     service_info = AsyncServiceInfo("_hap._tcp.local.", "doesnotmatter._hap._tcp.local.")
     with pytest.raises(RuntimeError):
         service_info.request(aiozc.zeroconf, 3000)
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
-async def test_service_browser_instantiation_generates_add_events_from_cache():
+async def test_service_browser_instantiation_generates_add_events_from_cache(aiozc: AsyncZeroconf) -> None:
     """Test that the ServiceBrowser will generate Add events with the existing cache when starting."""
 
     # instantiate a zeroconf instance
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_hap._tcp.local."
     registration_name = f"xxxyyy.{type_}"
@@ -894,8 +868,6 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
         ("add", type_, registration_name),
     ]
     await browser.async_cancel()
-
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
@@ -1110,11 +1082,10 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu(qui
 
 
 @pytest.mark.asyncio
-async def test_service_browser_ignores_unrelated_updates():
+async def test_service_browser_ignores_unrelated_updates(aiozc: AsyncZeroconf) -> None:
     """Test that the ServiceBrowser ignores unrelated updates."""
 
     # instantiate a zeroconf instance
-    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     type_ = "_veryuniqueone._tcp.local."
     registration_name = f"xxxyyy.{type_}"
@@ -1200,7 +1171,6 @@ async def test_service_browser_ignores_unrelated_updates():
     assert callbacks == [
         ("add", type_, registration_name),
     ]
-    await aiozc.async_close()
 
 
 @pytest.mark.asyncio
