@@ -1489,17 +1489,31 @@ def test_service_browser_expire_callbacks():
             ]
         ),
     )
+
+    def _restamp_cache(created: float) -> None:
+        # The expiration heap is only safe to touch from the loop thread.
+        done = Event()
+
+        def _restamp() -> None:
+            for cache_record in list(zc.cache.cache.values()):
+                for record in list(cache_record.values()):
+                    zc.cache._async_set_created_ttl(record, created, 1)
+            done.set()
+
+        assert zc.loop is not None
+        zc.loop.call_soon_threadsafe(_restamp)
+        assert done.wait(2)
+
+    def _wait_for_callbacks(count: int) -> None:
+        deadline = time.monotonic() + 2
+        while len(callbacks) < count and time.monotonic() < deadline:
+            time.sleep(0.01)
+
     # Force the ttl to be 1 second
-    now = current_time_millis()
-    for cache_record in list(zc.cache.cache.values()):
-        for record in cache_record.values():
-            zc.cache._async_set_created_ttl(record, now, 1)
+    _restamp_cache(current_time_millis())
 
     # Wait for the add callback to fire from the original inject_response.
-    for _ in range(30):
-        time.sleep(0.01)
-        if len(callbacks) == 1:
-            break
+    _wait_for_callbacks(1)
 
     info.port = 400
     info._dns_service_cache = None  # we are mutating the record so clear the cache
@@ -1509,10 +1523,7 @@ def test_service_browser_expire_callbacks():
         mock_incoming_msg([info.dns_service()]),
     )
 
-    for _ in range(30):
-        time.sleep(0.01)
-        if len(callbacks) == 2:
-            break
+    _wait_for_callbacks(2)
 
     assert callbacks == [
         ("add", type_, registration_name),
@@ -1525,15 +1536,9 @@ def test_service_browser_expire_callbacks():
     # Going through `_async_set_created_ttl` updates the expiration
     # heap; mutating `record.created` directly would leave the heap
     # entry pointing at the original `when` so the reaper never wakes.
-    past = current_time_millis() - 2000
-    for cache_record in list(zc.cache.cache.values()):
-        for record in list(cache_record.values()):
-            zc.cache._async_set_created_ttl(record, past, 1)
+    _restamp_cache(current_time_millis() - 2000)
 
-    for _ in range(30):
-        time.sleep(0.01)
-        if len(callbacks) == 3:
-            break
+    _wait_for_callbacks(3)
 
     assert callbacks == [
         ("add", type_, registration_name),
