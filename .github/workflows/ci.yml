@@ -187,7 +187,8 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - env:
+      - name: Switch to the head branch
+        env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: git switch -C "$BRANCH"
 
@@ -221,7 +222,8 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - env:
+      - name: Switch to the head branch
+        env:
           BRANCH: ${{ github.ref_name }}
         run: git switch -C "$BRANCH"
 
