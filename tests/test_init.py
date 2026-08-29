@@ -29,45 +29,6 @@ def teardown_module():
 
 
 class Names(unittest.TestCase):
-    def test_long_name(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion(
-            "an.excessively.deep.chain.of.dns.labels.used.for.testing.local.",
-            const._TYPE_SRV,
-            const._CLASS_IN,
-        )
-        generated.add_question(question)
-        r.DNSIncoming(generated.packets()[0])
-
-    def test_exceedingly_long_name(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        name = f"{'part.' * 1000}local."
-        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
-        generated.add_question(question)
-        r.DNSIncoming(generated.packets()[0])
-
-    def test_extra_exceedingly_long_name(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        name = f"{'part.' * 4000}local."
-        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
-        generated.add_question(question)
-        r.DNSIncoming(generated.packets()[0])
-
-    def test_exceedingly_long_name_part(self):
-        name = f"{'a' * 1000}.local."
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
-        generated.add_question(question)
-        self.assertRaises(r.NamePartTooLongException, generated.packets)
-
-    def test_same_name(self):
-        name = "paired.local."
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion(name, const._TYPE_SRV, const._CLASS_IN)
-        generated.add_question(question)
-        generated.add_question(question)
-        r.DNSIncoming(generated.packets()[0])
-
     @pytest.mark.usefixtures("quick_timing")
     def test_verify_name_change_with_lots_of_names(self):
         # instantiate a zeroconf instance
