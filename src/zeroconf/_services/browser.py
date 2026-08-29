@@ -669,7 +669,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._pending_handlers[key] = state_change
 
     def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate_]) -> None:
-        """Callback invoked by Zeroconf when new information arrives.
 
         Updates information required by browser in the Zeroconf cache.
 
@@ -764,11 +763,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
-    """Used to browse for a service of a specific type.
 
     The listener object will have its add_service() and
     remove_service() methods called when this browser
-    discovers changes in the services availability."""
 
     def __init__(
         self,

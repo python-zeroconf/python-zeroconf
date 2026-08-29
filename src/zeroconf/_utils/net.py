@@ -61,9 +61,6 @@ class IPVersion(enum.Enum):
     All = 3
 
 
-# utility functions
-
-
 def _is_v6_address(addr: bytes) -> bool:
     return len(addr) == 16
 
@@ -212,12 +209,6 @@ def disable_ipv6_only_or_raise(s: socket.socket) -> None:
 
 def set_so_reuseport_if_available(s: socket.socket) -> None:
     """Set SO_REUSEADDR on a socket if available."""
-    # SO_REUSEADDR should be equivalent to SO_REUSEPORT for
-    # multicast UDP sockets (p 731, "TCP/IP Illustrated,
-    # Volume 2"), but some BSD-derived systems require
-    # SO_REUSEPORT to be specified explicitly.  Also, not all
-    # versions of Python have SO_REUSEPORT available.
-    # Catch OSError and socket.error for kernel versions <3.9 because lacking
     # SO_REUSEPORT support.
     if not hasattr(socket, "SO_REUSEPORT"):
         return

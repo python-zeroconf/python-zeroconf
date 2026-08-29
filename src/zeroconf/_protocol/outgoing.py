@@ -144,24 +144,9 @@ class DNSOutgoing:
             )
         )
 
-    def add_question(self, record: DNSQuestion) -> None:
-        """Adds a question"""
-        self.questions.append(record)
-
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
-        """Adds an answer"""
         if not record.suppressed_by(inp):
             self.add_answer_at_time(record, 0.0)
-
-    def add_answer_at_time(self, record: DNSRecord | None, now: float_) -> None:
-        """Adds an answer if it does not expire by a certain time"""
-        now_double = now
-        if record is not None and (now_double == 0 or not record.is_expired(now_double)):
-            self.answers.append((record, now))
-
-    def add_authorative_answer(self, record: DNSPointer) -> None:
-        """Adds an authoritative answer"""
-        self.authorities.append(record)
 
     def add_additional_answer(self, record: DNSRecord) -> None:
         """Adds an additional answer
@@ -239,15 +224,6 @@ class DNSOutgoing:
             assert isinstance(value, bytes)
         self.data.append(value)
         self.size += len(value)
-
-    def _write_utf(self, s: str_) -> None:
-        """Writes a UTF-8 string of a given length to the packet"""
-        utfstr = s.encode("utf-8")
-        length = len(utfstr)
-        if length > 64:
-            raise NamePartTooLongException
-        self._write_byte(length)
-        self.write_string(utfstr)
 
     def write_character_string(self, value: bytes) -> None:
         if TYPE_CHECKING:
@@ -328,28 +304,6 @@ class DNSOutgoing:
         """Write out the record ttl."""
         self._write_int(record.ttl if now == 0 else record.get_remaining_ttl(now))
 
-    def _write_record(self, record: DNSRecord_, now: float_) -> bool:
-        """Writes a record (answer, authoritative answer, additional) to
-        the packet.  Returns True on success, or False if we did not
-        because the packet because the record does not fit."""
-        start_data_length = len(self.data)
-        start_size = self.size
-        self.write_name(record.name)
-        self.write_short(record.type)
-        self._write_record_class(record)
-        self._write_ttl(record, now)
-        index = len(self.data)
-        self.write_short(0)  # Will get replaced with the actual size
-        record.write(self)
-        # Adjust size for the short we will write before this record
-        length = 0
-        for d in self.data[index + 1 :]:
-            length += len(d)
-        # Here we replace the 0 length short we wrote
-        # before with the actual length
-        self._replace_short(index, length)
-        return self._check_data_limit_or_rollback(start_data_length, start_size)
-
     def _check_data_limit_or_rollback(self, start_data_length: int_, start_size: int_) -> bool:
         """Check data limit, if we go over, then rollback and return False."""
         len_limit = _MAX_MSG_ABSOLUTE if self.allow_long else _MAX_MSG_TYPICAL
@@ -415,7 +369,6 @@ class DNSOutgoing:
     def packets(self) -> list[bytes]:
         """Returns a list of bytestrings containing the packets' bytes
 
-        No further parts should be added to the packet once this
         is done.  The packets are each restricted to _MAX_MSG_TYPICAL
         or less in length, except for the case of a single answer which
         will be written out to a single oversized packet no more than

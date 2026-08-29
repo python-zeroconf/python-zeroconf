@@ -457,7 +457,6 @@ class PacketGeneration(unittest.TestCase):
 
 class PacketForm(unittest.TestCase):
     def test_transaction_id(self):
-        """ID must be zero in a DNS-SD packet"""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         bytes = generated.packets()[0]
         id = bytes[0] << 8 | bytes[1]

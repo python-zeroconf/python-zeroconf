@@ -26,7 +26,6 @@ import enum
 import socket
 from typing import TYPE_CHECKING, Any, cast
 
-from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
 from ._utils.time import current_time_millis
 from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
@@ -88,16 +87,13 @@ class DNSEntry:  # noqa: PLW1641
 
     @staticmethod
     def get_class_(class_: int) -> str:
-        """Class accessor"""
         return _CLASSES.get(class_, f"?({class_})")
 
     @staticmethod
     def get_type(t: int) -> str:
-        """Type accessor"""
         return _TYPES.get(t, f"?({t})")
 
     def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
-        """String representation with additional information"""
         return "{}[{},{}{},{}]{}".format(
             hdr,
             self.get_type(self.type),
@@ -122,7 +118,6 @@ class DNSQuestion(DNSEntry):
         self._hash = hash((self.key, type_, self.class_))
 
     def answered_by(self, rec: DNSRecord) -> bool:
-        """Returns true if the question is answered by the record"""
         return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
 
     def __hash__(self) -> int:
@@ -161,7 +156,7 @@ class DNSQuestion(DNSEntry):
         )
 
 
-class DNSRecord(DNSEntry):  # noqa: PLW1641
+class DNSRecord(DNSEntry):
     """A DNS record - like a DNS entry, but has a TTL"""
 
     __slots__ = ("created", "ttl")
@@ -182,31 +177,15 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         self.ttl = ttl
         self.created = created
 
-    def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
-        """Abstract method"""
-        raise AbstractMethodException
-
     def __lt__(self, other: DNSRecord) -> bool:
         return self.ttl < other.ttl
 
     def suppressed_by(self, msg: DNSIncoming) -> bool:
-        """Returns true if any answer in a message can suffice for the
-        information held in this record."""
         answers = msg.answers()
         for record in answers:
             if self._suppressed_by_answer(record):
                 return True
         return False
-
-    def _suppressed_by_answer(self, other: DNSRecord) -> bool:
-        """Returns true if another record has same name, type and class,
-        and if its TTL is at least half of this record's."""
-        return self == other and other.ttl > (self.ttl / 2)
-
-    def get_expiration_time(self, percent: _int) -> float:
-        """Returns the time at which this record will have expired
-        by a certain percentage."""
-        return self.created + (percent * self.ttl * 10)
 
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: _float) -> int | float:
@@ -219,7 +198,6 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         return self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) <= now
 
     def is_stale(self, now: _float) -> bool:
-        """Returns true if this record is at least half way expired."""
         return self.created + (_EXPIRE_STALE_TIME_MS * self.ttl) <= now
 
     def is_recent(self, now: _float) -> bool:
@@ -233,12 +211,7 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         self.created = created
         self.ttl = ttl
 
-    def write(self, out: DNSOutgoing) -> None:  # pylint: disable=no-self-use
-        """Abstract method"""
-        raise AbstractMethodException
-
     def to_string(self, other: bytes | str) -> str:
-        """String representation with additional information"""
         arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"
         return DNSEntry.entry_to_string(self, "record", arg)
 
@@ -277,11 +250,9 @@ class DNSAddress(DNSRecord):
         self._hash = hash((self.key, type_, self.class_, address, scope_id))
 
     def write(self, out: DNSOutgoing) -> None:
-        """Used in constructing an outgoing packet"""
         out.write_string(self.address)
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on address"""
         return isinstance(other, DNSAddress) and self._eq(other)
 
     def _eq(self, other: DNSAddress) -> bool:
@@ -296,7 +267,6 @@ class DNSAddress(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        """String representation"""
         try:
             return self.to_string(
                 socket.inet_ntop(
@@ -352,7 +322,6 @@ class DNSHinfo(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        """String representation"""
         return self.to_string(self.cpu + " " + self.os)
 
 
@@ -391,7 +360,6 @@ class DNSPointer(DNSRecord):
         )
 
     def write(self, out: DNSOutgoing) -> None:
-        """Used in constructing an outgoing packet"""
         out.write_name(self.alias)
 
     def __eq__(self, other: Any) -> bool:
@@ -407,7 +375,6 @@ class DNSPointer(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        """String representation"""
         return self.to_string(self.alias)
 
 
@@ -435,7 +402,6 @@ class DNSText(DNSRecord):
         self._hash = hash((self.key, type_, self.class_, text))
 
     def write(self, out: DNSOutgoing) -> None:
-        """Used in constructing an outgoing packet"""
         out.write_string(self.text)
 
     def __hash__(self) -> int:
@@ -451,7 +417,6 @@ class DNSText(DNSRecord):
         return self.text == other.text and self._dns_entry_matches(other)
 
     def __repr__(self) -> str:
-        """String representation"""
         if len(self.text) > 10:
             return self.to_string(self.text[:7]) + "..."
         return self.to_string(self.text)
@@ -499,14 +464,12 @@ class DNSService(DNSRecord):
         self._hash = hash((self.key, type_, self.class_, priority, weight, port, self.server_key))
 
     def write(self, out: DNSOutgoing) -> None:
-        """Used in constructing an outgoing packet"""
         out.write_short(self.priority)
         out.write_short(self.weight)
         out.write_short(self.port)
         out.write_name(self.server)
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on priority, weight, port and server"""
         return isinstance(other, DNSService) and self._eq(other)
 
     def _eq(self, other: DNSService) -> bool:

@@ -55,11 +55,7 @@ DEBUG_ENABLED = partial(log.isEnabledFor, logging.DEBUG)
 
 
 class AsyncListener:
-    """A Listener is used by this module to listen on the multicast
-    group to which DNS messages are sent, allowing the implementation
-    to cache information as it arrives.
 
-    It requires registration with an Engine object in order to have
     the read() method called when a socket is available for reading."""
 
     __slots__ = (
@@ -240,8 +236,6 @@ class AsyncListener:
         transport: _WrappedTransport,
         v6_flow_scope: tuple[()] | tuple[int, int],
     ) -> None:
-        """Deal with incoming query packets.  Provides a response if
-        possible."""
         if not msg.truncated:
             self._respond_query(msg, addr, port, transport, v6_flow_scope)
             return
