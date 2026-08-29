@@ -178,8 +178,6 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         self.ttl = ttl
         self.created = created
 
-    def __eq__(self, other: Any) -> bool:  # pylint: disable=no-self-use
-
     def __lt__(self, other: DNSRecord) -> bool:
         return self.ttl < other.ttl
 
@@ -189,10 +187,6 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
             if self._suppressed_by_answer(record):
                 return True
         return False
-
-    def _suppressed_by_answer(self, other: DNSRecord) -> bool:
-
-    def get_expiration_time(self, percent: _int) -> float:
 
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: _float) -> int | float:
@@ -217,8 +211,6 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         # in place, but records currently don't have a copy method.
         self.created = created
         self.ttl = ttl
-
-    def write(self, out: DNSOutgoing) -> None:  # pylint: disable=no-self-use
 
     def to_string(self, other: bytes | str) -> str:
         arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"

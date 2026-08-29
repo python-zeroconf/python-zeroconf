@@ -144,18 +144,9 @@ class DNSOutgoing:
             )
         )
 
-    def add_question(self, record: DNSQuestion) -> None:
-
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
         if not record.suppressed_by(inp):
             self.add_answer_at_time(record, 0.0)
-
-    def add_answer_at_time(self, record: DNSRecord | None, now: float_) -> None:
-        """Adds an answer if it does not expire by a certain time"""
-        now_double = now
-        if record is not None and (now_double == 0 or not record.is_expired(now_double)):
-
-    def add_authorative_answer(self, record: DNSPointer) -> None:
 
     def add_additional_answer(self, record: DNSRecord) -> None:
         """Adds an additional answer
@@ -233,11 +224,6 @@ class DNSOutgoing:
             assert isinstance(value, bytes)
         self.data.append(value)
         self.size += len(value)
-
-    def _write_utf(self, s: str_) -> None:
-        utfstr = s.encode("utf-8")
-        self._write_byte(length)
-        self.write_string(utfstr)
 
     def write_character_string(self, value: bytes) -> None:
         if TYPE_CHECKING:
@@ -317,25 +303,6 @@ class DNSOutgoing:
     def _write_ttl(self, record: DNSRecord_, now: float_) -> None:
         """Write out the record ttl."""
         self._write_int(record.ttl if now == 0 else record.get_remaining_ttl(now))
-
-    def _write_record(self, record: DNSRecord_, now: float_) -> bool:
-        the packet.  Returns True on success, or False if we did not
-        because the packet because the record does not fit."""
-        start_data_length = len(self.data)
-        start_size = self.size
-        self.write_name(record.name)
-        self.write_short(record.type)
-        self._write_record_class(record)
-        self._write_ttl(record, now)
-        index = len(self.data)
-        self.write_short(0)  # Will get replaced with the actual size
-        length = 0
-        for d in self.data[index + 1 :]:
-            length += len(d)
-        # Here we replace the 0 length short we wrote
-        # before with the actual length
-        self._replace_short(index, length)
-        return self._check_data_limit_or_rollback(start_data_length, start_size)
 
     def _check_data_limit_or_rollback(self, start_data_length: int_, start_size: int_) -> bool:
         """Check data limit, if we go over, then rollback and return False."""
