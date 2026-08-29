@@ -29,6 +29,16 @@ def teardown_module():
 
 
 class Names(unittest.TestCase):
+    def test_long_name(self):
+        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        question = r.DNSQuestion(
+            "an.excessively.deep.chain.of.dns.labels.used.for.testing.local.",
+            const._TYPE_SRV,
+            const._CLASS_IN,
+        )
+        generated.add_question(question)
+        r.DNSIncoming(generated.packets()[0])
+
     def test_exceedingly_long_name(self):
         generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
         name = f"{'part.' * 1000}local."
