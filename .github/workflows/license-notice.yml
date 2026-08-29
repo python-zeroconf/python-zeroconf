@@ -39,7 +39,7 @@ jobs:
                 "",
                 "By continuing with this pull request you are okay with your contribution, and your previous contributions to this repository, being offered under Apache 2.0.",
                 "",
-                "If that does not work for you, no hard feelings; reply with the exact phrase `I do not agree to the Apache 2.0 license` and we will close this so nothing of yours is included in the change.",
+                "If that does not work for you, no hard feelings; reply with the exact phrase `I do not agree to the Apache 2.0 license` or simply close this pull request, and nothing of yours will be included in the change.",
               ].join("\n"),
             });
 
