@@ -35,11 +35,11 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: [
-                "Heads up: this project is changing its license from LGPL-2.1 to Apache 2.0, see #1835.",
+                "Thanks for contributing! A quick note: this project is in the process of moving from LGPL-2.1 to Apache 2.0, see #1835.",
                 "",
-                "By opening this pull request you agree that your contribution, and all of your previous contributions to this repository, are licensed under Apache 2.0.",
+                "By continuing with this pull request you are okay with your contribution, and your previous contributions to this repository, being offered under Apache 2.0.",
                 "",
-                "If you do not agree, reply with the exact phrase `I do not agree to the Apache 2.0 license` and this pull request will be closed.",
+                "If that does not work for you, no hard feelings; reply with the exact phrase `I do not agree to the Apache 2.0 license` and we will close this so nothing of yours is included in the change.",
               ].join("\n"),
             });
 
