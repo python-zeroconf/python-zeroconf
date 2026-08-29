@@ -92,6 +92,24 @@ Here's how to discover services:
 
 .. code-block:: python
 
+    from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
+
+
+    class EventLogger(ServiceListener):
+        def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+            info = zc.get_service_info(type_, name)
+            print(f"discovered {name}: {info}")
+
+        def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+            print(f"lost {name}")
+
+        def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+            print(f"refreshed {name}")
+
+
+    with Zeroconf() as zc:
+        ServiceBrowser(zc, "_http._tcp.local.", EventLogger())
+        input("browsing, press enter to stop\n")
 
 .. note::
 
