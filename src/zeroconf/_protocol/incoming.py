@@ -444,8 +444,6 @@ class DNSIncoming:
                 self.now,
             )
             return nsec_rec
-        # Skip the payload for the resource record so the next
-        # records can be parsed correctly
         self.offset += length
         return None
 
