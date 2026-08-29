@@ -148,7 +148,6 @@ class DNSIncoming:
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
     def has_qu_question(self) -> bool:
-        """Returns true if any question is a QU question."""
         return self._has_qu_question
 
     @property
