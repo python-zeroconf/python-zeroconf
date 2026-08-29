@@ -16,7 +16,7 @@ from unittest import mock
 
 import ifaddr
 
-from zeroconf import DNSIncoming, DNSOutgoing, DNSQuestion, DNSRecord, Zeroconf, const
+from zeroconf import DNSIncoming, DNSOutgoing, DNSQuestion, DNSRecord, ServiceInfo, Zeroconf, const
 from zeroconf._history import QuestionHistory
 
 _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
@@ -57,6 +57,28 @@ IPV6_LOOPBACK_FIND_TIMEOUT = 0.5
 class QuestionHistoryWithoutSuppression(QuestionHistory):
     def suppresses(self, question: DNSQuestion, now: float, known_answers: set[DNSRecord]) -> bool:
         return False
+
+
+def make_service_info(
+    type_: str,
+    name: str,
+    *,
+    port: int = 80,
+    properties: dict | bytes | None = None,
+    server: str = "spare-rig.local.",
+    addresses: list[bytes] | None = None,
+) -> ServiceInfo:
+    """Build a ServiceInfo with the suite's canonical fixture values."""
+    return ServiceInfo(
+        type_,
+        name,
+        port,
+        0,
+        0,
+        {"path": "/healthz/"} if properties is None else properties,
+        server,
+        addresses=[socket.inet_aton("10.7.4.2")] if addresses is None else addresses,
+    )
 
 
 def mock_incoming_msg(records: Iterable[DNSRecord]) -> DNSIncoming:
