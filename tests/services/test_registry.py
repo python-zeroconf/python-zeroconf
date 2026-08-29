@@ -34,26 +34,8 @@ class TestServiceRegistry(unittest.TestCase):
         registration_name2 = f"{name2}.{type_}"
 
         desc = {"path": "/healthz/"}
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "same.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
-        info2 = ServiceInfo(
-            type_,
-            registration_name2,
-            80,
-            0,
-            0,
-            desc,
-            "same.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties=desc, server="same.local.")
+        info2 = make_service_info(type_, registration_name2, properties=desc, server="same.local.")
         registry = r.ServiceRegistry()
         registry.async_add(info)
         registry.async_add(info2)
@@ -107,16 +89,7 @@ class TestServiceRegistry(unittest.TestCase):
         registration_name = f"{name}.{type_}"
 
         desc = {"path": "/healthz/"}
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "SPARE-RIG.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties=desc, server="SPARE-RIG.local.")
 
         registry = r.ServiceRegistry()
         registry.async_add(info)
@@ -146,17 +119,7 @@ class TestServiceRegistry(unittest.TestCase):
         server = "shared.local."
         desc = {"path": "/healthz/"}
         infos = [
-            ServiceInfo(
-                type_,
-                f"svc{i}.{type_}",
-                80,
-                0,
-                0,
-                desc,
-                server,
-                addresses=[socket.inet_aton("10.7.4.2")],
-            )
-            for i in range(20)
+            make_service_info(type_, f"svc{i}.{type_}", properties=desc, server=server) for i in range(20)
         ]
 
         registry = r.ServiceRegistry()
@@ -176,16 +139,7 @@ class TestServiceRegistry(unittest.TestCase):
         type_ = "_test-srvc-type._tcp.local."
         server = "spare-rig.local."
         desc = {"path": "/healthz/"}
-        info = ServiceInfo(
-            type_,
-            f"only.{type_}",
-            80,
-            0,
-            0,
-            desc,
-            server,
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, f"only.{type_}", properties=desc, server=server)
 
         registry = r.ServiceRegistry()
         registry.async_add(info)
@@ -199,16 +153,7 @@ class TestServiceRegistry(unittest.TestCase):
         type_ = "_test-srvc-type._tcp.local."
         server = "spare-rig.local."
         registration_name = f"xxxyyy.{type_}"
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            {"path": "/healthz/"},
-            server,
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties={"path": "/healthz/"}, server=server)
         updated = ServiceInfo(
             type_,
             registration_name,

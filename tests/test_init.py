@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import logging
-import socket
 import time
 from unittest.mock import patch
 
 import pytest
 
 import zeroconf as r
-from zeroconf import ServiceInfo, Zeroconf, const
+from zeroconf import Zeroconf, const
 
-from . import _inject_responses
+from . import _inject_responses, make_service_info
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -111,16 +110,7 @@ def test_large_packet_exception_log_handling():
 
 def verify_name_change(zc, type_, name, number_hosts):
     desc = {"path": "/healthz/"}
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info_service = make_service_info(type_, f"{name}.{type_}", properties=desc)
 
     # verify name conflict
     with pytest.raises(r.NonUniqueNameException):
@@ -132,16 +122,7 @@ def verify_name_change(zc, type_, name, number_hosts):
     # Create a new object since allow_name_change will mutate the
     # original object and then we will have the wrong service
     # in the registry
-    info_service2 = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info_service2 = make_service_info(type_, f"{name}.{type_}", properties=desc)
     zc.register_service(info_service2, allow_name_change=True)
     assert info_service2.name.split(".")[0] == f"{name}-{number_hosts + 1}"
 

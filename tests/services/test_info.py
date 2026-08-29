@@ -25,7 +25,13 @@ from zeroconf._utils.ipaddress import ZeroconfIPv4Address
 from zeroconf._utils.net import IPVersion
 from zeroconf.asyncio import AsyncZeroconf
 
-from .. import QUICK_REQUEST_TIMEOUT_MS, _inject_response, has_working_ipv6, mock_incoming_msg
+from .. import (
+    QUICK_REQUEST_TIMEOUT_MS,
+    _inject_response,
+    has_working_ipv6,
+    make_service_info,
+    mock_incoming_msg,
+)
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -702,29 +708,16 @@ def test_multiple_addresses():
     address = socket.inet_aton(address_parsed)
 
     # New kwarg way
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[address, address],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, addresses=[address, address])
 
     assert info.addresses == [address, address]
     assert info.parsed_addresses() == [address_parsed, address_parsed]
     assert info.parsed_scoped_addresses() == [address_parsed, address_parsed]
 
-    info = ServiceInfo(
+    info = make_service_info(
         type_,
         registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
+        properties=desc,
         parsed_addresses=[address_parsed, address_parsed],
     )
     assert info.addresses == [address, address]
@@ -739,30 +732,19 @@ def test_multiple_addresses():
         address_v6_ll = socket.inet_pton(socket.AF_INET6, address_v6_ll_parsed)
         interface_index = 12
         infos = [
-            ServiceInfo(
+            make_service_info(
                 type_,
                 registration_name,
-                80,
-                0,
-                0,
-                desc,
-                "spare-rig.local.",
+                properties=desc,
                 addresses=[address, address_v6, address_v6_ll],
                 interface_index=interface_index,
             ),
-            ServiceInfo(
+            make_service_info(
                 type_,
                 registration_name,
-                80,
-                0,
-                0,
-                desc,
-                "spare-rig.local.",
-                parsed_addresses=[
-                    address_parsed,
-                    address_v6_parsed,
-                    address_v6_ll_parsed,
-                ],
+                properties=desc,
+                addresses=[],
+                parsed_addresses=[address_parsed, address_v6_parsed, address_v6_ll_parsed],
                 interface_index=interface_index,
             ),
         ]
@@ -1086,7 +1068,7 @@ async def test_multiple_a_addresses_newest_address_first():
     cache.async_add_records([record1, record2])
 
     # New kwarg way
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    info = make_service_info(type_, registration_name, properties=desc, server=host, addresses=[])
     info.load_from_cache(aiozc.zeroconf)
     assert info.addresses == [b"\x7f\x00\x00\x02", b"\x7f\x00\x00\x01"]
     await aiozc.async_close()
@@ -1105,7 +1087,7 @@ async def test_invalid_a_addresses(caplog):
     cache.async_add_records([record1, record2])
 
     # New kwarg way
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    info = make_service_info(type_, registration_name, properties=desc, server=host, addresses=[])
     info.load_from_cache(aiozc.zeroconf)
     assert not info.addresses
     assert "Encountered invalid address while processing record" in caplog.text
@@ -1123,7 +1105,7 @@ def test_filter_address_by_type_from_service_info():
     registration_name = f"{name}.{type_}"
     ipv4 = socket.inet_aton("10.7.4.2")
     ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[ipv4, ipv6])
+    info = make_service_info(type_, registration_name, properties=desc, addresses=[ipv4, ipv6])
 
     def dns_addresses_to_addresses(dns_address: list[DNSAddress]) -> list[bytes]:
         return [address.address for address in dns_address]
@@ -1141,16 +1123,7 @@ def test_changing_name_updates_serviceinfo_key():
     """Verify a name change will adjust the underlying key value."""
     type_ = "_homeassistant._tcp.local."
     name = "MyTestHome"
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        {"path": "/healthz/"},
-        "spare-rig.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info_service = make_service_info(type_, f"{name}.{type_}", properties={"path": "/healthz/"})
     assert info_service.key == "mytesthome._homeassistant._tcp.local."
     info_service.name = "YourTestHome._homeassistant._tcp.local."
     assert info_service.key == "yourtesthome._homeassistant._tcp.local."
@@ -1175,16 +1148,7 @@ def test_serviceinfo_address_updates():
             parsed_addresses=["10.7.4.2"],
         )
 
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        {"path": "/healthz/"},
-        "spare-rig.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info_service = make_service_info(type_, f"{name}.{type_}", properties={"path": "/healthz/"})
     info_service.addresses = [socket.inet_aton("10.7.4.3")]
     assert info_service.addresses == [socket.inet_aton("10.7.4.3")]
 
@@ -1195,48 +1159,20 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
     name = "MyTestHome"
     addresses = [socket.inet_aton("10.7.4.2")]
     server_name = "spare-rig.local."
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        {b"path": b"/healthz/"},
-        server_name,
-        addresses=addresses,
+    info_service = make_service_info(
+        type_, f"{name}.{type_}", properties={b"path": b"/healthz/"}, server=server_name, addresses=addresses
     )
     assert info_service.dns_text().text == b"\x0epath=/healthz/"
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        {"path": "/healthz/"},
-        server_name,
-        addresses=addresses,
+    info_service = make_service_info(
+        type_, f"{name}.{type_}", properties={"path": "/healthz/"}, server=server_name, addresses=addresses
     )
     assert info_service.dns_text().text == b"\x0epath=/healthz/"
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        {b"path": "/healthz/"},
-        server_name,
-        addresses=addresses,
+    info_service = make_service_info(
+        type_, f"{name}.{type_}", properties={b"path": "/healthz/"}, server=server_name, addresses=addresses
     )
     assert info_service.dns_text().text == b"\x0epath=/healthz/"
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        {"path": b"/healthz/"},
-        server_name,
-        addresses=addresses,
+    info_service = make_service_info(
+        type_, f"{name}.{type_}", properties={"path": b"/healthz/"}, server=server_name, addresses=addresses
     )
     assert info_service.dns_text().text == b"\x0epath=/healthz/"
 
@@ -1335,7 +1271,7 @@ async def test_release_wait_when_new_recorded_added():
     host = "multahost.local."
 
     # New kwarg way
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    info = make_service_info(type_, registration_name, properties=desc, server=host, addresses=[])
     task = asyncio.create_task(info.async_request(aiozc.zeroconf, timeout=200))
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     generated.add_answer_at_time(
@@ -1970,7 +1906,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
     await aiozc.zeroconf.async_wait_for_start()
 
     # New kwarg way
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host)
+    info = make_service_info(type_, registration_name, properties=desc, server=host, addresses=[])
     tasks = [asyncio.create_task(info.async_request(aiozc.zeroconf, timeout=200000)) for _ in range(10)]
     await asyncio.sleep(0.1)
     for task in tasks:
@@ -2037,7 +1973,9 @@ async def test_service_info_address_nsec_records() -> None:
     registration_name = f"multiareccon.{type_}"
     desc = {"path": "/healthz/"}
     host = "multahostcon.local."
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host, addresses=[b"\x7f\x00\x00\x01"])
+    info = make_service_info(
+        type_, registration_name, properties=desc, server=host, addresses=[b"\x7f\x00\x00\x01"]
+    )
     nsec_record = info.dns_address_nsec(50)
     assert nsec_record is not None
     assert nsec_record.name == host
@@ -2062,8 +2000,12 @@ def test_service_info_dns_nsec_deprecated() -> None:
     type_ = "_http._tcp.local."
     registration_name = f"depnsec.{type_}"
     host = "depnsec-host.local."
-    info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, {"path": "/healthz/"}, host, addresses=[b"\x7f\x00\x00\x01"]
+    info = make_service_info(
+        type_,
+        registration_name,
+        properties={"path": "/healthz/"},
+        server=host,
+        addresses=[b"\x7f\x00\x00\x01"],
     )
     with pytest.warns(DeprecationWarning, match="dns_address_nsec"):
         record = info.dns_nsec([const._TYPE_AAAA], 50)
@@ -2261,7 +2203,9 @@ def test_load_from_cache_complete_with_locally_set_properties():
         ]
     )
 
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/healthz/"}, host)
+    info = make_service_info(
+        type_, registration_name, properties={"path": "/healthz/"}, server=host, addresses=[]
+    )
     assert info.load_from_cache(zc) is True
     zc.close()
 
@@ -2284,7 +2228,7 @@ def test_load_from_cache_complete_with_empty_locally_set_properties():
         ]
     )
 
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, {}, host)
+    info = make_service_info(type_, registration_name, properties={}, server=host, addresses=[])
     assert info.load_from_cache(zc) is True
     assert info.properties == {}
     zc.close()
@@ -2308,7 +2252,7 @@ def test_load_from_cache_complete_with_empty_locally_set_text():
         ]
     )
 
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, b"", host)
+    info = make_service_info(type_, registration_name, properties=b"", server=host, addresses=[])
     assert info.load_from_cache(zc) is True
     assert info.properties == {}
     zc.close()
@@ -2574,16 +2518,7 @@ async def test_own_nsec_response_does_not_complete_service(aiozc: AsyncZeroconf)
     await aiozc.zeroconf.async_wait_for_start()
     zc = aiozc.zeroconf
 
-    registered = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        {"path": "/healthz/"},
-        host,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    registered = make_service_info(type_, registration_name, properties={"path": "/healthz/"}, server=host)
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg([registered.dns_service(), *registered.get_address_and_nsec_records()])
     )
