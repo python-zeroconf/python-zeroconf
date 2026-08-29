@@ -83,7 +83,6 @@ class DNSEntry:  # noqa: PLW1641
         return self.key == other.key and self.type == other.type and self.class_ == other.class_
 
     def __eq__(self, other: Any) -> bool:
-        """Equality test on key (lowercase name), type, and class"""
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
     @staticmethod
@@ -125,7 +124,6 @@ class DNSQuestion(DNSEntry):
         return self._hash
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on dns question."""
         return isinstance(other, DNSQuestion) and self._dns_entry_matches(other)
 
     @property
@@ -379,11 +377,9 @@ class DNSPointer(DNSRecord):
         out.write_name(self.alias)
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on alias."""
         return isinstance(other, DNSPointer) and self._eq(other)
 
     def _eq(self, other: DNSPointer) -> bool:
-        """Tests equality on alias."""
         return self.alias_key == other.alias_key and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
@@ -425,11 +421,9 @@ class DNSText(DNSRecord):
         return self._hash
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on text."""
         return isinstance(other, DNSText) and self._eq(other)
 
     def _eq(self, other: DNSText) -> bool:
-        """Tests equality on text."""
         return self.text == other.text and self._dns_entry_matches(other)
 
     def __repr__(self) -> str:
@@ -508,8 +502,6 @@ class DNSService(DNSRecord):
 
 
 class DNSNsec(DNSRecord):
-    """A DNS NSEC record"""
-
     __slots__ = ("_hash", "next_name", "rdtypes")
 
     def __init__(
@@ -560,11 +552,9 @@ class DNSNsec(DNSRecord):
         out.write_string(out_bytes)
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on next_name and rdtypes."""
         return isinstance(other, DNSNsec) and self._eq(other)
 
     def _eq(self, other: DNSNsec) -> bool:
-        """Tests equality on next_name and rdtypes."""
         return (
             self.next_name == other.next_name
             and self.rdtypes == other.rdtypes

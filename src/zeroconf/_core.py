@@ -602,12 +602,6 @@ class Zeroconf(QuietLogger):
         return out
 
     async def async_unregister_all_services(self) -> None:
-        """Unregister all registered services.
-
-        Unlike async_register_service and async_unregister_service, this
-        method does not return a future and is always expected to be
-        awaited since its only called at shutdown.
-        """
         # Send Goodbye packets https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
         out = self.generate_unregister_all_services()
         if not out:
@@ -618,12 +612,6 @@ class Zeroconf(QuietLogger):
             self.async_send(out)
 
     def unregister_all_services(self) -> None:
-        """Unregister all registered services.
-
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `async_unregister_all_services` cannot be completed.
-        """
         assert self.loop is not None
         run_coro_with_timeout(
             self.async_unregister_all_services(),
@@ -712,7 +700,6 @@ class Zeroconf(QuietLogger):
         v6_flow_scope: tuple[()] | tuple[int, int] = (),
         transport: _WrappedTransport | None = None,
     ) -> None:
-        """Sends an outgoing packet threadsafe."""
         assert self.loop is not None
         self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
 
@@ -724,7 +711,6 @@ class Zeroconf(QuietLogger):
         v6_flow_scope: tuple[()] | tuple[int, int] = (),
         transport: _WrappedTransport | None = None,
     ) -> None:
-        """Sends an outgoing packet."""
         if self.done:
             return
 
