@@ -447,6 +447,7 @@ class DNSIncoming:
         return None
 
     def _read_bitmap(self, end: _int) -> list[int]:
+        """Decode the NSEC type bitmap."""
         rdtypes = []
         if end > self._data_len:
             raise IncomingDecodeError(
