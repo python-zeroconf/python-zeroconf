@@ -29,8 +29,6 @@ def on_service_state_change(
     if state_change is ServiceStateChange.Added:
         info = zeroconf.get_service_info(service_type, name)
         print(f"Info from zeroconf.get_service_info: {info!r}")
-
-        if info:
             addresses = [f"{addr}:{cast(int, info.port)}" for addr in info.parsed_scoped_addresses()]
             print(f"  Addresses: {', '.join(addresses)}")
             print(f"  Weight: {info.weight}, priority: {info.priority}")

@@ -145,11 +145,8 @@ class DNSOutgoing:
         )
 
     def add_question(self, record: DNSQuestion) -> None:
-        """Adds a question"""
-        self.questions.append(record)
 
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
-        """Adds an answer"""
         if not record.suppressed_by(inp):
             self.add_answer_at_time(record, 0.0)
 
@@ -157,11 +154,8 @@ class DNSOutgoing:
         """Adds an answer if it does not expire by a certain time"""
         now_double = now
         if record is not None and (now_double == 0 or not record.is_expired(now_double)):
-            self.answers.append((record, now))
 
     def add_authorative_answer(self, record: DNSPointer) -> None:
-        """Adds an authoritative answer"""
-        self.authorities.append(record)
 
     def add_additional_answer(self, record: DNSRecord) -> None:
         """Adds an additional answer
@@ -241,11 +235,7 @@ class DNSOutgoing:
         self.size += len(value)
 
     def _write_utf(self, s: str_) -> None:
-        """Writes a UTF-8 string of a given length to the packet"""
         utfstr = s.encode("utf-8")
-        length = len(utfstr)
-        if length > 64:
-            raise NamePartTooLongException
         self._write_byte(length)
         self.write_string(utfstr)
 
@@ -329,7 +319,6 @@ class DNSOutgoing:
         self._write_int(record.ttl if now == 0 else record.get_remaining_ttl(now))
 
     def _write_record(self, record: DNSRecord_, now: float_) -> bool:
-        """Writes a record (answer, authoritative answer, additional) to
         the packet.  Returns True on success, or False if we did not
         because the packet because the record does not fit."""
         start_data_length = len(self.data)
@@ -340,8 +329,6 @@ class DNSOutgoing:
         self._write_ttl(record, now)
         index = len(self.data)
         self.write_short(0)  # Will get replaced with the actual size
-        record.write(self)
-        # Adjust size for the short we will write before this record
         length = 0
         for d in self.data[index + 1 :]:
             length += len(d)
@@ -415,7 +402,6 @@ class DNSOutgoing:
     def packets(self) -> list[bytes]:
         """Returns a list of bytestrings containing the packets' bytes
 
-        No further parts should be added to the packet once this
         is done.  The packets are each restricted to _MAX_MSG_TYPICAL
         or less in length, except for the case of a single answer which
         will be written out to a single oversized packet no more than

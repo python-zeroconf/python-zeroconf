@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-"""Example of announcing a service (in this case, a fake HTTP server)"""
 
 from __future__ import annotations
 
@@ -30,15 +29,12 @@ if __name__ == "__main__":
     else:
         ip_version = IPVersion.V4Only
 
-    desc = {"path": "/~paulsm/"}
 
     info = ServiceInfo(
         "_http._tcp.local.",
-        "Paul's Test Web Site._http._tcp.local.",
         addresses=[socket.inet_aton("127.0.0.1")],
         port=80,
         properties=desc,
-        server="ash-2.local.",
     )
 
     zeroconf = Zeroconf(ip_version=ip_version)

@@ -72,7 +72,6 @@ _int = int
 
 
 class DNSIncoming:
-    """Object representation of an incoming DNS packet"""
 
     __slots__ = (
         "_answers",
@@ -104,7 +103,6 @@ class DNSIncoming:
         scope_id: int | None = None,
         now: float | None = None,
     ) -> None:
-        """Constructor from string holding bytes of packet"""
         self.flags = 0
         self.offset = 0
         self.data = data
@@ -447,7 +445,6 @@ class DNSIncoming:
                 self.now,
             )
             return nsec_rec
-        # Try to ignore types we don't know about
         # Skip the payload for the resource record so the next
         # records can be parsed correctly
         self.offset += length

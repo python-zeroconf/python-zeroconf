@@ -150,10 +150,7 @@ def async_send_with_transport(
 
 
 class Zeroconf(QuietLogger):
-    """Implementation of Zeroconf Multicast DNS Service Discovery
 
-    Supports registration, unregistration, queries and browsing.
-    """
 
     def __init__(
         self,
@@ -163,7 +160,6 @@ class Zeroconf(QuietLogger):
         apple_p2p: bool = False,
         use_asyncio: bool | None = None,
     ) -> None:
-        """Creates an instance of the Zeroconf class, establishing
         multicast communications, listening and reaping threads.
 
         :param interfaces: :class:`InterfaceChoice` or a list of IP addresses
@@ -321,20 +317,17 @@ class Zeroconf(QuietLogger):
         return None
 
     def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
-        """Adds a listener for a particular service type.  This object
         will then have its add_service and remove_service methods called when
         services of that type become available and unavailable."""
         self.remove_service_listener(listener)
         self.browsers[listener] = ServiceBrowser(self, type_, listener)
 
     def remove_service_listener(self, listener: ServiceListener) -> None:
-        """Removes a listener from the set that is currently listening."""
         if listener in self.browsers:
             self.browsers[listener].cancel()
             del self.browsers[listener]
 
     def remove_all_service_listeners(self) -> None:
-        """Removes a listener from the set that is currently listening."""
         for listener in list(self.browsers):
             self.remove_service_listener(listener)
 
@@ -654,8 +647,6 @@ class Zeroconf(QuietLogger):
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> None:
-        """Checks the network for a unique service name, modifying the
-        ServiceInfo passed in if it is not unique."""
         instance_name = instance_name_from_service_info(info, strict=strict)
         if cooperating_responders:
             return
@@ -694,7 +685,6 @@ class Zeroconf(QuietLogger):
         listener: RecordUpdateListener,
         question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
-        """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
         answer the question(s).
 
@@ -716,7 +706,6 @@ class Zeroconf(QuietLogger):
         listener: RecordUpdateListener,
         question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
-        """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
         answer the question(s).
 
@@ -808,7 +797,6 @@ class Zeroconf(QuietLogger):
         self.loop.close()
 
     def close(self) -> None:
-        """Ends the background threads, and prevent this instance from
         servicing further queries.
 
         This method is idempotent and irreversible.
@@ -826,7 +814,6 @@ class Zeroconf(QuietLogger):
         self._shutdown_threads()
 
     async def _async_close(self) -> None:
-        """Ends the background threads, and prevent this instance from
         servicing further queries.
 
         This method is idempotent and irreversible.

@@ -422,7 +422,6 @@ class ServiceInfo(RecordUpdateListener):
         return [str(addr) for addr in self._ip_addresses_by_version_value(version.value)]
 
     def _set_properties(self, properties: dict[str | bytes, str | bytes | None]) -> None:
-        """Sets properties and text of this info from a dictionary"""
         list_: list[bytes] = []
         properties_contain_str = False
         result = b""
@@ -451,7 +450,6 @@ class ServiceInfo(RecordUpdateListener):
         self.text = result
 
     def _set_text(self, text: bytes) -> None:
-        """Sets properties and text given a text field"""
         if text == self.text:
             return
         self.text = text

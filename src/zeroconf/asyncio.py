@@ -135,9 +135,7 @@ class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
 
 
 class AsyncZeroconf:
-    """Implementation of Zeroconf Multicast DNS Service Discovery
 
-    Supports registration, unregistration, queries and browsing.
 
     The async version is currently a wrapper around Zeroconf which
     is now also async. It is expected that an asyncio event loop
@@ -152,7 +150,6 @@ class AsyncZeroconf:
         apple_p2p: bool = False,
         zc: Zeroconf | None = None,
     ) -> None:
-        """Creates an instance of the Zeroconf class, establishing
         multicast communications, and listening.
 
         :param interfaces: :class:`InterfaceChoice` or a list of IP addresses
@@ -241,8 +238,6 @@ class AsyncZeroconf:
         await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
 
     async def async_close(self) -> None:
-        """Ends the background threads, and prevent this instance from
-        servicing further queries."""
         if not self.zeroconf.done:
             with contextlib.suppress(NotRunningException):
                 await self.zeroconf.async_wait_for_start(timeout=1.0)

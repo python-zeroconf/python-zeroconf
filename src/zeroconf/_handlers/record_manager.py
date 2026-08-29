@@ -53,7 +53,6 @@ class RecordManager:
         self.listeners: set[RecordUpdateListener] = set()
 
     def async_updates(self, now: _float, records: list[_RecordUpdate]) -> None:
-        """Used to notify listeners of new information that has updated
         a record.
 
         This method must be called before the cache is updated.
@@ -64,7 +63,6 @@ class RecordManager:
             listener.async_update_records(self.zc, now, records)
 
     def async_updates_complete(self, notify: bool) -> None:
-        """Used to notify listeners of new information that has updated
         a record.
 
         This method must be called after the cache is updated.
@@ -77,7 +75,6 @@ class RecordManager:
             self.zc.async_notify_all()
 
     def async_updates_from_response(self, msg: DNSIncoming) -> None:
-        """Deal with incoming response packets.  All answers
         are held in the cache, and listeners are notified.
 
         This function must be run in the event loop as it is not
@@ -171,7 +168,6 @@ class RecordManager:
         listener: RecordUpdateListener,
         question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
-        """Adds a listener for a given question.  The listener will have
         its update_record method called when information is available to
         answer the question(s).
 

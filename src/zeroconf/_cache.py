@@ -258,8 +258,6 @@ class DNSCache:
     # inefficient.
 
     def get(self, entry: DNSEntry) -> DNSRecord | None:
-        """Gets an entry by key.  Will return None if there is no
-        matching entry."""
         if isinstance(entry, _UNIQUE_RECORD_TYPES):
             return self.cache.get(entry.key, {}).get(entry)
         for cached_entry in reversed(list(self.cache.get(entry.key, {}).values())):
@@ -303,7 +301,6 @@ class DNSCache:
         return []
 
     def entries_with_name(self, name: str) -> list[DNSRecord]:
-        """Returns a list of entries whose key matches the name."""
         if entries := self.cache.get(name.lower()):
             return list(entries.values())
         return []
