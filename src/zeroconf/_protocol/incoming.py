@@ -148,6 +148,7 @@ class DNSIncoming:
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
     def has_qu_question(self) -> bool:
+        """True when at least one question requests a unicast response."""
         return self._has_qu_question
 
     @property
