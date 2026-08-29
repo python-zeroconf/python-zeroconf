@@ -102,6 +102,26 @@ async def test_async_close_propagates_outer_cancellation(aiozc: AsyncZeroconf) -
 
 
 @pytest.mark.asyncio
+async def test_async_close_swallows_cancelled_setup(aiozc: AsyncZeroconf) -> None:
+    """Close before setup starts swallows the setup task's own cancellation."""
+    await aiozc.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    loop = asyncio.get_running_loop()
+    original_task = engine._setup_task
+
+    async def hang() -> None:
+        await asyncio.Event().wait()
+
+    cancelled_task = loop.create_task(hang())
+    cancelled_task.cancel()
+    engine._setup_task = cancelled_task
+    try:
+        await engine._async_close()
+    finally:
+        engine._setup_task = original_task
+
+
+@pytest.mark.asyncio
 async def test_reaper_aborts_when_done():
     """Ensure cache cleanup stops when zeroconf is done."""
     with patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01):

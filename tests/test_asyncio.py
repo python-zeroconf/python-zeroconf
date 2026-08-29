@@ -82,6 +82,14 @@ def verify_threads_ended():
 
 
 @pytest.mark.asyncio
+async def test_async_close_is_idempotent(aiozc: AsyncZeroconf) -> None:
+    """A second async_close is a quiet no-op."""
+    await aiozc.async_close()
+    assert aiozc.zeroconf.done
+    await aiozc.async_close()
+
+
+@pytest.mark.asyncio
 async def test_async_basic_usage(aiozc: AsyncZeroconf) -> None:
     """Test we can create and close the instance."""
 
