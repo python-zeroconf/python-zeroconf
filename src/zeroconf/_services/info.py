@@ -474,6 +474,7 @@ class ServiceInfo(RecordUpdateListener):
         self._properties = properties
 
     def get_name(self) -> str:
+        """Instance name with the service type stripped."""
         return self._name[: len(self._name) - len(self.type) - 1]
 
     def _get_ip_addresses_from_cache_lifo(
