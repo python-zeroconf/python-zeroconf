@@ -269,6 +269,7 @@ class Zeroconf(QuietLogger):
         await wait_for_future_set_or_timeout(loop, self._notify_futures, timeout)
 
     def notify_all(self) -> None:
+        """Wake every waiter and fire the listeners, from any thread."""
         assert self.loop is not None
         self.loop.call_soon_threadsafe(self.async_notify_all)
 
