@@ -443,8 +443,6 @@ class DNSIncoming:
                 self.now,
             )
             return nsec_rec
-        # Unknown rrtypes are skipped by advancing rdlength bytes so the
-        # records that follow still parse from the right offset
         self.offset += length
         return None
 
