@@ -94,7 +94,7 @@ class ListenerTest(unittest.TestCase):
         zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
         desc: dict[str, Any] = {"path": "/~paulsm/"}
         desc.update(properties)
-        addresses = [socket.inet_aton("10.0.1.2")]
+        addresses = [socket.inet_aton("10.7.4.2")]
         if has_working_ipv6() and not os.environ.get("SKIP_IPV6"):
             addresses.append(socket.inet_pton(socket.AF_INET6, "6001:db8::1"))
             addresses.append(socket.inet_pton(socket.AF_INET6, "2001:db8::1"))
@@ -103,7 +103,7 @@ class ListenerTest(unittest.TestCase):
             registration_name,
             port=80,
             properties=desc,
-            server="ash-2.local.",
+            server="spare-rig.local.",
             addresses=addresses,
         )
         zeroconf_registrar.register_service(info_service)
@@ -195,8 +195,8 @@ class ListenerTest(unittest.TestCase):
                 0,
                 0,
                 desc,
-                "ash-2.local.",
-                addresses=[socket.inet_aton("10.0.1.2")],
+                "spare-rig.local.",
+                addresses=[socket.inet_aton("10.7.4.2")],
             )
             zeroconf_registrar.update_service(info_service)
 

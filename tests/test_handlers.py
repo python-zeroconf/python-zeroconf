@@ -58,8 +58,8 @@ class TestRegistrar(unittest.TestCase):
             0,
             0,
             desc,
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            "spare-rig.local.",
+            addresses=[socket.inet_aton("10.7.4.2")],
         )
 
         nbr_answers = nbr_additionals = nbr_authorities = 0
@@ -246,8 +246,8 @@ def test_ptr_optimization(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
 
     # register
@@ -311,7 +311,7 @@ def test_any_query_for_ptr():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
     zc.registry.async_add(info)
@@ -340,7 +340,7 @@ def test_aaaa_query():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
     zc.registry.async_add(info)
@@ -367,7 +367,7 @@ def test_aaaa_query_upper_case():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
     zc.registry.async_add(info)
@@ -394,9 +394,9 @@ def test_a_and_aaaa_record_fate_sharing():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
-    ipv4_address = socket.inet_aton("10.0.1.2")
+    ipv4_address = socket.inet_aton("10.7.4.2")
     info = ServiceInfo(
         type_,
         registration_name,
@@ -460,8 +460,8 @@ def test_unicast_response():
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     # register
     zc.registry.async_add(info)
@@ -519,8 +519,8 @@ async def test_probe_answered_immediately():
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info)
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -570,8 +570,8 @@ async def test_probe_answered_immediately_with_uppercase_name():
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info)
     query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -622,8 +622,8 @@ def test_qu_response(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         other_type_,
@@ -737,7 +737,7 @@ def test_known_answer_supression():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
         registration_name,
@@ -746,7 +746,7 @@ def test_known_answer_supression():
         0,
         desc,
         server_name,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info)
 
@@ -911,7 +911,7 @@ def test_multi_packet_known_answer_supression():
     registration3_name = f"{name3}.{type_}"
 
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     server_name2 = "ash-3.local."
     server_name3 = "ash-4.local."
 
@@ -923,7 +923,7 @@ def test_multi_packet_known_answer_supression():
         0,
         desc,
         server_name,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_,
@@ -933,7 +933,7 @@ def test_multi_packet_known_answer_supression():
         0,
         desc,
         server_name2,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info3 = ServiceInfo(
         type_,
@@ -943,7 +943,7 @@ def test_multi_packet_known_answer_supression():
         0,
         desc,
         server_name3,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info)
     zc.registry.async_add(info2)
@@ -981,7 +981,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
         registration_name,
@@ -990,7 +990,7 @@ def test_known_answer_supression_service_type_enumeration_query():
         0,
         desc,
         server_name,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info)
 
@@ -1007,7 +1007,7 @@ def test_known_answer_supression_service_type_enumeration_query():
         0,
         desc,
         server_name2,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info2)
     now = current_time_millis()
@@ -1068,7 +1068,7 @@ def test_upper_case_enumeration_query():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
         registration_name,
@@ -1077,7 +1077,7 @@ def test_upper_case_enumeration_query():
         0,
         desc,
         server_name,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info)
 
@@ -1094,7 +1094,7 @@ def test_upper_case_enumeration_query():
         0,
         desc,
         server_name2,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info2)
     _clear_cache(zc)
@@ -1142,7 +1142,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     name = "knownname"
     registration_name = f"{name}.{type_}"
     desc = {"path": "/~paulsm/"}
-    server_name = "ash-2.local."
+    server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
         registration_name,
@@ -1151,7 +1151,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
         0,
         desc,
         server_name,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info)
 
@@ -1168,7 +1168,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
         0,
         desc,
         server_name2,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.registry.async_add(info2)
 
@@ -1317,12 +1317,12 @@ async def test_cache_flush_bit():
         0,
         desc,
         server_name,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     a_record = info.dns_addresses()[0]
     zc.cache.async_add_records([info.dns_pointer(), a_record, info.dns_text(), info.dns_service()])
 
-    info.addresses = [socket.inet_aton("10.0.1.5"), socket.inet_aton("10.0.1.6")]
+    info.addresses = [socket.inet_aton("10.7.4.5"), socket.inet_aton("10.7.4.6")]
     new_records = info.dns_addresses()
     for new_record in new_records:
         assert new_record.unique is True
@@ -1432,7 +1432,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
         0,
         desc,
         server_name,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     a_record = info.dns_addresses()[0]
     ptr_record = info.dns_pointer()
@@ -1473,7 +1473,7 @@ async def test_questions_query_handler_populates_the_question_history_from_qm_qu
             0,
             0,
             {"md": "known"},
-            "ash-2.local.",
+            "spare-rig.local.",
             addresses=[socket.inet_aton("1.2.3.4")],
         )
     )
@@ -1517,7 +1517,7 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
         0,
         0,
         {"md": "known"},
-        "ash-2.local.",
+        "spare-rig.local.",
         addresses=[socket.inet_aton("1.2.3.4")],
     )
     aiozc.zeroconf.registry.async_add(info)
@@ -1662,8 +1662,8 @@ async def test_response_aggregation_timings(run_isolated: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_2,
@@ -1673,7 +1673,7 @@ async def test_response_aggregation_timings(run_isolated: None) -> None:
         0,
         desc,
         "ash-4.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     info3 = ServiceInfo(
         type_3,
@@ -1683,7 +1683,7 @@ async def test_response_aggregation_timings(run_isolated: None) -> None:
         0,
         desc,
         "ash-4.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     aiozc.zeroconf.registry.async_add(info)
     aiozc.zeroconf.registry.async_add(info2)
@@ -1800,7 +1800,7 @@ async def test_response_aggregation_timings_multiple(
         0,
         desc,
         "ash-4.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     aiozc.zeroconf.registry.async_add(info2)
 
@@ -1895,7 +1895,7 @@ async def test_response_aggregation_random_delay():
         0,
         desc,
         "ash-1.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_2,
@@ -1904,8 +1904,8 @@ async def test_response_aggregation_random_delay():
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     info3 = ServiceInfo(
         type_3,
@@ -1915,7 +1915,7 @@ async def test_response_aggregation_random_delay():
         0,
         desc,
         "ash-3.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info4 = ServiceInfo(
         type_4,
@@ -1925,7 +1925,7 @@ async def test_response_aggregation_random_delay():
         0,
         desc,
         "ash-4.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info5 = ServiceInfo(
         type_5,
@@ -1935,7 +1935,7 @@ async def test_response_aggregation_random_delay():
         0,
         desc,
         "ash-5.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     mocked_zc = unittest.mock.MagicMock()
     mocked_zc.loop = asyncio.get_running_loop()
@@ -1993,7 +1993,7 @@ async def test_future_answers_are_removed_on_send():
         0,
         desc,
         "ash-1.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_2,
@@ -2002,8 +2002,8 @@ async def test_future_answers_are_removed_on_send():
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     mocked_zc = unittest.mock.MagicMock()
     mocked_zc.loop = asyncio.get_running_loop()

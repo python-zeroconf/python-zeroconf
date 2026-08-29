@@ -158,8 +158,8 @@ async def test_async_service_registration(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     task = await aiozc.async_register_service(info)
     await task
@@ -170,12 +170,12 @@ async def test_async_service_registration(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     task = await aiozc.async_update_service(new_info)
     await task
-    assert new_info.dns_service().server_key == "ash-2.local."
+    assert new_info.dns_service().server_key == "spare-rig.local."
     new_info.server = "ash-3.local."
     task = await aiozc.async_update_service(new_info)
     await task
@@ -229,7 +229,7 @@ async def test_async_service_registration_with_server_missing(quick_timing: None
         0,
         0,
         desc,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     task = await aiozc.async_register_service(info)
     await task
@@ -243,8 +243,8 @@ async def test_async_service_registration_with_server_missing(quick_timing: None
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     task = await aiozc.async_update_service(new_info)
     await task
@@ -295,8 +295,8 @@ async def test_async_service_registration_same_server_different_ports(quick_timi
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_,
@@ -305,8 +305,8 @@ async def test_async_service_registration_same_server_different_ports(quick_timi
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     tasks = []
     tasks.append(await aiozc.async_register_service(info))
@@ -315,7 +315,7 @@ async def test_async_service_registration_same_server_different_ports(quick_timi
 
     task = await aiozc.async_unregister_service(info)
     await task
-    entries = aiozc.zeroconf.cache.async_entries_with_server("ash-2.local.")
+    entries = aiozc.zeroconf.cache.async_entries_with_server("spare-rig.local.")
     assert len(entries) == 1
     assert info2.dns_service() in entries
     await aiozc.async_close()
@@ -362,8 +362,8 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_,
@@ -372,8 +372,8 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     tasks = []
     tasks.append(await aiozc.async_register_service(info))
@@ -382,7 +382,7 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
 
     task = await aiozc.async_unregister_service(info)
     await task
-    entries = aiozc.zeroconf.cache.async_entries_with_server("ash-2.local.")
+    entries = aiozc.zeroconf.cache.async_entries_with_server("spare-rig.local.")
     assert len(entries) == 1
     assert info2.dns_service() in entries
     await aiozc.async_close()
@@ -410,8 +410,8 @@ async def test_async_service_registration_name_conflict(quick_timing: None) -> N
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     task = await aiozc.async_register_service(info)
     await task
@@ -432,7 +432,7 @@ async def test_async_service_registration_name_conflict(quick_timing: None) -> N
         0,
         desc,
         "ash-3.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
 
     with pytest.raises(NonUniqueNameException):
@@ -458,8 +458,8 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info.type = "_wrong._tcp.local."
     with pytest.raises(BadTypeInNameException):
@@ -485,8 +485,8 @@ async def test_async_service_registration_name_strict_check(quick_timing: None) 
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     with pytest.raises(BadTypeInNameException):
         await zc.async_check_service(info, allow_name_change=False)
@@ -536,8 +536,8 @@ async def test_async_tasks(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     task = await aiozc.async_register_service(info)
     assert isinstance(task, asyncio.Task)
@@ -550,8 +550,8 @@ async def test_async_tasks(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     task = await aiozc.async_update_service(new_info)
     assert isinstance(task, asyncio.Task)
@@ -587,8 +587,8 @@ async def test_async_wait_unblocks_on_update(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     task = await aiozc.async_register_service(info)
 
@@ -634,7 +634,7 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
         0,
         desc,
         "ash-1.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_,
@@ -644,7 +644,7 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
         0,
         desc,
         "ash-5.local.",
-        addresses=[socket.inet_aton("10.0.1.5")],
+        addresses=[socket.inet_aton("10.7.4.5")],
     )
     tasks = []
     tasks.append(await aiozc.async_register_service(info))
@@ -653,15 +653,15 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
 
     aiosinfo = await get_service_info_task1
     assert aiosinfo is not None
-    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.2")]
+    assert aiosinfo.addresses == [socket.inet_aton("10.7.4.2")]
 
     aiosinfo = await get_service_info_task2
     assert aiosinfo is not None
-    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.2")]
+    assert aiosinfo.addresses == [socket.inet_aton("10.7.4.2")]
 
     aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
     assert aiosinfo is not None
-    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.2")]
+    assert aiosinfo.addresses == [socket.inet_aton("10.7.4.2")]
 
     new_info = ServiceInfo(
         type_,
@@ -670,9 +670,9 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
         0,
         0,
         desc,
-        "ash-2.local.",
+        "spare-rig.local.",
         addresses=[
-            socket.inet_aton("10.0.1.3"),
+            socket.inet_aton("10.7.4.3"),
             socket.inet_pton(socket.AF_INET6, "6001:db8::1"),
         ],
     )
@@ -682,20 +682,20 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
 
     aiosinfo = await aiozc.async_get_service_info(type_, registration_name)
     assert aiosinfo is not None
-    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
+    assert aiosinfo.addresses == [socket.inet_aton("10.7.4.3")]
 
     aiosinfo = await aiozc.zeroconf.async_get_service_info(type_, registration_name)
     assert aiosinfo is not None
-    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
+    assert aiosinfo.addresses == [socket.inet_aton("10.7.4.3")]
 
     aiosinfos = await asyncio.gather(
         aiozc.async_get_service_info(type_, registration_name),
         aiozc.async_get_service_info(type_, registration_name2),
     )
     assert aiosinfos[0] is not None
-    assert aiosinfos[0].addresses == [socket.inet_aton("10.0.1.3")]
+    assert aiosinfos[0].addresses == [socket.inet_aton("10.7.4.3")]
     assert aiosinfos[1] is not None
-    assert aiosinfos[1].addresses == [socket.inet_aton("10.0.1.5")]
+    assert aiosinfos[1].addresses == [socket.inet_aton("10.7.4.5")]
 
     # Drop pending multicast responses queued under the original
     # `info` / `info2` registrations. Their snapshots predate the
@@ -717,7 +717,7 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
     with patch("zeroconf.asyncio.AsyncServiceInfo._is_complete", False):
         await aiosinfo.async_request(aiozc.zeroconf, 300)
     assert aiosinfo is not None
-    assert aiosinfo.addresses == [socket.inet_aton("10.0.1.3")]
+    assert aiosinfo.addresses == [socket.inet_aton("10.7.4.3")]
 
     task = await aiozc.async_unregister_service(new_info)
     await task
@@ -761,8 +761,8 @@ async def test_async_service_browser(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     task = await aiozc.async_register_service(info)
     await task
@@ -773,8 +773,8 @@ async def test_async_service_browser(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.3")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.3")],
     )
     task = await aiozc.async_update_service(new_info)
     await task
@@ -805,8 +805,8 @@ async def test_async_context_manager(quick_timing: None) -> None:
             0,
             0,
             {"path": "/~paulsm/"},
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            "spare-rig.local.",
+            addresses=[socket.inet_aton("10.7.4.2")],
         )
         task = await aiozc.async_register_service(info)
         await task
@@ -859,7 +859,7 @@ async def test_async_unregister_all_services(quick_timing: None) -> None:
         0,
         desc,
         "ash-1.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     info2 = ServiceInfo(
         type_,
@@ -869,7 +869,7 @@ async def test_async_unregister_all_services(quick_timing: None) -> None:
         0,
         desc,
         "ash-5.local.",
-        addresses=[socket.inet_aton("10.0.1.5")],
+        addresses=[socket.inet_aton("10.7.4.5")],
     )
     tasks = []
     tasks.append(await aiozc.async_register_service(info))
@@ -914,8 +914,8 @@ async def test_async_zeroconf_service_types(quick_timing: None) -> None:
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     task = await zeroconf_registrar.async_register_service(info)
     await task
@@ -977,9 +977,9 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
     listener = MyServiceListener()
 
     desc = {"path": "/~paulsm/"}
-    address_parsed = "10.0.1.2"
+    address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
     zc.cache.async_add_records(
         [info.dns_pointer(), info.dns_service(), *info.dns_addresses(), info.dns_text()]
     )
@@ -1062,8 +1062,8 @@ async def test_integration(quick_timing: None) -> None:
             0,
             0,
             {"path": "/~paulsm/"},
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            "spare-rig.local.",
+            addresses=[socket.inet_aton("10.7.4.2")],
         )
         # Wait for the browser's first startup query to land (with an empty
         # cache) before registering — otherwise on fast loopback the register
@@ -1177,8 +1177,8 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu(qui
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
 
     zeroconf_info.registry.async_add(info)
@@ -1243,9 +1243,9 @@ async def test_service_browser_ignores_unrelated_updates():
     listener = MyServiceListener()
 
     desc = {"path": "/~paulsm/"}
-    address_parsed = "10.0.1.2"
+    address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[address])
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
     zc.cache.async_add_records(
         [
             info.dns_pointer(),
@@ -1354,8 +1354,8 @@ async def test_legacy_unicast_response(run_isolated):
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
 
     aiozc.zeroconf.registry.async_add(info)

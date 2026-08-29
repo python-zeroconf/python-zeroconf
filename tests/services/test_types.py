@@ -42,8 +42,8 @@ def test_integration_with_listener(quick_timing, disable_duplicate_packet_suppre
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zeroconf_registrar.registry.async_add(info)
     try:
@@ -74,7 +74,7 @@ def test_integration_with_listener_v6_records(quick_timing, disable_duplicate_pa
         0,
         0,
         desc,
-        "ash-2.local.",
+        "spare-rig.local.",
         addresses=[socket.inet_pton(socket.AF_INET6, addr)],
     )
     zeroconf_registrar.registry.async_add(info)
@@ -110,7 +110,7 @@ def test_integration_with_listener_ipv6(quick_timing, disable_duplicate_packet_s
         0,
         0,
         desc,
-        "ash-2.local.",
+        "spare-rig.local.",
         addresses=[socket.inet_pton(socket.AF_INET6, addr)],
     )
     zeroconf_registrar.registry.async_add(info)
@@ -144,8 +144,8 @@ def test_integration_with_subtype_and_listener(quick_timing, disable_duplicate_p
         0,
         0,
         desc,
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zeroconf_registrar.registry.async_add(info)
     try:

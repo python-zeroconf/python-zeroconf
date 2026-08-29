@@ -49,7 +49,7 @@ class TestServiceInfo(unittest.TestCase):
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
-        service_address = socket.inet_aton("10.0.1.2")
+        service_address = socket.inet_aton("10.7.4.2")
         info = ServiceInfo(
             service_type,
             service_name,
@@ -70,7 +70,7 @@ class TestServiceInfo(unittest.TestCase):
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
-        service_address = socket.inet_aton("10.0.1.2")
+        service_address = socket.inet_aton("10.7.4.2")
         ttl = 120
         now = r.current_time_millis()
         info = ServiceInfo(
@@ -116,22 +116,22 @@ class TestServiceInfo(unittest.TestCase):
                         0,
                         0,
                         80,
-                        "ASH-2.local.",
+                        "SPARE-RIG.local.",
                     ),
                     None,
                 )
             ],
         )
-        assert info.server_key == "ash-2.local."
-        assert info.server == "ASH-2.local."
-        new_address = socket.inet_aton("10.0.1.3")
+        assert info.server_key == "spare-rig.local."
+        assert info.server == "SPARE-RIG.local."
+        new_address = socket.inet_aton("10.7.4.3")
         info.async_update_records(
             zc,
             now,
             [
                 RecordUpdate(
                     r.DNSAddress(
-                        "ASH-2.local.",
+                        "SPARE-RIG.local.",
                         const._TYPE_A,
                         const._CLASS_IN | const._CLASS_UNIQUE,
                         ttl,
@@ -173,15 +173,15 @@ class TestServiceInfo(unittest.TestCase):
                         0,
                         0,
                         80,
-                        "ASH-2.local.",
+                        "SPARE-RIG.local.",
                     ),
                     None,
                 )
             ],
         )
-        assert info.server_key == "ash-2.local."
-        assert info.server == "ASH-2.local."
-        new_address = socket.inet_aton("10.0.1.4")
+        assert info.server_key == "spare-rig.local."
+        assert info.server == "SPARE-RIG.local."
+        new_address = socket.inet_aton("10.7.4.4")
         info.async_update_records(
             zc,
             now,
@@ -208,7 +208,7 @@ class TestServiceInfo(unittest.TestCase):
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
-        service_address = socket.inet_aton("10.0.1.2")
+        service_address = socket.inet_aton("10.7.4.2")
         ttl = 120
         now = r.current_time_millis()
         info = ServiceInfo(
@@ -262,7 +262,7 @@ class TestServiceInfo(unittest.TestCase):
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
         service_text = b"path=/~matt1/"
-        service_address = "10.0.1.2"
+        service_address = "10.7.4.2"
         service_address_v6_ll = "fe80::52e:c2f2:bc5f:e9c6"
         service_scope_id = 12
 
@@ -509,7 +509,7 @@ class TestServiceInfo(unittest.TestCase):
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
         service_text = b"path=/~matt1/"
-        service_address = "10.0.1.2"
+        service_address = "10.7.4.2"
 
         service_info = None
         service_info_event = Event()
@@ -601,7 +601,7 @@ class TestServiceInfo(unittest.TestCase):
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
-        service_address = socket.inet_aton("10.0.1.2")
+        service_address = socket.inet_aton("10.7.4.2")
         ttl = 120
         now = r.current_time_millis()
         info = ServiceInfo(
@@ -650,7 +650,7 @@ class TestServiceInfo(unittest.TestCase):
             0,
             {"path": "/~paulsm/"},
             service_server,
-            addresses=[socket.inet_aton("10.0.1.2")],
+            addresses=[socket.inet_aton("10.7.4.2")],
         )
         info.async_update_records(
             zc,
@@ -698,7 +698,7 @@ def test_multiple_addresses():
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
     desc = {"path": "/~paulsm/"}
-    address_parsed = "10.0.1.2"
+    address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
 
     # New kwarg way
@@ -709,7 +709,7 @@ def test_multiple_addresses():
         0,
         0,
         desc,
-        "ash-2.local.",
+        "spare-rig.local.",
         addresses=[address, address],
     )
 
@@ -724,7 +724,7 @@ def test_multiple_addresses():
         0,
         0,
         desc,
-        "ash-2.local.",
+        "spare-rig.local.",
         parsed_addresses=[address_parsed, address_parsed],
     )
     assert info.addresses == [address, address]
@@ -746,7 +746,7 @@ def test_multiple_addresses():
                 0,
                 0,
                 desc,
-                "ash-2.local.",
+                "spare-rig.local.",
                 addresses=[address, address_v6, address_v6_ll],
                 interface_index=interface_index,
             ),
@@ -757,7 +757,7 @@ def test_multiple_addresses():
                 0,
                 0,
                 desc,
-                "ash-2.local.",
+                "spare-rig.local.",
                 parsed_addresses=[
                     address_parsed,
                     address_v6_parsed,
@@ -1121,9 +1121,9 @@ def test_filter_address_by_type_from_service_info():
     type_ = "_homeassistant._tcp.local."
     name = "MyTestHome"
     registration_name = f"{name}.{type_}"
-    ipv4 = socket.inet_aton("10.0.1.2")
+    ipv4 = socket.inet_aton("10.7.4.2")
     ipv6 = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "ash-2.local.", addresses=[ipv4, ipv6])
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[ipv4, ipv6])
 
     def dns_addresses_to_addresses(dns_address: list[DNSAddress]) -> list[bytes]:
         return [address.address for address in dns_address]
@@ -1148,8 +1148,8 @@ def test_changing_name_updates_serviceinfo_key():
         0,
         0,
         {"path": "/~paulsm/"},
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     assert info_service.key == "mytesthome._homeassistant._tcp.local."
     info_service.name = "YourTestHome._homeassistant._tcp.local."
@@ -1170,9 +1170,9 @@ def test_serviceinfo_address_updates():
             0,
             0,
             {"path": "/~paulsm/"},
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
-            parsed_addresses=["10.0.1.2"],
+            "spare-rig.local.",
+            addresses=[socket.inet_aton("10.7.4.2")],
+            parsed_addresses=["10.7.4.2"],
         )
 
     info_service = ServiceInfo(
@@ -1182,19 +1182,19 @@ def test_serviceinfo_address_updates():
         0,
         0,
         {"path": "/~paulsm/"},
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
-    info_service.addresses = [socket.inet_aton("10.0.1.3")]
-    assert info_service.addresses == [socket.inet_aton("10.0.1.3")]
+    info_service.addresses = [socket.inet_aton("10.7.4.3")]
+    assert info_service.addresses == [socket.inet_aton("10.7.4.3")]
 
 
 def test_serviceinfo_accepts_bytes_or_string_dict():
     """Verify a bytes or string dict can be passed to ServiceInfo."""
     type_ = "_homeassistant._tcp.local."
     name = "MyTestHome"
-    addresses = [socket.inet_aton("10.0.1.2")]
-    server_name = "ash-2.local."
+    addresses = [socket.inet_aton("10.7.4.2")]
+    server_name = "spare-rig.local."
     info_service = ServiceInfo(
         type_,
         f"{name}.{type_}",
@@ -2585,7 +2585,7 @@ async def test_own_nsec_response_does_not_complete_service(aiozc_loopback: Async
         0,
         {"path": "/~paulsm/"},
         host,
-        addresses=[socket.inet_aton("10.0.1.2")],
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
     zc.record_manager.async_updates_from_response(
         mock_incoming_msg([registered.dns_service(), *registered.get_address_and_nsec_records()])
@@ -3070,25 +3070,25 @@ def test_denied_flag_is_ignored_when_address_is_held(zc_loopback: r.Zeroconf) ->
 @pytest.mark.parametrize(
     "addresses",
     [
-        ["10.0.1.2", "2001:db8::1"],
-        [socket.inet_aton("10.0.1.2"), socket.inet_pton(socket.AF_INET6, "2001:db8::1")],
-        ["10.0.1.2", socket.inet_pton(socket.AF_INET6, "2001:db8::1")],
+        ["10.7.4.2", "2001:db8::1"],
+        [socket.inet_aton("10.7.4.2"), socket.inet_pton(socket.AF_INET6, "2001:db8::1")],
+        ["10.7.4.2", socket.inet_pton(socket.AF_INET6, "2001:db8::1")],
     ],
 )
 def test_addresses_setter_accepts_str_and_bytes(addresses):
     """The addresses setter accepts str and bytes addresses."""
     type_ = "_http._tcp.local."
-    info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="ash-2.local.")
+    info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="spare-rig.local.")
     info.addresses = addresses
-    assert info.parsed_addresses() == ["10.0.1.2", "2001:db8::1"]
+    assert info.parsed_addresses() == ["10.7.4.2", "2001:db8::1"]
 
-    info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="ash-2.local.", addresses=addresses)
-    assert info.parsed_addresses() == ["10.0.1.2", "2001:db8::1"]
+    info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="spare-rig.local.", addresses=addresses)
+    assert info.parsed_addresses() == ["10.7.4.2", "2001:db8::1"]
 
 
 def test_addresses_setter_rejects_invalid_address():
     """The addresses setter raises TypeError for invalid addresses."""
     type_ = "_http._tcp.local."
-    info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="ash-2.local.")
+    info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="spare-rig.local.")
     with pytest.raises(TypeError, match="Addresses must either be"):
         info.addresses = ["not an address"]

@@ -108,8 +108,8 @@ class TestDunder(unittest.TestCase):
             0,
             0,
             b"",
-            "ash-2.local.",
-            addresses=[socket.inet_aton("10.0.1.2")],
+            "spare-rig.local.",
+            addresses=[socket.inet_aton("10.7.4.2")],
         )
 
         assert (info != info) is False
@@ -122,9 +122,9 @@ class TestDunder(unittest.TestCase):
         info = ServiceInfo(
             type_=type_,
             name=registration_name,
-            addresses=[socket.inet_aton("10.0.1.2")],
+            addresses=[socket.inet_aton("10.7.4.2")],
             port=80,
-            server="ash-2.local.",
+            server="spare-rig.local.",
         )
 
         assert isinstance(info.text, bytes)

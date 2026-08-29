@@ -70,8 +70,8 @@ def test_legacy_record_update_listener(quick_timing: None) -> None:
         0,
         0,
         {"path": "/~paulsm/"},
-        "ash-2.local.",
-        addresses=[socket.inet_aton("10.0.1.2")],
+        "spare-rig.local.",
+        addresses=[socket.inet_aton("10.7.4.2")],
     )
 
     zc.register_service(info_service)
