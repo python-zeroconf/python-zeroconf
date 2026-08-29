@@ -287,7 +287,7 @@ def test_async_updates_from_response():
     service_name = "name._type._tcp.local."
     service_type = "_type._tcp.local."
     service_server = "spare-rig.local."
-    service_text = b"path=/~paulsm/"
+    service_text = b"path=/healthz/"
     service_address = "10.7.4.2"
 
     zeroconf = r.Zeroconf(interfaces=["127.0.0.1"])
@@ -297,7 +297,7 @@ def test_async_updates_from_response():
         _inject_response(zeroconf, mock_incoming_msg(r.ServiceStateChange.Added))
         dns_text = zeroconf.cache.get_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
         assert dns_text is not None
-        assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/~paulsm/'
+        assert cast(r.DNSText, dns_text).text == service_text  # service_text is b'path=/healthz/'
         all_dns_text = zeroconf.cache.get_all_by_details(service_name, const._TYPE_TXT, const._CLASS_IN)
         assert [dns_text] == all_dns_text
 
@@ -340,7 +340,7 @@ def test_generate_service_query_set_qu_bit():
     """Test generate_service_query sets the QU bit."""
 
     zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     type_ = "._hap._tcp.local."
     registration_name = "this-host-is-not-used._hap._tcp.local."
     info = r.ServiceInfo(
@@ -383,7 +383,7 @@ def test_invalid_packets_ignored_and_does_not_cause_loop_exception():
         const._TYPE_TXT,
         const._CLASS_IN | const._CLASS_UNIQUE,
         500,
-        b"path=/~paulsm/",
+        b"path=/healthz/",
     )
     assert isinstance(entry, r.DNSText)
     assert isinstance(entry, r.DNSRecord)
@@ -403,7 +403,7 @@ def test_goodbye_all_services():
     assert out is None
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = r.ServiceInfo(
         type_,
         registration_name,
@@ -447,7 +447,7 @@ def test_register_service_with_custom_ttl(quick_timing: None) -> None:
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "ash-90.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )
@@ -474,7 +474,7 @@ def test_logging_packets(caplog: pytest.LogCaptureFixture, quick_timing: None) -
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "ash-90.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )
@@ -515,7 +515,7 @@ def test_sending_unicast():
         const._TYPE_TXT,
         const._CLASS_IN | const._CLASS_UNIQUE,
         500,
-        b"path=/~paulsm/",
+        b"path=/healthz/",
     )
     generated.add_answer_at_time(entry, 0)
     zc.send(generated, "2001:db8::1", const._MDNS_PORT)  # https://www.iana.org/go/rfc3849
@@ -549,7 +549,7 @@ def test_tc_bit_defers():
     registration2_name = f"{name2}.{type_}"
     registration3_name = f"{name3}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     server_name2 = "ash-3.local."
     server_name3 = "ash-4.local."
@@ -649,7 +649,7 @@ def test_tc_bit_defers_last_response_missing():
     registration2_name = f"{name2}.{type_}"
     registration3_name = f"{name3}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     server_name2 = "ash-3.local."
     server_name3 = "ash-4.local."
@@ -767,7 +767,7 @@ def test_tc_bit_defer_window_is_bounded():
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "spare-rig.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )
@@ -955,7 +955,7 @@ def test_shutdown_while_register_in_process(quick_timing: None) -> None:
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "ash-90.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )

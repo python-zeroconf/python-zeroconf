@@ -150,7 +150,7 @@ async def test_async_service_registration(quick_timing: None) -> None:
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -221,7 +221,7 @@ async def test_async_service_registration_with_server_missing(quick_timing: None
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -287,7 +287,7 @@ async def test_async_service_registration_same_server_different_ports(quick_timi
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -354,7 +354,7 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -402,7 +402,7 @@ async def test_async_service_registration_name_conflict(quick_timing: None) -> N
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -450,7 +450,7 @@ async def test_async_service_registration_name_does_not_match_type() -> None:
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -477,7 +477,7 @@ async def test_async_service_registration_name_strict_check(quick_timing: None) 
     name = "CustomerInformationService-F4D4895E9EEB"
     registration_name = f"{name}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -528,7 +528,7 @@ async def test_async_tasks(quick_timing: None) -> None:
     listener = MyListener()
     aiozc.zeroconf.add_service_listener(type_, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -579,7 +579,7 @@ async def test_async_wait_unblocks_on_update(quick_timing: None) -> None:
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -625,7 +625,7 @@ async def test_service_info_async_request(quick_timing: None, quick_request_timi
     await asyncio.sleep(_LISTENER_TIME / 1000 / 2)
     get_service_info_task2 = asyncio.ensure_future(aiozc.async_get_service_info(type_, registration_name))
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -753,7 +753,7 @@ async def test_async_service_browser(quick_timing: None) -> None:
     listener = MyListener()
     await aiozc.async_add_service_listener(type_, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -804,7 +804,7 @@ async def test_async_context_manager(quick_timing: None) -> None:
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             "spare-rig.local.",
             addresses=[socket.inet_aton("10.7.4.2")],
         )
@@ -850,7 +850,7 @@ async def test_async_unregister_all_services(quick_timing: None) -> None:
     registration_name = f"{name}.{type_}"
     registration_name2 = f"{name2}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -906,7 +906,7 @@ async def test_async_zeroconf_service_types(quick_timing: None) -> None:
     registration_name = f"{name}.{type_}"
 
     zeroconf_registrar = AsyncZeroconf(interfaces=["127.0.0.1"])
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -976,7 +976,7 @@ async def test_service_browser_instantiation_generates_add_events_from_cache():
 
     listener = MyServiceListener()
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
@@ -1061,7 +1061,7 @@ async def test_integration(quick_timing: None) -> None:
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             "spare-rig.local.",
             addresses=[socket.inet_aton("10.7.4.2")],
         )
@@ -1169,7 +1169,7 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu(qui
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -1242,7 +1242,7 @@ async def test_service_browser_ignores_unrelated_updates():
 
     listener = MyServiceListener()
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
@@ -1346,7 +1346,7 @@ async def test_legacy_unicast_response(run_isolated):
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,

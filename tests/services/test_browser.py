@@ -601,7 +601,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu(quick_ti
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             "spare-rig.local.",
             addresses=[socket.inet_aton("10.7.4.2")],
         )
@@ -702,7 +702,7 @@ async def test_ttl_refresh_cancelled_rescue_query(quick_timing: None) -> None:
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             "spare-rig.local.",
             addresses=[socket.inet_aton("10.7.4.2")],
         )
@@ -874,7 +874,7 @@ def test_legacy_record_update_listener(quick_timing: None) -> None:
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "spare-rig.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )
@@ -914,7 +914,7 @@ def test_service_browser_is_aware_of_port_changes():
 
     browser = ServiceBrowser(zc, type_, [on_service_state_change])
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
@@ -985,7 +985,7 @@ def test_service_browser_listeners_update_service():
 
     browser = r.ServiceBrowser(zc, type_, None, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
@@ -1046,7 +1046,7 @@ def test_service_browser_listeners_no_update_service():
 
     browser = r.ServiceBrowser(zc, type_, None, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
@@ -1105,7 +1105,7 @@ def test_service_browser_nsec_record_does_not_trigger_update():
     listener = MyServiceListener()
     browser = r.ServiceBrowser(zc, type_, None, listener)
     try:
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         address = socket.inet_aton("10.7.4.2")
         info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
 
@@ -1437,7 +1437,7 @@ def test_service_browser_matching():
 
     browser = r.ServiceBrowser(zc, type_, None, listener)
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
@@ -1525,7 +1525,7 @@ def test_service_browser_expire_callbacks():
 
     browser = r.ServiceBrowser(zc, type_, None, listener)
 
-    desc = {"path": "/~paul2/"}
+    desc = {"path": "/status1/"}
     address_parsed = "10.7.4.3"
     address = socket.inet_aton(address_parsed)
     info = ServiceInfo(
@@ -1678,7 +1678,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries(quick_timi
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             "spare-rig.local.",
             addresses=[socket.inet_aton("10.7.4.2")],
         )
@@ -1745,7 +1745,7 @@ async def test_close_zeroconf_without_browser_after_start_up_queries(quick_timin
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             "spare-rig.local.",
             addresses=[socket.inet_aton("10.7.4.2")],
         )

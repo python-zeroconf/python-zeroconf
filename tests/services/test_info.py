@@ -45,7 +45,7 @@ def teardown_module():
 class TestServiceInfo(unittest.TestCase):
     def test_get_name(self):
         """Verify the name accessor can strip the type."""
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
@@ -66,7 +66,7 @@ class TestServiceInfo(unittest.TestCase):
         """Verify records with the wrong name are rejected."""
 
         zc = r.Zeroconf(interfaces=["127.0.0.1"])
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
@@ -204,7 +204,7 @@ class TestServiceInfo(unittest.TestCase):
     def test_service_info_rejects_expired_records(self):
         """Verify records that are expired are rejected."""
         zc = r.Zeroconf(interfaces=["127.0.0.1"])
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
@@ -597,7 +597,7 @@ class TestServiceInfo(unittest.TestCase):
         """Verify the first property is always used when there are duplicates in a txt record."""
 
         zc = r.Zeroconf(interfaces=["127.0.0.1"])
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         service_name = "name._type._tcp.local."
         service_type = "_type._tcp.local."
         service_server = "ash-1.local."
@@ -648,7 +648,7 @@ class TestServiceInfo(unittest.TestCase):
             22,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             service_server,
             addresses=[socket.inet_aton("10.7.4.2")],
         )
@@ -697,7 +697,7 @@ class TestServiceInfo(unittest.TestCase):
 def test_multiple_addresses():
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
 
@@ -1077,7 +1077,7 @@ async def test_multiple_a_addresses_newest_address_first():
     """Test that info.addresses returns the newest seen address first."""
     type_ = "_http._tcp.local."
     registration_name = f"multiarec.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     cache = aiozc.zeroconf.cache
     host = "multahost.local."
@@ -1096,7 +1096,7 @@ async def test_multiple_a_addresses_newest_address_first():
 async def test_invalid_a_addresses(caplog):
     type_ = "_http._tcp.local."
     registration_name = f"multiarec.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     cache = aiozc.zeroconf.cache
     host = "multahost.local."
@@ -1117,7 +1117,7 @@ async def test_invalid_a_addresses(caplog):
 @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
 def test_filter_address_by_type_from_service_info():
     """Verify dns_addresses can filter by ipversion."""
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     type_ = "_homeassistant._tcp.local."
     name = "MyTestHome"
     registration_name = f"{name}.{type_}"
@@ -1147,7 +1147,7 @@ def test_changing_name_updates_serviceinfo_key():
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "spare-rig.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )
@@ -1169,7 +1169,7 @@ def test_serviceinfo_address_updates():
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             "spare-rig.local.",
             addresses=[socket.inet_aton("10.7.4.2")],
             parsed_addresses=["10.7.4.2"],
@@ -1181,7 +1181,7 @@ def test_serviceinfo_address_updates():
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "spare-rig.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )
@@ -1201,44 +1201,44 @@ def test_serviceinfo_accepts_bytes_or_string_dict():
         80,
         0,
         0,
-        {b"path": b"/~paulsm/"},
+        {b"path": b"/healthz/"},
         server_name,
         addresses=addresses,
     )
-    assert info_service.dns_text().text == b"\x0epath=/~paulsm/"
+    assert info_service.dns_text().text == b"\x0epath=/healthz/"
     info_service = ServiceInfo(
         type_,
         f"{name}.{type_}",
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         server_name,
         addresses=addresses,
     )
-    assert info_service.dns_text().text == b"\x0epath=/~paulsm/"
+    assert info_service.dns_text().text == b"\x0epath=/healthz/"
     info_service = ServiceInfo(
         type_,
         f"{name}.{type_}",
         80,
         0,
         0,
-        {b"path": "/~paulsm/"},
+        {b"path": "/healthz/"},
         server_name,
         addresses=addresses,
     )
-    assert info_service.dns_text().text == b"\x0epath=/~paulsm/"
+    assert info_service.dns_text().text == b"\x0epath=/healthz/"
     info_service = ServiceInfo(
         type_,
         f"{name}.{type_}",
         80,
         0,
         0,
-        {"path": b"/~paulsm/"},
+        {"path": b"/healthz/"},
         server_name,
         addresses=addresses,
     )
-    assert info_service.dns_text().text == b"\x0epath=/~paulsm/"
+    assert info_service.dns_text().text == b"\x0epath=/healthz/"
 
 
 def test_asking_qu_questions(quick_request_timing):
@@ -1330,7 +1330,7 @@ async def test_release_wait_when_new_recorded_added():
     """Test that async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
     registration_name = f"multiarec.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1395,7 +1395,7 @@ async def test_port_changes_are_seen():
     """Test that port changes are seen by async_request."""
     type_ = "_http._tcp.local."
     registration_name = f"multiarec.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1478,7 +1478,7 @@ async def test_port_changes_are_seen_with_directed_request():
     """Test that port changes are seen by async_request with a directed request."""
     type_ = "_http._tcp.local."
     registration_name = f"multiarec.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahost.local."
 
@@ -1964,7 +1964,7 @@ async def test_release_wait_when_new_recorded_added_concurrency():
     """Test that concurrent async_request returns as soon as new matching records are added to the cache."""
     type_ = "_http._tcp.local."
     registration_name = f"multiareccon.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     host = "multahostcon.local."
     await aiozc.zeroconf.async_wait_for_start()
@@ -2035,7 +2035,7 @@ async def test_service_info_address_nsec_records() -> None:
     """Test we can generate address nsec records from ServiceInfo."""
     type_ = "_http._tcp.local."
     registration_name = f"multiareccon.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     host = "multahostcon.local."
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, host, addresses=[b"\x7f\x00\x00\x01"])
     nsec_record = info.dns_address_nsec(50)
@@ -2063,7 +2063,7 @@ def test_service_info_dns_nsec_deprecated() -> None:
     registration_name = f"depnsec.{type_}"
     host = "depnsec-host.local."
     info = ServiceInfo(
-        type_, registration_name, 80, 0, 0, {"path": "/~paulsm/"}, host, addresses=[b"\x7f\x00\x00\x01"]
+        type_, registration_name, 80, 0, 0, {"path": "/healthz/"}, host, addresses=[b"\x7f\x00\x00\x01"]
     )
     with pytest.warns(DeprecationWarning, match="dns_address_nsec"):
         record = info.dns_nsec([const._TYPE_AAAA], 50)
@@ -2261,7 +2261,7 @@ def test_load_from_cache_complete_with_locally_set_properties():
         ]
     )
 
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/~paulsm/"}, host)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/healthz/"}, host)
     assert info.load_from_cache(zc) is True
     zc.close()
 
@@ -2583,7 +2583,7 @@ async def test_own_nsec_response_does_not_complete_service(aiozc_loopback: Async
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         host,
         addresses=[socket.inet_aton("10.7.4.2")],
     )

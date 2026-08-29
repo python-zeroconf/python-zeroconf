@@ -69,7 +69,7 @@ def test_legacy_record_update_listener(quick_timing: None) -> None:
         80,
         0,
         0,
-        {"path": "/~paulsm/"},
+        {"path": "/healthz/"},
         "spare-rig.local.",
         addresses=[socket.inet_aton("10.7.4.2")],
     )
