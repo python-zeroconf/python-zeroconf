@@ -69,8 +69,8 @@ from ._utils.time import (  # noqa # import needed for backwards compat
     millis_to_seconds,
 )
 
-__author__ = "Paul Scott-Murphy, William McBrine"
-__maintainer__ = "Jakub Stasiak <jakub@stasiak.at>"
+__author__ = "The python-zeroconf authors"  # full history in COPYING and git
+__maintainer__ = "J. Nick Koston <nick@koston.org>"
 __version__ = "0.151.2"
 __license__ = "LGPL"
 
