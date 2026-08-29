@@ -601,45 +601,6 @@ class _ServiceBrowserBase(RecordUpdateListener):
         for h in handlers:
             self.service_state_changed.register_handler(h)
 
-    def _async_start(self) -> None:
-        """Generate the next time and setup listeners.
-
-        Must be called by uses of this base class after they
-        have finished setting their properties.
-        """
-        self.zc.async_add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
-        # Only start queries after the listener is installed
-        self._query_sender_task = asyncio.ensure_future(self._async_start_query_sender())
-
-    @property
-    def service_state_changed(self) -> SignalRegistrationInterface:
-        return self._service_state_changed.registration_interface
-
-    def _names_matching_types(self, names: Iterable[str]) -> list[tuple[str, str]]:
-        """Return the type and name for records matching the types we are browsing."""
-        return [
-            (type_, name) for name in names for type_ in self.types.intersection(cached_possible_types(name))
-        ]
-
-    def _enqueue_callback(
-        self,
-        state_change: ServiceStateChange,
-        type_: str_,
-        name: str_,
-    ) -> None:
-        # Code to ensure we only do a single update message
-        # Precedence is; Added, Remove, Update
-        key = (name, type_)
-        if (
-            state_change is SERVICE_STATE_CHANGE_ADDED
-            or (
-                state_change is SERVICE_STATE_CHANGE_REMOVED
-                and self._pending_handlers.get(key) is not SERVICE_STATE_CHANGE_ADDED
-            )
-            or (state_change is SERVICE_STATE_CHANGE_UPDATED and key not in self._pending_handlers)
-        ):
-            self._pending_handlers[key] = state_change
-
     def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate_]) -> None:
         """Handle record updates for the browsed types inside the event loop."""
         for record_update in records:
@@ -695,6 +656,54 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._fire_service_state_changed_event(pending)
         self._pending_handlers.clear()
 
+    @property
+    def service_state_changed(self) -> SignalRegistrationInterface:
+        return self._service_state_changed.registration_interface
+
+    def _async_cancel(self) -> None:
+        """Cancel the browser."""
+        self.done = True
+        self.query_scheduler.stop()
+        self.zc.async_remove_listener(self)
+        assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
+        self._query_sender_task.cancel()
+        self._query_sender_task = None
+
+    def _async_start(self) -> None:
+        """Generate the next time and setup listeners.
+
+        Must be called by uses of this base class after they
+        have finished setting their properties.
+        """
+        self.zc.async_add_listener(self, [DNSQuestion(type_, _TYPE_PTR, _CLASS_IN) for type_ in self.types])
+        # Only start queries after the listener is installed
+        self._query_sender_task = asyncio.ensure_future(self._async_start_query_sender())
+
+    async def _async_start_query_sender(self) -> None:
+        """Start scheduling queries."""
+        if not self.zc.started:
+            await self.zc.async_wait_for_start()
+        self.query_scheduler.start(self._loop)
+
+    def _enqueue_callback(
+        self,
+        state_change: ServiceStateChange,
+        type_: str_,
+        name: str_,
+    ) -> None:
+        # Code to ensure we only do a single update message
+        # Precedence is; Added, Remove, Update
+        key = (name, type_)
+        if (
+            state_change is SERVICE_STATE_CHANGE_ADDED
+            or (
+                state_change is SERVICE_STATE_CHANGE_REMOVED
+                and self._pending_handlers.get(key) is not SERVICE_STATE_CHANGE_ADDED
+            )
+            or (state_change is SERVICE_STATE_CHANGE_UPDATED and key not in self._pending_handlers)
+        ):
+            self._pending_handlers[key] = state_change
+
     def _fire_service_state_changed_event(self, event: tuple[tuple[str, str], ServiceStateChange]) -> None:
         """Fire a service state changed event.
 
@@ -712,20 +721,11 @@ class _ServiceBrowserBase(RecordUpdateListener):
             state_change=state_change,
         )
 
-    def _async_cancel(self) -> None:
-        """Cancel the browser."""
-        self.done = True
-        self.query_scheduler.stop()
-        self.zc.async_remove_listener(self)
-        assert self._query_sender_task is not None, "Attempted to cancel a browser that was not started"
-        self._query_sender_task.cancel()
-        self._query_sender_task = None
-
-    async def _async_start_query_sender(self) -> None:
-        """Start scheduling queries."""
-        if not self.zc.started:
-            await self.zc.async_wait_for_start()
-        self.query_scheduler.start(self._loop)
+    def _names_matching_types(self, names: Iterable[str]) -> list[tuple[str, str]]:
+        """Return the type and name for records matching the types we are browsing."""
+        return [
+            (type_, name) for name in names for type_ in self.types.intersection(cached_possible_types(name))
+        ]
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
@@ -760,6 +760,29 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             getattr(self, "native_id", self.ident),
         )
 
+    def __enter__(self) -> ServiceBrowser:
+        return self
+
+    def __exit__(  # pylint: disable=useless-return
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        self.cancel()
+        return None
+
+    def async_update_records_complete(self) -> None:
+        """Called when a record update has completed for all handlers.
+
+        At this point the cache will have the new records.
+
+        This method will be run in the event loop.
+        """
+        for pending in self._pending_handlers.items():
+            self.queue.put(pending)
+        self._pending_handlers.clear()
+
     def cancel(self) -> None:
         """Cancel the browser."""
         assert self.zc.loop is not None
@@ -783,26 +806,3 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             if event is None:
                 return
             self._fire_service_state_changed_event(event)
-
-    def async_update_records_complete(self) -> None:
-        """Called when a record update has completed for all handlers.
-
-        At this point the cache will have the new records.
-
-        This method will be run in the event loop.
-        """
-        for pending in self._pending_handlers.items():
-            self.queue.put(pending)
-        self._pending_handlers.clear()
-
-    def __enter__(self) -> ServiceBrowser:
-        return self
-
-    def __exit__(  # pylint: disable=useless-return
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> bool | None:
-        self.cancel()
-        return None
