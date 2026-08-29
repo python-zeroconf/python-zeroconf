@@ -60,11 +60,4 @@ cdef class AsyncListener:
         tuple v6_flow_scope
     )
 
-    cpdef _respond_query(
-        self,
-        object msg,
-        object addr,
-        object port,
-        object transport,
-        tuple v6_flow_scope
-    )
+    cpdef _respond_query(self, DNSIncoming msg, object addr, object port, object transport, tuple v6_flow_scope)
