@@ -541,6 +541,11 @@ class DNSText(DNSRecord):
         """Hash to compare like DNSText."""
         return self._hash
 
+    def __repr__(self) -> str:
+        if len(self.text) > 16:
+            return self.to_string(f"{len(self.text)} bytes")
+        return self.to_string(self.text)
+
     def write(self, out: DNSOutgoing) -> None:
         out.write_string(self.text)
 
