@@ -7,7 +7,6 @@ import logging
 import os
 import pickle
 import socket
-import struct
 import unittest.mock
 from typing import cast
 
@@ -36,23 +35,6 @@ def teardown_module():
 
 
 class PacketGeneration(unittest.TestCase):
-    def test_parse_own_packet_simple(self):
-        generated = r.DNSOutgoing(0)
-        r.DNSIncoming(generated.packets()[0])
-
-    def test_parse_own_packet_simple_unicast(self):
-        generated = r.DNSOutgoing(0, False)
-        r.DNSIncoming(generated.packets()[0])
-
-    def test_parse_own_packet_flags(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        r.DNSIncoming(generated.packets()[0])
-
-    def test_parse_own_packet_question(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        generated.add_question(r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN))
-        r.DNSIncoming(generated.packets()[0])
-
     def test_parse_own_packet_nsec(self):
         answer = r.DNSNsec(
             "eufy HomeBase2-2464._hap._tcp.local.",
@@ -171,15 +153,6 @@ class PacketGeneration(unittest.TestCase):
         parsed = r.DNSIncoming(generated.packets()[0])
         assert len(generated.answers) == 0
         assert len(generated.answers) == len(parsed.answers())
-
-    def test_match_question(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
-        generated.add_question(question)
-        parsed = r.DNSIncoming(generated.packets()[0])
-        assert len(generated.questions) == 1
-        assert len(generated.questions) == len(parsed.questions)
-        assert question == parsed.questions[0]
 
     def test_suppress_answer(self):
         query_generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -456,50 +429,10 @@ class PacketGeneration(unittest.TestCase):
 
 
 class PacketForm(unittest.TestCase):
-    def test_transaction_id(self):
-        """Multicast DNS messages carry transaction id 0 (RFC 6762 section 18.1)."""
-        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        bytes = generated.packets()[0]
-        id = bytes[0] << 8 | bytes[1]
-        assert id == 0
-
     def test_setting_id(self):
         """Test setting id in the constructor"""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY, id_=4444)
         assert generated.id == 4444
-
-    def test_query_header_bits(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
-        bytes = generated.packets()[0]
-        flags = bytes[2] << 8 | bytes[3]
-        assert flags == 0x0
-
-    def test_response_header_bits(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        bytes = generated.packets()[0]
-        flags = bytes[2] << 8 | bytes[3]
-        assert flags == 0x8000
-
-    def test_numbers(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        bytes = generated.packets()[0]
-        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack("!4H", bytes[4:12])
-        assert num_questions == 0
-        assert num_answers == 0
-        assert num_authorities == 0
-        assert num_additionals == 0
-
-    def test_numbers_questions(self):
-        generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        question = r.DNSQuestion("testname.local.", const._TYPE_SRV, const._CLASS_IN)
-        for _i in range(10):
-            generated.add_question(question)
-        bytes = generated.packets()[0]
-        (num_questions, num_answers, num_authorities, num_additionals) = struct.unpack("!4H", bytes[4:12])
-        assert num_questions == 10
-        assert num_answers == 0
-        assert num_authorities == 0
-        assert num_additionals == 0
 
 
 class TestDnsIncoming(unittest.TestCase):

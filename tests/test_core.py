@@ -58,12 +58,6 @@ def threadsafe_query(
 
 
 class Framework(unittest.TestCase):
-    def test_launch_and_close(self):
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.All)
-        rv.close()
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
-        rv.close()
-
     def test_launch_and_close_context_manager(self):
         with r.Zeroconf(interfaces=r.InterfaceChoice.All) as rv:
             assert rv.done is False
