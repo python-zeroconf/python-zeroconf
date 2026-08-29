@@ -25,8 +25,6 @@ from __future__ import annotations
 import re
 import socket
 
-# Timing intervals and timeouts
-
 _UNREGISTER_TIME = 125  # ms
 _CHECK_TIME = 500  # ms
 _REGISTER_TIME = 225  # ms
@@ -51,8 +49,6 @@ _ONE_SECOND = 1000  # ms
 # a buffer timeout to ensure a coroutine can finish before
 # the future times out
 
-
-# Protocol addresses, ports and TTLs
 
 _MDNS_ADDR = "224.0.0.251"
 _MDNS_ADDR6 = "ff02::fb"
