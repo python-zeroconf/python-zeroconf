@@ -280,6 +280,7 @@ class Zeroconf(QuietLogger):
         return self.record_manager.listeners
 
     async def async_wait(self, timeout: float) -> None:
+        """Suspend the calling task for timeout milliseconds, or less when notified."""
         loop = self.loop
         assert loop is not None
         await wait_for_future_set_or_timeout(loop, self._notify_futures, timeout)
@@ -302,6 +303,13 @@ class Zeroconf(QuietLogger):
         timeout: int = 3000,
         question_type: DNSQuestionType | None = None,
     ) -> ServiceInfo | None:
+        """Look up details for a service on the network.
+
+        Queries for the given fully qualified type and name, waiting up to
+        timeout milliseconds, and returns a populated ServiceInfo or None
+        when nothing answered in time. question_type forces QM or QU
+        questions instead of the automatic choice.
+        """
         info = ServiceInfo(type_, name)
         if info.request(self, timeout, question_type):
             return info
@@ -331,6 +339,12 @@ class Zeroconf(QuietLogger):
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> None:
+        """Announce a service on the network.
+
+        Probes for conflicts first; with allow_name_change the instance
+        name is renamed until it is unique. May raise EventLoopBlocked
+        when the event loop cannot complete the registration in time.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(
@@ -348,6 +362,12 @@ class Zeroconf(QuietLogger):
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> Awaitable:
+        """Announce a service on the network from the event loop.
+
+        Returns an awaitable that completes once the announcements have
+        been sent. Prefer setting TTLs on the ServiceInfo over the ttl
+        argument.
+        """
         if ttl is not None:
             # ttl argument is used to maintain backward compatibility
             # Setting TTLs via ServiceInfo is preferred
@@ -361,6 +381,11 @@ class Zeroconf(QuietLogger):
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     def update_service(self, info: ServiceInfo) -> None:
+        """Publish updated records for an already registered service.
+
+        May raise EventLoopBlocked when the event loop cannot complete
+        the update in time.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             await_awaitable(self.async_update_service(info)),
@@ -369,6 +394,10 @@ class Zeroconf(QuietLogger):
         )
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
+        """Publish updated records for an already registered service.
+
+        Returns an awaitable that completes once the rebroadcasts finish.
+        """
         self.registry.async_update(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
@@ -464,6 +493,13 @@ class Zeroconf(QuietLogger):
         timeout: int = 3000,
         question_type: DNSQuestionType | None = None,
     ) -> AsyncServiceInfo | None:
+        """Look up details for a service on the network from the event loop.
+
+        Queries for the given fully qualified type and name, waiting up to
+        timeout milliseconds, and returns a populated AsyncServiceInfo or
+        None when nothing answered in time. question_type forces QM or QU
+        questions instead of the automatic choice.
+        """
         info = AsyncServiceInfo(type_, name)
         if await info.async_request(self, timeout, question_type):
             return info

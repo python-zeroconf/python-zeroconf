@@ -46,6 +46,9 @@ __all__ = [
 
 
 class AsyncServiceBrowser(_ServiceBrowserBase):
+    """Event loop browser that fires ServiceListener callbacks as services
+    of the requested types appear, change, and disappear."""
+
     def __init__(
         self,
         zeroconf: Zeroconf,
@@ -158,6 +161,11 @@ class AsyncZeroconf:
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> Awaitable:
+        """Announce a service on the network.
+
+        Returns an awaitable that completes once the announcements have
+        been sent.
+        """
         return await self.zeroconf.async_register_service(
             info, ttl, allow_name_change, cooperating_responders, strict
         )
@@ -180,6 +188,10 @@ class AsyncZeroconf:
         return await self.zeroconf.async_unregister_service(info)
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
+        """Publish updated records for an already registered service.
+
+        Returns an awaitable that completes once the rebroadcasts finish.
+        """
         return await self.zeroconf.async_update_service(info)
 
     async def async_update_interfaces(
@@ -214,18 +226,31 @@ class AsyncZeroconf:
         timeout: int = 3000,
         question_type: DNSQuestionType | None = None,
     ) -> AsyncServiceInfo | None:
+        """Look up details for a service on the network.
+
+        Queries for the given fully qualified type and name, waiting up to
+        timeout milliseconds, and returns a populated AsyncServiceInfo or
+        None when nothing answered in time. question_type forces QM or QU
+        questions instead of the automatic choice.
+        """
         return await self.zeroconf.async_get_service_info(type_, name, timeout, question_type)
 
     async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
+        """Browse a service type, delivering events to the listener.
+
+        Replaces any browser previously registered for the same listener.
+        """
         await self.async_remove_service_listener(listener)
         self.async_browsers[listener] = AsyncServiceBrowser(self.zeroconf, type_, listener)
 
     async def async_remove_service_listener(self, listener: ServiceListener) -> None:
+        """Stop and drop the browser registered for the listener, if any."""
         if listener in self.async_browsers:
             await self.async_browsers[listener].async_cancel()
             del self.async_browsers[listener]
 
     async def async_remove_all_service_listeners(self) -> None:
+        """Stop and drop every browser started through add_service_listener."""
         await asyncio.gather(
             *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
         )

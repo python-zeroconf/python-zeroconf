@@ -158,6 +158,8 @@ class DNSQuestion(DNSEntry):
 
 
 class DNSRecord(DNSEntry):  # noqa: PLW1641
+    """A DNS entry that also carries a TTL and creation time."""
+
     __slots__ = ("created", "ttl")
 
     def __init__(
@@ -201,10 +203,12 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
 
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: _float) -> int | float:
+        """Seconds of TTL left at the given time, never negative."""
         remain = (self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) - now) / 1000.0
         return 0 if remain < 0 else remain
 
     def is_expired(self, now: _float) -> bool:
+        """True once the full TTL has elapsed."""
         return self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) <= now
 
     def is_stale(self, now: _float) -> bool:
@@ -318,10 +322,12 @@ class DNSHinfo(DNSRecord):
         self._hash = hash((self.key, type_, self.class_, cpu, os))
 
     def write(self, out: DNSOutgoing) -> None:
+        """Write the rdata to an outgoing packet."""
         out.write_character_string(self.cpu.encode("utf-8"))
         out.write_character_string(self.os.encode("utf-8"))
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when cpu, os and the entry fields match."""
         return isinstance(other, DNSHinfo) and self._eq(other)
 
     def _eq(self, other: DNSHinfo) -> bool:
@@ -480,6 +486,7 @@ class DNSService(DNSRecord):
         out.write_name(self.server)
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when priority, weight, port, server and the entry fields match."""
         return isinstance(other, DNSService) and self._eq(other)
 
     def _eq(self, other: DNSService) -> bool:
@@ -533,6 +540,7 @@ class DNSNsec(DNSRecord):
         self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
 
     def write(self, out: DNSOutgoing) -> None:
+        """Write the rdata to an outgoing packet."""
         bitmap = bytearray(b"\0" * 32)
         total_octets = 0
         for rdtype in self.rdtypes:
@@ -604,6 +612,7 @@ class DNSRRSet:
         return self._lookup
 
     def suppresses(self, record: _DNSRecord) -> bool:
+        """True when the set holds a match with over half the record's TTL left."""
         lookup = self._get_lookup()
         other = lookup.get(record)
         if other is None:

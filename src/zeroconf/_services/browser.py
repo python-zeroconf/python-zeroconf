@@ -576,6 +576,12 @@ class _ServiceBrowserBase(RecordUpdateListener):
         delay: int = _BROWSER_TIME,
         question_type: DNSQuestionType | None = None,
     ) -> None:
+        """Start watching one or more fully qualified service types.
+
+        Events are delivered to the given ServiceListener or handler
+        callables; delay sets the interval between the periodic queries
+        and question_type forces QM or QU questions.
+        """
         assert handlers or listener, "You need to specify at least one handler"
         self.types: set[str] = set(type_ if isinstance(type_, list) else [type_])
         for check_type_ in self.types:

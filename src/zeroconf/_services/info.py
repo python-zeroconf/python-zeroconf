@@ -151,6 +151,15 @@ def instance_name_from_service_info(info: ServiceInfo, strict: bool = True) -> s
 
 
 class ServiceInfo(RecordUpdateListener):
+    """Everything known about a single service instance.
+
+    Holds the instance name, its type, the host server name, port,
+    addresses, priority, weight, and the properties dictionary carried
+    by the TXT record (pass a dict, or bytes to reuse a raw TXT
+    payload). Build one to register a service, or let request or
+    async_request populate one from the network.
+    """
+
     __slots__ = (
         "_decoded_properties",
         "_dns_address_cache",
@@ -324,6 +333,7 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
     async def async_wait(self, timeout: float, loop: asyncio.AbstractEventLoop | None = None) -> None:
+        """Suspend the calling task for timeout milliseconds, or less when new records arrive."""
         if not self._new_records_futures:
             self._new_records_futures = set()
         await wait_for_future_set_or_timeout(
@@ -540,6 +550,7 @@ class ServiceInfo(RecordUpdateListener):
             self._ipv4_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
 
     def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate_]) -> None:
+        """Merge a batch of record updates into this object and wake any waiters."""
         new_records_futures = self._new_records_futures
         updated: bool = False
         nsec_records = None
@@ -931,6 +942,12 @@ class ServiceInfo(RecordUpdateListener):
         addr: str | None = None,
         port: int = _MDNS_PORT,
     ) -> bool:
+        """Populate this object from the network, returning True on success.
+
+        Waits up to timeout milliseconds for the answers to arrive; addr
+        and port direct the queries at a specific responder instead of
+        the multicast group.
+        """
         assert zc.loop is not None, "Zeroconf instance must have a loop, was it not started?"
         assert zc.loop.is_running(), "Zeroconf instance loop must be running, was it already stopped?"
         if zc.loop == get_running_loop():
@@ -957,6 +974,12 @@ class ServiceInfo(RecordUpdateListener):
         addr: str | None = None,
         port: int = _MDNS_PORT,
     ) -> bool:
+        """Populate this object from the network, returning True on success.
+
+        Event loop flavor of request; waits up to timeout milliseconds
+        for the answers to arrive, and addr and port direct the queries
+        at a specific responder instead of the multicast group.
+        """
         if not zc.started:
             await zc.async_wait_for_start()
 
