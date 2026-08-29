@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import enum
 import socket
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
 from ._utils.time import current_time_millis
-from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
+from .const import _CLASS_MASK, _CLASS_UNIQUE, _TYPE_ANY
 
 _LEN_BYTE = 1
 _LEN_SHORT = 2
