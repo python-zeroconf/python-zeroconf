@@ -1027,7 +1027,6 @@ async def test_integration(quick_timing: None) -> None:
     packets = []
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-        """Sends an outgoing packet."""
         pout = DNSIncoming(out.packets()[0])
         packets.append(pout)
         last_answers = pout.answers()
@@ -1191,7 +1190,6 @@ async def test_info_asking_default_is_asking_qm_questions_after_the_first_qu(qui
     second_outgoing = None
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-        """Sends an outgoing packet."""
         nonlocal first_outgoing
         nonlocal second_outgoing
         if out.questions:

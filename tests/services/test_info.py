@@ -273,7 +273,6 @@ class TestServiceInfo(unittest.TestCase):
         last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-            """Sends an outgoing packet."""
             nonlocal last_sent
 
             last_sent = out
@@ -413,7 +412,6 @@ class TestServiceInfo(unittest.TestCase):
         last_sent: r.DNSOutgoing | None = None
 
         def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT, v6_flow_scope=()):
-            """Sends an outgoing packet."""
             nonlocal last_sent
 
             last_sent = out
@@ -1254,7 +1252,6 @@ def test_asking_qu_questions(quick_request_timing):
     first_outgoing = None
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-        """Sends an outgoing packet."""
         nonlocal first_outgoing
         if first_outgoing is None:
             first_outgoing = out
@@ -1280,7 +1277,6 @@ def test_asking_qm_questions(quick_request_timing):
     first_outgoing = None
 
     def send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-        """Sends an outgoing packet."""
         nonlocal first_outgoing
         if first_outgoing is None:
             first_outgoing = out
@@ -1317,7 +1313,6 @@ async def test_we_try_four_times_with_random_delay():
     request_count = 0
 
     def async_send(out, addr=const._MDNS_ADDR, port=const._MDNS_PORT):
-        """Sends an outgoing packet."""
         nonlocal request_count
         request_count += 1
 
@@ -2161,7 +2156,6 @@ async def test_unicast_flag_if_requested() -> None:
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
 
     def async_send(out: DNSOutgoing, addr: str | None = None, port: int = const._MDNS_PORT) -> None:
-        """Sends an outgoing packet."""
         for question in out.questions:
             assert question.unicast
 

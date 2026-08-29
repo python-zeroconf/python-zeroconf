@@ -106,8 +106,6 @@ class DNSEntry:  # noqa: PLW1641
 
 
 class DNSQuestion(DNSEntry):
-    """A DNS question entry"""
-
     __slots__ = ("_hash",)
 
     def __init__(self, name: str, type_: int, class_: int) -> None:
@@ -234,8 +232,6 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
 
 
 class DNSAddress(DNSRecord):
-    """A DNS address record"""
-
     __slots__ = ("_hash", "address", "scope_id")
 
     def __init__(
@@ -342,8 +338,6 @@ class DNSHinfo(DNSRecord):
 
 
 class DNSPointer(DNSRecord):
-    """A DNS pointer record"""
-
     __slots__ = ("_hash", "alias", "alias_key")
 
     def __init__(
@@ -395,8 +389,6 @@ class DNSPointer(DNSRecord):
 
 
 class DNSText(DNSRecord):
-    """A DNS text record"""
-
     __slots__ = ("_hash", "text")
 
     def __init__(
@@ -439,8 +431,6 @@ class DNSText(DNSRecord):
 
 
 class DNSService(DNSRecord):
-    """A DNS service record"""
-
     __slots__ = ("_hash", "port", "priority", "server", "server_key", "weight")
 
     def __init__(
