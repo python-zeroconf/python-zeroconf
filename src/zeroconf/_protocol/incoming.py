@@ -72,7 +72,6 @@ _int = int
 
 
 class DNSIncoming:
-
     __slots__ = (
         "_answers",
         "_buf",

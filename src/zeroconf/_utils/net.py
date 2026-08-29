@@ -61,8 +61,6 @@ class IPVersion(enum.Enum):
     All = 3
 
 
-
-
 def _is_v6_address(addr: bytes) -> bool:
     return len(addr) == 16
 

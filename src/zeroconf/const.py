@@ -146,8 +146,6 @@ _TYPE_NSEC = 47
 _TYPE_ANY = 255
 
 
-
-
 _ADDRESS_RECORD_TYPES = {_TYPE_A, _TYPE_AAAA}
 
 _HAS_A_TO_Z = re.compile(r"[A-Za-z]")
