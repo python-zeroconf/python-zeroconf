@@ -61,6 +61,173 @@ class DNSCache:
     # Functions prefixed with async_ are NOT threadsafe and must
     # be run in the event loop.
 
+    def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
+        """Add multiple records.
+
+        Returns true if any of the records were not in the cache.
+
+        This function must be run in from event loop.
+        """
+        new = False
+        for entry in entries:
+            if self._async_add(entry):
+                new = True
+        return new
+
+    def async_all_by_details(self, name: _str, type_: _int, class_: _int) -> list[DNSRecord]:
+        """Gets all matching entries by details.
+
+        This function is not thread-safe and must be called from
+        the event loop.
+        """
+        key = name.lower()
+        records = self.cache.get(key)
+        matches: list[DNSRecord] = []
+        if records is None:
+            return matches
+        for record in records.values():
+            if type_ == record.type and class_ == record.class_:
+                matches.append(record)
+        return matches
+
+    def async_entries_with_name(self, name: str) -> list[DNSRecord]:
+        """All cached records for a name; event loop only, not threadsafe."""
+        return self.entries_with_name(name)
+
+    def async_entries_with_server(self, name: str) -> list[DNSRecord]:
+        """All cached records for a server name; event loop only, not threadsafe."""
+        return self.entries_with_server(name)
+
+    # The below functions are threadsafe and do not need to be run in the
+    # event loop, however they all make copies so they significantly
+    # inefficient.
+
+    def async_expire(self, now: _float) -> list[DNSRecord]:
+        """Purge expired entries from the cache.
+
+        This function must be run in from event loop.
+
+        :param now: The current time in milliseconds.
+        """
+        if not self._expire_heap:
+            return []
+
+        expired: list[DNSRecord] = []
+        while self._expire_heap:
+            when_record = self._expire_heap[0]
+            when = when_record[0]
+            if when > now:
+                break
+            heappop(self._expire_heap)
+            # Skip entries left behind by a TTL re-add; the live tuple is
+            # later in the heap and will be removed when it reaches the top.
+            record = when_record[1]
+            if self._expirations.get(record) == when:
+                expired.append(record)
+
+        self._maybe_rebuild_heap()
+        self.async_remove_records(expired)
+        return expired
+
+    def async_get_unique(self, entry: _UniqueRecordsType) -> DNSRecord | None:
+        """Look up the cached copy of a unique record, or None.
+
+        Event loop only; not threadsafe.
+        """
+        store = self.cache.get(entry.key)
+        if store is None:
+            return None
+        return store.get(entry)
+
+    def async_mark_unique_records_older_than_1s_to_expire(
+        self,
+        unique_types: set[_UniqueType],
+        answers: Iterable[DNSRecord],
+        now: _float,
+    ) -> None:
+        # rfc6762#section-10.2 para 2
+        # Since unique is set, all old records with that name, rrtype,
+        # and rrclass that were received more than one second ago are declared
+        # invalid, and marked to expire from the cache in one second.
+        answers_rrset = set(answers)
+        for name, type_, class_ in unique_types:
+            for record in self.async_all_by_details(name, type_, class_):
+                created_double = record.created
+                if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
+                    # Expire in 1s
+                    self._async_set_created_ttl(record, now, 1)
+
+    def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
+        """Remove multiple records.
+
+        This function must be run in from event loop.
+        """
+        for entry in entries:
+            self._async_remove(entry)
+
+    def current_entry_with_name_and_alias(self, name: str, alias: str) -> DNSRecord | None:
+        now = current_time_millis()
+        for record in reversed(self.entries_with_name(name)):
+            if (
+                record.type == _TYPE_PTR
+                and not record.is_expired(now)
+                and cast(DNSPointer, record).alias == alias
+            ):
+                return record
+        return None
+
+    def entries_with_name(self, name: str) -> list[DNSRecord]:
+        if entries := self.cache.get(name.lower()):
+            return list(entries.values())
+        return []
+
+    def entries_with_server(self, server: str) -> list[DNSRecord]:
+        """All cached records whose server field matches."""
+        if entries := self.service_cache.get(server.lower()):
+            return list(entries.values())
+        return []
+
+    def get(self, entry: DNSEntry) -> DNSRecord | None:
+        if isinstance(entry, _UNIQUE_RECORD_TYPES):
+            return self.cache.get(entry.key, {}).get(entry)
+        for cached_entry in reversed(list(self.cache.get(entry.key, {}).values())):
+            if entry.__eq__(cached_entry):
+                return cached_entry
+        return None
+
+    def get_all_by_details(self, name: str, type_: _int, class_: _int) -> list[DNSRecord]:
+        """Gets all matching entries by details."""
+        key = name.lower()
+        records = self.cache.get(key)
+        if records is None:
+            return []
+        return [entry for entry in list(records.values()) if type_ == entry.type and class_ == entry.class_]
+
+    def get_by_details(self, name: str, type_: _int, class_: _int) -> DNSRecord | None:
+        """Gets the first matching entry by details. Returns None if no entries match.
+
+        Calling this function is not recommended as it will only
+        return one record even if there are multiple entries.
+
+        For example if there are multiple A or AAAA addresses this
+        function will return the last one that was added to the cache
+        which may not be the one you expect.
+
+        Use get_all_by_details instead.
+        """
+        key = name.lower()
+        records = self.cache.get(key)
+        if records is None:
+            return None
+        for cached_entry in reversed(list(records.values())):
+            if type_ == cached_entry.type and class_ == cached_entry.class_:
+                return cached_entry
+        return None
+
+    def names(self) -> list[str]:
+        """Return a copy of the list of current cache names."""
+        return list(self.cache)
+
     def _async_add(self, record: _DNSRecord) -> bool:
         """Store a record, returning True when it was not cached before.
 
@@ -118,6 +285,22 @@ class DNSCache:
             self._async_remove(record)
             return
 
+    def _async_remove(self, record: _DNSRecord) -> None:
+        """Drop a record from the cache. Event loop only; not threadsafe."""
+        if isinstance(record, DNSService):
+            service_record = record
+            _remove_key(self.service_cache, service_record.server_key, service_record)
+        _remove_key(self.cache, record.key, record)
+        self._expirations.pop(record, None)
+        self._total_records -= 1
+
+    def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _int) -> None:
+        """Stamp a record with a new ttl and creation moment, then cache it."""
+        # It would be better if we made a copy instead of mutating the record
+        # in place, but records currently don't have a copy method.
+        record._set_created_ttl(now, ttl)
+        self._async_add(record)
+
     def _maybe_rebuild_heap(self) -> None:
         """Rebuild ``_expire_heap`` when stale entries dominate live ones."""
         expire_heap_len = len(self._expire_heap)
@@ -129,186 +312,3 @@ class DNSCache:
                 entry for entry in self._expire_heap if self._expirations.get(entry[1]) == entry[0]
             ]
             heapify(self._expire_heap)
-
-    def async_add_records(self, entries: Iterable[DNSRecord]) -> bool:
-        """Add multiple records.
-
-        Returns true if any of the records were not in the cache.
-
-        This function must be run in from event loop.
-        """
-        new = False
-        for entry in entries:
-            if self._async_add(entry):
-                new = True
-        return new
-
-    def _async_remove(self, record: _DNSRecord) -> None:
-        """Drop a record from the cache. Event loop only; not threadsafe."""
-        if isinstance(record, DNSService):
-            service_record = record
-            _remove_key(self.service_cache, service_record.server_key, service_record)
-        _remove_key(self.cache, record.key, record)
-        self._expirations.pop(record, None)
-        self._total_records -= 1
-
-    def async_remove_records(self, entries: Iterable[DNSRecord]) -> None:
-        """Remove multiple records.
-
-        This function must be run in from event loop.
-        """
-        for entry in entries:
-            self._async_remove(entry)
-
-    def async_expire(self, now: _float) -> list[DNSRecord]:
-        """Purge expired entries from the cache.
-
-        This function must be run in from event loop.
-
-        :param now: The current time in milliseconds.
-        """
-        if not self._expire_heap:
-            return []
-
-        expired: list[DNSRecord] = []
-        while self._expire_heap:
-            when_record = self._expire_heap[0]
-            when = when_record[0]
-            if when > now:
-                break
-            heappop(self._expire_heap)
-            # Skip entries left behind by a TTL re-add; the live tuple is
-            # later in the heap and will be removed when it reaches the top.
-            record = when_record[1]
-            if self._expirations.get(record) == when:
-                expired.append(record)
-
-        self._maybe_rebuild_heap()
-        self.async_remove_records(expired)
-        return expired
-
-    def async_get_unique(self, entry: _UniqueRecordsType) -> DNSRecord | None:
-        """Look up the cached copy of a unique record, or None.
-
-        Event loop only; not threadsafe.
-        """
-        store = self.cache.get(entry.key)
-        if store is None:
-            return None
-        return store.get(entry)
-
-    def async_all_by_details(self, name: _str, type_: _int, class_: _int) -> list[DNSRecord]:
-        """Gets all matching entries by details.
-
-        This function is not thread-safe and must be called from
-        the event loop.
-        """
-        key = name.lower()
-        records = self.cache.get(key)
-        matches: list[DNSRecord] = []
-        if records is None:
-            return matches
-        for record in records.values():
-            if type_ == record.type and class_ == record.class_:
-                matches.append(record)
-        return matches
-
-    def async_entries_with_name(self, name: str) -> list[DNSRecord]:
-        """All cached records for a name; event loop only, not threadsafe."""
-        return self.entries_with_name(name)
-
-    def async_entries_with_server(self, name: str) -> list[DNSRecord]:
-        """All cached records for a server name; event loop only, not threadsafe."""
-        return self.entries_with_server(name)
-
-    # The below functions are threadsafe and do not need to be run in the
-    # event loop, however they all make copies so they significantly
-    # inefficient.
-
-    def get(self, entry: DNSEntry) -> DNSRecord | None:
-        if isinstance(entry, _UNIQUE_RECORD_TYPES):
-            return self.cache.get(entry.key, {}).get(entry)
-        for cached_entry in reversed(list(self.cache.get(entry.key, {}).values())):
-            if entry.__eq__(cached_entry):
-                return cached_entry
-        return None
-
-    def get_by_details(self, name: str, type_: _int, class_: _int) -> DNSRecord | None:
-        """Gets the first matching entry by details. Returns None if no entries match.
-
-        Calling this function is not recommended as it will only
-        return one record even if there are multiple entries.
-
-        For example if there are multiple A or AAAA addresses this
-        function will return the last one that was added to the cache
-        which may not be the one you expect.
-
-        Use get_all_by_details instead.
-        """
-        key = name.lower()
-        records = self.cache.get(key)
-        if records is None:
-            return None
-        for cached_entry in reversed(list(records.values())):
-            if type_ == cached_entry.type and class_ == cached_entry.class_:
-                return cached_entry
-        return None
-
-    def get_all_by_details(self, name: str, type_: _int, class_: _int) -> list[DNSRecord]:
-        """Gets all matching entries by details."""
-        key = name.lower()
-        records = self.cache.get(key)
-        if records is None:
-            return []
-        return [entry for entry in list(records.values()) if type_ == entry.type and class_ == entry.class_]
-
-    def entries_with_server(self, server: str) -> list[DNSRecord]:
-        """All cached records whose server field matches."""
-        if entries := self.service_cache.get(server.lower()):
-            return list(entries.values())
-        return []
-
-    def entries_with_name(self, name: str) -> list[DNSRecord]:
-        if entries := self.cache.get(name.lower()):
-            return list(entries.values())
-        return []
-
-    def current_entry_with_name_and_alias(self, name: str, alias: str) -> DNSRecord | None:
-        now = current_time_millis()
-        for record in reversed(self.entries_with_name(name)):
-            if (
-                record.type == _TYPE_PTR
-                and not record.is_expired(now)
-                and cast(DNSPointer, record).alias == alias
-            ):
-                return record
-        return None
-
-    def names(self) -> list[str]:
-        """Return a copy of the list of current cache names."""
-        return list(self.cache)
-
-    def async_mark_unique_records_older_than_1s_to_expire(
-        self,
-        unique_types: set[_UniqueType],
-        answers: Iterable[DNSRecord],
-        now: _float,
-    ) -> None:
-        # rfc6762#section-10.2 para 2
-        # Since unique is set, all old records with that name, rrtype,
-        # and rrclass that were received more than one second ago are declared
-        # invalid, and marked to expire from the cache in one second.
-        answers_rrset = set(answers)
-        for name, type_, class_ in unique_types:
-            for record in self.async_all_by_details(name, type_, class_):
-                created_double = record.created
-                if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
-                    # Expire in 1s
-                    self._async_set_created_ttl(record, now, 1)
-
-    def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _int) -> None:
-        """Stamp a record with a new ttl and creation moment, then cache it."""
-        # It would be better if we made a copy instead of mutating the record
-        # in place, but records currently don't have a copy method.
-        record._set_created_ttl(now, ttl)
-        self._async_add(record)

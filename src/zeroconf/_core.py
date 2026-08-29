@@ -210,132 +210,105 @@ class Zeroconf(QuietLogger):
 
         self.start()
 
-    @property
-    def started(self) -> bool:
-        """Check if the instance has started."""
-        running_future = self.engine.running_future
-        return bool(
-            not self.done
-            and running_future
-            and running_future.done()
-            and not running_future.cancelled()
-            and not running_future.exception()
-            and running_future.result()
-        )
+    def __enter__(self) -> Zeroconf:
+        return self
 
-    def start(self) -> None:
-        """Start Zeroconf."""
-        self.loop = None if self._use_asyncio is False else get_running_loop()
-        if self.loop:
-            self.engine.setup(self.loop, None)
-            return
-        self._start_thread()
-
-    def _start_thread(self) -> None:
-        """Start a thread with a running event loop."""
-        loop_thread_ready = threading.Event()
-
-        def _run_loop() -> None:
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
-            self.engine.setup(self.loop, loop_thread_ready)
-            self.loop.run_forever()
-
-        self._loop_thread = threading.Thread(target=_run_loop, daemon=True)
-        self._loop_thread.start()
-        loop_thread_ready.wait()
-
-    async def async_wait_for_start(self, timeout: float = _STARTUP_TIMEOUT) -> None:
-        """Wait for start up for actions that require a running Zeroconf instance.
-
-        Throws NotRunningException if the instance is not running or could
-        not be started.
-        """
-        if self.done:  # If the instance was shutdown from under us, raise immediately
-            raise NotRunningException
-        assert self.engine.running_future is not None
-        await wait_future_or_timeout(self.engine.running_future, timeout=timeout)
-        if not self.started:
-            raise NotRunningException
-
-    @property
-    def listeners(self) -> set[RecordUpdateListener]:
-        return self.record_manager.listeners
-
-    async def async_wait(self, timeout: float) -> None:
-        """Suspend the calling task for timeout milliseconds, or less when notified."""
-        loop = self.loop
-        assert loop is not None
-        await wait_for_future_set_or_timeout(loop, self._notify_futures, timeout)
-
-    def notify_all(self) -> None:
-        """Wake every waiter and fire the listeners, from any thread."""
-        assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_notify_all)
-
-    def async_notify_all(self) -> None:
-        """Schedule an async_notify_all."""
-        notify_futures = self._notify_futures
-        if notify_futures:
-            _resolve_all_futures_to_none(notify_futures)
-
-    def get_service_info(
+    def __exit__(  # pylint: disable=useless-return
         self,
-        type_: str,
-        name: str,
-        timeout: int = 3000,
-        question_type: DNSQuestionType | None = None,
-    ) -> ServiceInfo | None:
-        """Look up details for a service on the network.
-
-        Queries for the given fully qualified type and name, waiting up to
-        timeout milliseconds, and returns a populated ServiceInfo or None
-        when nothing answered in time. question_type forces QM or QU
-        questions instead of the automatic choice.
-        """
-        info = ServiceInfo(type_, name)
-        if info.request(self, timeout, question_type):
-            return info
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        self.close()
         return None
+
+    def add_listener(
+        self,
+        listener: RecordUpdateListener,
+        question: DNSQuestion | list[DNSQuestion] | None,
+    ) -> None:
+        """Subscribe a record update listener, optionally scoped to questions; threadsafe."""
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.record_manager.async_add_listener, listener, question)
 
     def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
         """Browse for a type and deliver add, remove, and update callbacks to the listener."""
         self.remove_service_listener(listener)
         self.browsers[listener] = ServiceBrowser(self, type_, listener)
 
-    def remove_service_listener(self, listener: ServiceListener) -> None:
-        """Stop the browser behind the given listener."""
-        if listener in self.browsers:
-            self.browsers[listener].cancel()
-            del self.browsers[listener]
+    def async_add_listener(
+        self,
+        listener: RecordUpdateListener,
+        question: DNSQuestion | list[DNSQuestion] | None,
+    ) -> None:
+        """Subscribe a record update listener, optionally scoped to questions; event loop only."""
+        self.record_manager.async_add_listener(listener, question)
 
-    def remove_all_service_listeners(self) -> None:
-        """Stop the browsers behind every registered listener."""
-        for listener in list(self.browsers):
-            self.remove_service_listener(listener)
-
-    def register_service(
+    async def async_check_service(
         self,
         info: ServiceInfo,
-        ttl: int | None = None,
-        allow_name_change: bool = False,
+        allow_name_change: bool,
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> None:
-        """Announce a service on the network.
+        """Probe the network for name uniqueness, renaming first when allowed."""
+        instance_name = instance_name_from_service_info(info, strict=strict)
+        if cooperating_responders:
+            return
 
-        Probes for conflicts first; with allow_name_change the instance
-        name is renamed until it is unique. May raise EventLoopBlocked
-        when the event loop cannot complete the registration in time.
+        # Wait a random amount of time up avoid collisions and avoid
+        # a thundering herd when multiple services are started on the network
+        await self.async_wait(random.randint(*_PROBE_RANDOM_DELAY_INTERVAL))  # noqa: S311
+
+        next_instance_number = 2
+        next_time = now = current_time_millis()
+        i = 0
+        while i < _REGISTER_BROADCASTS:
+            # check for a name conflict
+            while self.cache.current_entry_with_name_and_alias(info.type, info.name):
+                if not allow_name_change:
+                    raise NonUniqueNameException
+
+                # change the name and look for a conflict
+                info.name = f"{instance_name}-{next_instance_number}.{info.type}"
+                next_instance_number += 1
+                service_type_name(info.name, strict=strict)
+                next_time = now
+                i = 0
+
+            if now < next_time:
+                await self.async_wait(next_time - now)
+                now = current_time_millis()
+                continue
+
+            self.async_send(self.generate_service_query(info))
+            i += 1
+            next_time += _CHECK_TIME
+
+    async def async_get_service_info(
+        self,
+        type_: str,
+        name: str,
+        timeout: int = 3000,
+        question_type: DNSQuestionType | None = None,
+    ) -> AsyncServiceInfo | None:
+        """Look up details for a service on the network from the event loop.
+
+        Queries for the given fully qualified type and name, waiting up to
+        timeout milliseconds, and returns a populated AsyncServiceInfo or
+        None when nothing answered in time. question_type forces QM or QU
+        questions instead of the automatic choice.
         """
-        assert self.loop is not None
-        run_coro_with_timeout(
-            await_awaitable(
-                self.async_register_service(info, ttl, allow_name_change, cooperating_responders, strict)
-            ),
-            self.loop,
-            _REGISTER_TIME * _REGISTER_BROADCASTS,
-        )
+        info = AsyncServiceInfo(type_, name)
+        if await info.async_request(self, timeout, question_type):
+            return info
+        return None
+
+    def async_notify_all(self) -> None:
+        """Schedule an async_notify_all."""
+        notify_futures = self._notify_futures
+        if notify_futures:
+            _resolve_all_futures_to_none(notify_futures)
 
     async def async_register_service(
         self,
@@ -363,49 +336,75 @@ class Zeroconf(QuietLogger):
         self.registry.async_add(info)
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
-    def update_service(self, info: ServiceInfo) -> None:
-        """Publish updated records for an already registered service.
+    def async_remove_listener(self, listener: RecordUpdateListener) -> None:
+        """Detach a record listener; event loop only, not threadsafe."""
+        self.record_manager.async_remove_listener(listener)
 
-        May raise EventLoopBlocked when the event loop cannot complete
-        the update in time.
-        """
-        assert self.loop is not None
-        run_coro_with_timeout(
-            await_awaitable(self.async_update_service(info)),
-            self.loop,
-            _REGISTER_TIME * _REGISTER_BROADCASTS,
-        )
-
-    async def async_update_service(self, info: ServiceInfo) -> Awaitable:
-        """Publish updated records for an already registered service.
-
-        Returns an awaitable that completes once the rebroadcasts finish.
-        """
-        self.registry.async_update(info)
-        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
-
-    def update_interfaces(
+    def async_send(
         self,
-        interfaces: InterfacesType | None = None,
-        ip_version: IPVersion | None = None,
-        apple_p2p: bool | None = None,
+        out: DNSOutgoing,
+        addr: str | None = None,
+        port: int = _MDNS_PORT,
+        v6_flow_scope: tuple[()] | tuple[int, int] = (),
+        transport: _WrappedTransport | None = None,
     ) -> None:
-        """Rescan network interfaces and reconcile the sockets in use.
+        """Transmit a packet from the event loop."""
+        if self.done:
+            return
 
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `async_update_interfaces` cannot be completed. Raises
-        RuntimeError if apple_p2p is set on a non-Apple platform.
+        # If no transport is specified, we send to all the ones
+        # with the same address family
+        transports = [transport] if transport else self.engine.senders
+        log_debug = log.isEnabledFor(logging.DEBUG)
+
+        for packet_num, packet in enumerate(out.packets()):
+            if len(packet) > _MAX_MSG_ABSOLUTE:
+                self.log_warning_once(
+                    "Dropping %r over-sized packet (%d bytes) %r",
+                    out,
+                    len(packet),
+                    packet,
+                )
+                return
+            for send_transport in transports:
+                async_send_with_transport(
+                    log_debug,
+                    send_transport,
+                    packet,
+                    packet_num,
+                    out,
+                    addr,
+                    port,
+                    v6_flow_scope,
+                )
+
+    async def async_unregister_all_services(self) -> None:
+        """Send goodbye packets for every registered service and drop them all.
+
+        Runs only at shutdown, so unlike the single service calls it
+        returns nothing to await separately.
         """
-        assert self.loop is not None
-        # Unlike register/update, the re-announce is awaited inline (to log
-        # per-service failures), so the budget must cover the full announce
-        # window ((_REGISTER_BROADCASTS - 1) * _REGISTER_TIME) plus the reconcile
-        # and wait-for-start overhead; double the register budget for headroom.
-        run_coro_with_timeout(
-            self.async_update_interfaces(interfaces, ip_version, apple_p2p),
-            self.loop,
-            _REGISTER_TIME * _REGISTER_BROADCASTS * 2,
+        # Send Goodbye packets https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
+        out = self.generate_unregister_all_services()
+        if not out:
+            return
+        for i in range(_REGISTER_BROADCASTS):
+            if i != 0:
+                await asyncio.sleep(millis_to_seconds(_UNREGISTER_TIME))
+            self.async_send(out)
+
+    async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
+        """Withdraw a service from the event loop, broadcasting goodbyes."""
+        info.set_server_if_missing()
+        self.registry.async_remove(info)
+        # If another server uses the same addresses, we do not want to send
+        # goodbye packets for the address records
+
+        assert info.server_key is not None
+        entries = self.registry.async_get_infos_server(info.server_key)
+        broadcast_addresses = not bool(entries)
+        return asyncio.ensure_future(
+            self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
         )
 
     async def async_update_interfaces(
@@ -469,37 +468,46 @@ class Zeroconf(QuietLogger):
                 # such as CancelledError; don't swallow a cancellation/interrupt.
                 raise result
 
-    async def async_get_service_info(
-        self,
-        type_: str,
-        name: str,
-        timeout: int = 3000,
-        question_type: DNSQuestionType | None = None,
-    ) -> AsyncServiceInfo | None:
-        """Look up details for a service on the network from the event loop.
+    async def async_update_service(self, info: ServiceInfo) -> Awaitable:
+        """Publish updated records for an already registered service.
 
-        Queries for the given fully qualified type and name, waiting up to
-        timeout milliseconds, and returns a populated AsyncServiceInfo or
-        None when nothing answered in time. question_type forces QM or QU
-        questions instead of the automatic choice.
+        Returns an awaitable that completes once the rebroadcasts finish.
         """
-        info = AsyncServiceInfo(type_, name)
-        if await info.async_request(self, timeout, question_type):
-            return info
-        return None
+        self.registry.async_update(info)
+        return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
-    async def _async_broadcast_service(
-        self,
-        info: ServiceInfo,
-        interval: int,
-        ttl: int | None,
-        broadcast_addresses: bool = True,
-    ) -> None:
-        """Send a broadcasts to announce a service at intervals."""
-        for i in range(_REGISTER_BROADCASTS):
-            if i != 0:
-                await asyncio.sleep(millis_to_seconds(interval))
-            self.async_send(self.generate_service_broadcast(info, ttl, broadcast_addresses))
+    async def async_wait(self, timeout: float) -> None:
+        """Suspend the calling task for timeout milliseconds, or less when notified."""
+        loop = self.loop
+        assert loop is not None
+        await wait_for_future_set_or_timeout(loop, self._notify_futures, timeout)
+
+    async def async_wait_for_start(self, timeout: float = _STARTUP_TIMEOUT) -> None:
+        """Wait for start up for actions that require a running Zeroconf instance.
+
+        Throws NotRunningException if the instance is not running or could
+        not be started.
+        """
+        if self.done:  # If the instance was shutdown from under us, raise immediately
+            raise NotRunningException
+        assert self.engine.running_future is not None
+        await wait_future_or_timeout(self.engine.running_future, timeout=timeout)
+        if not self.started:
+            raise NotRunningException
+
+    def close(self) -> None:
+        """Shut down the sockets and engine for good; safe to call repeatedly."""
+        assert self.loop is not None
+        if self.loop.is_running():
+            if self.loop == get_running_loop():
+                log.warning(
+                    "unregister_all_services skipped as it does blocking i/o; use AsyncZeroconf with asyncio"
+                )
+            else:
+                self.unregister_all_services()
+        self._close()
+        self.engine.close()
+        self._shutdown_threads()
 
     def generate_service_broadcast(
         self,
@@ -527,6 +535,180 @@ class Zeroconf(QuietLogger):
         out.add_authorative_answer(info.dns_pointer())
         return out
 
+    def generate_unregister_all_services(self) -> DNSOutgoing | None:
+        """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
+        service_infos = self.registry.async_get_service_infos()
+        if not service_infos:
+            return None
+        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
+        for info in service_infos:
+            self._add_broadcast_answer(out, info, 0)
+        self.registry.async_remove(service_infos)
+        return out
+
+    def get_service_info(
+        self,
+        type_: str,
+        name: str,
+        timeout: int = 3000,
+        question_type: DNSQuestionType | None = None,
+    ) -> ServiceInfo | None:
+        """Look up details for a service on the network.
+
+        Queries for the given fully qualified type and name, waiting up to
+        timeout milliseconds, and returns a populated ServiceInfo or None
+        when nothing answered in time. question_type forces QM or QU
+        questions instead of the automatic choice.
+        """
+        info = ServiceInfo(type_, name)
+        if info.request(self, timeout, question_type):
+            return info
+        return None
+
+    @property
+    def listeners(self) -> set[RecordUpdateListener]:
+        return self.record_manager.listeners
+
+    def notify_all(self) -> None:
+        """Wake every waiter and fire the listeners, from any thread."""
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.async_notify_all)
+
+    def register_service(
+        self,
+        info: ServiceInfo,
+        ttl: int | None = None,
+        allow_name_change: bool = False,
+        cooperating_responders: bool = False,
+        strict: bool = True,
+    ) -> None:
+        """Announce a service on the network.
+
+        Probes for conflicts first; with allow_name_change the instance
+        name is renamed until it is unique. May raise EventLoopBlocked
+        when the event loop cannot complete the registration in time.
+        """
+        assert self.loop is not None
+        run_coro_with_timeout(
+            await_awaitable(
+                self.async_register_service(info, ttl, allow_name_change, cooperating_responders, strict)
+            ),
+            self.loop,
+            _REGISTER_TIME * _REGISTER_BROADCASTS,
+        )
+
+    def remove_all_service_listeners(self) -> None:
+        """Stop the browsers behind every registered listener."""
+        for listener in list(self.browsers):
+            self.remove_service_listener(listener)
+
+    def remove_listener(self, listener: RecordUpdateListener) -> None:
+        """Detach a record listener from any thread."""
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.record_manager.async_remove_listener, listener)
+
+    def remove_service_listener(self, listener: ServiceListener) -> None:
+        """Stop the browser behind the given listener."""
+        if listener in self.browsers:
+            self.browsers[listener].cancel()
+            del self.browsers[listener]
+
+    def send(
+        self,
+        out: DNSOutgoing,
+        addr: str | None = None,
+        port: int = _MDNS_PORT,
+        v6_flow_scope: tuple[()] | tuple[int, int] = (),
+        transport: _WrappedTransport | None = None,
+    ) -> None:
+        """Queue a packet for transmission from any thread."""
+        assert self.loop is not None
+        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
+
+    def start(self) -> None:
+        """Start Zeroconf."""
+        self.loop = None if self._use_asyncio is False else get_running_loop()
+        if self.loop:
+            self.engine.setup(self.loop, None)
+            return
+        self._start_thread()
+
+    @property
+    def started(self) -> bool:
+        """Check if the instance has started."""
+        running_future = self.engine.running_future
+        return bool(
+            not self.done
+            and running_future
+            and running_future.done()
+            and not running_future.cancelled()
+            and not running_future.exception()
+            and running_future.result()
+        )
+
+    def unregister_all_services(self) -> None:
+        """Send goodbye packets for every registered service and drop them all.
+
+        May raise EventLoopBlocked when the event loop cannot finish the
+        shutdown broadcasts in time.
+        """
+        assert self.loop is not None
+        run_coro_with_timeout(
+            self.async_unregister_all_services(),
+            self.loop,
+            _UNREGISTER_TIME * _REGISTER_BROADCASTS,
+        )
+
+    def unregister_service(self, info: ServiceInfo) -> None:
+        """Withdraw a service by broadcasting goodbye records.
+
+        May raise EventLoopBlocked when the event loop cannot finish the
+        withdrawal in time.
+        """
+        assert self.loop is not None
+        run_coro_with_timeout(
+            self.async_unregister_service(info),
+            self.loop,
+            _UNREGISTER_TIME * _REGISTER_BROADCASTS,
+        )
+
+    def update_interfaces(
+        self,
+        interfaces: InterfacesType | None = None,
+        ip_version: IPVersion | None = None,
+        apple_p2p: bool | None = None,
+    ) -> None:
+        """Rescan network interfaces and reconcile the sockets in use.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `async_update_interfaces` cannot be completed. Raises
+        RuntimeError if apple_p2p is set on a non-Apple platform.
+        """
+        assert self.loop is not None
+        # Unlike register/update, the re-announce is awaited inline (to log
+        # per-service failures), so the budget must cover the full announce
+        # window ((_REGISTER_BROADCASTS - 1) * _REGISTER_TIME) plus the reconcile
+        # and wait-for-start overhead; double the register budget for headroom.
+        run_coro_with_timeout(
+            self.async_update_interfaces(interfaces, ip_version, apple_p2p),
+            self.loop,
+            _REGISTER_TIME * _REGISTER_BROADCASTS * 2,
+        )
+
+    def update_service(self, info: ServiceInfo) -> None:
+        """Publish updated records for an already registered service.
+
+        May raise EventLoopBlocked when the event loop cannot complete
+        the update in time.
+        """
+        assert self.loop is not None
+        run_coro_with_timeout(
+            await_awaitable(self.async_update_service(info)),
+            self.loop,
+            _REGISTER_TIME * _REGISTER_BROADCASTS,
+        )
+
     def _add_broadcast_answer(  # pylint: disable=no-self-use
         self,
         out: DNSOutgoing,
@@ -545,188 +727,24 @@ class Zeroconf(QuietLogger):
             for record in info.get_address_and_nsec_records(override_ttl=host_ttl):
                 out.add_answer_at_time(record, 0)
 
-    def unregister_service(self, info: ServiceInfo) -> None:
-        """Withdraw a service by broadcasting goodbye records.
-
-        May raise EventLoopBlocked when the event loop cannot finish the
-        withdrawal in time.
-        """
-        assert self.loop is not None
-        run_coro_with_timeout(
-            self.async_unregister_service(info),
-            self.loop,
-            _UNREGISTER_TIME * _REGISTER_BROADCASTS,
-        )
-
-    async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
-        """Withdraw a service from the event loop, broadcasting goodbyes."""
-        info.set_server_if_missing()
-        self.registry.async_remove(info)
-        # If another server uses the same addresses, we do not want to send
-        # goodbye packets for the address records
-
-        assert info.server_key is not None
-        entries = self.registry.async_get_infos_server(info.server_key)
-        broadcast_addresses = not bool(entries)
-        return asyncio.ensure_future(
-            self._async_broadcast_service(info, _UNREGISTER_TIME, 0, broadcast_addresses)
-        )
-
-    def generate_unregister_all_services(self) -> DNSOutgoing | None:
-        """Generate a DNSOutgoing goodbye for all services and remove them from the registry."""
-        service_infos = self.registry.async_get_service_infos()
-        if not service_infos:
-            return None
-        out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
-        for info in service_infos:
-            self._add_broadcast_answer(out, info, 0)
-        self.registry.async_remove(service_infos)
-        return out
-
-    async def async_unregister_all_services(self) -> None:
-        """Send goodbye packets for every registered service and drop them all.
-
-        Runs only at shutdown, so unlike the single service calls it
-        returns nothing to await separately.
-        """
-        # Send Goodbye packets https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
-        out = self.generate_unregister_all_services()
-        if not out:
-            return
-        for i in range(_REGISTER_BROADCASTS):
-            if i != 0:
-                await asyncio.sleep(millis_to_seconds(_UNREGISTER_TIME))
-            self.async_send(out)
-
-    def unregister_all_services(self) -> None:
-        """Send goodbye packets for every registered service and drop them all.
-
-        May raise EventLoopBlocked when the event loop cannot finish the
-        shutdown broadcasts in time.
-        """
-        assert self.loop is not None
-        run_coro_with_timeout(
-            self.async_unregister_all_services(),
-            self.loop,
-            _UNREGISTER_TIME * _REGISTER_BROADCASTS,
-        )
-
-    async def async_check_service(
+    async def _async_broadcast_service(
         self,
         info: ServiceInfo,
-        allow_name_change: bool,
-        cooperating_responders: bool = False,
-        strict: bool = True,
+        interval: int,
+        ttl: int | None,
+        broadcast_addresses: bool = True,
     ) -> None:
-        """Probe the network for name uniqueness, renaming first when allowed."""
-        instance_name = instance_name_from_service_info(info, strict=strict)
-        if cooperating_responders:
-            return
+        """Send a broadcasts to announce a service at intervals."""
+        for i in range(_REGISTER_BROADCASTS):
+            if i != 0:
+                await asyncio.sleep(millis_to_seconds(interval))
+            self.async_send(self.generate_service_broadcast(info, ttl, broadcast_addresses))
 
-        # Wait a random amount of time up avoid collisions and avoid
-        # a thundering herd when multiple services are started on the network
-        await self.async_wait(random.randint(*_PROBE_RANDOM_DELAY_INTERVAL))  # noqa: S311
-
-        next_instance_number = 2
-        next_time = now = current_time_millis()
-        i = 0
-        while i < _REGISTER_BROADCASTS:
-            # check for a name conflict
-            while self.cache.current_entry_with_name_and_alias(info.type, info.name):
-                if not allow_name_change:
-                    raise NonUniqueNameException
-
-                # change the name and look for a conflict
-                info.name = f"{instance_name}-{next_instance_number}.{info.type}"
-                next_instance_number += 1
-                service_type_name(info.name, strict=strict)
-                next_time = now
-                i = 0
-
-            if now < next_time:
-                await self.async_wait(next_time - now)
-                now = current_time_millis()
-                continue
-
-            self.async_send(self.generate_service_query(info))
-            i += 1
-            next_time += _CHECK_TIME
-
-    def add_listener(
-        self,
-        listener: RecordUpdateListener,
-        question: DNSQuestion | list[DNSQuestion] | None,
-    ) -> None:
-        """Subscribe a record update listener, optionally scoped to questions; threadsafe."""
-        assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.record_manager.async_add_listener, listener, question)
-
-    def remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Detach a record listener from any thread."""
-        assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.record_manager.async_remove_listener, listener)
-
-    def async_add_listener(
-        self,
-        listener: RecordUpdateListener,
-        question: DNSQuestion | list[DNSQuestion] | None,
-    ) -> None:
-        """Subscribe a record update listener, optionally scoped to questions; event loop only."""
-        self.record_manager.async_add_listener(listener, question)
-
-    def async_remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Detach a record listener; event loop only, not threadsafe."""
-        self.record_manager.async_remove_listener(listener)
-
-    def send(
-        self,
-        out: DNSOutgoing,
-        addr: str | None = None,
-        port: int = _MDNS_PORT,
-        v6_flow_scope: tuple[()] | tuple[int, int] = (),
-        transport: _WrappedTransport | None = None,
-    ) -> None:
-        """Queue a packet for transmission from any thread."""
-        assert self.loop is not None
-        self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
-
-    def async_send(
-        self,
-        out: DNSOutgoing,
-        addr: str | None = None,
-        port: int = _MDNS_PORT,
-        v6_flow_scope: tuple[()] | tuple[int, int] = (),
-        transport: _WrappedTransport | None = None,
-    ) -> None:
-        """Transmit a packet from the event loop."""
-        if self.done:
-            return
-
-        # If no transport is specified, we send to all the ones
-        # with the same address family
-        transports = [transport] if transport else self.engine.senders
-        log_debug = log.isEnabledFor(logging.DEBUG)
-
-        for packet_num, packet in enumerate(out.packets()):
-            if len(packet) > _MAX_MSG_ABSOLUTE:
-                self.log_warning_once(
-                    "Dropping %r over-sized packet (%d bytes) %r",
-                    out,
-                    len(packet),
-                    packet,
-                )
-                return
-            for send_transport in transports:
-                async_send_with_transport(
-                    log_debug,
-                    send_transport,
-                    packet,
-                    packet_num,
-                    out,
-                    addr,
-                    port,
-                    v6_flow_scope,
-                )
+    async def _async_close(self) -> None:
+        """Shut down for AsyncZeroconf; callers unregister services first."""
+        self._close()
+        await self.engine._async_close()  # pylint: disable=protected-access
+        self._shutdown_threads()
 
     def _close(self) -> None:
         """Set global done and remove all service listeners."""
@@ -754,34 +772,16 @@ class Zeroconf(QuietLogger):
         # those file descriptors across Zeroconf() construct/close cycles.
         self.loop.close()
 
-    def close(self) -> None:
-        """Shut down the sockets and engine for good; safe to call repeatedly."""
-        assert self.loop is not None
-        if self.loop.is_running():
-            if self.loop == get_running_loop():
-                log.warning(
-                    "unregister_all_services skipped as it does blocking i/o; use AsyncZeroconf with asyncio"
-                )
-            else:
-                self.unregister_all_services()
-        self._close()
-        self.engine.close()
-        self._shutdown_threads()
+    def _start_thread(self) -> None:
+        """Start a thread with a running event loop."""
+        loop_thread_ready = threading.Event()
 
-    async def _async_close(self) -> None:
-        """Shut down for AsyncZeroconf; callers unregister services first."""
-        self._close()
-        await self.engine._async_close()  # pylint: disable=protected-access
-        self._shutdown_threads()
+        def _run_loop() -> None:
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+            self.engine.setup(self.loop, loop_thread_ready)
+            self.loop.run_forever()
 
-    def __enter__(self) -> Zeroconf:
-        return self
-
-    def __exit__(  # pylint: disable=useless-return
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> bool | None:
-        self.close()
-        return None
+        self._loop_thread = threading.Thread(target=_run_loop, daemon=True)
+        self._loop_thread.start()
+        loop_thread_ready.wait()
