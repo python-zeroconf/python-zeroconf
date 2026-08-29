@@ -34,7 +34,7 @@ def test_integration_with_listener(quick_timing, disable_duplicate_packet_suppre
     registration_name = f"{name}.{type_}"
 
     zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -66,7 +66,7 @@ def test_integration_with_listener_v6_records(quick_timing, disable_duplicate_pa
     addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
 
     zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -102,7 +102,7 @@ def test_integration_with_listener_ipv6(quick_timing, disable_duplicate_packet_s
     addr = "2606:2800:220:1:248:1893:25c8:1946"  # example.com
 
     zeroconf_registrar = Zeroconf(ip_version=r.IPVersion.V6Only)
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -136,7 +136,7 @@ def test_integration_with_subtype_and_listener(quick_timing, disable_duplicate_p
     registration_name = f"{name}.{type_}"
 
     zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         discovery_type,
         registration_name,

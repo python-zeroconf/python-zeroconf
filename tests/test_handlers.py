@@ -50,7 +50,7 @@ class TestRegistrar(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             registration_name,
@@ -238,7 +238,7 @@ def test_ptr_optimization(quick_timing: None) -> None:
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -310,7 +310,7 @@ def test_any_query_for_ptr():
     type_ = "_anyptr._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
@@ -339,7 +339,7 @@ def test_aaaa_query():
     type_ = "_knownaaaservice._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
@@ -366,7 +366,7 @@ def test_aaaa_query_upper_case():
     type_ = "_knownaaaservice._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
@@ -393,7 +393,7 @@ def test_a_and_aaaa_record_fate_sharing():
     type_ = "_a-and-aaaa-service._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     ipv4_address = socket.inet_aton("10.7.4.2")
@@ -452,7 +452,7 @@ def test_unicast_response():
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -511,7 +511,7 @@ async def test_probe_answered_immediately():
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -562,7 +562,7 @@ async def test_probe_answered_immediately_with_uppercase_name():
     type_ = "_test-srvc-type._tcp.local."
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -614,7 +614,7 @@ def test_qu_response(quick_timing: None) -> None:
     name = "xxxyyy"
     registration_name = f"{name}.{type_}"
     registration_name2 = f"{name}.{other_type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -736,7 +736,7 @@ def test_known_answer_supression():
     type_ = "_knownanswersv8._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
@@ -880,7 +880,7 @@ def test_no_nsec_answer_for_service_without_addresses() -> None:
     type_ = "_noaddrnsec._tcp.local."
     registration_name = f"noaddr.{type_}"
     server_name = "noaddr-host.local."
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/~paulsm/"}, server_name)
+    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/healthz/"}, server_name)
     zc.registry.async_add(info)
     _clear_cache(zc)
 
@@ -910,7 +910,7 @@ def test_multi_packet_known_answer_supression():
     registration2_name = f"{name2}.{type_}"
     registration3_name = f"{name3}.{type_}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     server_name2 = "ash-3.local."
     server_name3 = "ash-4.local."
@@ -980,7 +980,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     type_ = "_otherknown._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
@@ -997,7 +997,7 @@ def test_known_answer_supression_service_type_enumeration_query():
     type_2 = "_otherknown2._tcp.local."
     name = "knownname"
     registration_name2 = f"{name}.{type_2}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name2 = "ash-3.local."
     info2 = ServiceInfo(
         type_2,
@@ -1067,7 +1067,7 @@ def test_upper_case_enumeration_query():
     type_ = "_otherknown._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
@@ -1084,7 +1084,7 @@ def test_upper_case_enumeration_query():
     type_2 = "_otherknown2._tcp.local."
     name = "knownname"
     registration_name2 = f"{name}.{type_2}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name2 = "ash-3.local."
     info2 = ServiceInfo(
         type_2,
@@ -1141,7 +1141,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     type_ = "_addtest1._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     info = ServiceInfo(
         type_,
@@ -1158,7 +1158,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     type_2 = "_addtest2._tcp.local."
     name = "knownname"
     registration_name2 = f"{name}.{type_2}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name2 = "ash-3.local."
     info2 = ServiceInfo(
         type_2,
@@ -1307,7 +1307,7 @@ async def test_cache_flush_bit():
     type_ = "_cacheflush._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "server-uu1.local."
     info = ServiceInfo(
         type_,
@@ -1422,7 +1422,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     type_ = "_cacheflush._tcp.local."
     name = "knownname"
     registration_name = f"{name}.{type_}"
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     server_name = "server-uu1.local."
     info = ServiceInfo(
         type_,
@@ -1654,7 +1654,7 @@ async def test_response_aggregation_timings(run_isolated: None) -> None:
     registration_name2 = f"{name}.{type_2}"
     registration_name3 = f"{name}.{type_3}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -1791,7 +1791,7 @@ async def test_response_aggregation_timings_multiple(
     name = "xxxyyy"
     registration_name2 = f"{name}.{type_2}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info2 = ServiceInfo(
         type_2,
         registration_name2,
@@ -1886,7 +1886,7 @@ async def test_response_aggregation_random_delay():
     registration_name4 = f"{name}.{type_4}"
     registration_name5 = f"{name}.{type_5}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,
@@ -1984,7 +1984,7 @@ async def test_future_answers_are_removed_on_send():
     registration_name = f"{name}.{type_}"
     registration_name2 = f"{name}.{type_2}"
 
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info = ServiceInfo(
         type_,
         registration_name,

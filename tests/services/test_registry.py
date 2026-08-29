@@ -15,7 +15,7 @@ class TestServiceRegistry(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             registration_name,
@@ -40,7 +40,7 @@ class TestServiceRegistry(unittest.TestCase):
         registration_name = f"{name}.{type_}"
         registration_name2 = f"{name2}.{type_}"
 
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             registration_name,
@@ -82,7 +82,7 @@ class TestServiceRegistry(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             registration_name,
@@ -105,7 +105,7 @@ class TestServiceRegistry(unittest.TestCase):
         name = "xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             registration_name,
@@ -131,7 +131,7 @@ class TestServiceRegistry(unittest.TestCase):
         name = "Xxxyyy"
         registration_name = f"{name}.{type_}"
 
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             registration_name,
@@ -155,7 +155,7 @@ class TestServiceRegistry(unittest.TestCase):
     def test_empty_buckets_are_removed_when_last_entry_is_removed(self):
         type_ = "_test-srvc-type._tcp.local."
         registration_name = f"xxxyyy.{type_}"
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             registration_name,
@@ -178,7 +178,7 @@ class TestServiceRegistry(unittest.TestCase):
     def test_bulk_remove_preserves_order_of_survivors(self):
         type_ = "_test-srvc-type._tcp.local."
         server = "shared.local."
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         infos = [
             ServiceInfo(
                 type_,
@@ -209,7 +209,7 @@ class TestServiceRegistry(unittest.TestCase):
         """Re-adding after the bucket was deleted must rebuild it cleanly."""
         type_ = "_test-srvc-type._tcp.local."
         server = "spare-rig.local."
-        desc = {"path": "/~paulsm/"}
+        desc = {"path": "/healthz/"}
         info = ServiceInfo(
             type_,
             f"only.{type_}",
@@ -239,7 +239,7 @@ class TestServiceRegistry(unittest.TestCase):
             80,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             server,
             addresses=[socket.inet_aton("10.7.4.2")],
         )
@@ -249,7 +249,7 @@ class TestServiceRegistry(unittest.TestCase):
             81,
             0,
             0,
-            {"path": "/~paulsm/"},
+            {"path": "/healthz/"},
             server,
             addresses=[socket.inet_aton("10.7.4.3")],
         )

@@ -92,7 +92,7 @@ class ListenerTest(unittest.TestCase):
         }
 
         zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
-        desc: dict[str, Any] = {"path": "/~paulsm/"}
+        desc: dict[str, Any] = {"path": "/healthz/"}
         desc.update(properties)
         addresses = [socket.inet_aton("10.7.4.2")]
         if has_working_ipv6() and not os.environ.get("SKIP_IPV6"):

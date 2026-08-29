@@ -36,7 +36,7 @@ def test_service_type_name_overlong_full_name():
 )
 def test_service_type_name_non_strict_compliant_names(instance_name, service_type):
     """Test service_type_name for valid names, but not strict-compliant."""
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     service_name = f"{instance_name}.{service_type}"
     service_server = "ash-1.local."
     service_address = socket.inet_aton("10.7.4.2")

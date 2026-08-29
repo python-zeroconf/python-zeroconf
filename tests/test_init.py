@@ -110,7 +110,7 @@ def test_large_packet_exception_log_handling():
 
 
 def verify_name_change(zc, type_, name, number_hosts):
-    desc = {"path": "/~paulsm/"}
+    desc = {"path": "/healthz/"}
     info_service = ServiceInfo(
         type_,
         f"{name}.{type_}",

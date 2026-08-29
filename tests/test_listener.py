@@ -52,7 +52,7 @@ def test_guard_against_oversized_packets():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 500,
-                b"path=/~paulsm/",
+                b"path=/healthz/",
             ),
             0,
         )
@@ -76,7 +76,7 @@ def test_guard_against_oversized_packets():
         const._TYPE_TXT,
         const._CLASS_IN | const._CLASS_UNIQUE,
         500,
-        b"path=/~paulsm/",
+        b"path=/healthz/",
     )
 
     generated.add_answer_at_time(
@@ -101,7 +101,7 @@ def test_guard_against_oversized_packets():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 500,
-                b"path=/~paulsm/",
+                b"path=/healthz/",
             )
         )
         is None
@@ -117,7 +117,7 @@ def test_guard_against_oversized_packets():
                 const._TYPE_TXT,
                 const._CLASS_IN | const._CLASS_UNIQUE,
                 500,
-                b"path=/~paulsm/",
+                b"path=/healthz/",
             )
         )
         is None
