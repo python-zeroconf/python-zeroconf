@@ -30,6 +30,22 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
+def test_display_compat_shims():
+    """The legacy display helpers stay callable and route through the new formatter."""
+    record = r.DNSPointer(
+        "_http._tcp.local.", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "demo._http._tcp.local."
+    )
+    assert r.DNSEntry.get_type(const._TYPE_PTR) == "ptr"
+    assert r.DNSEntry.get_type(4242) == "unknown-type-4242"
+    assert r.DNSEntry.get_class_(const._CLASS_IN) == "in"
+    assert r.DNSEntry.get_class_(4242) == "unknown-class-4242"
+    assert record.entry_to_string("hdr", None).startswith("<hdr ")
+    assert "data=extra" in record.entry_to_string("hdr", "extra")
+    assert "data=payload" in record.to_string("payload")
+    assert record.type_label == "ptr"
+    assert record.class_label == "in"
+
+
 class TestDunder(unittest.TestCase):
     def test_dns_text_repr(self):
         # There was an issue on Python 3 that prevented DNSText's repr
