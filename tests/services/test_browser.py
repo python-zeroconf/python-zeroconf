@@ -54,11 +54,10 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
-def test_service_browser_cancel_multiple_times():
+def test_service_browser_cancel_multiple_times(zc: Zeroconf) -> None:
     """Test we can cancel a ServiceBrowser multiple times before close."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
 
@@ -73,14 +72,11 @@ def test_service_browser_cancel_multiple_times():
     browser.cancel()
     browser.cancel()
 
-    zc.close()
 
-
-def test_service_browser_cancel_context_manager():
+def test_service_browser_cancel_context_manager(zc: Zeroconf) -> None:
     """Test we can cancel a ServiceBrowser with it being used as a context manager."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
 
@@ -101,8 +97,6 @@ def test_service_browser_cancel_context_manager():
     asyncio.run_coroutine_threadsafe(asyncio.sleep(0), zc.loop).result()
 
     assert cast(bool, browser.done) is True
-
-    zc.close()
 
 
 def test_service_browser_cancel_multiple_times_after_close():
@@ -834,12 +828,10 @@ async def test_asking_qu_questions():
             await aiozc.async_close()
 
 
-def test_legacy_record_update_listener(quick_timing: None) -> None:
+def test_legacy_record_update_listener(zc: Zeroconf, quick_timing: None) -> None:
     """Test a RecordUpdateListener that does not implement update_records."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
-
     with pytest.raises(RuntimeError):
         r.RecordUpdateListener().update_record(
             zc,
@@ -892,14 +884,11 @@ def test_legacy_record_update_listener(quick_timing: None) -> None:
     # Removing a second time should not throw
     zc.remove_listener(listener)
 
-    zc.close()
 
-
-def test_service_browser_is_aware_of_port_changes():
+def test_service_browser_is_aware_of_port_changes(zc: Zeroconf) -> None:
     """Test that the ServiceBrowser is aware of port changes."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
     registration_name = f"xxxyyy.{type_}"
@@ -955,14 +944,11 @@ def test_service_browser_is_aware_of_port_changes():
     assert service_info.port == 400
     browser.cancel()
 
-    zc.close()
 
-
-def test_service_browser_listeners_update_service():
+def test_service_browser_listeners_update_service(zc: Zeroconf) -> None:
     """Test that the ServiceBrowser ServiceListener that implements update_service."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
     registration_name = f"xxxyyy.{type_}"
@@ -1017,14 +1003,11 @@ def test_service_browser_listeners_update_service():
     ]
     browser.cancel()
 
-    zc.close()
 
-
-def test_service_browser_listeners_no_update_service():
+def test_service_browser_listeners_no_update_service(zc: Zeroconf) -> None:
     """A listener that ignores update events records only add/remove callbacks."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_hap._tcp.local."
     registration_name = f"xxxyyy.{type_}"
@@ -1077,12 +1060,9 @@ def test_service_browser_listeners_no_update_service():
     ]
     browser.cancel()
 
-    zc.close()
 
-
-def test_service_browser_nsec_record_does_not_trigger_update():
+def test_service_browser_nsec_record_does_not_trigger_update(zc: Zeroconf) -> None:
     """NSEC records assert non-existence and must not fire ServiceStateChange.Updated."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     type_ = "_hap._tcp.local."
     registration_name = f"xxxyyy.{type_}"
     callbacks: list[tuple[str, str, str]] = []
@@ -1144,24 +1124,21 @@ def test_service_browser_nsec_record_does_not_trigger_update():
         assert callbacks == [("add", type_, registration_name)]
     finally:
         browser.cancel()
-        zc.close()
 
 
-def test_service_browser_uses_non_strict_names():
+def test_service_browser_uses_non_strict_names(zc: Zeroconf) -> None:
     """Verify we can look for technically invalid names as we cannot change what others do."""
 
     # dummy service callback
     def on_service_state_change(zeroconf, service_type, state_change, name):
         pass
 
-    zc = r.Zeroconf(interfaces=["127.0.0.1"])
     browser = ServiceBrowser(zc, ["_tivo-videostream._tcp.local."], [on_service_state_change])
     browser.cancel()
 
     # Still fail on completely invalid
     with pytest.raises(r.BadTypeInNameException):
         browser = ServiceBrowser(zc, ["tivo-videostream._tcp.local."], [on_service_state_change])
-    zc.close()
 
 
 def test_group_ptr_queries_with_known_answers():
@@ -1408,11 +1385,10 @@ async def test_query_scheduler_rescue_records():
     await aiozc.async_close()
 
 
-def test_service_browser_matching():
+def test_service_browser_matching(zc: Zeroconf) -> None:
     """Test that the ServiceBrowser matching does not match partial names."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     # start a browser
     type_ = "_http._tcp.local."
     registration_name = f"xxxyyy.{type_}"
@@ -1494,8 +1470,6 @@ def test_service_browser_matching():
         ("update", type_, registration_name),
     ]
     browser.cancel()
-
-    zc.close()
 
 
 @patch.object(_engine, "_CACHE_CLEANUP_INTERVAL", 0.01)
