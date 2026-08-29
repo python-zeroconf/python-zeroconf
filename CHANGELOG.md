@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.151.2 (2026-08-29)
+
+### Bug Fixes
+
+- Restore sdist contents and listener typing after the reverts
+  ([#1839](https://github.com/python-zeroconf/python-zeroconf/pull/1839),
+  [`6b2a040`](https://github.com/python-zeroconf/python-zeroconf/commit/6b2a04080df823b4ef9f4bcb07e058df7af3c242))
+
+
 ## v0.151.1 (2026-08-28)
 
 ### Bug Fixes
