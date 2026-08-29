@@ -66,8 +66,6 @@ def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> No
 
 
 class DNSCache:
-    """A cache of DNS entries."""
-
     def __init__(self) -> None:
         self.cache: _DNSRecordCacheType = {}
         self._expire_heap: list[tuple[float, DNSRecord]] = []

@@ -66,7 +66,6 @@ class ZeroconfIPv4Address(IPv4Address):
 
     @property
     def is_loopback(self) -> bool:
-        """Return True if this is a loop back."""
         return self._is_loopback
 
 
@@ -103,7 +102,6 @@ class ZeroconfIPv6Address(IPv6Address):
 
     @property
     def is_loopback(self) -> bool:
-        """Return True if this is a loop back."""
         return self._is_loopback
 
 

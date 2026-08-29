@@ -296,8 +296,6 @@ class DNSAddress(DNSRecord):
 
 
 class DNSHinfo(DNSRecord):
-    """A DNS host information record"""
-
     __slots__ = ("_hash", "cpu", "os")
 
     def __init__(
