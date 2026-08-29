@@ -636,8 +636,10 @@ def test_qu_response(quick_timing: None) -> None:
         "ash-other.local.",
         addresses=[socket.inet_aton("10.0.4.2")],
     )
-    # register
-    zc.register_service(info)
+    # Register and inject the announcement directly so the cache state is
+    # deterministic; announcing on loopback would race the phases below.
+    zc.registry.async_add(info)
+    _inject_response(zc, r.DNSIncoming(zc.generate_service_broadcast(info, None).packets()[0]))
 
     def _validate_complete_response(answers):
         has_srv = has_txt = has_a = has_aaaa = has_nsec = False
