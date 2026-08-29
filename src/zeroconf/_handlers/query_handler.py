@@ -318,6 +318,7 @@ class QueryHandler:
     def async_response(  # pylint: disable=unused-argument
         self, msgs: list[_DNSIncoming], ucast_source: bool
     ) -> QuestionAnswers | None:
+        """Build the answers for a batch of incoming queries, or None when there are none."""
         strategies: list[_AnswerStrategy] = []
         for msg in msgs:
             for question in msg._questions:
