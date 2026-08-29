@@ -135,12 +135,8 @@ class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
 
 
 class AsyncZeroconf:
-
-
-    The async version is currently a wrapper around Zeroconf which
-    is now also async. It is expected that an asyncio event loop
-    is already running before creating the AsyncZeroconf object.
-    """
+    """Awaitable facade over Zeroconf for registration, browsing, and
+    resolution; expects a running asyncio event loop."""
 
     def __init__(
         self,
@@ -150,7 +146,7 @@ class AsyncZeroconf:
         apple_p2p: bool = False,
         zc: Zeroconf | None = None,
     ) -> None:
-        multicast communications, and listening.
+        """Create or wrap a Zeroconf instance for use from asyncio.
 
         :param interfaces: :class:`InterfaceChoice` or a list of IP addresses
             (IPv4 and IPv6) and interface indexes (IPv6 only).
@@ -238,6 +234,7 @@ class AsyncZeroconf:
         await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
 
     async def async_close(self) -> None:
+        """Unregister everything and shut the wrapped Zeroconf down."""
         if not self.zeroconf.done:
             with contextlib.suppress(NotRunningException):
                 await self.zeroconf.async_wait_for_start(timeout=1.0)

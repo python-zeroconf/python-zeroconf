@@ -65,10 +65,11 @@ cdef class DNSOutgoing:
     cdef cython.bint _write_question(self, DNSQuestion question)
 
     @cython.locals(
-        d=cython.bytes,
-        data_view=cython.list,
-        index=cython.uint,
-        length=cython.uint
+        chunk=cython.bytes,
+        data_length_before=cython.uint,
+        size_before=cython.uint,
+        length_index=cython.uint,
+        rdata_length=cython.uint,
     )
     cdef cython.bint _write_record(self, DNSRecord record, double now)
 
@@ -110,7 +111,7 @@ cdef class DNSOutgoing:
 
     cpdef void write_character_string(self, cython.bytes value)
 
-    @cython.locals(utfstr=bytes)
+    @cython.locals(encoded=bytes, byte_length=cython.uint)
     cdef void _write_utf(self, cython.str value)
 
     @cython.locals(
@@ -132,7 +133,6 @@ cdef class DNSOutgoing:
 
     cpdef void add_answer(self, DNSIncoming inp, DNSRecord record)
 
-    @cython.locals(now_double=double)
     cpdef void add_answer_at_time(self, DNSRecord record, double now)
 
     cpdef void add_authorative_answer(self, DNSPointer record)

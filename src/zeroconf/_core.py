@@ -150,7 +150,8 @@ def async_send_with_transport(
 
 
 class Zeroconf(QuietLogger):
-
+    """High level mDNS service discovery: register services, browse for
+    them, and resolve their details on the local network."""
 
     def __init__(
         self,
@@ -160,7 +161,7 @@ class Zeroconf(QuietLogger):
         apple_p2p: bool = False,
         use_asyncio: bool | None = None,
     ) -> None:
-        multicast communications, listening and reaping threads.
+        """Open the multicast sockets and start serving on the chosen interfaces.
 
         :param interfaces: :class:`InterfaceChoice` or a list of IP addresses
             (IPv4 and IPv6) and interface indexes (IPv6 only).
@@ -317,17 +318,18 @@ class Zeroconf(QuietLogger):
         return None
 
     def add_service_listener(self, type_: str, listener: ServiceListener) -> None:
-        will then have its add_service and remove_service methods called when
-        services of that type become available and unavailable."""
+        """Browse for a type and deliver add, remove, and update callbacks to the listener."""
         self.remove_service_listener(listener)
         self.browsers[listener] = ServiceBrowser(self, type_, listener)
 
     def remove_service_listener(self, listener: ServiceListener) -> None:
+        """Stop the browser behind the given listener."""
         if listener in self.browsers:
             self.browsers[listener].cancel()
             del self.browsers[listener]
 
     def remove_all_service_listeners(self) -> None:
+        """Stop the browsers behind every registered listener."""
         for listener in list(self.browsers):
             self.remove_service_listener(listener)
 
@@ -647,6 +649,7 @@ class Zeroconf(QuietLogger):
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> None:
+        """Probe the network for name uniqueness, renaming first when allowed."""
         instance_name = instance_name_from_service_info(info, strict=strict)
         if cooperating_responders:
             return
@@ -685,11 +688,7 @@ class Zeroconf(QuietLogger):
         listener: RecordUpdateListener,
         question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
-        its update_record method called when information is available to
-        answer the question(s).
-
-        This function is threadsafe
-        """
+        """Subscribe a record update listener, optionally scoped to questions; threadsafe."""
         assert self.loop is not None
         self.loop.call_soon_threadsafe(self.record_manager.async_add_listener, listener, question)
 
@@ -706,11 +705,7 @@ class Zeroconf(QuietLogger):
         listener: RecordUpdateListener,
         question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
-        its update_record method called when information is available to
-        answer the question(s).
-
-        This function is not threadsafe and must be called in the eventloop.
-        """
+        """Subscribe a record update listener, optionally scoped to questions; event loop only."""
         self.record_manager.async_add_listener(listener, question)
 
     def async_remove_listener(self, listener: RecordUpdateListener) -> None:
@@ -797,10 +792,7 @@ class Zeroconf(QuietLogger):
         self.loop.close()
 
     def close(self) -> None:
-        servicing further queries.
-
-        This method is idempotent and irreversible.
-        """
+        """Shut down the sockets and engine for good; safe to call repeatedly."""
         assert self.loop is not None
         if self.loop.is_running():
             if self.loop == get_running_loop():
@@ -814,15 +806,7 @@ class Zeroconf(QuietLogger):
         self._shutdown_threads()
 
     async def _async_close(self) -> None:
-        servicing further queries.
-
-        This method is idempotent and irreversible.
-
-        This call only intended to be used by AsyncZeroconf
-
-        Callers are responsible for unregistering all services
-        before calling this function
-        """
+        """Shut down for AsyncZeroconf; callers unregister services first."""
         self._close()
         await self.engine._async_close()  # pylint: disable=protected-access
         self._shutdown_threads()

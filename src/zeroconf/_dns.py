@@ -177,6 +177,9 @@ class DNSRecord(DNSEntry):
         self.ttl = ttl
         self.created = created
 
+    def __eq__(self, other: Any) -> bool:
+        raise AbstractMethodException(f"{type(self).__name__} is missing __eq__")
+
     def __lt__(self, other: DNSRecord) -> bool:
         return self.ttl < other.ttl
 
@@ -186,6 +189,16 @@ class DNSRecord(DNSEntry):
             if self._suppressed_by_answer(record):
                 return True
         return False
+
+    def _suppressed_by_answer(self, answer: DNSRecord) -> bool:
+        """True when the answer matches this record with at least half its TTL left."""
+        return self == answer and self.ttl / 2 < answer.ttl
+
+    def get_expiration_time(self, percent: _int) -> float:
+        """Return the moment when the given percentage of the TTL has elapsed."""
+        # created is epoch milliseconds and ttl is seconds, so one percent
+        # of the ttl expressed in milliseconds is ttl * 10
+        return self.created + percent * self.ttl * 10
 
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: _float) -> int | float:
@@ -210,6 +223,9 @@ class DNSRecord(DNSEntry):
         # in place, but records currently don't have a copy method.
         self.created = created
         self.ttl = ttl
+
+    def write(self, out: DNSOutgoing) -> None:
+        raise AbstractMethodException(f"{type(self).__name__} is missing write")
 
     def to_string(self, other: bytes | str) -> str:
         arg = f"{self.ttl}/{int(self.get_remaining_ttl(current_time_millis()))},{cast(Any, other)}"

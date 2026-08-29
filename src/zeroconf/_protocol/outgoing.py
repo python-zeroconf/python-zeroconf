@@ -144,9 +144,22 @@ class DNSOutgoing:
             )
         )
 
+    def add_question(self, record: DNSQuestion) -> None:
+        self.questions.append(record)
+
     def add_answer(self, inp: DNSIncoming, record: DNSRecord) -> None:
         if not record.suppressed_by(inp):
             self.add_answer_at_time(record, 0.0)
+
+    def add_answer_at_time(self, record: DNSRecord | None, now: float_) -> None:
+        """Add an answer, dropping it when it is already expired at now."""
+        if record is None:
+            return
+        if now == 0 or not record.is_expired(now):
+            self.answers.append((record, now))
+
+    def add_authorative_answer(self, record: DNSPointer) -> None:
+        self.authorities.append(record)
 
     def add_additional_answer(self, record: DNSRecord) -> None:
         """Adds an additional answer
@@ -224,6 +237,14 @@ class DNSOutgoing:
             assert isinstance(value, bytes)
         self.data.append(value)
         self.size += len(value)
+
+    def _write_utf(self, value: str_) -> None:
+        encoded = value.encode("utf-8")
+        byte_length = len(encoded)
+        if byte_length > 64:
+            raise NamePartTooLongException(f"{byte_length} byte label exceeds the limit")
+        self._write_byte(byte_length)
+        self.write_string(encoded)
 
     def write_character_string(self, value: bytes) -> None:
         if TYPE_CHECKING:
@@ -303,6 +324,23 @@ class DNSOutgoing:
     def _write_ttl(self, record: DNSRecord_, now: float_) -> None:
         """Write out the record ttl."""
         self._write_int(record.ttl if now == 0 else record.get_remaining_ttl(now))
+
+    def _write_record(self, record: DNSRecord_, now: float_) -> bool:
+        """Write one record, or roll back and return False when it cannot fit."""
+        data_length_before = len(self.data)
+        size_before = self.size
+        self.write_name(record.name)
+        self.write_short(record.type)
+        self._write_record_class(record)
+        self._write_ttl(record, now)
+        length_index = len(self.data)
+        self.write_short(0)  # placeholder for the rdata length
+        record.write(self)
+        rdata_length = 0
+        for chunk in self.data[length_index + 1 :]:
+            rdata_length += len(chunk)
+        self._replace_short(length_index, rdata_length)
+        return self._check_data_limit_or_rollback(data_length_before, size_before)
 
     def _check_data_limit_or_rollback(self, start_data_length: int_, start_size: int_) -> bool:
         """Check data limit, if we go over, then rollback and return False."""

@@ -669,13 +669,7 @@ class _ServiceBrowserBase(RecordUpdateListener):
             self._pending_handlers[key] = state_change
 
     def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate_]) -> None:
-
-        Updates information required by browser in the Zeroconf cache.
-
-        Ensures that there is are no unnecessary duplicates in the list.
-
-        This method will be run in the event loop.
-        """
+        """Handle record updates for the browsed types inside the event loop."""
         for record_update in records:
             record = record_update.new
             old_record = record_update.old
@@ -763,9 +757,8 @@ class _ServiceBrowserBase(RecordUpdateListener):
 
 
 class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
-
-    The listener object will have its add_service() and
-    remove_service() methods called when this browser
+    """Threaded browser that fires ServiceListener callbacks as services
+    of the requested types appear, change, and disappear."""
 
     def __init__(
         self,
