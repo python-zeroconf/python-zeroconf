@@ -32,6 +32,8 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 from .. import (
     QuestionHistoryWithoutSuppression,
     _inject_response,
+    _restamp_cache,
+    _wait_for,
     _wait_for_start,
     has_working_ipv6,
     make_service_info,
@@ -1489,31 +1491,11 @@ def test_service_browser_expire_callbacks():
             ]
         ),
     )
-
-    def _restamp_cache(created: float) -> None:
-        # The expiration heap is only safe to touch from the loop thread.
-        done = Event()
-
-        def _restamp() -> None:
-            for cache_record in list(zc.cache.cache.values()):
-                for record in list(cache_record.values()):
-                    zc.cache._async_set_created_ttl(record, created, 1)
-            done.set()
-
-        assert zc.loop is not None
-        zc.loop.call_soon_threadsafe(_restamp)
-        assert done.wait(2)
-
-    def _wait_for_callbacks(count: int) -> None:
-        deadline = time.monotonic() + 2
-        while len(callbacks) < count and time.monotonic() < deadline:
-            time.sleep(0.01)
-
     # Force the ttl to be 1 second
-    _restamp_cache(current_time_millis())
+    _restamp_cache(zc, current_time_millis(), 1)
 
     # Wait for the add callback to fire from the original inject_response.
-    _wait_for_callbacks(1)
+    _wait_for(lambda: len(callbacks) >= 1)
 
     info.port = 400
     info._dns_service_cache = None  # we are mutating the record so clear the cache
@@ -1523,7 +1505,7 @@ def test_service_browser_expire_callbacks():
         mock_incoming_msg([info.dns_service()]),
     )
 
-    _wait_for_callbacks(2)
+    _wait_for(lambda: len(callbacks) >= 2)
 
     assert callbacks == [
         ("add", type_, registration_name),
@@ -1536,9 +1518,9 @@ def test_service_browser_expire_callbacks():
     # Going through `_async_set_created_ttl` updates the expiration
     # heap; mutating `record.created` directly would leave the heap
     # entry pointing at the original `when` so the reaper never wakes.
-    _restamp_cache(current_time_millis() - 2000)
+    _restamp_cache(zc, current_time_millis() - 2000, 1)
 
-    _wait_for_callbacks(3)
+    _wait_for(lambda: len(callbacks) >= 3)
 
     assert callbacks == [
         ("add", type_, registration_name),
