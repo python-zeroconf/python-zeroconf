@@ -29,6 +29,11 @@ _float = float
 _int = int
 
 
+# Longest TXT payload rendered inline by repr; larger payloads are
+# summarized as a byte count to keep debug logs readable.
+_TEXT_REPR_INLINE_LIMIT = 16
+
+
 def _type_label(type_: int) -> str:
     return _TYPES.get(type_, f"unknown-type-{type_}")
 
@@ -572,7 +577,7 @@ class DNSText(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        data = f"{len(self.text)} bytes" if len(self.text) > 16 else str(self.text)
+        data = f"{len(self.text)} bytes" if len(self.text) > _TEXT_REPR_INLINE_LIMIT else str(self.text)
         return self._repr_with(("data", data))
 
     def write(self, out: DNSOutgoing) -> None:
