@@ -59,7 +59,7 @@ _KNOWN_BLOCKING: frozenset[str] = frozenset(
         "tests/test_asyncio.py::test_async_service_registration_same_server_different_ports",
         "tests/test_asyncio.py::test_async_service_registration_same_server_same_ports",
         "tests/test_asyncio.py::test_async_tasks",
-        "tests/test_core.py::Framework::test_use_asyncio_false_forces_thread_when_loop_running",
+        "tests/test_core.py::test_use_asyncio_false_forces_thread_when_loop_running",
         "tests/utils/test_asyncio.py::test_run_coro_with_timeout",
     }
 )

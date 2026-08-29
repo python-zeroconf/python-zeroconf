@@ -39,7 +39,7 @@ def test_service_type_name_non_strict_compliant_names(instance_name, service_typ
     desc = {"path": "/~paulsm/"}
     service_name = f"{instance_name}.{service_type}"
     service_server = "ash-1.local."
-    service_address = socket.inet_aton("10.0.1.2")
+    service_address = socket.inet_aton("10.7.4.2")
     info = ServiceInfo(
         service_type,
         service_name,

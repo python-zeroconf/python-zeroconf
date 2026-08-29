@@ -24,7 +24,7 @@ def _make_infos(count: int) -> list[ServiceInfo]:
             0,
             {"path": "/"},
             _SERVER,
-            addresses=[socket.inet_aton("10.0.1.2")],
+            addresses=[socket.inet_aton("10.7.4.2")],
         )
         for i in range(count)
     ]
