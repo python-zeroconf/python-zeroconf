@@ -179,11 +179,6 @@ class AsyncZeroconf:
         await self.zeroconf.async_unregister_all_services()
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
-        """Unregister a service.
-
-        The service will be broadcast in a task. This task is returned
-        and therefore can be awaited if necessary.
-        """
         return await self.zeroconf.async_unregister_service(info)
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:

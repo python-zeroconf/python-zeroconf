@@ -403,13 +403,6 @@ class DNSOutgoing:
         )
 
     def packets(self) -> list[bytes]:
-        """Returns a list of bytestrings containing the packets' bytes
-
-        is done.  The packets are each restricted to _MAX_MSG_TYPICAL
-        or less in length, except for the case of a single answer which
-        will be written out to a single oversized packet no more than
-        _MAX_MSG_ABSOLUTE in length (and hence will be subject to IP
-        fragmentation potentially)."""
         packets_data = self.packets_data
 
         if self.state == STATE_FINISHED:

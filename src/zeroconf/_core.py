@@ -563,12 +563,6 @@ class Zeroconf(QuietLogger):
                 out.add_answer_at_time(record, 0)
 
     def unregister_service(self, info: ServiceInfo) -> None:
-        """Unregister a service.
-
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `async_unregister_service` cannot be completed.
-        """
         assert self.loop is not None
         run_coro_with_timeout(
             self.async_unregister_service(info),
@@ -577,7 +571,6 @@ class Zeroconf(QuietLogger):
         )
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
-        """Unregister a service."""
         info.set_server_if_missing()
         self.registry.async_remove(info)
         # If another server uses the same addresses, we do not want to send
@@ -680,10 +673,6 @@ class Zeroconf(QuietLogger):
         self.loop.call_soon_threadsafe(self.record_manager.async_add_listener, listener, question)
 
     def remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Removes a listener.
-
-        This function is threadsafe
-        """
         assert self.loop is not None
         self.loop.call_soon_threadsafe(self.record_manager.async_remove_listener, listener)
 
@@ -696,10 +685,6 @@ class Zeroconf(QuietLogger):
         self.record_manager.async_add_listener(listener, question)
 
     def async_remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Removes a listener.
-
-        This function is not threadsafe and must be called in the eventloop.
-        """
         self.record_manager.async_remove_listener(listener)
 
     def send(
