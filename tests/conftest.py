@@ -105,12 +105,15 @@ def verify_threads_ended():
 
 
 @pytest.fixture
-def zc() -> Generator[Zeroconf]:
+def zc(verify_threads_ended: None) -> Generator[Zeroconf]:
     """Yield a loopback `Zeroconf` and close it on teardown.
 
     Replaces the inline `zc = Zeroconf(interfaces=["127.0.0.1"])` +
     explicit `zc.close()` pattern duplicated across the suite. Calling
     `zc.close()` inside a test is still safe — `close()` is idempotent.
+
+    Depends on `verify_threads_ended` so the instance is torn down before
+    the thread check runs.
     """
     zc = Zeroconf(interfaces=["127.0.0.1"])
     try:
@@ -120,7 +123,7 @@ def zc() -> Generator[Zeroconf]:
 
 
 @pytest_asyncio.fixture
-async def aiozc() -> AsyncGenerator[AsyncZeroconf]:
+async def aiozc(verify_threads_ended: None) -> AsyncGenerator[AsyncZeroconf]:
     """Yield a loopback `AsyncZeroconf` and close it on teardown.
 
     Replaces the inline `aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])`

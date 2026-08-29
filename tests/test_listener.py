@@ -126,11 +126,10 @@ def test_guard_against_oversized_packets():
     zc.close()
 
 
-def test_guard_against_duplicate_packets():
+def test_guard_against_duplicate_packets(zc: Zeroconf) -> None:
     """Ensure we do not process duplicate packets.
     These packets can quickly overwhelm the system.
     """
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     zc.registry.async_add(
         ServiceInfo(
             "_http._tcp.local.",
@@ -275,12 +274,9 @@ def test_guard_against_duplicate_packets():
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
 
-    zc.close()
 
-
-def test_guard_against_alternating_duplicate_packets() -> None:
+def test_guard_against_alternating_duplicate_packets(zc: Zeroconf) -> None:
     """Alternating two distinct payloads must not bypass duplicate suppression."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     zc.registry.async_add(
         ServiceInfo(
             "_http._tcp.local.",
@@ -331,12 +327,9 @@ def test_guard_against_alternating_duplicate_packets() -> None:
             listener._process_datagram_at_time(False, len(packet_b), now, packet_b, addrs)
         _handle_query_or_defer.assert_not_called()
 
-    zc.close()
 
-
-def test_recent_packets_window_is_bounded() -> None:
+def test_recent_packets_window_is_bounded(zc: Zeroconf) -> None:
     """Distinct payloads beyond the recency window evict oldest entries."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     zc.registry.async_add(
         ServiceInfo(
             "_http._tcp.local.",
@@ -391,17 +384,14 @@ def test_recent_packets_window_is_bounded() -> None:
             listener._process_datagram_at_time(False, len(packet), now, packet, addrs)
         assert _handle_query_or_defer.call_count == len(evicted)
 
-    zc.close()
 
-
-def test_recent_packets_miss_with_small_now_is_not_suppressed() -> None:
+def test_recent_packets_miss_with_small_now_is_not_suppressed(zc: Zeroconf) -> None:
     """A cache miss must not trigger suppression when `now` is below the suppression interval."""
     # time.monotonic() can start near zero on freshly booted systems, so
     # `now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL` is negative for the
     # first second of process lifetime. A 0.0 default on the recency
     # dict would let any negative `now - INTERVAL` satisfy the compare
     # and suppress legitimate traffic.
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     zc.registry.async_add(
         ServiceInfo(
             "_http._tcp.local.",
@@ -435,5 +425,3 @@ def test_recent_packets_miss_with_small_now_is_not_suppressed() -> None:
     with patch.object(listener, "handle_query_or_defer") as _handle_query_or_defer:
         listener._process_datagram_at_time(False, len(packet), 0.0, packet, addrs)
         _handle_query_or_defer.assert_called_once()
-
-    zc.close()

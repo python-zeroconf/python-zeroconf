@@ -181,13 +181,9 @@ def test_use_asyncio_true_requires_running_loop():
         r.Zeroconf(interfaces=["127.0.0.1"], use_asyncio=True)
 
 
-def test_use_asyncio_default_starts_thread_without_loop():
+def test_use_asyncio_default_starts_thread_without_loop(zc: Zeroconf) -> None:
     """use_asyncio=None (default) keeps the historic auto-detect behavior."""
-    zc = r.Zeroconf(interfaces=["127.0.0.1"])
-    try:
-        assert zc._loop_thread is not None
-    finally:
-        zc.close()
+    assert zc._loop_thread is not None
 
 
 def test_async_updates_from_response():
@@ -396,9 +392,8 @@ def test_invalid_packets_ignored_and_does_not_cause_loop_exception():
     assert zc.cache.get(entry) is not None
 
 
-def test_goodbye_all_services():
+def test_goodbye_all_services(zc: Zeroconf) -> None:
     """Verify generating the goodbye query does not change with time."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     out = zc.generate_unregister_all_services()
     assert out is None
     type_ = "_http._tcp.local."
@@ -429,15 +424,11 @@ def test_goodbye_all_services():
     assert out3 is None
     assert zc.registry.async_get_service_infos() == []
 
-    zc.close()
 
-
-def test_register_service_with_custom_ttl(quick_timing: None) -> None:
+def test_register_service_with_custom_ttl(zc: Zeroconf, quick_timing: None) -> None:
     """Test a registering a service with a custom ttl."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
-
     # start a browser
     type_ = "_homeassistant._tcp.local."
     name = "MyTestHome"
@@ -456,15 +447,12 @@ def test_register_service_with_custom_ttl(quick_timing: None) -> None:
     record = zc.cache.get(info_service.dns_pointer())
     assert record is not None
     assert record.ttl == 3000
-    zc.close()
 
 
-def test_logging_packets(caplog: pytest.LogCaptureFixture, quick_timing: None) -> None:
+def test_logging_packets(zc: Zeroconf, caplog: pytest.LogCaptureFixture, quick_timing: None) -> None:
     """Test packets are only logged with debug logging."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
-
     # start a browser
     type_ = "_logging._tcp.local."
     name = "TLD"
@@ -492,23 +480,18 @@ def test_logging_packets(caplog: pytest.LogCaptureFixture, quick_timing: None) -
     assert "Sending to" not in caplog.text
     logging.getLogger("zeroconf").setLevel(logging.DEBUG)
 
-    zc.close()
 
-
-def test_get_service_info_failure_path():
+def test_get_service_info_failure_path(zc: Zeroconf) -> None:
     """Verify get_service_info return None when the underlying call returns False."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     assert zc.get_service_info("_neverused._tcp.local.", "xneverused._neverused._tcp.local.", 10) is None
-    zc.close()
 
 
 @pytest.mark.skipif(
     sys.platform == "win32",
     reason="multicast loopback on the 127.0.0.1-only socket is unreliable on GH Actions Windows runners",
 )
-def test_sending_unicast():
+def test_sending_unicast(zc: Zeroconf) -> None:
     """Test sending unicast response."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     entry = r.DNSText(
         "didnotcrashincoming._crash._tcp.local.",
@@ -534,11 +517,8 @@ def test_sending_unicast():
 
     assert zc.cache.get(entry) is not None
 
-    zc.close()
 
-
-def test_tc_bit_defers():
-    zc = Zeroconf(interfaces=["127.0.0.1"])
+def test_tc_bit_defers(zc: Zeroconf) -> None:
     _wait_for_start(zc)
     type_ = "_tcbitdefer._tcp.local."
     name = "knownname"
@@ -634,11 +614,9 @@ def test_tc_bit_defers():
 
     # unregister
     zc.unregister_service(info)
-    zc.close()
 
 
-def test_tc_bit_defers_last_response_missing():
-    zc = Zeroconf(interfaces=["127.0.0.1"])
+def test_tc_bit_defers_last_response_missing(zc: Zeroconf) -> None:
     _wait_for_start(zc)
     type_ = "_knowndefer._tcp.local."
     name = "knownname"
@@ -751,12 +729,10 @@ def test_tc_bit_defers_last_response_missing():
 
     # unregister
     zc.registry.async_remove(info)
-    zc.close()
 
 
-def test_tc_bit_defer_window_is_bounded():
+def test_tc_bit_defer_window_is_bounded(zc: Zeroconf) -> None:
     """TC-deferral assembly window must not slide past first_arrival + max delay."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     _wait_for_start(zc)
     type_ = "_boundeddefer._tcp.local."
     registration_name = f"knownname.{type_}"
@@ -797,7 +773,6 @@ def test_tc_bit_defer_window_is_bounded():
             assert protocol._timers[source_ip].when() <= first_when
 
     zc.registry.async_remove(info)
-    zc.close()
 
 
 def _make_distinct_tc_packets(count: int, name_prefix: str = "q") -> list[bytes]:
@@ -819,9 +794,8 @@ def _synthetic_source_ip(i: int) -> str:
     return f"192.0.2.{i - 512}"
 
 
-def test_tc_bit_per_addr_queue_is_bounded(quick_timing: None) -> None:
+def test_tc_bit_per_addr_queue_is_bounded(zc: Zeroconf, quick_timing: None) -> None:
     """Per-addr deferred queue must not grow past ``_MAX_DEFERRED_PER_ADDR``."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     _wait_for_start(zc)
     protocol = zc.engine.protocols[0]
     source_ip = "203.0.113.21"
@@ -841,12 +815,9 @@ def test_tc_bit_per_addr_queue_is_bounded(quick_timing: None) -> None:
         retained = [incoming.data for incoming in protocol._deferred[source_ip]]
         assert retained == packets[: const._MAX_DEFERRED_PER_ADDR]
 
-    zc.close()
 
-
-def test_tc_bit_total_addrs_is_bounded(quick_timing: None) -> None:
+def test_tc_bit_total_addrs_is_bounded(zc: Zeroconf, quick_timing: None) -> None:
     """Distinct addrs with deferred state must not exceed ``_MAX_DEFERRED_ADDRS``."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     _wait_for_start(zc)
     protocol = zc.engine.protocols[0]
 
@@ -865,12 +836,9 @@ def test_tc_bit_total_addrs_is_bounded(quick_timing: None) -> None:
         assert len(protocol._deferred) == const._MAX_DEFERRED_ADDRS
         assert len(protocol._timers) == const._MAX_DEFERRED_ADDRS
 
-    zc.close()
 
-
-def test_tc_bit_eviction_drops_oldest_addr(quick_timing: None) -> None:
+def test_tc_bit_eviction_drops_oldest_addr(zc: Zeroconf, quick_timing: None) -> None:
     """Adding a new addr at capacity drops the oldest insertion (FIFO)."""
-    zc = Zeroconf(interfaces=["127.0.0.1"])
     _wait_for_start(zc)
     protocol = zc.engine.protocols[0]
 
@@ -891,8 +859,6 @@ def test_tc_bit_eviction_drops_oldest_addr(quick_timing: None) -> None:
         assert oldest not in protocol._timers
         assert new_addr in protocol._deferred
         assert len(protocol._deferred) == const._MAX_DEFERRED_ADDRS
-
-    zc.close()
 
 
 @pytest.mark.asyncio

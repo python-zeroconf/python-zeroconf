@@ -29,12 +29,10 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
-def test_legacy_record_update_listener(quick_timing: None) -> None:
+def test_legacy_record_update_listener(zc: Zeroconf, quick_timing: None) -> None:
     """Test a RecordUpdateListener that does not implement update_records."""
 
     # instantiate a zeroconf instance
-    zc = Zeroconf(interfaces=["127.0.0.1"])
-
     with pytest.raises(RuntimeError):
         r.RecordUpdateListener().update_record(
             zc,
@@ -86,8 +84,6 @@ def test_legacy_record_update_listener(quick_timing: None) -> None:
     zc.remove_listener(listener)
     # Removing a second time should not throw
     zc.remove_listener(listener)
-
-    zc.close()
 
 
 def test_record_update_compat():
