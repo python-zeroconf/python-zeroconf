@@ -56,12 +56,10 @@ class ZeroconfIPv4Address(IPv4Address):
 
     @property
     def is_link_local(self) -> bool:
-        """Return True if this is a link-local address."""
         return self._is_link_local
 
     @property
     def is_unspecified(self) -> bool:
-        """Return True if this is an unspecified address."""
         return self._is_unspecified
 
     @property
@@ -92,12 +90,10 @@ class ZeroconfIPv6Address(IPv6Address):
 
     @property
     def is_link_local(self) -> bool:
-        """Return True if this is a link-local address."""
         return self._is_link_local
 
     @property
     def is_unspecified(self) -> bool:
-        """Return True if this is an unspecified address."""
         return self._is_unspecified
 
     @property
