@@ -15,7 +15,7 @@ import zeroconf as r
 from zeroconf import Zeroconf
 from zeroconf._services.info import ServiceInfo
 
-from . import _clear_cache, has_working_ipv6
+from . import _clear_cache, has_working_ipv6, make_service_info
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -188,16 +188,7 @@ class ListenerTest(unittest.TestCase):
 
             properties["prop_blank"] = b"an updated string"
             desc.update(properties)
-            info_service = ServiceInfo(
-                subtype,
-                registration_name,
-                80,
-                0,
-                0,
-                desc,
-                "spare-rig.local.",
-                addresses=[socket.inet_aton("10.7.4.2")],
-            )
+            info_service = make_service_info(subtype, registration_name, properties=desc)
             zeroconf_registrar.update_service(info_service)
 
             sub_service_added.wait(1)  # we cleared the cache above

@@ -8,6 +8,8 @@ import unittest
 import zeroconf as r
 from zeroconf import ServiceInfo
 
+from .. import make_service_info
+
 
 class TestServiceRegistry(unittest.TestCase):
     def test_only_register_once(self):
@@ -16,16 +18,7 @@ class TestServiceRegistry(unittest.TestCase):
         registration_name = f"{name}.{type_}"
 
         desc = {"path": "/healthz/"}
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties=desc)
 
         registry = r.ServiceRegistry()
         registry.async_add(info)
@@ -83,16 +76,7 @@ class TestServiceRegistry(unittest.TestCase):
         registration_name = f"{name}.{type_}"
 
         desc = {"path": "/healthz/"}
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties=desc)
 
         registry = r.ServiceRegistry()
         registry.async_add(info)
@@ -106,16 +90,7 @@ class TestServiceRegistry(unittest.TestCase):
         registration_name = f"{name}.{type_}"
 
         desc = {"path": "/healthz/"}
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties=desc)
 
         registry = r.ServiceRegistry()
         registry.async_add(info)
@@ -156,16 +131,7 @@ class TestServiceRegistry(unittest.TestCase):
         type_ = "_test-srvc-type._tcp.local."
         registration_name = f"xxxyyy.{type_}"
         desc = {"path": "/healthz/"}
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            desc,
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties=desc)
 
         registry = r.ServiceRegistry()
         registry.async_add(info)

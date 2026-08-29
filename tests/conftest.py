@@ -95,6 +95,14 @@ def blockbuster(
         yield bb
 
 
+@pytest.fixture
+def zc() -> Iterator[Zeroconf]:
+    """A running Zeroconf bound to loopback, closed after the test."""
+    instance = Zeroconf(interfaces=["127.0.0.1"])
+    yield instance
+    instance.close()
+
+
 @pytest.fixture(autouse=True)
 def verify_threads_ended():
     """Verify that the threads are not running after the test."""
