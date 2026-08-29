@@ -30,7 +30,9 @@ async def show_service_info(zeroconf: Zeroconf, service_type: str, name: str) ->
     if await info.async_request(zeroconf, 3000):
         print(f"  addresses: {', '.join(info.parsed_scoped_addresses())}")
         print(f"  server: {info.server} port: {info.port}")
-        print(f"  properties: {info.decoded_properties}")
+        for key, value in info.decoded_properties.items():
+            if key:
+                print(f"  txt {key} = {value}")
 
 
 async def main(ip_version: IPVersion) -> None:

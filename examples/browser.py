@@ -17,7 +17,9 @@ class PrintingListener(ServiceListener):
         if info is not None:
             print(f"  addresses: {', '.join(info.parsed_scoped_addresses())}")
             print(f"  server: {info.server} port: {info.port}")
-            print(f"  properties: {info.decoded_properties}")
+            for key, value in info.decoded_properties.items():
+                if key:
+                    print(f"  txt {key} = {value}")
 
     def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         print(f"removed: {name}")
