@@ -252,7 +252,6 @@ class ServiceInfo(RecordUpdateListener):
 
     @property
     def name(self) -> str:
-        """The name of the service."""
         return self._name
 
     @name.setter
