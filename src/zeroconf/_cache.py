@@ -329,6 +329,7 @@ class DNSCache:
                     self._async_set_created_ttl(record, now, 1)
 
     def _async_set_created_ttl(self, record: DNSRecord, now: _float, ttl: _int) -> None:
+        """Stamp a record with a new ttl and creation moment, then cache it."""
         # It would be better if we made a copy instead of mutating the record
         # in place, but records currently don't have a copy method.
         record._set_created_ttl(now, ttl)
