@@ -296,6 +296,8 @@ class DNSAddress(DNSRecord):
 
 
 class DNSHinfo(DNSRecord):
+    """HINFO record carrying the host's cpu and os strings."""
+
     __slots__ = ("_hash", "cpu", "os")
 
     def __init__(

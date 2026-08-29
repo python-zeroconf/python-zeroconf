@@ -56,14 +56,17 @@ class ZeroconfIPv4Address(IPv4Address):
 
     @property
     def is_link_local(self) -> bool:
+        """True for a link-local address."""
         return self._is_link_local
 
     @property
     def is_unspecified(self) -> bool:
+        """True for an unspecified address."""
         return self._is_unspecified
 
     @property
     def is_loopback(self) -> bool:
+        """True for a loopback address."""
         return self._is_loopback
 
 
@@ -90,14 +93,17 @@ class ZeroconfIPv6Address(IPv6Address):
 
     @property
     def is_link_local(self) -> bool:
+        """True for a link-local address."""
         return self._is_link_local
 
     @property
     def is_unspecified(self) -> bool:
+        """True for an unspecified address."""
         return self._is_unspecified
 
     @property
     def is_loopback(self) -> bool:
+        """True for a loopback address."""
         return self._is_loopback
 
 

@@ -235,6 +235,7 @@ class DNSIncoming:
         )
 
     def _read_header(self) -> None:
+        """Unpack the fixed twelve byte message header."""
         offset = self.offset
         if offset + 12 > self._data_len:
             raise IncomingDecodeError(
@@ -251,6 +252,7 @@ class DNSIncoming:
         self._num_additionals = buf[offset + 10] << 8 | buf[offset + 11]
 
     def _read_questions(self) -> None:
+        """Parse the question entries."""
         buf = self._buf
         questions = self._questions
         for _ in range(self._num_questions):

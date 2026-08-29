@@ -66,6 +66,8 @@ def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> No
 
 
 class DNSCache:
+    """Store of received DNS records, indexed for fast lookup."""
+
     def __init__(self) -> None:
         self.cache: _DNSRecordCacheType = {}
         self._expire_heap: list[tuple[float, DNSRecord]] = []
