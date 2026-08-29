@@ -415,8 +415,6 @@ class DNSOutgoing:
         self.size += 4
 
     def _write_link_to_name(self, index: int_) -> None:
-        # If part of the name already exists in the packet,
-        # create a pointer to it
         self._write_byte((index >> 8) | 0xC0)
         self._write_byte(index & 0xFF)
 
