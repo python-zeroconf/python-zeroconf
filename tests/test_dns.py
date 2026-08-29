@@ -30,6 +30,22 @@ def teardown_module():
         log.setLevel(original_logging_level)
 
 
+def test_display_compat_shims():
+    """The legacy display helpers stay callable and route through the new formatter."""
+    record = r.DNSPointer(
+        "_http._tcp.local.", const._TYPE_PTR, const._CLASS_IN, const._DNS_OTHER_TTL, "demo._http._tcp.local."
+    )
+    assert r.DNSEntry.get_type(const._TYPE_PTR) == "ptr"
+    assert r.DNSEntry.get_type(4242) == "unknown-type-4242"
+    assert r.DNSEntry.get_class_(const._CLASS_IN) == "in"
+    assert r.DNSEntry.get_class_(4242) == "unknown-class-4242"
+    assert record.entry_to_string("hdr", None).startswith("<hdr ")
+    assert "data=extra" in record.entry_to_string("hdr", "extra")
+    assert "data=payload" in record.to_string("payload")
+    assert record.type_label == "ptr"
+    assert record.class_label == "in"
+
+
 class TestDunder(unittest.TestCase):
     def test_dns_text_repr(self):
         # There was an issue on Python 3 that prevented DNSText's repr
@@ -53,7 +69,7 @@ class TestDunder(unittest.TestCase):
     @unittest.skipIf(os.environ.get("SKIP_IPV6"), "IPv6 tests disabled")
     def test_dns_address_repr(self):
         address = r.DNSAddress("irrelevant", const._TYPE_SOA, const._CLASS_IN, 1, b"a")
-        assert repr(address).endswith("b'a'")
+        assert "data=b'a'" in repr(address)
 
         address_ipv4 = r.DNSAddress(
             "irrelevant",
@@ -62,7 +78,7 @@ class TestDunder(unittest.TestCase):
             1,
             socket.inet_pton(socket.AF_INET, "127.0.0.1"),
         )
-        assert repr(address_ipv4).endswith("127.0.0.1")
+        assert "data=127.0.0.1" in repr(address_ipv4)
 
         address_ipv6 = r.DNSAddress(
             "irrelevant",
@@ -71,7 +87,7 @@ class TestDunder(unittest.TestCase):
             1,
             socket.inet_pton(socket.AF_INET6, "::1"),
         )
-        assert repr(address_ipv6).endswith("::1")
+        assert "data=::1" in repr(address_ipv6)
 
     def test_dns_question_repr(self):
         question = r.DNSQuestion("irrelevant", const._TYPE_SRV, const._CLASS_IN | const._CLASS_UNIQUE)

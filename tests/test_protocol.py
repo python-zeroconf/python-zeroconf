@@ -754,7 +754,7 @@ def test_qm_packet_parser():
     )
     parsed = DNSIncoming(qm_packet)
     assert parsed.questions[0].unicast is False
-    assert ",QM," in str(parsed.questions[0])
+    assert "mode=QM" in str(parsed.questions[0])
 
 
 # MDNS	115	Standard query 0x0000 PTR _companion-link._tcp.local, "QU" question OPT
@@ -766,7 +766,7 @@ def test_qu_packet_parser():
     )
     parsed = DNSIncoming(qu_packet)
     assert parsed.questions[0].unicast is True
-    assert ",QU," in str(parsed.questions[0])
+    assert "mode=QU" in str(parsed.questions[0])
 
 
 def test_parse_packet_with_nsec_record():
@@ -780,7 +780,7 @@ def test_parse_packet_with_nsec_record():
     )
     parsed = DNSIncoming(nsec_packet)
     nsec_record = cast(r.DNSNsec, parsed.answers()[3])
-    assert "nsec," in str(nsec_record)
+    assert "type=nsec" in str(nsec_record)
     assert nsec_record.rdtypes == [16, 33]
     assert nsec_record.next_name == "MyHome54 (2)._meshcop._udp.local."
 

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from ._exceptions import AbstractMethodException
 from ._utils.net import _is_v6_address
 from ._utils.time import current_time_millis
-from .const import _CLASS_MASK, _CLASS_UNIQUE, _TYPE_ANY
+from .const import _CLASS_MASK, _CLASS_UNIQUE, _CLASSES, _TYPE_ANY, _TYPES
 
 _LEN_BYTE = 1
 _LEN_SHORT = 2
@@ -27,6 +27,20 @@ _RECENT_TIME_MS = 250
 
 _float = float
 _int = int
+
+
+def _type_label(type_: int) -> str:
+    return _TYPES.get(type_, f"unknown-type-{type_}")
+
+
+def _class_label(class_: int) -> str:
+    return _CLASSES.get(class_, f"unknown-class-{class_}")
+
+
+def _format_display(kind: str, fields: list[tuple[str, str]]) -> str:
+    body = " ".join([f"{key}={value}" if key else value for key, value in fields])
+    return f"<{kind} {body}>"
+
 
 if TYPE_CHECKING:
     from ._protocol.incoming import DNSIncoming
@@ -58,6 +72,39 @@ class DNSEntry:  # noqa: PLW1641
         """Equal when key, type and class match."""
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
+    @property
+    def type_label(self) -> str:
+        """Human readable label for the record type."""
+        return _type_label(self.type)
+
+    @property
+    def class_label(self) -> str:
+        """Human readable label for the record class."""
+        return _class_label(self.class_)
+
+    def _display_fields(self) -> list[tuple[str, str]]:
+        fields = [("name", self.name), ("type", self.type_label), ("class", self.class_label)]
+        if self.unique:
+            fields.append(("", "unique"))
+        return fields
+
+    @staticmethod
+    def get_class_(class_: int) -> str:
+        """Compatibility alias for the class_label property."""
+        return _class_label(class_)
+
+    @staticmethod
+    def get_type(t: int) -> str:
+        """Compatibility alias for the type_label property."""
+        return _type_label(t)
+
+    def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
+        """Compatibility alias rendering through the display formatter."""
+        fields = self._display_fields()
+        if other is not None:
+            fields.append(("data", str(other)))
+        return _format_display(hdr, fields)
+
     def _dns_entry_matches(self, other: DNSEntry) -> bool:
         return self.key == other.key and self.type == other.type and self.class_ == other.class_
 
@@ -86,12 +133,8 @@ class DNSQuestion(DNSEntry):
         return self._hash
 
     def __repr__(self) -> str:
-        return "{}[question,{},{},{}]".format(
-            self.get_type(self.type),
-            "QU" if self.unicast else "QM",
-            self.get_class_(self.class_),
-            self.name,
-        )
+        mode = "QU" if self.unicast else "QM"
+        return _format_display("DNSQuestion", [("mode", mode), *self._display_fields()])
 
     def answered_by(self, rec: DNSRecord) -> bool:
         return self.class_ == rec.class_ and self.type in (rec.type, _TYPE_ANY) and self.name == rec.name
@@ -188,6 +231,17 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         self.created = created
         self.ttl = ttl
 
+    def _display_fields(self) -> list[tuple[str, str]]:
+        remaining = int(self.get_remaining_ttl(current_time_millis()))
+        return [*DNSEntry._display_fields(self), ("ttl", f"{self.ttl} ({remaining} remaining)")]
+
+    def _repr_with(self, *details: tuple[str, str]) -> str:
+        return _format_display(type(self).__name__, [*self._display_fields(), *details])
+
+    def to_string(self, other: bytes | str) -> str:
+        """Compatibility alias rendering through the display formatter."""
+        return self._repr_with(("data", str(other)))
+
     def _suppressed_by_answer(self, answer: DNSRecord) -> bool:
         """True when the answer matches this record with at least half its TTL left."""
         return self == answer and self.ttl / 2 < answer.ttl
@@ -220,14 +274,13 @@ class DNSAddress(DNSRecord):
 
     def __repr__(self) -> str:
         try:
-            return self.to_string(
-                socket.inet_ntop(
-                    socket.AF_INET6 if _is_v6_address(self.address) else socket.AF_INET,
-                    self.address,
-                )
+            data = socket.inet_ntop(
+                socket.AF_INET6 if _is_v6_address(self.address) else socket.AF_INET,
+                self.address,
             )
         except (ValueError, OSError):
-            return self.to_string(str(self.address))
+            data = str(self.address)
+        return self._repr_with(("data", data))
 
     def write(self, out: DNSOutgoing) -> None:
         out.write_string(self.address)
@@ -281,6 +334,9 @@ class DNSHinfo(DNSRecord):
         """Hash to compare like DNSHinfo."""
         return self._hash
 
+    def __repr__(self) -> str:
+        return self._repr_with(("cpu", self.cpu), ("os", self.os))
+
     def write(self, out: DNSOutgoing) -> None:
         """Write the rdata to an outgoing packet."""
         out.write_character_string(self.cpu.encode("utf-8"))
@@ -325,9 +381,8 @@ class DNSNsec(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        return self.to_string(
-            self.next_name + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes])
-        )
+        covered = "|".join([_type_label(t) for t in self.rdtypes])
+        return self._repr_with(("next_name", self.next_name), ("covers", covered))
 
     def write(self, out: DNSOutgoing) -> None:
         """Write the rdata to an outgoing packet."""
@@ -397,7 +452,7 @@ class DNSPointer(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        return self.to_string(self.alias)
+        return self._repr_with(("alias", self.alias))
 
     @property
     def max_size_compressed(self) -> int:
@@ -452,6 +507,9 @@ class DNSService(DNSRecord):
     def __hash__(self) -> int:
         """Hash to compare like DNSService."""
         return self._hash
+
+    def __repr__(self) -> str:
+        return self._repr_with(("server", self.server), ("port", str(self.port)))
 
     def write(self, out: DNSOutgoing) -> None:
         out.write_short(self.priority)
@@ -514,9 +572,8 @@ class DNSText(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        if len(self.text) > 16:
-            return self.to_string(f"{len(self.text)} bytes")
-        return self.to_string(self.text)
+        data = f"{len(self.text)} bytes" if len(self.text) > 16 else str(self.text)
+        return self._repr_with(("data", data))
 
     def write(self, out: DNSOutgoing) -> None:
         out.write_string(self.text)

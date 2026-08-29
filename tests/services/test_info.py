@@ -1090,7 +1090,7 @@ async def test_invalid_a_addresses(caplog):
     info = make_service_info(type_, registration_name, properties=desc, server=host, addresses=[])
     info.load_from_cache(aiozc.zeroconf)
     assert not info.addresses
-    assert "Encountered invalid address while processing record" in caplog.text
+    assert "Encountered invalid address while processing" in caplog.text
 
     await aiozc.async_close()
 
