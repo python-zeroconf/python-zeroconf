@@ -179,6 +179,7 @@ class AsyncZeroconf:
         await self.zeroconf.async_unregister_all_services()
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
+        """Withdraw a service, returning an awaitable that completes once the goodbyes are sent."""
         return await self.zeroconf.async_unregister_service(info)
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:

@@ -64,6 +64,8 @@ class DNSQuestionType(enum.Enum):
 
 
 class DNSEntry:  # noqa: PLW1641
+    """Identity shared by every question and record: name, type and class."""
+
     __slots__ = ("class_", "key", "name", "type", "unique")
 
     def __init__(self, name: str, type_: int, class_: int) -> None:

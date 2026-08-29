@@ -403,6 +403,12 @@ class DNSOutgoing:
         )
 
     def packets(self) -> list[bytes]:
+        """Render the queued sections into wire format chunks and finish the message.
+
+        Each chunk stays within _MAX_MSG_TYPICAL, except a lone oversized
+        answer which may grow to _MAX_MSG_ABSOLUTE and rely on IP
+        fragmentation.
+        """
         packets_data = self.packets_data
 
         if self.state == STATE_FINISHED:
