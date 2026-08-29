@@ -27,7 +27,6 @@ from zeroconf import (
 )
 from zeroconf._services import ServiceStateChange
 from zeroconf._services.browser import ServiceBrowser, _ScheduledPTRQuery
-from zeroconf._services.info import ServiceInfo
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 
 from .. import (
@@ -35,6 +34,7 @@ from .. import (
     _inject_response,
     _wait_for_start,
     has_working_ipv6,
+    make_service_info,
     mock_incoming_msg,
     time_changed_millis,
 )
@@ -589,16 +589,7 @@ async def test_asking_default_is_asking_qm_questions_after_the_first_qu(quick_ti
         service_removed = asyncio.Event()
 
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            {"path": "/healthz/"},
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties={"path": "/healthz/"})
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
         loop = asyncio.get_running_loop()
@@ -690,16 +681,7 @@ async def test_ttl_refresh_cancelled_rescue_query(quick_timing: None) -> None:
         service_removed = asyncio.Event()
 
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            {"path": "/healthz/"},
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties={"path": "/healthz/"})
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
         loop = asyncio.get_running_loop()
@@ -860,16 +842,7 @@ def test_legacy_record_update_listener(zc: Zeroconf, quick_timing: None) -> None
     name = "MyTestHome"
     browser = ServiceBrowser(zc, type_, [on_service_state_change])
 
-    info_service = ServiceInfo(
-        type_,
-        f"{name}.{type_}",
-        80,
-        0,
-        0,
-        {"path": "/healthz/"},
-        "spare-rig.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info_service = make_service_info(type_, f"{name}.{type_}", properties={"path": "/healthz/"})
 
     zc.register_service(info_service)
 
@@ -906,7 +879,7 @@ def test_service_browser_is_aware_of_port_changes(zc: Zeroconf) -> None:
     desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
+    info = make_service_info(type_, registration_name, properties=desc, addresses=[address])
 
     _inject_response(
         zc,
@@ -974,7 +947,7 @@ def test_service_browser_listeners_update_service(zc: Zeroconf) -> None:
     desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
+    info = make_service_info(type_, registration_name, properties=desc, addresses=[address])
 
     _inject_response(
         zc,
@@ -1032,7 +1005,7 @@ def test_service_browser_listeners_no_update_service(zc: Zeroconf) -> None:
     desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
+    info = make_service_info(type_, registration_name, properties=desc, addresses=[address])
 
     _inject_response(
         zc,
@@ -1087,7 +1060,7 @@ def test_service_browser_nsec_record_does_not_trigger_update(zc: Zeroconf) -> No
     try:
         desc = {"path": "/healthz/"}
         address = socket.inet_aton("10.7.4.2")
-        info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
+        info = make_service_info(type_, registration_name, properties=desc, addresses=[address])
 
         _inject_response(
             zc,
@@ -1416,16 +1389,9 @@ def test_service_browser_matching(zc: Zeroconf) -> None:
     desc = {"path": "/healthz/"}
     address_parsed = "10.7.4.2"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, "spare-rig.local.", addresses=[address])
-    should_not_match = ServiceInfo(
-        not_match_type_,
-        not_match_registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[address],
+    info = make_service_info(type_, registration_name, properties=desc, addresses=[address])
+    should_not_match = make_service_info(
+        not_match_type_, not_match_registration_name, properties=desc, addresses=[address]
     )
 
     _inject_response(
@@ -1502,17 +1468,14 @@ def test_service_browser_expire_callbacks():
     desc = {"path": "/status1/"}
     address_parsed = "10.7.4.3"
     address = socket.inet_aton(address_parsed)
-    info = ServiceInfo(
+    info = make_service_info(
         type_,
         registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "newname-2.local.",
+        properties=desc,
+        server="newname-2.local.",
+        addresses=[address],
         host_ttl=1,
         other_ttl=1,
-        addresses=[address],
     )
 
     _inject_response(
@@ -1646,16 +1609,7 @@ async def test_close_zeroconf_without_browser_before_start_up_queries(quick_timi
         service_added = asyncio.Event()
 
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            {"path": "/healthz/"},
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties={"path": "/healthz/"})
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
         loop = asyncio.get_running_loop()
@@ -1713,16 +1667,7 @@ async def test_close_zeroconf_without_browser_after_start_up_queries(quick_timin
         service_added = asyncio.Event()
         browser = AsyncServiceBrowser(zeroconf_browser, type_, [on_service_state_change])
         expected_ttl = const._DNS_OTHER_TTL
-        info = ServiceInfo(
-            type_,
-            registration_name,
-            80,
-            0,
-            0,
-            {"path": "/healthz/"},
-            "spare-rig.local.",
-            addresses=[socket.inet_aton("10.7.4.2")],
-        )
+        info = make_service_info(type_, registration_name, properties={"path": "/healthz/"})
         task = await aio_zeroconf_registrar.async_register_service(info)
         await task
         loop = asyncio.get_running_loop()

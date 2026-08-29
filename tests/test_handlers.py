@@ -281,7 +281,9 @@ def test_any_query_for_ptr(zc: Zeroconf) -> None:
     desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
+    info = make_service_info(
+        type_, registration_name, properties=desc, server=server_name, addresses=[ipv6_address]
+    )
     zc.registry.async_add(info)
 
     _clear_cache(zc)
@@ -308,7 +310,9 @@ def test_aaaa_query(zc: Zeroconf) -> None:
     desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
+    info = make_service_info(
+        type_, registration_name, properties=desc, server=server_name, addresses=[ipv6_address]
+    )
     zc.registry.async_add(info)
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -333,7 +337,9 @@ def test_aaaa_query_upper_case(zc: Zeroconf) -> None:
     desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, desc, server_name, addresses=[ipv6_address])
+    info = make_service_info(
+        type_, registration_name, properties=desc, server=server_name, addresses=[ipv6_address]
+    )
     zc.registry.async_add(info)
 
     generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
@@ -359,15 +365,8 @@ def test_a_and_aaaa_record_fate_sharing(zc: Zeroconf) -> None:
     server_name = "spare-rig.local."
     ipv6_address = socket.inet_pton(socket.AF_INET6, "2001:db8::1")
     ipv4_address = socket.inet_aton("10.7.4.2")
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[ipv6_address, ipv4_address],
+    info = make_service_info(
+        type_, registration_name, properties=desc, server=server_name, addresses=[ipv6_address, ipv4_address]
     )
     aaaa_record = info.dns_addresses(version=r.IPVersion.V6Only)[0]
     a_record = info.dns_addresses(version=r.IPVersion.V4Only)[0]
@@ -535,14 +534,11 @@ def test_qu_response(zc: Zeroconf, quick_timing: None) -> None:
     registration_name2 = f"{name}.{other_type_}"
     desc = {"path": "/healthz/"}
     info = make_service_info(type_, registration_name, properties=desc)
-    info2 = ServiceInfo(
+    info2 = make_service_info(
         other_type_,
         registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        "ash-other.local.",
+        properties=desc,
+        server="ash-other.local.",
         addresses=[socket.inet_aton("10.0.4.2")],
     )
     # Register and inject the announcement directly so the cache state is
@@ -646,16 +642,7 @@ def test_known_answer_supression(zc: Zeroconf) -> None:
     registration_name = f"{name}.{type_}"
     desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, server=server_name)
     zc.registry.async_add(info)
 
     now = current_time_millis()
@@ -786,7 +773,9 @@ def test_no_nsec_answer_for_service_without_addresses(zc: Zeroconf) -> None:
     type_ = "_noaddrnsec._tcp.local."
     registration_name = f"noaddr.{type_}"
     server_name = "noaddr-host.local."
-    info = ServiceInfo(type_, registration_name, 80, 0, 0, {"path": "/healthz/"}, server_name)
+    info = make_service_info(
+        type_, registration_name, properties={"path": "/healthz/"}, server=server_name, addresses=[]
+    )
     zc.registry.async_add(info)
     _clear_cache(zc)
 
@@ -819,36 +808,9 @@ def test_multi_packet_known_answer_supression(zc: Zeroconf) -> None:
     server_name2 = "ash-3.local."
     server_name3 = "ash-4.local."
 
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
-    info2 = ServiceInfo(
-        type_,
-        registration2_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name2,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
-    info3 = ServiceInfo(
-        type_,
-        registration3_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name3,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, server=server_name)
+    info2 = make_service_info(type_, registration2_name, properties=desc, server=server_name2)
+    info3 = make_service_info(type_, registration3_name, properties=desc, server=server_name3)
     zc.registry.async_add(info)
     zc.registry.async_add(info2)
     zc.registry.async_add(info3)
@@ -884,16 +846,7 @@ def test_known_answer_supression_service_type_enumeration_query(zc: Zeroconf) ->
     registration_name = f"{name}.{type_}"
     desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, server=server_name)
     zc.registry.async_add(info)
 
     type_2 = "_otherknown2._tcp.local."
@@ -901,16 +854,7 @@ def test_known_answer_supression_service_type_enumeration_query(zc: Zeroconf) ->
     registration_name2 = f"{name}.{type_2}"
     desc = {"path": "/healthz/"}
     server_name2 = "ash-3.local."
-    info2 = ServiceInfo(
-        type_2,
-        registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        server_name2,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info2 = make_service_info(type_2, registration_name2, properties=desc, server=server_name2)
     zc.registry.async_add(info2)
     now = current_time_millis()
     _clear_cache(zc)
@@ -969,16 +913,7 @@ def test_upper_case_enumeration_query(zc: Zeroconf) -> None:
     registration_name = f"{name}.{type_}"
     desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, server=server_name)
     zc.registry.async_add(info)
 
     type_2 = "_otherknown2._tcp.local."
@@ -986,16 +921,7 @@ def test_upper_case_enumeration_query(zc: Zeroconf) -> None:
     registration_name2 = f"{name}.{type_2}"
     desc = {"path": "/healthz/"}
     server_name2 = "ash-3.local."
-    info2 = ServiceInfo(
-        type_2,
-        registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        server_name2,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info2 = make_service_info(type_2, registration_name2, properties=desc, server=server_name2)
     zc.registry.async_add(info2)
     _clear_cache(zc)
 
@@ -1040,16 +966,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     registration_name = f"{name}.{type_}"
     desc = {"path": "/healthz/"}
     server_name = "spare-rig.local."
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, server=server_name)
     zc.registry.async_add(info)
 
     type_2 = "_addtest2._tcp.local."
@@ -1057,16 +974,7 @@ async def test_qu_response_only_sends_additionals_if_sends_answer():
     registration_name2 = f"{name}.{type_2}"
     desc = {"path": "/healthz/"}
     server_name2 = "ash-3.local."
-    info2 = ServiceInfo(
-        type_2,
-        registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        server_name2,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info2 = make_service_info(type_2, registration_name2, properties=desc, server=server_name2)
     zc.registry.async_add(info2)
 
     ptr_record = info.dns_pointer()
@@ -1206,16 +1114,7 @@ async def test_cache_flush_bit():
     registration_name = f"{name}.{type_}"
     desc = {"path": "/healthz/"}
     server_name = "server-uu1.local."
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, server=server_name)
     a_record = info.dns_addresses()[0]
     zc.cache.async_add_records([info.dns_pointer(), a_record, info.dns_text(), info.dns_service()])
 
@@ -1321,16 +1220,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     registration_name = f"{name}.{type_}"
     desc = {"path": "/healthz/"}
     server_name = "server-uu1.local."
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        server_name,
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info = make_service_info(type_, registration_name, properties=desc, server=server_name)
     a_record = info.dns_addresses()[0]
     ptr_record = info.dns_pointer()
     zc.cache.async_add_records([ptr_record, a_record, info.dns_text(), info.dns_service()])
@@ -1363,14 +1253,10 @@ async def test_questions_query_handler_populates_the_question_history_from_qm_qu
     _clear_cache(zc)
 
     aiozc.zeroconf.registry.async_add(
-        ServiceInfo(
+        make_service_info(
             "_hap._tcp.local.",
             "other._hap._tcp.local.",
-            80,
-            0,
-            0,
-            {"md": "known"},
-            "spare-rig.local.",
+            properties={"md": "known"},
             addresses=[socket.inet_aton("1.2.3.4")],
         )
     )
@@ -1407,14 +1293,10 @@ async def test_questions_query_handler_does_not_put_qu_questions_in_history():
     zc = aiozc.zeroconf
     now = current_time_millis()
     _clear_cache(zc)
-    info = ServiceInfo(
+    info = make_service_info(
         "_hap._tcp.local.",
         "qu._hap._tcp.local.",
-        80,
-        0,
-        0,
-        {"md": "known"},
-        "spare-rig.local.",
+        properties={"md": "known"},
         addresses=[socket.inet_aton("1.2.3.4")],
     )
     aiozc.zeroconf.registry.async_add(info)
@@ -1553,24 +1435,18 @@ async def test_response_aggregation_timings(run_isolated: None) -> None:
 
     desc = {"path": "/healthz/"}
     info = make_service_info(type_, registration_name, properties=desc)
-    info2 = ServiceInfo(
+    info2 = make_service_info(
         type_2,
         registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        "ash-4.local.",
+        properties=desc,
+        server="ash-4.local.",
         addresses=[socket.inet_aton("10.7.4.3")],
     )
-    info3 = ServiceInfo(
+    info3 = make_service_info(
         type_3,
         registration_name3,
-        80,
-        0,
-        0,
-        desc,
-        "ash-4.local.",
+        properties=desc,
+        server="ash-4.local.",
         addresses=[socket.inet_aton("10.7.4.3")],
     )
     aiozc.zeroconf.registry.async_add(info)
@@ -1680,14 +1556,11 @@ async def test_response_aggregation_timings_multiple(
     registration_name2 = f"{name}.{type_2}"
 
     desc = {"path": "/healthz/"}
-    info2 = ServiceInfo(
+    info2 = make_service_info(
         type_2,
         registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        "ash-4.local.",
+        properties=desc,
+        server="ash-4.local.",
         addresses=[socket.inet_aton("10.7.4.3")],
     )
     aiozc.zeroconf.registry.async_add(info2)
@@ -1775,56 +1648,13 @@ async def test_response_aggregation_random_delay():
     registration_name5 = f"{name}.{type_5}"
 
     desc = {"path": "/healthz/"}
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "ash-1.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
+    info = make_service_info(type_, registration_name, properties=desc, server="ash-1.local.")
+    info2 = make_service_info(
+        type_2, registration_name2, properties=desc, addresses=[socket.inet_aton("10.7.4.3")]
     )
-    info2 = ServiceInfo(
-        type_2,
-        registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[socket.inet_aton("10.7.4.3")],
-    )
-    info3 = ServiceInfo(
-        type_3,
-        registration_name3,
-        80,
-        0,
-        0,
-        desc,
-        "ash-3.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
-    info4 = ServiceInfo(
-        type_4,
-        registration_name4,
-        80,
-        0,
-        0,
-        desc,
-        "ash-4.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
-    info5 = ServiceInfo(
-        type_5,
-        registration_name5,
-        80,
-        0,
-        0,
-        desc,
-        "ash-5.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
+    info3 = make_service_info(type_3, registration_name3, properties=desc, server="ash-3.local.")
+    info4 = make_service_info(type_4, registration_name4, properties=desc, server="ash-4.local.")
+    info5 = make_service_info(type_5, registration_name5, properties=desc, server="ash-5.local.")
     mocked_zc = unittest.mock.MagicMock()
     mocked_zc.loop = asyncio.get_running_loop()
     outgoing_queue = MulticastOutgoingQueue(mocked_zc, 0, 500)
@@ -1873,25 +1703,9 @@ async def test_future_answers_are_removed_on_send():
     registration_name2 = f"{name}.{type_2}"
 
     desc = {"path": "/healthz/"}
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "ash-1.local.",
-        addresses=[socket.inet_aton("10.7.4.2")],
-    )
-    info2 = ServiceInfo(
-        type_2,
-        registration_name2,
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[socket.inet_aton("10.7.4.3")],
+    info = make_service_info(type_, registration_name, properties=desc, server="ash-1.local.")
+    info2 = make_service_info(
+        type_2, registration_name2, properties=desc, addresses=[socket.inet_aton("10.7.4.3")]
     )
     mocked_zc = unittest.mock.MagicMock()
     mocked_zc.loop = asyncio.get_running_loop()

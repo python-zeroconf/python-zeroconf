@@ -9,7 +9,7 @@ import sys
 import unittest
 
 import zeroconf as r
-from zeroconf import ServiceInfo, Zeroconf, ZeroconfServiceTypes
+from zeroconf import Zeroconf, ZeroconfServiceTypes
 
 from .. import (
     IPV6_LOOPBACK_FIND_TIMEOUT,
@@ -64,15 +64,8 @@ def test_integration_with_listener_v6_records(quick_timing, disable_duplicate_pa
 
     zeroconf_registrar = Zeroconf(interfaces=["127.0.0.1"])
     desc = {"path": "/healthz/"}
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[socket.inet_pton(socket.AF_INET6, addr)],
+    info = make_service_info(
+        type_, registration_name, properties=desc, addresses=[socket.inet_pton(socket.AF_INET6, addr)]
     )
     zeroconf_registrar.registry.async_add(info)
     try:
@@ -100,15 +93,8 @@ def test_integration_with_listener_ipv6(quick_timing, disable_duplicate_packet_s
 
     zeroconf_registrar = Zeroconf(ip_version=r.IPVersion.V6Only)
     desc = {"path": "/healthz/"}
-    info = ServiceInfo(
-        type_,
-        registration_name,
-        80,
-        0,
-        0,
-        desc,
-        "spare-rig.local.",
-        addresses=[socket.inet_pton(socket.AF_INET6, addr)],
+    info = make_service_info(
+        type_, registration_name, properties=desc, addresses=[socket.inet_pton(socket.AF_INET6, addr)]
     )
     zeroconf_registrar.registry.async_add(info)
     try:

@@ -12,6 +12,7 @@ import sys
 import time
 from collections.abc import Iterable
 from functools import cache
+from typing import Any
 from unittest import mock
 
 import ifaddr
@@ -67,8 +68,23 @@ def make_service_info(
     properties: dict | bytes | None = None,
     server: str = "spare-rig.local.",
     addresses: list[bytes] | None = None,
+    parsed_addresses: list[str] | None = None,
+    interface_index: int | None = None,
+    host_ttl: int | None = None,
+    other_ttl: int | None = None,
 ) -> ServiceInfo:
     """Build a ServiceInfo with the suite's canonical fixture values."""
+    kwargs: dict[str, Any] = {}
+    if parsed_addresses is not None:
+        kwargs["parsed_addresses"] = parsed_addresses
+    else:
+        kwargs["addresses"] = [socket.inet_aton("10.7.4.2")] if addresses is None else addresses
+    if interface_index is not None:
+        kwargs["interface_index"] = interface_index
+    if host_ttl is not None:
+        kwargs["host_ttl"] = host_ttl
+    if other_ttl is not None:
+        kwargs["other_ttl"] = other_ttl
     return ServiceInfo(
         type_,
         name,
@@ -77,7 +93,7 @@ def make_service_info(
         0,
         {"path": "/healthz/"} if properties is None else properties,
         server,
-        addresses=[socket.inet_aton("10.7.4.2")] if addresses is None else addresses,
+        **kwargs,
     )
 
 
