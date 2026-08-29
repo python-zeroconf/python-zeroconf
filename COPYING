@@ -1,3 +1,18 @@
+python-zeroconf is distributed under the GNU Lesser General Public
+License, version 2.1 or later. The full license text follows below the
+separator.
+
+Historical copyright notices, preserved from the original per file
+headers:
+
+    Copyright 2003 Paul Scott-Murphy
+    Copyright 2014 William McBrine
+
+Later contributions are copyright their respective authors; the
+complete record is in the project's git history.
+
+----------------------------------------------------------------------
+
 		  GNU LESSER GENERAL PUBLIC LICENSE
 		       Version 2.1, February 1999
 
