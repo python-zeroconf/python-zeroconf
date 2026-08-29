@@ -114,60 +114,60 @@ def test_listen_socket_supports_family() -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_noop(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_noop(aiozc: AsyncZeroconf) -> None:
     """Re-scanning the same interface set leaves the engine lists unchanged."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     before = (len(engine.senders), len(engine.readers), len(engine.protocols))
-    await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+    await aiozc.async_update_interfaces(["127.0.0.1"])
     assert (len(engine.senders), len(engine.readers), len(engine.protocols)) == before
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_defaults_to_stored_choice(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_defaults_to_stored_choice(aiozc: AsyncZeroconf) -> None:
     """Calling without an argument reuses the interface choice from construction."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     before = (len(engine.senders), len(engine.readers), len(engine.protocols))
-    await aiozc_loopback.async_update_interfaces()
+    await aiozc.async_update_interfaces()
     assert (len(engine.senders), len(engine.readers), len(engine.protocols)) == before
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_accepts_ip_version_and_apple_p2p(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_accepts_ip_version_and_apple_p2p(aiozc: AsyncZeroconf) -> None:
     """ip_version and apple_p2p overrides are stored for the rescan."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
-    await aiozc_loopback.async_update_interfaces(["127.0.0.1"], ip_version=IPVersion.V4Only, apple_p2p=False)
+    await aiozc.async_update_interfaces(["127.0.0.1"], ip_version=IPVersion.V4Only, apple_p2p=False)
     assert zc._ip_version is IPVersion.V4Only
     assert zc._apple_p2p is False
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_removes_and_readds(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_removes_and_readds(aiozc: AsyncZeroconf) -> None:
     """A gone interface drops its sender; a returning interface re-adds it."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     listen_reader_count = len(engine.readers) - len(engine.senders)
 
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
     assert engine.senders == []
     # The shared listen socket is never torn down.
     assert len(engine.readers) == listen_reader_count
 
-    await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+    await aiozc.async_update_interfaces(["127.0.0.1"])
     await asyncio.sleep(0)
     assert len(engine.senders) == 1
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_keeps_unchanged_sender_untouched(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_keeps_unchanged_sender_untouched(aiozc: AsyncZeroconf) -> None:
     """An unchanged interface keeps its exact transport; only the gone interface is torn down."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     kept = engine.senders[0]
@@ -179,7 +179,7 @@ async def test_update_interfaces_keeps_unchanged_sender_untouched(aiozc_loopback
     engine.senders.append(gone)
 
     with patch.object(_engine, "drop_multicast_member"):
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
     await asyncio.sleep(0)
 
     # The unchanged 127.0.0.1 sender is the same object, never recreated.
@@ -190,9 +190,9 @@ async def test_update_interfaces_keeps_unchanged_sender_untouched(aiozc_loopback
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_cancels_removed_listener_timers(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_cancels_removed_listener_timers(aiozc: AsyncZeroconf) -> None:
     """Removing an interface cancels its listener's pending TC-reassembly timers."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     sender = engine.senders[0]
@@ -204,7 +204,7 @@ async def test_update_interfaces_cancels_removed_listener_timers(aiozc_loopback:
     protocol._deferred["1.2.3.4"] = []
     protocol._deferred_deadlines["1.2.3.4"] = 0.0
 
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
 
     timer.cancel.assert_called_once()
@@ -213,12 +213,12 @@ async def test_update_interfaces_cancels_removed_listener_timers(aiozc_loopback:
 
 
 @pytest.mark.asyncio
-async def test_close_sender_keeps_protocol_without_transport(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_close_sender_keeps_protocol_without_transport(aiozc: AsyncZeroconf) -> None:
     """A protocol that never bound a transport is left in place when a sender is closed."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     sender = engine.senders[0]
-    orphan = _listener.AsyncListener(aiozc_loopback.zeroconf)
+    orphan = _listener.AsyncListener(aiozc.zeroconf)
     assert orphan.transport is None
     engine.protocols.append(orphan)
 
@@ -229,15 +229,15 @@ async def test_close_sender_keeps_protocol_without_transport(aiozc_loopback: Asy
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_reconciles_mixed_set(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_reconciles_mixed_set(aiozc: AsyncZeroconf) -> None:
     """One rescan keeps unchanged, drops gone, adds new across v4 and link-local v6.
 
     Drives the engine diff directly over a controlled sender set (no real
     sockets) so the (address, scope_id) keying is exercised end to end,
     including two interfaces sharing fe80::1 distinguished only by scope.
     """
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
 
     keep_v4 = _make_wrapped(("192.168.1.5", 5353))
     drop_v4 = _make_wrapped(("10.0.0.9", 5353))
@@ -281,9 +281,9 @@ async def test_update_interfaces_reconciles_mixed_set(aiozc_loopback: AsyncZeroc
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_reannounces_services_on_add(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_reannounces_services_on_add(aiozc: AsyncZeroconf) -> None:
     """Existing registrations are re-announced when a new sender appears."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     info = ServiceInfo(
         "_test._tcp.local.",
@@ -292,13 +292,13 @@ async def test_update_interfaces_reannounces_services_on_add(aiozc_loopback: Asy
         port=80,
         server="test.local.",
     )
-    await aiozc_loopback.async_register_service(info)
+    await aiozc.async_register_service(info)
     # Drop the sender so the next rescan genuinely adds one back.
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
 
     with patch.object(zc, "_async_broadcast_service", new_callable=AsyncMock) as mock_broadcast:
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
         await asyncio.sleep(0)
 
     assert mock_broadcast.call_count == 1
@@ -306,9 +306,9 @@ async def test_update_interfaces_reannounces_services_on_add(aiozc_loopback: Asy
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_noop_does_not_reannounce(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_noop_does_not_reannounce(aiozc: AsyncZeroconf) -> None:
     """An unchanged interface set neither touches sockets nor re-announces."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     info = ServiceInfo(
@@ -318,11 +318,11 @@ async def test_update_interfaces_noop_does_not_reannounce(aiozc_loopback: AsyncZ
         port=80,
         server="test.local.",
     )
-    await aiozc_loopback.async_register_service(info)
+    await aiozc.async_register_service(info)
     before = (len(engine.senders), len(engine.readers), len(engine.protocols))
 
     with patch.object(zc, "_async_broadcast_service", new_callable=AsyncMock) as mock_broadcast:
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
         await asyncio.sleep(0)
 
     mock_broadcast.assert_not_called()
@@ -331,10 +331,10 @@ async def test_update_interfaces_noop_does_not_reannounce(aiozc_loopback: AsyncZ
 
 @pytest.mark.asyncio
 async def test_update_interfaces_logs_reannounce_errors(
-    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+    aiozc: AsyncZeroconf, caplog: pytest.LogCaptureFixture
 ) -> None:
     """A re-announce failure is logged and does not propagate out of the rescan."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     info = ServiceInfo(
         "_test._tcp.local.",
@@ -343,15 +343,15 @@ async def test_update_interfaces_logs_reannounce_errors(
         port=80,
         server="test.local.",
     )
-    await aiozc_loopback.async_register_service(info)
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_register_service(info)
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
 
     with (
         patch.object(zc, "_async_broadcast_service", new_callable=AsyncMock, side_effect=ValueError("boom")),
         caplog.at_level(logging.WARNING),
     ):
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
         await asyncio.sleep(0)
 
     # The failing service is named so a partial failure is actionable.
@@ -360,10 +360,10 @@ async def test_update_interfaces_logs_reannounce_errors(
 
 @pytest.mark.asyncio
 async def test_update_interfaces_reannounces_all_services_one_failing(
-    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+    aiozc: AsyncZeroconf, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Every registration is re-announced on add; one failing does not stop the rest."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     infos = [
         ServiceInfo(
@@ -376,8 +376,8 @@ async def test_update_interfaces_reannounces_all_services_one_failing(
         for n in range(2)
     ]
     for info in infos:
-        await aiozc_loopback.async_register_service(info)
-    await aiozc_loopback.async_update_interfaces([])
+        await aiozc.async_register_service(info)
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
 
     async def broadcast(info: ServiceInfo, *args: object) -> None:
@@ -388,7 +388,7 @@ async def test_update_interfaces_reannounces_all_services_one_failing(
         patch.object(zc, "_async_broadcast_service", new_callable=AsyncMock, side_effect=broadcast) as mock,
         caplog.at_level(logging.WARNING),
     ):
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
         await asyncio.sleep(0)
 
     # Both services were attempted (the gather fans out over all registrations)
@@ -401,9 +401,9 @@ async def test_update_interfaces_reannounces_all_services_one_failing(
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_reannounce_cancellation_propagates(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_reannounce_cancellation_propagates(aiozc: AsyncZeroconf) -> None:
     """A cancelled re-announce propagates rather than being silently dropped as a non-Exception."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     info = ServiceInfo(
         "_test._tcp.local.",
@@ -412,8 +412,8 @@ async def test_update_interfaces_reannounce_cancellation_propagates(aiozc_loopba
         port=80,
         server="test.local.",
     )
-    await aiozc_loopback.async_register_service(info)
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_register_service(info)
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
 
     with (
@@ -422,14 +422,14 @@ async def test_update_interfaces_reannounce_cancellation_propagates(aiozc_loopba
         ),
         pytest.raises(asyncio.CancelledError),
     ):
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_ip_change_in_one_rescan(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_ip_change_in_one_rescan(aiozc: AsyncZeroconf) -> None:
     """An interface whose address changes is removed and re-added in a single rescan."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     old_transport = Mock()
     old = _make_wrapped(("10.0.0.5", 5353), transport=old_transport)
     engine.senders = [old]
@@ -459,10 +459,10 @@ async def test_update_interfaces_ip_change_in_one_rescan(aiozc_loopback: AsyncZe
 
 @pytest.mark.asyncio
 async def test_update_interfaces_transient_empty_set_is_noop(
-    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+    aiozc: AsyncZeroconf, caplog: pytest.LogCaptureFixture
 ) -> None:
     """An All instance that transiently resolves to zero interfaces logs and no-ops."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
     before = (len(engine.senders), len(engine.readers), len(engine.protocols))
@@ -486,27 +486,27 @@ async def test_update_interfaces_transient_empty_set_is_noop(
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_add_failure_adds_no_sender(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_add_failure_adds_no_sender(aiozc: AsyncZeroconf) -> None:
     """An interface that fails to come up adds no responder socket."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
 
     with patch.object(_engine, "add_interface", return_value=None):
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
     assert engine.senders == []
 
 
 @pytest.mark.asyncio
 async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """Endpoint creation failing rolls the interface back and is skipped, not raised."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
     assert zc._interfaces == []
 
@@ -517,7 +517,7 @@ async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
     ):
         # Best-effort: the failure is logged and skipped, not propagated.
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
 
     # The just-joined membership was dropped, the socket closed, no sender added.
     mock_drop.assert_called_once()
@@ -526,10 +526,10 @@ async def test_update_interfaces_rolls_back_membership_on_wrap_failure(
 
 
 @pytest.mark.asyncio
-async def test_add_interface_rollback_without_listen_socket(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_add_interface_rollback_without_listen_socket(aiozc: AsyncZeroconf) -> None:
     """A wrap failure with no listen socket (unicast) closes the socket and drops no membership."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
 
     fake_socket = Mock()
     with (
@@ -545,10 +545,10 @@ async def test_add_interface_rollback_without_listen_socket(aiozc_loopback: Asyn
 
 
 @pytest.mark.asyncio
-async def test_add_interface_propagates_non_oserror(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_add_interface_propagates_non_oserror(aiozc: AsyncZeroconf) -> None:
     """A non-OSError (a real bug) propagates after rollback, not downgraded to a warning."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
 
     fake_socket = Mock()
     listen_socket = Mock()
@@ -566,10 +566,10 @@ async def test_add_interface_propagates_non_oserror(aiozc_loopback: AsyncZerocon
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_keeps_dual_use_listen_socket(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_keeps_dual_use_listen_socket(aiozc: AsyncZeroconf) -> None:
     """A dual-use sender (the listen socket itself) is never torn down on rescan."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     listen = engine._listen_transport
     assert listen is not None
     # Simulate a Default single-family instance: the listen socket is the sole sender.
@@ -579,10 +579,10 @@ async def test_update_interfaces_keeps_dual_use_listen_socket(aiozc_loopback: As
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_default_to_explicit_reconciles(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_default_to_explicit_reconciles(aiozc: AsyncZeroconf) -> None:
     """Moving a dual-use instance to an explicit set demotes its socket and rebuilds clean."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     listen = engine._listen_transport
     assert listen is not None
     old_underlying = listen.transport
@@ -619,10 +619,10 @@ async def test_update_interfaces_default_to_explicit_reconciles(aiozc_loopback: 
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_default_to_explicit_real(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_default_to_explicit_real(aiozc: AsyncZeroconf) -> None:
     """A real dual-use socket with an overlapping membership reconciles without EADDRINUSE."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     listen = engine._listen_transport
     assert listen is not None
     assert listen.sock.family == socket.AF_INET
@@ -648,27 +648,27 @@ async def test_update_interfaces_default_to_explicit_real(aiozc_loopback: AsyncZ
 
 @pytest.mark.asyncio
 async def test_update_interfaces_does_not_rebuild_when_family_supported(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """Same-family rescans (and All/dual-stack) never rebuild the listen socket."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     listen = zc.engine._listen_transport
     with patch.object(_engine, "new_listen_socket") as mock_new_listen:
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
-        await aiozc_loopback.async_update_interfaces([])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces([])
         await asyncio.sleep(0)
-        await aiozc_loopback.async_update_interfaces(["127.0.0.1"])
+        await aiozc.async_update_interfaces(["127.0.0.1"])
         await asyncio.sleep(0)
     mock_new_listen.assert_not_called()
     assert zc.engine._listen_transport is listen
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_rebuild_rejoins_kept_interfaces(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_rebuild_rejoins_kept_interfaces(aiozc: AsyncZeroconf) -> None:
     """On a family-change rebuild, interfaces that stay are re-joined on the new listen socket."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
 
     # Keep the existing IPv4 interface and add an IPv6 one (which the IPv4
     # listen socket can't join, forcing a rebuild).
@@ -700,11 +700,11 @@ async def test_update_interfaces_rebuild_rejoins_kept_interfaces(aiozc_loopback:
 
 @pytest.mark.asyncio
 async def test_update_interfaces_rebuild_rejoin_failure_warns(
-    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+    aiozc: AsyncZeroconf, caplog: pytest.LogCaptureFixture
 ) -> None:
     """A staying interface that fails to re-join on the rebuilt listen socket warns."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     v6 = (("fe80::1", 0, 0), 1)
     new_listen_sock = Mock()
     new_listen_sock.family = socket.AF_INET6
@@ -730,11 +730,11 @@ async def test_update_interfaces_rebuild_rejoin_failure_warns(
 
 @pytest.mark.asyncio
 async def test_update_interfaces_rebuild_failure_is_noop(
-    aiozc_loopback: AsyncZeroconf, caplog: pytest.LogCaptureFixture
+    aiozc: AsyncZeroconf, caplog: pytest.LogCaptureFixture
 ) -> None:
     """If the replacement listen socket can't be created, the rescan logs and no-ops."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     old_listen = engine._listen_transport
     before = (list(engine.senders), list(engine.readers))
     with (
@@ -753,11 +753,11 @@ async def test_update_interfaces_rebuild_failure_is_noop(
 
 @pytest.mark.asyncio
 async def test_update_interfaces_default_rebuild_failure_keeps_dual_use(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """A failed rebuild during a dual-use conversion leaves the dual-use sender intact."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     listen = engine._listen_transport
     assert listen is not None
     # Simulate a Default single-family instance: the listen socket is the sole sender.
@@ -777,11 +777,11 @@ async def test_update_interfaces_default_rebuild_failure_keeps_dual_use(
 
 @pytest.mark.asyncio
 async def test_update_interfaces_rebuild_closes_socket_on_wrap_failure(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """If wrapping the new listen socket fails, it is closed rather than leaked."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     old_listen = engine._listen_transport
     new_listen_sock = Mock()
     new_listen_sock.family = socket.AF_INET6
@@ -803,11 +803,11 @@ async def test_update_interfaces_rebuild_closes_socket_on_wrap_failure(
 
 @pytest.mark.asyncio
 async def test_update_interfaces_rebuild_family_matches_desired_set(
-    aiozc_loopback: AsyncZeroconf,
+    aiozc: AsyncZeroconf,
 ) -> None:
     """The rebuilt listen socket's family is derived from the desired set, not ip_version."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     new_listen_sock = Mock()
     new_listen_sock.family = socket.AF_INET
 
@@ -834,10 +834,10 @@ async def test_update_interfaces_rebuild_family_matches_desired_set(
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_rebuilds_real_listen_socket(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_rebuilds_real_listen_socket(aiozc: AsyncZeroconf) -> None:
     """End to end: a family change builds a real dual-stack listen socket and closes the old one."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     old_listen = engine._listen_transport
     assert old_listen is not None
     assert old_listen.sock.family == socket.AF_INET  # V4Only loopback instance
@@ -864,10 +864,10 @@ async def test_update_interfaces_rebuilds_real_listen_socket(aiozc_loopback: Asy
 
 
 @pytest.mark.asyncio
-async def test_close_sender_closes_transport_when_drop_raises(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_close_sender_closes_transport_when_drop_raises(aiozc: AsyncZeroconf) -> None:
     """A non-benign group-leave error still releases the transport."""
-    engine = aiozc_loopback.zeroconf.engine
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
     gone_transport = Mock()
     gone = _make_wrapped(("10.0.0.5", 5353), transport=gone_transport)
     listen_socket = Mock()
@@ -882,23 +882,23 @@ async def test_close_sender_closes_transport_when_drop_raises(aiozc_loopback: As
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_apple_p2p_non_darwin_raises(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_apple_p2p_non_darwin_raises(aiozc: AsyncZeroconf) -> None:
     """apple_p2p=True on a non-Apple platform raises, matching __init__."""
-    await aiozc_loopback.zeroconf.async_wait_for_start()
+    await aiozc.zeroconf.async_wait_for_start()
     with (
         patch("zeroconf._core.sys.platform", "linux"),
         pytest.raises(RuntimeError, match="apple_p2p"),
     ):
-        await aiozc_loopback.async_update_interfaces(apple_p2p=True)
+        await aiozc.async_update_interfaces(apple_p2p=True)
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_copies_interface_list(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_copies_interface_list(aiozc: AsyncZeroconf) -> None:
     """A mutable interfaces list is copied so later mutation doesn't change retained config."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     ifaces = ["127.0.0.1"]
-    await aiozc_loopback.async_update_interfaces(ifaces)
+    await aiozc.async_update_interfaces(ifaces)
     ifaces.append("10.0.0.1")
     assert zc._interfaces == ["127.0.0.1"]
 
@@ -931,27 +931,27 @@ async def test_update_interfaces_unicast_has_no_listen_socket() -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_serializes_concurrent_calls(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_serializes_concurrent_calls(aiozc: AsyncZeroconf) -> None:
     """Overlapping rescans are serialized so an interface is not added twice."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     engine = zc.engine
-    await aiozc_loopback.async_update_interfaces([])
+    await aiozc.async_update_interfaces([])
     await asyncio.sleep(0)
     assert engine.senders == []
 
     await asyncio.gather(
-        aiozc_loopback.async_update_interfaces(["127.0.0.1"]),
-        aiozc_loopback.async_update_interfaces(["127.0.0.1"]),
+        aiozc.async_update_interfaces(["127.0.0.1"]),
+        aiozc.async_update_interfaces(["127.0.0.1"]),
     )
     await asyncio.sleep(0)
     assert len(engine.senders) == 1
 
 
 @pytest.mark.asyncio
-async def test_update_interfaces_keeps_config_on_reconcile_failure(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_update_interfaces_keeps_config_on_reconcile_failure(aiozc: AsyncZeroconf) -> None:
     """A failed engine reconcile leaves the retained interface config unchanged."""
-    zc = aiozc_loopback.zeroconf
+    zc = aiozc.zeroconf
     await zc.async_wait_for_start()
     original_interfaces = zc._interfaces
     original_ip_version = zc._ip_version
@@ -960,15 +960,15 @@ async def test_update_interfaces_keeps_config_on_reconcile_failure(aiozc_loopbac
         patch.object(_engine.AsyncEngine, "async_update_interfaces", new=AsyncMock(side_effect=OSError)),
         pytest.raises(OSError),
     ):
-        await aiozc_loopback.async_update_interfaces(["10.0.0.1"], ip_version=IPVersion.All)
+        await aiozc.async_update_interfaces(["10.0.0.1"], ip_version=IPVersion.All)
 
     assert zc._interfaces == original_interfaces
     assert zc._ip_version == original_ip_version
 
 
-def test_sync_update_interfaces(zc_loopback: Zeroconf) -> None:
+def test_sync_update_interfaces(zc: Zeroconf) -> None:
     """The sync wrapper drives a rescan through the loop without changing a stable set."""
-    engine = zc_loopback.engine
+    engine = zc.engine
     sender_count = len(engine.senders)
-    zc_loopback.update_interfaces(["127.0.0.1"])
+    zc.update_interfaces(["127.0.0.1"])
     assert len(engine.senders) == sender_count

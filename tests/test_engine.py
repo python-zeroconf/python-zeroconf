@@ -74,10 +74,10 @@ async def test_reaper():
 
 
 @pytest.mark.asyncio
-async def test_setup_releases_socket_ownership(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_setup_releases_socket_ownership(aiozc: AsyncZeroconf) -> None:
     """Engine releases its pending-socket refs once each socket has a transport."""
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    engine = aiozc_loopback.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
     assert engine._listen_socket is None
     assert engine._respond_sockets == []
     assert engine.readers
@@ -85,10 +85,10 @@ async def test_setup_releases_socket_ownership(aiozc_loopback: AsyncZeroconf) ->
 
 
 @pytest.mark.asyncio
-async def test_async_close_propagates_outer_cancellation(aiozc_loopback: AsyncZeroconf) -> None:
+async def test_async_close_propagates_outer_cancellation(aiozc: AsyncZeroconf) -> None:
     """Outer-task cancellation while awaiting setup propagates to the caller."""
-    await aiozc_loopback.zeroconf.async_wait_for_start()
-    engine = aiozc_loopback.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
     loop = asyncio.get_running_loop()
     original_task = engine._setup_task
     fake_task = loop.create_future()
@@ -97,6 +97,26 @@ async def test_async_close_propagates_outer_cancellation(aiozc_loopback: AsyncZe
     try:
         with pytest.raises(asyncio.CancelledError):
             await engine._async_close()
+    finally:
+        engine._setup_task = original_task
+
+
+@pytest.mark.asyncio
+async def test_async_close_swallows_cancelled_setup(aiozc: AsyncZeroconf) -> None:
+    """Close before setup starts swallows the setup task's own cancellation."""
+    await aiozc.zeroconf.async_wait_for_start()
+    engine = aiozc.zeroconf.engine
+    loop = asyncio.get_running_loop()
+    original_task = engine._setup_task
+
+    async def hang() -> None:
+        await asyncio.Event().wait()
+
+    cancelled_task = loop.create_task(hang())
+    cancelled_task.cancel()
+    engine._setup_task = cancelled_task
+    try:
+        await engine._async_close()
     finally:
         engine._setup_task = original_task
 
