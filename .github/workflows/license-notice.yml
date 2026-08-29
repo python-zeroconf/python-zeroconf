@@ -1,0 +1,68 @@
+name: License Change Notice
+
+# The project is transitioning from LGPL-2.1 to Apache 2.0
+# (https://github.com/python-zeroconf/python-zeroconf/issues/1835).
+# Every newly opened pull request gets a comment stating that opening
+# it means agreeing to license the contribution, and the author's
+# previous contributions, under Apache 2.0. If the pull request author
+# replies that they do not agree, the pull request is closed.
+
+on:
+  pull_request_target:
+    types:
+      - opened
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  notice:
+    name: Post license notice
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                "Heads up: this project is changing its license from LGPL-2.1 to Apache 2.0, see #1835.",
+                "",
+                "By opening this pull request you agree that your contribution, and all of your previous contributions to this repository, are licensed under Apache 2.0.",
+                "",
+                "If you do not agree, reply with the exact phrase `I do not agree to the Apache 2.0 license` and this pull request will be closed.",
+              ].join("\n"),
+            });
+
+  objection:
+    name: Close on objection
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      github.event.comment.user.login == github.event.issue.user.login &&
+      contains(github.event.comment.body, 'I do not agree to the Apache 2.0 license')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const number = context.payload.issue.number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: number,
+              body: "Closing as requested; this contribution is not offered under the Apache 2.0 license change.",
+            });
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: number,
+              state: "closed",
+            });
