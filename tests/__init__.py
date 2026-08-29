@@ -10,8 +10,9 @@ import platform
 import socket
 import sys
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import cache
+from threading import Event
 from typing import Any
 from unittest import mock
 
@@ -127,6 +128,16 @@ def _wait_for_start(zc: Zeroconf) -> None:
     asyncio.run_coroutine_threadsafe(zc.async_wait_for_start(), zc.loop).result()
 
 
+def _wait_for(predicate: Callable[[], bool], timeout: float = 2.0) -> bool:
+    """Poll `predicate` from a non-loop thread until true or `timeout` seconds pass."""
+    deadline = time.monotonic() + timeout
+    while not predicate():
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.01)
+    return True
+
+
 @cache
 def has_working_ipv6():
     """Return True if the system can bind an IPv6 address."""
@@ -178,6 +189,26 @@ def _backdate_cache(zc: Zeroconf, ms: int = 1100) -> None:
     for store in zc.cache.cache.values():
         for record in store.values():
             record.created -= ms
+
+
+def _restamp_cache(zc: Zeroconf, created: float, ttl: int) -> None:
+    """Re-add every cached record with a new `created` and `ttl` from the loop thread.
+
+    Unlike `_backdate_cache` this goes through `_async_set_created_ttl`, so
+    the expiration heap is updated and the reaper will actually expire the
+    records; the heap is only safe to touch from the event loop thread.
+    """
+    assert zc.loop is not None
+    done = Event()
+
+    def _restamp() -> None:
+        for store in list(zc.cache.cache.values()):
+            for record in list(store.values()):
+                zc.cache._async_set_created_ttl(record, created, ttl)
+        done.set()
+
+    zc.loop.call_soon_threadsafe(_restamp)
+    assert done.wait(2)
 
 
 def time_changed_millis(millis: float | None = None) -> None:
