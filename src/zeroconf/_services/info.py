@@ -474,7 +474,6 @@ class ServiceInfo(RecordUpdateListener):
         self._properties = properties
 
     def get_name(self) -> str:
-        """Name accessor"""
         return self._name[: len(self._name) - len(self.type) - 1]
 
     def _get_ip_addresses_from_cache_lifo(
@@ -1086,7 +1085,6 @@ class ServiceInfo(RecordUpdateListener):
         return out
 
     def __repr__(self) -> str:
-        """String representation"""
         return "{}({})".format(
             type(self).__name__,
             ", ".join(

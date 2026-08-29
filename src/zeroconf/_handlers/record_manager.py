@@ -195,10 +195,6 @@ class RecordManager:
         self.zc.async_notify_all()
 
     def async_remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Removes a listener.
-
-        This function is not threadsafe and must be called in the eventloop.
-        """
         try:
             self.listeners.remove(listener)
             self.zc.async_notify_all()

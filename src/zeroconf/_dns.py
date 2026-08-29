@@ -64,8 +64,6 @@ class DNSQuestionType(enum.Enum):
 
 
 class DNSEntry:  # noqa: PLW1641
-    """A DNS entry"""
-
     __slots__ = ("class_", "key", "name", "type", "unique")
 
     def __init__(self, name: str, type_: int, class_: int) -> None:
@@ -148,7 +146,6 @@ class DNSQuestion(DNSEntry):
         self.unique = value
 
     def __repr__(self) -> str:
-        """String representation"""
         return "{}[question,{},{},{}]".format(
             self.get_type(self.type),
             "QU" if self.unicast else "QM",
@@ -502,7 +499,6 @@ class DNSService(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        """String representation"""
         return self.to_string(f"{self.server}:{self.port}")
 
 
@@ -574,7 +570,6 @@ class DNSNsec(DNSRecord):
         return self._hash
 
     def __repr__(self) -> str:
-        """String representation"""
         return self.to_string(
             self.next_name + "," + "|".join([self.get_type(type_) for type_ in self.rdtypes])
         )

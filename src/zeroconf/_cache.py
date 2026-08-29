@@ -79,12 +79,6 @@ class DNSCache:
     # be run in the event loop.
 
     def _async_add(self, record: _DNSRecord) -> bool:
-        """Adds an entry.
-
-        Returns true if the entry was not already in the cache.
-
-        This function must be run in from event loop.
-        """
         # Previously storage of records was implemented as a list
         # instead a dict. Since DNSRecords are now hashable, the implementation
         # uses a dict to ensure that adding a new record to the cache
@@ -163,10 +157,6 @@ class DNSCache:
         return new
 
     def _async_remove(self, record: _DNSRecord) -> None:
-        """Removes an entry.
-
-        This function must be run in from event loop.
-        """
         if isinstance(record, DNSService):
             service_record = record
             _remove_key(self.service_cache, service_record.server_key, service_record)
