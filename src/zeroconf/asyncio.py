@@ -171,6 +171,11 @@ class AsyncZeroconf:
         )
 
     async def async_unregister_all_services(self) -> None:
+        """Send goodbye packets for every registered service and drop them all.
+
+        Runs only at shutdown, so unlike the single service calls it
+        returns nothing to await separately.
+        """
         await self.zeroconf.async_unregister_all_services()
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:

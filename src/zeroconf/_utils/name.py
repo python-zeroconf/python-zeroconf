@@ -41,6 +41,8 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
     """
     Validate a fully qualified service name, instance or subtype. [rfc6763]
 
+    Returns the name in its validated, fully qualified form.
+
     Domain names used by mDNS-SD take the following forms:
 
                    <sn> . <_tcp|_udp> . local.

@@ -83,6 +83,7 @@ class DNSEntry:  # noqa: PLW1641
         return self.key == other.key and self.type == other.type and self.class_ == other.class_
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when key, type and class match."""
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
     @staticmethod
@@ -124,6 +125,7 @@ class DNSQuestion(DNSEntry):
         return self._hash
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when the entry fields match a question."""
         return isinstance(other, DNSQuestion) and self._dns_entry_matches(other)
 
     @property
@@ -268,6 +270,7 @@ class DNSAddress(DNSRecord):
         out.write_string(self.address)
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when address and the entry fields match."""
         return isinstance(other, DNSAddress) and self._eq(other)
 
     def _eq(self, other: DNSAddress) -> bool:
@@ -377,6 +380,7 @@ class DNSPointer(DNSRecord):
         out.write_name(self.alias)
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when alias and the entry fields match."""
         return isinstance(other, DNSPointer) and self._eq(other)
 
     def _eq(self, other: DNSPointer) -> bool:
@@ -421,6 +425,7 @@ class DNSText(DNSRecord):
         return self._hash
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when text and the entry fields match."""
         return isinstance(other, DNSText) and self._eq(other)
 
     def _eq(self, other: DNSText) -> bool:
@@ -502,6 +507,8 @@ class DNSService(DNSRecord):
 
 
 class DNSNsec(DNSRecord):
+    """NSEC record asserting which record types exist for a name."""
+
     __slots__ = ("_hash", "next_name", "rdtypes")
 
     def __init__(
@@ -552,6 +559,7 @@ class DNSNsec(DNSRecord):
         out.write_string(out_bytes)
 
     def __eq__(self, other: Any) -> bool:
+        """Equal when next_name, rdtypes and the entry fields match."""
         return isinstance(other, DNSNsec) and self._eq(other)
 
     def _eq(self, other: DNSNsec) -> bool:

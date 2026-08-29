@@ -602,6 +602,11 @@ class Zeroconf(QuietLogger):
         return out
 
     async def async_unregister_all_services(self) -> None:
+        """Send goodbye packets for every registered service and drop them all.
+
+        Runs only at shutdown, so unlike the single service calls it
+        returns nothing to await separately.
+        """
         # Send Goodbye packets https://datatracker.ietf.org/doc/html/rfc6762#section-10.1
         out = self.generate_unregister_all_services()
         if not out:
@@ -612,6 +617,11 @@ class Zeroconf(QuietLogger):
             self.async_send(out)
 
     def unregister_all_services(self) -> None:
+        """Send goodbye packets for every registered service and drop them all.
+
+        May raise EventLoopBlocked when the event loop cannot finish the
+        shutdown broadcasts in time.
+        """
         assert self.loop is not None
         run_coro_with_timeout(
             self.async_unregister_all_services(),
@@ -700,6 +710,7 @@ class Zeroconf(QuietLogger):
         v6_flow_scope: tuple[()] | tuple[int, int] = (),
         transport: _WrappedTransport | None = None,
     ) -> None:
+        """Queue a packet for transmission from any thread."""
         assert self.loop is not None
         self.loop.call_soon_threadsafe(self.async_send, out, addr, port, v6_flow_scope, transport)
 
@@ -711,6 +722,7 @@ class Zeroconf(QuietLogger):
         v6_flow_scope: tuple[()] | tuple[int, int] = (),
         transport: _WrappedTransport | None = None,
     ) -> None:
+        """Transmit a packet from the event loop."""
         if self.done:
             return
 

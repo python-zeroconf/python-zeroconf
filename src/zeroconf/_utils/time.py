@@ -28,6 +28,11 @@ _float = float
 
 
 def current_time_millis() -> _float:
+    """Monotonic clock reading in milliseconds.
+
+    Must stay aligned with asyncio.loop.time(); the backing clock is an
+    implementation detail and may change.
+    """
     return time.monotonic() * 1000
 
 
