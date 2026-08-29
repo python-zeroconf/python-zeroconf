@@ -55,8 +55,8 @@ DEBUG_ENABLED = partial(log.isEnabledFor, logging.DEBUG)
 
 
 class AsyncListener:
-
-    the read() method called when a socket is available for reading."""
+    """Asyncio datagram protocol that receives mDNS packets and feeds them
+    to the record manager and query handler as they arrive."""
 
     __slots__ = (
         "_deferred",
@@ -236,6 +236,7 @@ class AsyncListener:
         transport: _WrappedTransport,
         v6_flow_scope: tuple[()] | tuple[int, int],
     ) -> None:
+        """Answer immediately, or hold a truncated query for reassembly."""
         if not msg.truncated:
             self._respond_query(msg, addr, port, transport, v6_flow_scope)
             return

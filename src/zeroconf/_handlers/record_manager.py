@@ -53,32 +53,21 @@ class RecordManager:
         self.listeners: set[RecordUpdateListener] = set()
 
     def async_updates(self, now: _float, records: list[_RecordUpdate]) -> None:
-        a record.
-
-        This method must be called before the cache is updated.
-
-        This method will be run in the event loop.
-        """
+        """Notify listeners of updated records, before the cache commits them."""
         for listener in self.listeners.copy():
             listener.async_update_records(self.zc, now, records)
 
     def async_updates_complete(self, notify: bool) -> None:
-        a record.
-
-        This method must be called after the cache is updated.
-
-        This method will be run in the event loop.
-        """
+        """Notify listeners that a batch landed, after the cache committed it."""
         for listener in self.listeners.copy():
             listener.async_update_records_complete()
         if notify:
             self.zc.async_notify_all()
 
     def async_updates_from_response(self, msg: DNSIncoming) -> None:
-        are held in the cache, and listeners are notified.
+        """Ingest a response: cache its answers and notify listeners.
 
-        This function must be run in the event loop as it is not
-        threadsafe.
+        Runs in the event loop; not threadsafe.
         """
         updates: list[RecordUpdate] = []
         address_adds: list[DNSRecord] = []
@@ -168,10 +157,8 @@ class RecordManager:
         listener: RecordUpdateListener,
         question: DNSQuestion | list[DNSQuestion] | None,
     ) -> None:
-        its update_record method called when information is available to
-        answer the question(s).
-
-        This function is not thread-safe and must be called in the eventloop.
+        """Subscribe a listener, optionally scoped to questions, and seed it
+        with matching cached records; event loop only.
         """
         if not isinstance(listener, RecordUpdateListener):
             log.error(  # type: ignore[unreachable]

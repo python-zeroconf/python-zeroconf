@@ -457,6 +457,7 @@ class PacketGeneration(unittest.TestCase):
 
 class PacketForm(unittest.TestCase):
     def test_transaction_id(self):
+        """Multicast DNS messages carry transaction id 0 (RFC 6762 section 18.1)."""
         generated = r.DNSOutgoing(const._FLAGS_QR_QUERY)
         bytes = generated.packets()[0]
         id = bytes[0] << 8 | bytes[1]
