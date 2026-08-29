@@ -171,12 +171,6 @@ class AsyncZeroconf:
         )
 
     async def async_unregister_all_services(self) -> None:
-        """Unregister all registered services.
-
-        Unlike async_register_service and async_unregister_service, this
-        method does not return a future and is always expected to be
-        awaited since its only called at shutdown.
-        """
         await self.zeroconf.async_unregister_all_services()
 
     async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
