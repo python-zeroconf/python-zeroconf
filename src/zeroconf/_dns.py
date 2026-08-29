@@ -158,8 +158,6 @@ class DNSQuestion(DNSEntry):
 
 
 class DNSRecord(DNSEntry):  # noqa: PLW1641
-    """A DNS record - like a DNS entry, but has a TTL"""
-
     __slots__ = ("created", "ttl")
 
     def __init__(
@@ -203,12 +201,10 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
 
     # TODO: Switch to just int here
     def get_remaining_ttl(self, now: _float) -> int | float:
-        """Returns the remaining TTL in seconds."""
         remain = (self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) - now) / 1000.0
         return 0 if remain < 0 else remain
 
     def is_expired(self, now: _float) -> bool:
-        """Returns true if this record has expired."""
         return self.created + (_EXPIRE_FULL_TIME_MS * self.ttl) <= now
 
     def is_stale(self, now: _float) -> bool:
@@ -322,16 +318,13 @@ class DNSHinfo(DNSRecord):
         self._hash = hash((self.key, type_, self.class_, cpu, os))
 
     def write(self, out: DNSOutgoing) -> None:
-        """Used in constructing an outgoing packet"""
         out.write_character_string(self.cpu.encode("utf-8"))
         out.write_character_string(self.os.encode("utf-8"))
 
     def __eq__(self, other: Any) -> bool:
-        """Tests equality on cpu and os."""
         return isinstance(other, DNSHinfo) and self._eq(other)
 
     def _eq(self, other: DNSHinfo) -> bool:
-        """Tests equality on cpu and os."""
         return self.cpu == other.cpu and self.os == other.os and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
@@ -490,7 +483,6 @@ class DNSService(DNSRecord):
         return isinstance(other, DNSService) and self._eq(other)
 
     def _eq(self, other: DNSService) -> bool:
-        """Tests equality on priority, weight, port and server."""
         return (
             self.priority == other.priority
             and self.weight == other.weight
@@ -541,7 +533,6 @@ class DNSNsec(DNSRecord):
         self._hash = hash((self.key, type_, self.class_, next_name, *self.rdtypes))
 
     def write(self, out: DNSOutgoing) -> None:
-        """Used in constructing an outgoing packet."""
         bitmap = bytearray(b"\0" * 32)
         total_octets = 0
         for rdtype in self.rdtypes:
@@ -613,8 +604,6 @@ class DNSRRSet:
         return self._lookup
 
     def suppresses(self, record: _DNSRecord) -> bool:
-        """Returns true if any answer in the rrset can suffice for the
-        information held in this record."""
         lookup = self._get_lookup()
         other = lookup.get(record)
         if other is None:

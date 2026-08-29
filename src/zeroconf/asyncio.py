@@ -46,24 +46,6 @@ __all__ = [
 
 
 class AsyncServiceBrowser(_ServiceBrowserBase):
-    """Used to browse for a service for specific type(s).
-
-    Constructor parameters are as follows:
-
-    * `zc`: A Zeroconf instance
-    * `type_`: fully qualified service type name
-    * `handler`: ServiceListener or Callable that knows how to process ServiceStateChange events
-    * `listener`: ServiceListener
-    * `addr`: address to send queries (will default to multicast)
-    * `port`: port to send queries (will default to mdns 5353)
-    * `delay`: The initial delay between answering questions
-    * `question_type`: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
-
-    The listener object will have its add_service() and
-    remove_service() methods called when this browser
-    discovers changes in the services availability.
-    """
-
     def __init__(
         self,
         zeroconf: Zeroconf,
@@ -176,16 +158,6 @@ class AsyncZeroconf:
         cooperating_responders: bool = False,
         strict: bool = True,
     ) -> Awaitable:
-        """Registers service information to the network with a default TTL.
-        Zeroconf will then respond to requests for information for that
-        service.  The name of the service may be changed if needed to make
-        it unique on the network. Additionally multiple cooperating responders
-        can register the same service on the network for resilience
-        (if you want this behavior set `cooperating_responders` to `True`).
-
-        The service will be broadcast in a task. This task is returned
-        and therefore can be awaited if necessary.
-        """
         return await self.zeroconf.async_register_service(
             info, ttl, allow_name_change, cooperating_responders, strict
         )
@@ -208,13 +180,6 @@ class AsyncZeroconf:
         return await self.zeroconf.async_unregister_service(info)
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
-        """Registers service information to the network with a default TTL.
-        Zeroconf will then respond to requests for information for that
-        service.
-
-        The service will be broadcast in a task. This task is returned
-        and therefore can be awaited if necessary.
-        """
         return await self.zeroconf.async_update_service(info)
 
     async def async_update_interfaces(
@@ -249,32 +214,18 @@ class AsyncZeroconf:
         timeout: int = 3000,
         question_type: DNSQuestionType | None = None,
     ) -> AsyncServiceInfo | None:
-        """Returns network's service information for a particular
-        name and type, or None if no service matches by the timeout,
-        which defaults to 3 seconds.
-
-        :param type_: fully qualified service type name
-        :param name: the name of the service
-        :param timeout: milliseconds to wait for a response
-        :param question_type: The type of questions to ask (DNSQuestionType.QM or DNSQuestionType.QU)
-        """
         return await self.zeroconf.async_get_service_info(type_, name, timeout, question_type)
 
     async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
-        """Adds a listener for a particular service type.  This object
-        will then have its add_service and remove_service methods called when
-        services of that type become available and unavailable."""
         await self.async_remove_service_listener(listener)
         self.async_browsers[listener] = AsyncServiceBrowser(self.zeroconf, type_, listener)
 
     async def async_remove_service_listener(self, listener: ServiceListener) -> None:
-        """Removes a listener from the set that is currently listening."""
         if listener in self.async_browsers:
             await self.async_browsers[listener].async_cancel()
             del self.async_browsers[listener]
 
     async def async_remove_all_service_listeners(self) -> None:
-        """Removes a listener from the set that is currently listening."""
         await asyncio.gather(
             *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
         )

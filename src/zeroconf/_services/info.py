@@ -151,32 +151,6 @@ def instance_name_from_service_info(info: ServiceInfo, strict: bool = True) -> s
 
 
 class ServiceInfo(RecordUpdateListener):
-    """Service information.
-
-    Constructor parameters are as follows:
-
-    * `type_`: fully qualified service type name
-    * `name`: fully qualified service name
-    * `port`: port that the service runs on
-    * `weight`: weight of the service
-    * `priority`: priority of the service
-    * `properties`: dictionary of properties (or a bytes object holding the contents of the `text` field).
-      converted to str and then encoded to bytes using UTF-8. Keys with `None` values are converted to
-      value-less attributes. Any supplied value, including an empty `{}` or `b""`, counts as a seen TXT
-      record; omitting the parameter means the TXT record is not yet known, so `request()` and
-      `load_from_cache()` will not report the service as complete until one arrives.
-    * `server`: fully qualified name for service host (defaults to name)
-    * `host_ttl`: ttl used for A/SRV records
-    * `other_ttl`: ttl used for PTR/TXT records
-    * `addresses` and `parsed_addresses`: List of IP addresses (either as bytes, network byte order,
-      or in parsed form as text; at most one of those parameters can be provided)
-    * interface_index: scope_id or zone_id for IPv6 link-local addresses i.e. an identifier of the interface
-      where the peer is connected to
-
-    Assigning the `text` attribute directly does not mark the TXT record as seen; pass `properties`
-    to the constructor instead.
-    """
-
     __slots__ = (
         "_decoded_properties",
         "_dns_address_cache",
@@ -350,7 +324,6 @@ class ServiceInfo(RecordUpdateListener):
         self._get_address_and_nsec_records_cache = None
 
     async def async_wait(self, timeout: float, loop: asyncio.AbstractEventLoop | None = None) -> None:
-        """Calling task waits for a given number of milliseconds or until notified."""
         if not self._new_records_futures:
             self._new_records_futures = set()
         await wait_for_future_set_or_timeout(
@@ -567,10 +540,6 @@ class ServiceInfo(RecordUpdateListener):
             self._ipv4_addresses = self._get_ip_addresses_from_cache_lifo(zc, now, _TYPE_A)
 
     def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate_]) -> None:
-        """Updates service information from a DNS record.
-
-        This method will be run in the event loop.
-        """
         new_records_futures = self._new_records_futures
         updated: bool = False
         nsec_records = None
@@ -962,19 +931,6 @@ class ServiceInfo(RecordUpdateListener):
         addr: str | None = None,
         port: int = _MDNS_PORT,
     ) -> bool:
-        """Returns true if the service could be discovered on the
-        network, and updates this object with details discovered.
-
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `async_request` cannot be completed.
-
-        :param zc: Zeroconf instance
-        :param timeout: time in milliseconds to wait for a response
-        :param question_type: question type to ask
-        :param addr: address to send the request to
-        :param port: port to send the request to
-        """
         assert zc.loop is not None, "Zeroconf instance must have a loop, was it not started?"
         assert zc.loop.is_running(), "Zeroconf instance loop must be running, was it already stopped?"
         if zc.loop == get_running_loop():
@@ -1001,22 +957,6 @@ class ServiceInfo(RecordUpdateListener):
         addr: str | None = None,
         port: int = _MDNS_PORT,
     ) -> bool:
-        """Returns true if the service could be discovered on the
-        network, and updates this object with details discovered.
-
-        This method will be run in the event loop.
-
-        Passing addr and port is optional, and will default to the
-        mDNS multicast address and port. This is useful for directing
-        requests to a specific host that may be able to respond across
-        subnets.
-
-        :param zc: Zeroconf instance
-        :param timeout: time in milliseconds to wait for a response
-        :param question_type: question type to ask
-        :param addr: address to send the request to
-        :param port: port to send the request to
-        """
         if not zc.started:
             await zc.async_wait_for_start()
 

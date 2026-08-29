@@ -115,13 +115,13 @@ _MAX_MSG_TYPICAL = 1460
 _FLAGS_QR_MASK = 0x8000
 _FLAGS_QR_QUERY = 0x0000
 _FLAGS_QR_RESPONSE = 0x8000
-_FLAGS_AA = 0x0400  # Authoritative answer
-_FLAGS_TC = 0x0200  # Truncated
-_FLAGS_RD = 0x0100  # Recursion desired
-_FLAGS_RA = 0x8000  # Recursion available
-_FLAGS_Z = 0x0040  # Zero
-_FLAGS_AD = 0x0020  # Authentic data
-_FLAGS_CD = 0x0010  # Checking disabled
+_FLAGS_AA = 0x0400
+_FLAGS_TC = 0x0200
+_FLAGS_RD = 0x0100
+_FLAGS_RA = 0x8000
+_FLAGS_Z = 0x0040
+_FLAGS_AD = 0x0020
+_FLAGS_CD = 0x0010
 
 
 _CLASS_IN = 1

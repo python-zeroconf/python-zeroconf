@@ -77,8 +77,6 @@ LOGGING_DEBUG = logging.DEBUG
 
 
 class DNSOutgoing:
-    """Object representation of an outgoing packet"""
-
     __slots__ = (
         "additionals",
         "allow_long",
@@ -117,11 +115,9 @@ class DNSOutgoing:
         self.additionals: list[DNSRecord] = []
 
     def is_query(self) -> bool:
-        """Returns true if this is a query."""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_QUERY
 
     def is_response(self) -> bool:
-        """Returns true if this is a response."""
         return (self.flags & _FLAGS_QR_MASK) == _FLAGS_QR_RESPONSE
 
     def _reset_for_next_packet(self) -> None:
@@ -200,7 +196,6 @@ class DNSOutgoing:
         self.additionals.append(record)
 
     def _write_byte(self, value: int_) -> None:
-        """Writes a single byte to the packet"""
         self.data.append(BYTE_TABLE[value])
         self.size += 1
 
@@ -213,16 +208,13 @@ class DNSOutgoing:
         self.data.insert(0, self._get_short(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
-        """Replaces an unsigned short in a certain position in the packet"""
         self.data[index] = self._get_short(value)
 
     def write_short(self, value: int_) -> None:
-        """Writes an unsigned short to the packet"""
         self.data.append(self._get_short(value))
         self.size += 2
 
     def _write_int(self, value: float | int) -> None:
-        """Writes an unsigned integer to the packet"""
         value_as_int = int(value)
         long_bytes = LONG_LOOKUP.get(value_as_int)
         if long_bytes is not None:
@@ -232,7 +224,6 @@ class DNSOutgoing:
         self.size += 4
 
     def write_string(self, value: bytes_) -> None:
-        """Writes a string to the packet"""
         if TYPE_CHECKING:
             assert isinstance(value, bytes)
         self.data.append(value)
@@ -305,7 +296,6 @@ class DNSOutgoing:
         self._write_byte(index & 0xFF)
 
     def _write_question(self, question: DNSQuestion_) -> bool:
-        """Writes a question to the packet"""
         start_data_length = len(self.data)
         start_size = self.size
         self.write_name(question.name)
