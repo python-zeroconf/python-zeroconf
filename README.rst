@@ -88,6 +88,8 @@ The easiest way to install python-zeroconf is using pip::
 How do I use it?
 ================
 
+Here's how to discover services:
+
 .. code-block:: python
 
     from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
@@ -119,6 +121,8 @@ How do I use it?
     Discovery and service registration use *all* available network interfaces by default.
     If you want to customize that you need to specify ``interfaces`` argument when
     constructing ``Zeroconf`` object (see the code for details).
+
+To see which service types are present on the network, try:
 
 .. code-block:: python
 
