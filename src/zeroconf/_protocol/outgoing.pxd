@@ -65,11 +65,10 @@ cdef class DNSOutgoing:
     cdef cython.bint _write_question(self, DNSQuestion question)
 
     @cython.locals(
-        chunk=cython.bytes,
         data_length_before=cython.uint,
         size_before=cython.uint,
         length_index=cython.uint,
-        rdata_length=cython.uint,
+        rdata_size_start=cython.uint,
     )
     cdef cython.bint _write_record(self, DNSRecord record, double now)
 

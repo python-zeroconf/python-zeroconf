@@ -335,11 +335,9 @@ class DNSOutgoing:
         self._write_ttl(record, now)
         length_index = len(self.data)
         self.write_short(0)  # placeholder for the rdata length
+        rdata_size_start = self.size
         record.write(self)
-        rdata_length = 0
-        for chunk in self.data[length_index + 1 :]:
-            rdata_length += len(chunk)
-        self._replace_short(length_index, rdata_length)
+        self._replace_short(length_index, self.size - rdata_size_start)
         return self._check_data_limit_or_rollback(data_length_before, size_before)
 
     def _check_data_limit_or_rollback(self, start_data_length: int_, start_size: int_) -> bool:

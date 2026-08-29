@@ -311,6 +311,7 @@ class DNSIncoming:
         return info
 
     def _read_others(self) -> None:
+        """Read the answer, authority and additional sections."""
         self._did_read_others = True
         buf = self._buf
         answers = self._answers
