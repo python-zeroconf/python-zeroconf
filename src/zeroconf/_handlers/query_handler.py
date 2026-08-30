@@ -328,7 +328,7 @@ class QueryHandler:
         answer_set: _AnswerWithAdditionalsType,
         known_answers: DNSRRSet,
     ) -> None:
-        """Answer PTR/ANY question."""
+        """Build PTR answers with their DNS-SD recommended additionals."""
         for service in services:
             # Add recommended additional answers according to
             # https://tools.ietf.org/html/rfc6763#section-12.1.
@@ -371,7 +371,7 @@ class QueryHandler:
         services: list[_ServiceInfo],
         known_answers: DNSRRSet,
     ) -> _AnswerWithAdditionalsType:
-        """Answer a question."""
+        """Build the answer set for one question."""
         answer_set: _AnswerWithAdditionalsType = {}
 
         if strategy_type == _ANSWER_STRATEGY_SERVICE_TYPE_ENUMERATION:
