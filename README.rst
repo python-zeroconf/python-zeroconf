@@ -20,9 +20,9 @@ python-zeroconf
 
 `Documentation <https://python-zeroconf.readthedocs.io/en/latest/>`_.
 
-This is fork of pyzeroconf, Multicast DNS Service Discovery for Python,
-originally by Paul Scott-Murphy (https://github.com/paulsm/pyzeroconf),
-modified by William McBrine (https://github.com/wmcbrine/pyzeroconf).
+This project is a fork of pyzeroconf, originally by Paul Scott-Murphy
+(https://github.com/paulsm/pyzeroconf), modified by William McBrine
+(https://github.com/wmcbrine/pyzeroconf).
 
 Compatible with:
 

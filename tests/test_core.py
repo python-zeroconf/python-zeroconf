@@ -57,32 +57,23 @@ def threadsafe_query(
     asyncio.run_coroutine_threadsafe(make_query(), zc.loop).result()
 
 
+@pytest.mark.parametrize("unicast", [False, True])
 @pytest.mark.parametrize("interfaces", [r.InterfaceChoice.All, r.InterfaceChoice.Default])
-def test_open_and_close_cleanly(interfaces):
-    r.Zeroconf(interfaces=interfaces).close()
+def test_open_and_close_cleanly(interfaces: r.InterfaceChoice, unicast: bool) -> None:
+    r.Zeroconf(interfaces=interfaces, unicast=unicast).close()
 
 
-def test_launch_and_close_context_manager():
-    with r.Zeroconf(interfaces=r.InterfaceChoice.All) as rv:
-        assert rv.done is False
-    assert rv.done is True
-
-    with r.Zeroconf(interfaces=r.InterfaceChoice.Default) as rv:  # type: ignore[unreachable]
-        assert rv.done is False
-    assert rv.done is True
-
-
-def test_launch_and_close_unicast():
-    rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, unicast=True)
-    rv.close()
-    rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, unicast=True)
-    rv.close()
+@pytest.mark.parametrize("interfaces", [r.InterfaceChoice.All, r.InterfaceChoice.Default])
+def test_context_manager_marks_done(interfaces: r.InterfaceChoice) -> None:
+    with r.Zeroconf(interfaces=interfaces) as zc:
+        assert zc.done is False
+    assert zc.done is True
 
 
 def test_close_multiple_times():
-    rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
-    rv.close()
-    rv.close()
+    zc = r.Zeroconf(interfaces=r.InterfaceChoice.Default)
+    zc.close()
+    zc.close()
 
 
 def test_close_releases_owned_event_loop():
@@ -93,11 +84,11 @@ def test_close_releases_owned_event_loop():
     Zeroconf construct/close cycle and the process eventually exhausts
     its FD limit.
     """
-    rv = r.Zeroconf(interfaces=["127.0.0.1"])
-    loop = rv.loop
+    zc = r.Zeroconf(interfaces=["127.0.0.1"])
+    loop = zc.loop
     assert loop is not None
     assert loop.is_running()
-    rv.close()
+    zc.close()
     assert loop.is_closed()
 
 
@@ -123,38 +114,23 @@ def test_close_does_not_leak_file_descriptors():
 
 @pytest.mark.skipif(not has_working_ipv6(), reason="Requires IPv6")
 @pytest.mark.skipif(os.environ.get("SKIP_IPV6"), reason="IPv6 tests disabled")
-def test_launch_and_close_v4_v6():
-    rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.All)
-    rv.close()
+@pytest.mark.parametrize("ip_version", [r.IPVersion.All, r.IPVersion.V6Only])
+def test_default_interface_warns_when_ipv6_requested(ip_version: r.IPVersion) -> None:
+    r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=ip_version).close()
     with warnings.catch_warnings(record=True) as warned:
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.All)
-        rv.close()
-        first_warning = warned[0]
-        assert "IPv6 multicast requests can't be sent using default interface" in str(first_warning.message)
-
-
-@pytest.mark.skipif(not has_working_ipv6(), reason="Requires IPv6")
-@pytest.mark.skipif(os.environ.get("SKIP_IPV6"), reason="IPv6 tests disabled")
-def test_launch_and_close_v6_only():
-    rv = r.Zeroconf(interfaces=r.InterfaceChoice.All, ip_version=r.IPVersion.V6Only)
-    rv.close()
-    with warnings.catch_warnings(record=True) as warned:
-        rv = r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=r.IPVersion.V6Only)
-        rv.close()
-        first_warning = warned[0]
-        assert "IPv6 multicast requests can't be sent using default interface" in str(first_warning.message)
+        r.Zeroconf(interfaces=r.InterfaceChoice.Default, ip_version=ip_version).close()
+        assert "IPv6 multicast requests can't be sent using default interface" in str(warned[0].message)
 
 
 @pytest.mark.skipif(sys.platform == "darwin", reason="apple_p2p failure path not testable on mac")
-def test_launch_and_close_apple_p2p_not_mac():
+def test_apple_p2p_rejected_off_mac():
     with pytest.raises(RuntimeError):
         r.Zeroconf(apple_p2p=True)
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="apple_p2p happy path only testable on mac")
-def test_launch_and_close_apple_p2p_on_mac():
-    rv = r.Zeroconf(apple_p2p=True)
-    rv.close()
+def test_apple_p2p_binds_on_mac():
+    r.Zeroconf(apple_p2p=True).close()
 
 
 def test_use_asyncio_false_forces_thread_when_loop_running():

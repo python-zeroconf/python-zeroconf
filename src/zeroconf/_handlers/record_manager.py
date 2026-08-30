@@ -27,7 +27,7 @@ _DNSQuestion = DNSQuestion
 
 
 class RecordManager:
-    """Process records into the cache and notify listeners."""
+    """Apply incoming records to the cache and deliver the updates to listeners."""
 
     __slots__ = ("cache", "listeners", "zc")
 
