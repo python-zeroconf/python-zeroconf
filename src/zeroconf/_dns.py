@@ -243,14 +243,13 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         return _format_display(type(self).__name__, [*self._display_fields(), *details])
 
     def _set_created_ttl(self, created: _float, ttl: _int) -> None:
-        """Set the created and ttl of a record."""
         # It would be better if we made a copy instead of mutating the record
         # in place, but records currently don't have a copy method.
         self.created = created
         self.ttl = ttl
 
     def _suppressed_by_answer(self, answer: DNSRecord) -> bool:
-        """RFC 6762 section 7.1 known answer test: an equal record whose TTL is at least half of ours."""
+        """RFC 6762 section 7.1 known answer test: an equal record with more than half our TTL."""
         return self == answer and self.ttl / 2 < answer.ttl
 
 
@@ -345,7 +344,6 @@ class DNSHinfo(DNSRecord):
         return self._repr_with(("cpu", self.cpu), ("os", self.os))
 
     def write(self, out: DNSOutgoing) -> None:
-        """Write the rdata to an outgoing packet."""
         out.write_character_string(self.cpu.encode("utf-8"))
         out.write_character_string(self.os.encode("utf-8"))
 
@@ -392,7 +390,6 @@ class DNSNsec(DNSRecord):
         return self._repr_with(("next_name", self.next_name), ("covers", covered))
 
     def write(self, out: DNSOutgoing) -> None:
-        """Write the rdata to an outgoing packet."""
         bitmap = bytearray(b"\0" * 32)
         total_octets = 0
         for rdtype in self.rdtypes:
