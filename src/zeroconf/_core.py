@@ -263,29 +263,31 @@ class Zeroconf(QuietLogger):
         await self.async_wait(random.randint(*_PROBE_RANDOM_DELAY_INTERVAL))  # noqa: S311
 
         next_instance_number = 2
-        next_time = now = current_time_millis()
-        i = 0
-        while i < _REGISTER_BROADCASTS:
-            # check for a name conflict
-            while self.cache.current_entry_with_name_and_alias(info.type, info.name):
+        probes_sent = 0
+        next_probe_at = current_time_millis()
+        while probes_sent < _REGISTER_BROADCASTS:
+            # check for a name conflict; a cache update during the wait below
+            # wakes async_wait, so a conflicting response lands here promptly
+            if self.cache.current_entry_with_name_and_alias(info.type, info.name):
                 if not allow_name_change:
                     raise NonUniqueNameException
 
-                # change the name and look for a conflict
+                # change the name and restart probing from zero
                 info.name = f"{instance_name}-{next_instance_number}.{info.type}"
                 next_instance_number += 1
                 service_type_name(info.name, strict=strict)
-                next_time = now
-                i = 0
+                probes_sent = 0
+                next_probe_at = current_time_millis()
+                continue
 
-            if now < next_time:
-                await self.async_wait(next_time - now)
-                now = current_time_millis()
+            remaining = next_probe_at - current_time_millis()
+            if remaining > 0:
+                await self.async_wait(remaining)
                 continue
 
             self.async_send(self.generate_service_query(info))
-            i += 1
-            next_time += _CHECK_TIME
+            probes_sent += 1
+            next_probe_at += _CHECK_TIME
 
     async def async_get_service_info(
         self,
