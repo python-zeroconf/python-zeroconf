@@ -117,68 +117,6 @@ class AsyncEngine:
         self._cleanup_timer: asyncio.TimerHandle | None = None
         self._setup_task: asyncio.Task[None] | None = None
 
-    def setup(
-        self,
-        loop: asyncio.AbstractEventLoop,
-        loop_thread_ready: threading.Event | None,
-    ) -> None:
-        """Set up the instance."""
-        self.loop = loop
-        self.running_future = loop.create_future()
-        self._setup_task = self.loop.create_task(self._async_setup(loop_thread_ready))
-
-    async def _async_setup(self, loop_thread_ready: threading.Event | None) -> None:
-        """Set up the instance."""
-        self._async_schedule_next_cache_cleanup()
-        await self._async_create_endpoints()
-        assert self.running_future is not None
-        if not self.running_future.done():
-            self.running_future.set_result(True)
-        if loop_thread_ready:
-            loop_thread_ready.set()
-
-    async def _async_create_endpoints(self) -> None:
-        """Create endpoints to send and receive."""
-        reader_sockets = []
-        sender_sockets = []
-        if self._listen_socket:
-            reader_sockets.append(self._listen_socket)
-        for s in self._respond_sockets:
-            if s not in reader_sockets:
-                reader_sockets.append(s)
-            sender_sockets.append(s)
-
-        for s in reader_sockets:
-            reader = await self._async_wrap_socket(s, s in sender_sockets)
-            # _async_wrap_socket registers the transport with no await between
-            # creating and registering it, and the pending-handle cleanup below
-            # adds no await either, so a concurrent shutdown always sees ``s``
-            # in exactly one place.
-            if s is self._listen_socket:
-                # Keep a handle to the shared listen socket so interface
-                # rescans can add/drop multicast memberships on it.
-                self._listen_transport = reader
-                self._listen_socket = None
-            if s in self._respond_sockets:
-                self._respond_sockets.remove(s)
-
-    async def _async_wrap_socket(self, sock: socket.socket, is_sender: bool) -> _WrappedTransport:
-        """Adopt a socket into a transport, register it, and return the reader wrapper."""
-        assert self.loop is not None
-        transport, protocol = await self.loop.create_datagram_endpoint(  # type: ignore[type-var]
-            lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
-            sock=sock,
-        )
-        datagram_transport = cast(asyncio.DatagramTransport, transport)
-        reader = make_wrapped_transport(datagram_transport)
-        # No ``await`` between wrapping and registering so a concurrent
-        # shutdown always sees the transport in exactly one place.
-        self.protocols.append(cast(AsyncListener, protocol))
-        self.readers.append(reader)
-        if is_sender:
-            self.senders.append(make_wrapped_transport(datagram_transport))
-        return reader
-
     async def async_update_interfaces(
         self,
         interfaces: InterfacesType,
@@ -271,6 +209,32 @@ class AsyncEngine:
                 added = True
         return added
 
+    def close(self) -> None:
+        """Close from sync context.
+
+        While it is not expected during normal operation,
+        this function may raise EventLoopBlocked if the underlying
+        call to `_async_close` cannot be completed.
+        """
+        assert self.loop is not None
+        # Guard against Zeroconf.close() being called from the eventloop
+        if get_running_loop() == self.loop:
+            self._async_shutdown()
+            return
+        if not self.loop.is_running():
+            return
+        run_coro_with_timeout(self._async_close(), self.loop, _CLOSE_TIMEOUT)
+
+    def setup(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        loop_thread_ready: threading.Event | None,
+    ) -> None:
+        """Set up the instance."""
+        self.loop = loop
+        self.running_future = loop.create_future()
+        self._setup_task = self.loop.create_task(self._async_setup(loop_thread_ready))
+
     async def _async_add_interface(
         self,
         interface: str | tuple[tuple[str, int, int], int],
@@ -309,19 +273,32 @@ class AsyncEngine:
             return False
         return True
 
-    def _async_remove_transport(self, transport: asyncio.DatagramTransport) -> None:
-        """Drop a transport's protocol/reader/sender wrappers, cancelling its timers."""
-        kept_protocols = []
-        for protocol in self.protocols:
-            if protocol.transport is not None and protocol.transport.transport is transport:
-                # Cancel any pending TC-reassembly timers so one can't fire a
-                # response against the transport we're about to close.
-                protocol.cancel_pending_timers()
-            else:
-                kept_protocols.append(protocol)
-        self.protocols = kept_protocols
-        self.readers = _without_transport(self.readers, transport)
-        self.senders = _without_transport(self.senders, transport)
+    def _async_cache_cleanup(self) -> None:
+        """Periodic cache cleanup."""
+        now = current_time_millis()
+        self.zc.question_history.async_expire(now)
+        self.zc.record_manager.async_updates(
+            now,
+            [RecordUpdate(record, record) for record in self.zc.cache.async_expire(now)],
+        )
+        self.zc.record_manager.async_updates_complete(False)
+        self._async_schedule_next_cache_cleanup()
+
+    async def _async_close(self) -> None:
+        """Cancel and wait for the cleanup task to finish."""
+        assert self._setup_task is not None
+        # Swallow CancelledError only if the setup task itself was
+        # cancelled (close-before-start); outer-task cancellation must
+        # propagate.
+        try:
+            await self._setup_task
+        except asyncio.CancelledError:
+            if not self._setup_task.cancelled():
+                raise
+        self._async_shutdown()
+        await asyncio.sleep(0)  # flush out any call soons
+        if self._cleanup_timer is not None:
+            self._cleanup_timer.cancel()
 
     def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
         """Drop a per-interface sender's wrappers/protocol and close its transport."""
@@ -333,6 +310,31 @@ class AsyncEngine:
         finally:
             # Release the socket even if a non-benign leave (e.g. EPERM) raises.
             transport.close()
+
+    async def _async_create_endpoints(self) -> None:
+        """Create endpoints to send and receive."""
+        reader_sockets = []
+        sender_sockets = []
+        if self._listen_socket:
+            reader_sockets.append(self._listen_socket)
+        for s in self._respond_sockets:
+            if s not in reader_sockets:
+                reader_sockets.append(s)
+            sender_sockets.append(s)
+
+        for s in reader_sockets:
+            reader = await self._async_wrap_socket(s, s in sender_sockets)
+            # _async_wrap_socket registers the transport with no await between
+            # creating and registering it, and the pending-handle cleanup below
+            # adds no await either, so a concurrent shutdown always sees ``s``
+            # in exactly one place.
+            if s is self._listen_socket:
+                # Keep a handle to the shared listen socket so interface
+                # rescans can add/drop multicast memberships on it.
+                self._listen_transport = reader
+                self._listen_socket = None
+            if s in self._respond_sockets:
+                self._respond_sockets.remove(s)
 
     async def _async_rebuild_listen_socket(
         self,
@@ -387,16 +389,19 @@ class AsyncEngine:
         self._async_remove_transport(old_transport)
         old_transport.close()
 
-    def _async_cache_cleanup(self) -> None:
-        """Periodic cache cleanup."""
-        now = current_time_millis()
-        self.zc.question_history.async_expire(now)
-        self.zc.record_manager.async_updates(
-            now,
-            [RecordUpdate(record, record) for record in self.zc.cache.async_expire(now)],
-        )
-        self.zc.record_manager.async_updates_complete(False)
-        self._async_schedule_next_cache_cleanup()
+    def _async_remove_transport(self, transport: asyncio.DatagramTransport) -> None:
+        """Drop a transport's protocol/reader/sender wrappers, cancelling its timers."""
+        kept_protocols = []
+        for protocol in self.protocols:
+            if protocol.transport is not None and protocol.transport.transport is transport:
+                # Cancel any pending TC-reassembly timers so one can't fire a
+                # response against the transport we're about to close.
+                protocol.cancel_pending_timers()
+            else:
+                kept_protocols.append(protocol)
+        self.protocols = kept_protocols
+        self.readers = _without_transport(self.readers, transport)
+        self.senders = _without_transport(self.senders, transport)
 
     def _async_schedule_next_cache_cleanup(self) -> None:
         """Schedule the next cache cleanup."""
@@ -404,21 +409,15 @@ class AsyncEngine:
         assert loop is not None
         self._cleanup_timer = loop.call_at(loop.time() + _CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
 
-    async def _async_close(self) -> None:
-        """Cancel and wait for the cleanup task to finish."""
-        assert self._setup_task is not None
-        # Swallow CancelledError only if the setup task itself was
-        # cancelled (close-before-start); outer-task cancellation must
-        # propagate.
-        try:
-            await self._setup_task
-        except asyncio.CancelledError:
-            if not self._setup_task.cancelled():
-                raise
-        self._async_shutdown()
-        await asyncio.sleep(0)  # flush out any call soons
-        if self._cleanup_timer is not None:
-            self._cleanup_timer.cancel()
+    async def _async_setup(self, loop_thread_ready: threading.Event | None) -> None:
+        """Set up the instance."""
+        self._async_schedule_next_cache_cleanup()
+        await self._async_create_endpoints()
+        assert self.running_future is not None
+        if not self.running_future.done():
+            self.running_future.set_result(True)
+        if loop_thread_ready:
+            loop_thread_ready.set()
 
     def _async_shutdown(self) -> None:
         """Shutdown transports and sockets; safe to call repeatedly."""
@@ -439,18 +438,19 @@ class AsyncEngine:
             s.close()
         self._respond_sockets = []
 
-    def close(self) -> None:
-        """Close from sync context.
-
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `_async_close` cannot be completed.
-        """
+    async def _async_wrap_socket(self, sock: socket.socket, is_sender: bool) -> _WrappedTransport:
+        """Adopt a socket into a transport, register it, and return the reader wrapper."""
         assert self.loop is not None
-        # Guard against Zeroconf.close() being called from the eventloop
-        if get_running_loop() == self.loop:
-            self._async_shutdown()
-            return
-        if not self.loop.is_running():
-            return
-        run_coro_with_timeout(self._async_close(), self.loop, _CLOSE_TIMEOUT)
+        transport, protocol = await self.loop.create_datagram_endpoint(  # type: ignore[type-var]
+            lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
+            sock=sock,
+        )
+        datagram_transport = cast(asyncio.DatagramTransport, transport)
+        reader = make_wrapped_transport(datagram_transport)
+        # No ``await`` between wrapping and registering so a concurrent
+        # shutdown always sees the transport in exactly one place.
+        self.protocols.append(cast(AsyncListener, protocol))
+        self.readers.append(reader)
+        if is_sender:
+            self.senders.append(make_wrapped_transport(datagram_transport))
+        return reader

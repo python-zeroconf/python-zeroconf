@@ -126,31 +126,6 @@ class _ScheduledPTRQuery:  # noqa: PLW1641
         # we failed to rescue the record.
         self.when_millis = when_millis
 
-    def __repr__(self) -> str:
-        """Return a string representation of the scheduled query."""
-        return (
-            f"<{self.__class__.__name__} "
-            f"alias={self.alias} "
-            f"name={self.name} "
-            f"ttl={self.ttl} "
-            f"cancelled={self.cancelled} "
-            f"expire_time_millis={self.expire_time_millis} "
-            f"when_millis={self.when_millis}"
-            ">"
-        )
-
-    def __lt__(self, other: _ScheduledPTRQuery) -> bool:
-        """Compare two scheduled queries."""
-        if type(other) is _ScheduledPTRQuery:
-            return self.when_millis < other.when_millis
-        return NotImplemented
-
-    def __le__(self, other: _ScheduledPTRQuery) -> bool:
-        """Compare two scheduled queries."""
-        if type(other) is _ScheduledPTRQuery:
-            return self.when_millis < other.when_millis or self.__eq__(other)
-        return NotImplemented
-
     def __eq__(self, other: Any) -> bool:
         """Compare two scheduled queries."""
         if type(other) is _ScheduledPTRQuery:
@@ -168,6 +143,31 @@ class _ScheduledPTRQuery:  # noqa: PLW1641
         if type(other) is _ScheduledPTRQuery:
             return self.when_millis > other.when_millis
         return NotImplemented
+
+    def __le__(self, other: _ScheduledPTRQuery) -> bool:
+        """Compare two scheduled queries."""
+        if type(other) is _ScheduledPTRQuery:
+            return self.when_millis < other.when_millis or self.__eq__(other)
+        return NotImplemented
+
+    def __lt__(self, other: _ScheduledPTRQuery) -> bool:
+        """Compare two scheduled queries."""
+        if type(other) is _ScheduledPTRQuery:
+            return self.when_millis < other.when_millis
+        return NotImplemented
+
+    def __repr__(self) -> str:
+        """Return a string representation of the scheduled query."""
+        return (
+            f"<{self.__class__.__name__} "
+            f"alias={self.alias} "
+            f"name={self.name} "
+            f"ttl={self.ttl} "
+            f"cancelled={self.cancelled} "
+            f"expire_time_millis={self.expire_time_millis} "
+            f"when_millis={self.when_millis}"
+            ">"
+        )
 
 
 class _DNSPointerOutgoingBucket:
@@ -354,44 +354,19 @@ class QueryScheduler:
         self._clock_resolution_millis = time.get_clock_info("monotonic").resolution * 1000
         self._question_type = question_type
 
-    def start(self, loop: asyncio.AbstractEventLoop) -> None:
-        """Start the scheduler.
-
-        https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
-        To avoid accidental synchronization when, for some reason, multiple
-        clients begin querying at exactly the same moment (e.g., because of
-        some common external trigger event), a Multicast DNS querier SHOULD
-        also delay the first query of the series by a randomly chosen amount
-        in the range 20-120 ms.
-        """
-        start_delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))  # noqa: S311
-        self._loop = loop
-        self._next_run = loop.call_later(start_delay, self._process_startup_queries)
-
-    def stop(self) -> None:
-        """Stop the scheduler."""
-        if self._next_run is not None:
-            self._next_run.cancel()
-            self._next_run = None
-        self._next_scheduled_for_alias.clear()
-        self._query_heap.clear()
-
-    def _schedule_ptr_refresh(
-        self,
-        pointer: DNSPointer,
-        expire_time_millis: float_,
-        refresh_time_millis: float_,
+    def async_send_ready_queries(
+        self, first_request: bool, now_millis: float_, ready_types: set[str_]
     ) -> None:
-        """Schedule a query for a pointer."""
-        scheduled_ptr_query = _ScheduledPTRQuery(
-            pointer.alias, pointer.name, pointer.ttl, expire_time_millis, refresh_time_millis
-        )
-        self._schedule_ptr_query(scheduled_ptr_query)
-
-    def _schedule_ptr_query(self, scheduled_query: _ScheduledPTRQuery) -> None:
-        """Schedule a query for a pointer."""
-        self._next_scheduled_for_alias[scheduled_query.alias] = scheduled_query
-        heappush(self._query_heap, scheduled_query)
+        """Send any ready queries."""
+        # If they did not specify and this is the first request, ask QU questions
+        # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
+        # just starting up and we know our cache is likely empty. This ensures
+        # the next outgoing will be sent with the known answers list.
+        question_type = QU_QUESTION if self._question_type is None and first_request else self._question_type
+        outs = generate_service_query(self._zc, now_millis, ready_types, self._multicast, question_type)
+        if outs:
+            for out in outs:
+                self._zc.async_send(out, self._addr, self._port)
 
     def cancel_ptr_refresh(self, pointer: DNSPointer) -> None:
         """Cancel a query for a pointer."""
@@ -441,31 +416,27 @@ class QueryScheduler:
         )
         self._schedule_ptr_query(scheduled_ptr_query)
 
-    def _process_startup_queries(self) -> None:
-        if TYPE_CHECKING:
-            assert self._loop is not None
-        # This is a safety to ensure we stop sending queries if Zeroconf instance
-        # is stopped without the browser being cancelled
-        if self._zc.done:
-            return
+    def start(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Start the scheduler.
 
-        now_millis = current_time_millis()
+        https://datatracker.ietf.org/doc/html/rfc6762#section-5.2
+        To avoid accidental synchronization when, for some reason, multiple
+        clients begin querying at exactly the same moment (e.g., because of
+        some common external trigger event), a Multicast DNS querier SHOULD
+        also delay the first query of the series by a randomly chosen amount
+        in the range 20-120 ms.
+        """
+        start_delay = millis_to_seconds(random.randint(*self._first_random_delay_interval))  # noqa: S311
+        self._loop = loop
+        self._next_run = loop.call_later(start_delay, self._process_startup_queries)
 
-        # At first we will send STARTUP_QUERIES queries to get the cache populated
-        self.async_send_ready_queries(self._startup_queries_sent == 0, now_millis, self._types)
-        self._startup_queries_sent += 1
-
-        # Once we finish sending the initial queries we will
-        # switch to a strategy of sending queries only when we
-        # need to refresh records that are about to expire
-        if self._startup_queries_sent >= STARTUP_QUERIES:
-            self._next_run = self._loop.call_at(
-                millis_to_seconds(now_millis + self._min_time_between_queries_millis),
-                self._process_ready_types,
-            )
-            return
-
-        self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_startup_queries)
+    def stop(self) -> None:
+        """Stop the scheduler."""
+        if self._next_run is not None:
+            self._next_run.cancel()
+            self._next_run = None
+        self._next_scheduled_for_alias.clear()
+        self._query_heap.clear()
 
     def _process_ready_types(self) -> None:
         """Generate a list of ready types that is due and schedule the next time."""
@@ -520,19 +491,48 @@ class QueryScheduler:
 
         self._next_run = self._loop.call_at(millis_to_seconds(next_when_millis), self._process_ready_types)
 
-    def async_send_ready_queries(
-        self, first_request: bool, now_millis: float_, ready_types: set[str_]
+    def _process_startup_queries(self) -> None:
+        if TYPE_CHECKING:
+            assert self._loop is not None
+        # This is a safety to ensure we stop sending queries if Zeroconf instance
+        # is stopped without the browser being cancelled
+        if self._zc.done:
+            return
+
+        now_millis = current_time_millis()
+
+        # At first we will send STARTUP_QUERIES queries to get the cache populated
+        self.async_send_ready_queries(self._startup_queries_sent == 0, now_millis, self._types)
+        self._startup_queries_sent += 1
+
+        # Once we finish sending the initial queries we will
+        # switch to a strategy of sending queries only when we
+        # need to refresh records that are about to expire
+        if self._startup_queries_sent >= STARTUP_QUERIES:
+            self._next_run = self._loop.call_at(
+                millis_to_seconds(now_millis + self._min_time_between_queries_millis),
+                self._process_ready_types,
+            )
+            return
+
+        self._next_run = self._loop.call_later(self._startup_queries_sent**2, self._process_startup_queries)
+
+    def _schedule_ptr_query(self, scheduled_query: _ScheduledPTRQuery) -> None:
+        """Schedule a query for a pointer."""
+        self._next_scheduled_for_alias[scheduled_query.alias] = scheduled_query
+        heappush(self._query_heap, scheduled_query)
+
+    def _schedule_ptr_refresh(
+        self,
+        pointer: DNSPointer,
+        expire_time_millis: float_,
+        refresh_time_millis: float_,
     ) -> None:
-        """Send any ready queries."""
-        # If they did not specify and this is the first request, ask QU questions
-        # https://datatracker.ietf.org/doc/html/rfc6762#section-5.4 since we are
-        # just starting up and we know our cache is likely empty. This ensures
-        # the next outgoing will be sent with the known answers list.
-        question_type = QU_QUESTION if self._question_type is None and first_request else self._question_type
-        outs = generate_service_query(self._zc, now_millis, ready_types, self._multicast, question_type)
-        if outs:
-            for out in outs:
-                self._zc.async_send(out, self._addr, self._port)
+        """Schedule a query for a pointer."""
+        scheduled_ptr_query = _ScheduledPTRQuery(
+            pointer.alias, pointer.name, pointer.ttl, expire_time_millis, refresh_time_millis
+        )
+        self._schedule_ptr_query(scheduled_ptr_query)
 
 
 class _ServiceBrowserBase(RecordUpdateListener):

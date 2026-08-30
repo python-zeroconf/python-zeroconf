@@ -42,6 +42,20 @@ class QuestionHistory:
             self._evict_to_make_room(now)
         self._history[question] = (now, known_answers)
 
+    def async_expire(self, now: _float) -> None:
+        """Expire the history of old questions."""
+        removes: list[DNSQuestion] = []
+        for question, now_known_answers in self._history.items():
+            than, _ = now_known_answers
+            if now - than > _DUPLICATE_QUESTION_INTERVAL:
+                removes.append(question)
+        for question in removes:
+            del self._history[question]
+
+    def clear(self) -> None:
+        """Clear the history."""
+        self._history.clear()
+
     def suppresses(self, question: DNSQuestion, now: _float, known_answers: set[DNSRecord]) -> bool:
         """Check to see if a question should be suppressed.
 
@@ -61,20 +75,6 @@ class QuestionHistory:
         # The last question has more known answers than
         # we knew so we have to ask
         return not previous_known_answers - known_answers
-
-    def async_expire(self, now: _float) -> None:
-        """Expire the history of old questions."""
-        removes: list[DNSQuestion] = []
-        for question, now_known_answers in self._history.items():
-            than, _ = now_known_answers
-            if now - than > _DUPLICATE_QUESTION_INTERVAL:
-                removes.append(question)
-        for question in removes:
-            del self._history[question]
-
-    def clear(self) -> None:
-        """Clear the history."""
-        self._history.clear()
 
     def _evict_to_make_room(self, now: _float) -> None:
         """Drop expired or oldest entries when the history is at cap.

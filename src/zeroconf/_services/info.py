@@ -1090,10 +1090,6 @@ class ServiceInfo(RecordUpdateListener):
         return False
 
 
-class AsyncServiceInfo(ServiceInfo):
-    """An async version of ServiceInfo."""
-
-
 class AddressResolver(ServiceInfo):
     """Resolve a host name to an IP address."""
 
@@ -1106,6 +1102,20 @@ class AddressResolver(ServiceInfo):
     def _is_complete(self) -> bool:
         """The ServiceInfo has all expected properties."""
         return bool(self._ipv4_addresses) or bool(self._ipv6_addresses)
+
+
+class AddressResolverIPv4(ServiceInfo):
+    """Resolve a host name to an IPv4 address."""
+
+    def __init__(self, server: str) -> None:
+        """Initialize the AddressResolver."""
+        super().__init__(server, server, server=server)
+        self._query_record_types = _TYPE_A_RECORDS
+
+    @property
+    def _is_complete(self) -> bool:
+        """The ServiceInfo has all expected properties."""
+        return bool(self._ipv4_addresses)
 
 
 class AddressResolverIPv6(ServiceInfo):
@@ -1122,15 +1132,5 @@ class AddressResolverIPv6(ServiceInfo):
         return bool(self._ipv6_addresses)
 
 
-class AddressResolverIPv4(ServiceInfo):
-    """Resolve a host name to an IPv4 address."""
-
-    def __init__(self, server: str) -> None:
-        """Initialize the AddressResolver."""
-        super().__init__(server, server, server=server)
-        self._query_record_types = _TYPE_A_RECORDS
-
-    @property
-    def _is_complete(self) -> bool:
-        """The ServiceInfo has all expected properties."""
-        return bool(self._ipv4_addresses)
+class AsyncServiceInfo(ServiceInfo):
+    """An async version of ServiceInfo."""

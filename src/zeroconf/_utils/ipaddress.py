@@ -31,13 +31,13 @@ class ZeroconfIPv4Address(IPv4Address):
         self._hash = IPv4Address.__hash__(self)
         self.zc_integer = int(self)
 
-    def __str__(self) -> str:
-        """Return the string representation of the IPv4 address."""
-        return self._str
-
     def __hash__(self) -> int:
         """Return the precomputed hash of the IPv4 address."""
         return self._hash
+
+    def __str__(self) -> str:
+        """Return the string representation of the IPv4 address."""
+        return self._str
 
     @property
     def is_link_local(self) -> bool:
@@ -45,14 +45,14 @@ class ZeroconfIPv4Address(IPv4Address):
         return self._is_link_local
 
     @property
-    def is_unspecified(self) -> bool:
-        """True for an unspecified address."""
-        return self._is_unspecified
-
-    @property
     def is_loopback(self) -> bool:
         """True for a loopback address."""
         return self._is_loopback
+
+    @property
+    def is_unspecified(self) -> bool:
+        """True for an unspecified address."""
+        return self._is_unspecified
 
 
 class ZeroconfIPv6Address(IPv6Address):
@@ -68,13 +68,13 @@ class ZeroconfIPv6Address(IPv6Address):
         self._hash = IPv6Address.__hash__(self)
         self.zc_integer = int(self)
 
-    def __str__(self) -> str:
-        """Return the string representation of the IPv6 address."""
-        return self._str
-
     def __hash__(self) -> int:
         """Return the precomputed hash of the IPv6 address."""
         return self._hash
+
+    def __str__(self) -> str:
+        """Return the string representation of the IPv6 address."""
+        return self._str
 
     @property
     def is_link_local(self) -> bool:
@@ -82,14 +82,14 @@ class ZeroconfIPv6Address(IPv6Address):
         return self._is_link_local
 
     @property
-    def is_unspecified(self) -> bool:
-        """True for an unspecified address."""
-        return self._is_unspecified
-
-    @property
     def is_loopback(self) -> bool:
         """True for a loopback address."""
         return self._is_loopback
+
+    @property
+    def is_unspecified(self) -> bool:
+        """True for an unspecified address."""
+        return self._is_unspecified
 
 
 @lru_cache(maxsize=512)

@@ -37,6 +37,26 @@ class ServiceRegistry:
         """Add a new service to the registry."""
         self._add(info)
 
+    def async_get_info_name(self, name: str) -> ServiceInfo | None:
+        """Return all ServiceInfo for the name."""
+        return self._services.get(name)
+
+    def async_get_infos_server(self, server: str) -> list[ServiceInfo]:
+        """Return all ServiceInfo matching server."""
+        return self._async_get_by_index(self.servers, server)
+
+    def async_get_infos_type(self, type_: str) -> list[ServiceInfo]:
+        """Return all ServiceInfo matching type."""
+        return self._async_get_by_index(self.types, type_)
+
+    def async_get_service_infos(self) -> list[ServiceInfo]:
+        """Return all ServiceInfo."""
+        return list(self._services.values())
+
+    def async_get_types(self) -> list[str]:
+        """Return all types."""
+        return list(self.types)
+
     def async_remove(self, info: list[ServiceInfo] | ServiceInfo) -> None:
         """Remove a new service from the registry."""
         self._remove(info if isinstance(info, list) else [info])
@@ -45,33 +65,6 @@ class ServiceRegistry:
         """Update new service in the registry."""
         self._remove([info])
         self._add(info)
-
-    def async_get_service_infos(self) -> list[ServiceInfo]:
-        """Return all ServiceInfo."""
-        return list(self._services.values())
-
-    def async_get_info_name(self, name: str) -> ServiceInfo | None:
-        """Return all ServiceInfo for the name."""
-        return self._services.get(name)
-
-    def async_get_types(self) -> list[str]:
-        """Return all types."""
-        return list(self.types)
-
-    def async_get_infos_type(self, type_: str) -> list[ServiceInfo]:
-        """Return all ServiceInfo matching type."""
-        return self._async_get_by_index(self.types, type_)
-
-    def async_get_infos_server(self, server: str) -> list[ServiceInfo]:
-        """Return all ServiceInfo matching server."""
-        return self._async_get_by_index(self.servers, server)
-
-    def _async_get_by_index(self, records: _ServiceIndex, key: _str) -> list[_ServiceInfo]:
-        """Return all ServiceInfo matching the index."""
-        record_infos = records.get(key)
-        if record_infos is None:
-            return []
-        return list(record_infos.values())
 
     def _add(self, info: ServiceInfo) -> None:
         """Add a new service under the lock."""
@@ -85,6 +78,13 @@ class ServiceRegistry:
         self.types.setdefault(info.type.lower(), {})[info.key] = info
         self.servers.setdefault(info.server_key, {})[info.key] = info
         self.has_entries = True
+
+    def _async_get_by_index(self, records: _ServiceIndex, key: _str) -> list[_ServiceInfo]:
+        """Return all ServiceInfo matching the index."""
+        record_infos = records.get(key)
+        if record_infos is None:
+            return []
+        return list(record_infos.values())
 
     def _remove(self, infos: list[_ServiceInfo]) -> None:
         """Remove a services under the lock."""
