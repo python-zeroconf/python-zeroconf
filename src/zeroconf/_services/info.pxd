@@ -90,7 +90,9 @@ cdef class ServiceInfo(RecordUpdateListener):
 
     @cython.locals(
         length="unsigned char",
-        index="unsigned int",
+        pos="unsigned int",
+        start="unsigned int",
+        total="unsigned int",
         key_value=bytes,
         key=bytes,
         sep=bytes,

@@ -77,7 +77,7 @@ class DNSCache:
         return new
 
     def async_all_by_details(self, name: _str, type_: _int, class_: _int) -> list[DNSRecord]:
-        """Gets all matching entries by details.
+        """Return every cached record carrying this name, type and class.
 
         This function is not thread-safe and must be called from
         the event loop.
