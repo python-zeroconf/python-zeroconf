@@ -76,7 +76,6 @@ class DNSEntry:  # noqa: PLW1641
         self._fast_init_entry(name, type_, class_)
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when key, type and class match."""
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
     @property
@@ -133,7 +132,6 @@ class DNSQuestion(DNSEntry):
         self._fast_init(name, type_, class_)
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when the entry fields match a question."""
         return isinstance(other, DNSQuestion) and self._dns_entry_matches(other)
 
     def __hash__(self) -> int:
@@ -271,7 +269,6 @@ class DNSAddress(DNSRecord):
         self._fast_init(name, type_, class_, ttl, address, scope_id, created or current_time_millis())
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when address and the entry fields match."""
         return isinstance(other, DNSAddress) and self._eq(other)
 
     def __hash__(self) -> int:
@@ -333,7 +330,6 @@ class DNSHinfo(DNSRecord):
         self._fast_init(name, type_, class_, ttl, cpu, os, created or current_time_millis())
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when cpu, os and the entry fields match."""
         return isinstance(other, DNSHinfo) and self._eq(other)
 
     def __hash__(self) -> int:
@@ -378,7 +374,6 @@ class DNSNsec(DNSRecord):
         self._fast_init(name, type_, class_, ttl, next_name, rdtypes, created or current_time_millis())
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when next_name, rdtypes and the entry fields match."""
         return isinstance(other, DNSNsec) and self._eq(other)
 
     def __hash__(self) -> int:
@@ -448,7 +443,6 @@ class DNSPointer(DNSRecord):
         self._fast_init(name, type_, class_, ttl, alias, created or current_time_millis())
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when alias and the entry fields match."""
         return isinstance(other, DNSPointer) and self._eq(other)
 
     def __hash__(self) -> int:
@@ -505,7 +499,6 @@ class DNSService(DNSRecord):
         )
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when priority, weight, port, server and the entry fields match."""
         return isinstance(other, DNSService) and self._eq(other)
 
     def __hash__(self) -> int:
@@ -568,7 +561,6 @@ class DNSText(DNSRecord):
         self._fast_init(name, type_, class_, ttl, text, created or current_time_millis())
 
     def __eq__(self, other: Any) -> bool:
-        """Equal when text and the entry fields match."""
         return isinstance(other, DNSText) and self._eq(other)
 
     def __hash__(self) -> int:

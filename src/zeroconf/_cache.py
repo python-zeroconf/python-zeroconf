@@ -198,7 +198,7 @@ class DNSCache:
         return None
 
     def get_all_by_details(self, name: str, type_: _int, class_: _int) -> list[DNSRecord]:
-        """Gets all matching entries by details."""
+        """Return every cached record carrying this name, type and class."""
         key = name.lower()
         records = self.cache.get(key)
         if records is None:
