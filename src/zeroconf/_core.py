@@ -479,7 +479,7 @@ class Zeroconf(QuietLogger):
         return asyncio.ensure_future(self._async_broadcast_service(info, _REGISTER_TIME, None))
 
     async def async_wait(self, timeout: float) -> None:
-        """Suspend the calling task for timeout milliseconds, or less when notified."""
+        """Pause until notified or until timeout milliseconds pass."""
         loop = self.loop
         assert loop is not None
         await wait_for_future_set_or_timeout(loop, self._notify_futures, timeout)

@@ -82,20 +82,20 @@ class DNSOutgoing:
     )
 
     def __init__(self, flags: int, multicast: bool = True, id_: int = 0) -> None:
-        self.flags = flags
         self.finished = False
+        self.flags = flags
         self.id = id_
         self.multicast = multicast
         self.packets_data: list[bytes] = []
-
-        # these 3 are per-packet -- see also _reset_for_next_packet()
-        self.names: dict[str, int] = {}
-        self.data: list[bytes] = []
-        self.size: int = _DNS_PACKET_HEADER_LEN
-        self.allow_long: bool = True
-
         self.state = STATE_INIT
 
+        # per-packet state -- see also _reset_for_next_packet()
+        self.allow_long: bool = True
+        self.data: list[bytes] = []
+        self.names: dict[str, int] = {}
+        self.size: int = _DNS_PACKET_HEADER_LEN
+
+        # the four sections in RFC 1035 section 4.1 order
         self.questions: list[DNSQuestion] = []
         self.answers: list[tuple[DNSRecord, float]] = []
         self.authorities: list[DNSPointer] = []
@@ -388,10 +388,10 @@ class DNSOutgoing:
         self.data[index] = self._get_short(value)
 
     def _reset_for_next_packet(self) -> None:
-        self.names = {}
-        self.data = []
-        self.size = _DNS_PACKET_HEADER_LEN
         self.allow_long = True
+        self.data = []
+        self.names = {}
+        self.size = _DNS_PACKET_HEADER_LEN
 
     def _write_answers_from_offset(self, answer_offset: int_) -> int:
         answers_written = 0
