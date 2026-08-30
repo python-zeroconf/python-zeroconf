@@ -58,3 +58,10 @@ repos:
     hooks:
       - id: cython-lint
       - id: double-quote-cython-strings
+  - repo: local
+    hooks:
+      - id: check-declaration-order
+        name: check declaration order
+        entry: python3 scripts/check_declaration_order.py
+        language: system
+        files: ^(src/zeroconf/.*\.py|scripts/check_declaration_order\.py)$

@@ -48,10 +48,6 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         super().__init__(zeroconf, type_, handlers, listener, addr, port, delay, question_type)
         self._async_start()
 
-    async def async_cancel(self) -> None:
-        """Cancel the browser."""
-        self._async_cancel()
-
     async def __aenter__(self) -> AsyncServiceBrowser:
         return self
 
@@ -63,6 +59,10 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
     ) -> bool | None:
         await self.async_cancel()
         return None
+
+    async def async_cancel(self) -> None:
+        """Cancel the browser."""
+        self._async_cancel()
 
 
 class AsyncZeroconfServiceTypes(ZeroconfServiceTypes):
@@ -138,57 +138,25 @@ class AsyncZeroconf:
         )
         self.async_browsers: dict[ServiceListener, AsyncServiceBrowser] = {}
 
-    async def async_register_service(
+    async def __aenter__(self) -> AsyncZeroconf:
+        return self
+
+    async def __aexit__(
         self,
-        info: ServiceInfo,
-        ttl: int | None = None,
-        allow_name_change: bool = False,
-        cooperating_responders: bool = False,
-        strict: bool = True,
-    ) -> Awaitable:
-        """Announce a service on the network.
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        await self.async_close()
+        return None
 
-        Returns an awaitable that completes once the announcements have
-        been sent.
+    async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
+        """Browse a service type, delivering events to the listener.
+
+        Replaces any browser previously registered for the same listener.
         """
-        return await self.zeroconf.async_register_service(
-            info, ttl, allow_name_change, cooperating_responders, strict
-        )
-
-    async def async_unregister_all_services(self) -> None:
-        """Send goodbye packets for every registered service and drop them all.
-
-        Runs only at shutdown, so unlike the single service calls it
-        returns nothing to await separately.
-        """
-        await self.zeroconf.async_unregister_all_services()
-
-    async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
-        """Withdraw a service, returning an awaitable that completes once the goodbyes are sent."""
-        return await self.zeroconf.async_unregister_service(info)
-
-    async def async_update_service(self, info: ServiceInfo) -> Awaitable:
-        """Publish updated records for an already registered service.
-
-        Returns an awaitable that completes once the rebroadcasts finish.
-        """
-        return await self.zeroconf.async_update_service(info)
-
-    async def async_update_interfaces(
-        self,
-        interfaces: InterfacesType | None = None,
-        ip_version: IPVersion | None = None,
-        apple_p2p: bool | None = None,
-    ) -> None:
-        """Rescan network interfaces and reconcile the sockets in use.
-
-        Adds sockets for interfaces that appeared, drops sockets for
-        interfaces that disappeared, and re-announces existing
-        registrations on the resulting senders. ``interfaces``,
-        ``ip_version`` and ``apple_p2p`` each default to the construction-time
-        value. Raises RuntimeError if apple_p2p is set on a non-Apple platform.
-        """
-        await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
+        await self.async_remove_service_listener(listener)
+        self.async_browsers[listener] = AsyncServiceBrowser(self.zeroconf, type_, listener)
 
     async def async_close(self) -> None:
         """Unregister everything and shut the wrapped Zeroconf down."""
@@ -215,19 +183,22 @@ class AsyncZeroconf:
         """
         return await self.zeroconf.async_get_service_info(type_, name, timeout, question_type)
 
-    async def async_add_service_listener(self, type_: str, listener: ServiceListener) -> None:
-        """Browse a service type, delivering events to the listener.
+    async def async_register_service(
+        self,
+        info: ServiceInfo,
+        ttl: int | None = None,
+        allow_name_change: bool = False,
+        cooperating_responders: bool = False,
+        strict: bool = True,
+    ) -> Awaitable:
+        """Announce a service on the network.
 
-        Replaces any browser previously registered for the same listener.
+        Returns an awaitable that completes once the announcements have
+        been sent.
         """
-        await self.async_remove_service_listener(listener)
-        self.async_browsers[listener] = AsyncServiceBrowser(self.zeroconf, type_, listener)
-
-    async def async_remove_service_listener(self, listener: ServiceListener) -> None:
-        """Stop and drop the browser registered for the listener, if any."""
-        if listener in self.async_browsers:
-            await self.async_browsers[listener].async_cancel()
-            del self.async_browsers[listener]
+        return await self.zeroconf.async_register_service(
+            info, ttl, allow_name_change, cooperating_responders, strict
+        )
 
     async def async_remove_all_service_listeners(self) -> None:
         """Stop and drop every browser started through add_service_listener."""
@@ -235,14 +206,43 @@ class AsyncZeroconf:
             *(self.async_remove_service_listener(listener) for listener in list(self.async_browsers))
         )
 
-    async def __aenter__(self) -> AsyncZeroconf:
-        return self
+    async def async_remove_service_listener(self, listener: ServiceListener) -> None:
+        """Stop and drop the browser registered for the listener, if any."""
+        if listener in self.async_browsers:
+            await self.async_browsers[listener].async_cancel()
+            del self.async_browsers[listener]
 
-    async def __aexit__(
+    async def async_unregister_all_services(self) -> None:
+        """Send goodbye packets for every registered service and drop them all.
+
+        Runs only at shutdown, so unlike the single service calls it
+        returns nothing to await separately.
+        """
+        await self.zeroconf.async_unregister_all_services()
+
+    async def async_unregister_service(self, info: ServiceInfo) -> Awaitable:
+        """Withdraw a service, returning an awaitable that completes once the goodbyes are sent."""
+        return await self.zeroconf.async_unregister_service(info)
+
+    async def async_update_interfaces(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> bool | None:
-        await self.async_close()
-        return None
+        interfaces: InterfacesType | None = None,
+        ip_version: IPVersion | None = None,
+        apple_p2p: bool | None = None,
+    ) -> None:
+        """Rescan network interfaces and reconcile the sockets in use.
+
+        Adds sockets for interfaces that appeared, drops sockets for
+        interfaces that disappeared, and re-announces existing
+        registrations on the resulting senders. ``interfaces``,
+        ``ip_version`` and ``apple_p2p`` each default to the construction-time
+        value. Raises RuntimeError if apple_p2p is set on a non-Apple platform.
+        """
+        await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
+
+    async def async_update_service(self, info: ServiceInfo) -> Awaitable:
+        """Publish updated records for an already registered service.
+
+        Returns an awaitable that completes once the rebroadcasts finish.
+        """
+        return await self.zeroconf.async_update_service(info)

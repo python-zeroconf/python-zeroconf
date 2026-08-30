@@ -183,6 +183,9 @@ select = [
 "examples/**/*" = [
     "T201", # intended
 ]
+"scripts/**/*" = [
+    "T201", # intended
+]
 "setup.py" = ["D100"]
 "conftest.py" = ["D100"]
 "docs/conf.py" = ["D100"]

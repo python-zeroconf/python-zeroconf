@@ -37,6 +37,36 @@ class RecordManager:
         self.cache = zeroconf.cache
         self.listeners: set[RecordUpdateListener] = set()
 
+    def async_add_listener(
+        self,
+        listener: RecordUpdateListener,
+        question: DNSQuestion | list[DNSQuestion] | None,
+    ) -> None:
+        """Subscribe a listener, optionally scoped to questions, and seed it
+        with matching cached records; event loop only.
+        """
+        if not isinstance(listener, RecordUpdateListener):
+            log.error(  # type: ignore[unreachable]
+                "listeners passed to async_add_listener must inherit from RecordUpdateListener;"
+                " In the future this will fail"
+            )
+
+        self.listeners.add(listener)
+
+        if question is None:
+            return
+
+        questions = [question] if isinstance(question, DNSQuestion) else question
+        self._async_update_matching_records(listener, questions)
+
+    def async_remove_listener(self, listener: RecordUpdateListener) -> None:
+        """Detach a record listener; event loop only, not threadsafe."""
+        try:
+            self.listeners.remove(listener)
+            self.zc.async_notify_all()
+        except ValueError as e:
+            log.exception("Failed to remove listener: %r", e)
+
     def async_updates(self, now: _float, records: list[_RecordUpdate]) -> None:
         """Notify listeners of updated records, before the cache commits them."""
         for listener in self.listeners.copy():
@@ -137,28 +167,6 @@ class RecordManager:
         if updates:
             self.async_updates_complete(new)
 
-    def async_add_listener(
-        self,
-        listener: RecordUpdateListener,
-        question: DNSQuestion | list[DNSQuestion] | None,
-    ) -> None:
-        """Subscribe a listener, optionally scoped to questions, and seed it
-        with matching cached records; event loop only.
-        """
-        if not isinstance(listener, RecordUpdateListener):
-            log.error(  # type: ignore[unreachable]
-                "listeners passed to async_add_listener must inherit from RecordUpdateListener;"
-                " In the future this will fail"
-            )
-
-        self.listeners.add(listener)
-
-        if question is None:
-            return
-
-        questions = [question] if isinstance(question, DNSQuestion) else question
-        self._async_update_matching_records(listener, questions)
-
     def _async_update_matching_records(
         self, listener: RecordUpdateListener, questions: list[_DNSQuestion]
     ) -> None:
@@ -178,11 +186,3 @@ class RecordManager:
         listener.async_update_records(self.zc, now, records)
         listener.async_update_records_complete()
         self.zc.async_notify_all()
-
-    def async_remove_listener(self, listener: RecordUpdateListener) -> None:
-        """Detach a record listener; event loop only, not threadsafe."""
-        try:
-            self.listeners.remove(listener)
-            self.zc.async_notify_all()
-        except ValueError as e:
-            log.exception("Failed to remove listener: %r", e)

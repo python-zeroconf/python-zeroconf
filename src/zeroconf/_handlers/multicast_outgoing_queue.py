@@ -73,12 +73,6 @@ class MulticastOutgoingQueue:
             loop.call_at(loop.time() + millis_to_seconds(random_delay), self.async_ready)
         self.queue.append(AnswerGroup(send_after, send_before, answers))
 
-    def _remove_answers_from_queue(self, answers: _AnswerWithAdditionalsType) -> None:
-        """Remove a set of answers from the outgoing queue."""
-        for pending in self.queue:
-            for record in answers:
-                pending.answers.pop(record, None)
-
     def async_ready(self) -> None:
         """Process anything in the queue that is ready."""
         zc = self.zc
@@ -113,3 +107,9 @@ class MulticastOutgoingQueue:
             # If we have the same answer scheduled to go out, remove them
             self._remove_answers_from_queue(answers)
             zc.async_send(construct_outgoing_multicast_answers(answers))
+
+    def _remove_answers_from_queue(self, answers: _AnswerWithAdditionalsType) -> None:
+        """Remove a set of answers from the outgoing queue."""
+        for pending in self.queue:
+            for record in answers:
+                pending.answers.pop(record, None)

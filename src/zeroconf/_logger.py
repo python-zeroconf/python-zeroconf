@@ -74,22 +74,22 @@ def _mark_seen(seen: dict[str, None], key: str) -> bool:
 
 class QuietLogger:
     @classmethod
+    def log_exception_debug(cls, *logger_data: Any) -> None:
+        first_time = _mark_seen(_seen_logs, str(sys.exc_info()[1]))
+        log.debug(*(logger_data or ["Exception occurred"]), exc_info=first_time)
+
+    @classmethod
+    def log_exception_once(cls, exc: Exception, *args: Any) -> None:
+        logger = log.warning if _mark_seen(_seen_logs, args[0]) else log.debug
+        logger(*args, exc_info=exc)
+
+    @classmethod
     def log_exception_warning(cls, *logger_data: Any) -> None:
         first_time = _mark_seen(_seen_logs, str(sys.exc_info()[1]))
         logger = log.warning if first_time else log.debug
         logger(*(logger_data or ["Exception occurred"]), exc_info=True)
 
     @classmethod
-    def log_exception_debug(cls, *logger_data: Any) -> None:
-        first_time = _mark_seen(_seen_logs, str(sys.exc_info()[1]))
-        log.debug(*(logger_data or ["Exception occurred"]), exc_info=first_time)
-
-    @classmethod
     def log_warning_once(cls, *args: Any) -> None:
         logger = log.warning if _mark_seen(_seen_logs, args[0]) else log.debug
         logger(*args)
-
-    @classmethod
-    def log_exception_once(cls, exc: Exception, *args: Any) -> None:
-        logger = log.warning if _mark_seen(_seen_logs, args[0]) else log.debug
-        logger(*args, exc_info=exc)

@@ -63,8 +63,15 @@ path. The authoritative list of cythonized modules lives in
   references** to old codepaths or issue numbers unless there's
   a clear reason a future reader needs that link.
 
-- **Method order**: public API at the top, private helpers
-  (`_underscore_prefixed`) at the bottom. Modules whose names
+- **Method order**: enforced by `scripts/check_declaration_order.py`
+  (a pre-commit hook): dunder methods first with `__init__` leading,
+  then public methods, then private helpers (`_underscore_prefixed`),
+  each group alphabetical. Sibling classes that share a locally defined
+  base are declared alphabetically after that base. The order is
+  rule-generated on purpose — the arrangement of declarations is
+  derived from this stated convention rather than from any earlier
+  codebase — so don't hand-tune it; if a grouping seems more readable,
+  the convention still wins. Modules whose names
   start with `_` (`_cache`, `_dns`, `_handlers/`, etc.) are
   internal; the supported surface is what `zeroconf/__init__.py`
   and `zeroconf/asyncio.py` re-export.

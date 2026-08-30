@@ -29,12 +29,6 @@ class ZeroconfServiceTypes(ServiceListener):
         """Service added."""
         self.found_services.add(name)
 
-    def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        """Service updated."""
-
-    def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        """Service removed."""
-
     @classmethod
     def find(
         cls,
@@ -67,3 +61,9 @@ class ZeroconfServiceTypes(ServiceListener):
             local_zc.close()
 
         return tuple(sorted(listener.found_services))
+
+    def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+        """Service removed."""
+
+    def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
+        """Service updated."""

@@ -26,16 +26,6 @@ class RecordUpdateListener:
     as a base class. In the future it will be required.
     """
 
-    def update_record(  # pylint: disable=no-self-use
-        self, zc: Zeroconf, now: float, record: DNSRecord
-    ) -> None:
-        """Update a single record.
-
-        This method is deprecated and will be removed in a future version.
-        update_records should be implemented instead.
-        """
-        raise RuntimeError("update_record is deprecated and will be removed in a future version.")
-
     def async_update_records(self, zc: Zeroconf, now: float_, records: list[RecordUpdate]) -> None:
         """Update multiple records in one shot.
 
@@ -64,3 +54,13 @@ class RecordUpdateListener:
 
         This method will be run in the event loop.
         """
+
+    def update_record(  # pylint: disable=no-self-use
+        self, zc: Zeroconf, now: float, record: DNSRecord
+    ) -> None:
+        """Update a single record.
+
+        This method is deprecated and will be removed in a future version.
+        update_records should be implemented instead.
+        """
+        raise RuntimeError("update_record is deprecated and will be removed in a future version.")
