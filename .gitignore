@@ -19,3 +19,5 @@ docs/_build/
 /zeroconf.egg-info/
 /src/**/*.c
 .hypothesis/
+/src/**/*.so
+/src/**/*.html
