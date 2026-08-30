@@ -44,7 +44,9 @@ def _class_label(class_: int) -> str:
     return _CLASSES.get(class_, f"unknown-class-{class_}")
 
 
-def _format_display(kind: str, fields: list[tuple[str, str]]) -> str:
+def _format_display(kind: str, fields: list[tuple[str, str]], data: bytes | str | None = None) -> str:
+    if data is not None:
+        fields = [*fields, ("data", str(data))]
     body = " ".join([f"{key}={value}" if key else value for key, value in fields])
     return f"<{kind} {body}>"
 
@@ -83,12 +85,9 @@ class DNSEntry:  # noqa: PLW1641
         """Human readable label for the record class."""
         return _class_label(self.class_)
 
-    def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
-        """Compatibility alias rendering through the display formatter."""
-        fields = self._display_fields()
-        if other is not None:
-            fields.append(("data", str(other)))
-        return _format_display(hdr, fields)
+    def entry_to_string(self, kind: str, extra: bytes | str | None) -> str:
+        """Compatibility alias for the display formatter."""
+        return _format_display(kind, self._display_fields(), extra)
 
     @staticmethod
     def get_class_(class_: int) -> str:
@@ -221,8 +220,8 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         return False
 
     def to_string(self, other: bytes | str) -> str:
-        """Compatibility alias rendering through the display formatter."""
-        return self._repr_with(("data", str(other)))
+        """Compatibility alias for the display formatter."""
+        return _format_display(type(self).__name__, self._display_fields(), other)
 
     def write(self, out: DNSOutgoing) -> None:
         raise AbstractMethodException(f"{type(self).__name__} is missing write")

@@ -87,28 +87,29 @@ class DNSIncoming:
         scope_id: int | None = None,
         now: float | None = None,
     ) -> None:
-        self.flags = 0
-        self.offset = 0
         self.data = data
+        self.flags = 0
+        self.id = 0
+        self.now = now or current_time_millis()
+        self.offset = 0
+        self.scope_id = scope_id
+        self.source = source
+        self.valid = False
+
+        self._answers: list[DNSRecord] = []
         # Borrowed pointer into `data`; every read and slice must be
         # preceded by an explicit bounds check against _data_len.
         self._buf = data
         self._data_len = len(data)
+        self._did_read_others = False
+        self._has_qu_question = False
         self._name_cache: dict[int, list[str]] = {}
         self._name_str_cache: dict[int, str] = {}
-        self._questions: list[DNSQuestion] = []
-        self._answers: list[DNSRecord] = []
-        self.id = 0
-        self._num_questions = 0
+        self._num_additionals = 0
         self._num_answers = 0
         self._num_authorities = 0
-        self._num_additionals = 0
-        self.valid = False
-        self._did_read_others = False
-        self.now = now or current_time_millis()
-        self.source = source
-        self.scope_id = scope_id
-        self._has_qu_question = False
+        self._num_questions = 0
+        self._questions: list[DNSQuestion] = []
         try:
             self._initial_parse()
         except DECODE_EXCEPTIONS:

@@ -207,7 +207,6 @@ good-names = [
     "t",
     "wr",
     "zc",
-    "_GLOBAL_DONE",
 ]
 
 [tool.pylint."MESSAGES CONTROL"]
