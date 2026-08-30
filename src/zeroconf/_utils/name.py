@@ -60,7 +60,7 @@ def service_type_name(type_: str, *, strict: bool = True) -> str:  # pylint: dis
     and anything else that may be represented using Net-Unicode.
 
     :param type_: Type, SubType or service name to validate
-    :return: fully qualified service name (eg: _http._tcp.local.)
+    :return: the validated name, fully qualified (eg: _http._tcp.local.)
     """
     if len(type_) > 256:
         # https://datatracker.ietf.org/doc/html/rfc6763#section-7.2

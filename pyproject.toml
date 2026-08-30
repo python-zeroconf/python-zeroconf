@@ -9,10 +9,10 @@ license = "LGPL-2.1-or-later"
 description = "A pure python implementation of multicast DNS service discovery"
 readme = "README.rst"
 authors = [
-    { name = "Paul Scott-Murphy" },
-    { name = "William McBrine" },
-    { name = "Jakub Stasiak" },
-    { name = "J. Nick Koston" },
+    { name = "The python-zeroconf authors" },  # full history in COPYING and git
+]
+maintainers = [
+    { name = "J. Nick Koston", email = "nick@koston.org" },
 ]
 requires-python = ">=3.10"
 

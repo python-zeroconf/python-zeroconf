@@ -415,7 +415,7 @@
 
 ### Build System
 
-- Adjust actions checkout ref parameter on release
+- Use an explicit checkout ref in the release workflow
   ([#1669](https://github.com/python-zeroconf/python-zeroconf/pull/1669),
   [`bc8ec8d`](https://github.com/python-zeroconf/python-zeroconf/commit/bc8ec8d59d875522f75901644d423d30d803a030))
 
@@ -2013,16 +2013,9 @@ This also revealed that we do not send NSEC records in the initial broadcast. Th
   ([#1145](https://github.com/python-zeroconf/python-zeroconf/pull/1145),
   [`524494e`](https://github.com/python-zeroconf/python-zeroconf/commit/524494edd49bd049726b19ae8ac8f6eea69a3943))
 
-- Include tests and docs in sdist archives
+- Ship the tests, docs and COPYING file in the sdist
   ([#1142](https://github.com/python-zeroconf/python-zeroconf/pull/1142),
   [`da10a3b`](https://github.com/python-zeroconf/python-zeroconf/commit/da10a3b2827cee0719d3bb9152ae897f061c6e2e))
-
-feat: Include tests and docs in sdist archives
-
-Include documentation and test files in source distributions, in order to make them more useful for
-  packagers (Linux distributions, Conda). Testing is an important part of packaging process, and at
-  least Gentoo users have requested offline documentation for Python packages. Furthermore, the
-  COPYING file was missing from sdist, even though it was referenced in README.
 
 - Small cleanups to cache cleanup interval
   ([#1146](https://github.com/python-zeroconf/python-zeroconf/pull/1146),

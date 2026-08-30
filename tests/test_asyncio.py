@@ -138,7 +138,7 @@ async def test_async_service_registration(quick_timing: None) -> None:
 
     calls = []
 
-    class MyListener(ServiceListener):
+    class EventStore(ServiceListener):
         def add_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
@@ -148,7 +148,7 @@ async def test_async_service_registration(quick_timing: None) -> None:
         def update_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
-    listener = MyListener()
+    listener = EventStore()
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
@@ -193,7 +193,7 @@ async def test_async_service_registration_with_server_missing(quick_timing: None
 
     calls = []
 
-    class MyListener(ServiceListener):
+    class EventStore(ServiceListener):
         def add_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
@@ -203,7 +203,7 @@ async def test_async_service_registration_with_server_missing(quick_timing: None
         def update_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
-    listener = MyListener()
+    listener = EventStore()
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
@@ -252,7 +252,7 @@ async def test_async_service_registration_same_server_different_ports(quick_timi
 
     calls = []
 
-    class MyListener(ServiceListener):
+    class EventStore(ServiceListener):
         def add_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
@@ -262,7 +262,7 @@ async def test_async_service_registration_same_server_different_ports(quick_timi
         def update_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
-    listener = MyListener()
+    listener = EventStore()
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
@@ -310,7 +310,7 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
 
     calls = []
 
-    class MyListener(ServiceListener):
+    class EventStore(ServiceListener):
         def add_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
@@ -320,7 +320,7 @@ async def test_async_service_registration_same_server_same_ports(quick_timing: N
         def update_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
-    listener = MyListener()
+    listener = EventStore()
 
     aiozc.zeroconf.add_service_listener(type_, listener)
 
@@ -432,7 +432,7 @@ async def test_async_tasks(quick_timing: None) -> None:
 
     calls = []
 
-    class MyListener(ServiceListener):
+    class EventStore(ServiceListener):
         def add_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
@@ -442,7 +442,7 @@ async def test_async_tasks(quick_timing: None) -> None:
         def update_service(self, zeroconf: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
-    listener = MyListener()
+    listener = EventStore()
     aiozc.zeroconf.add_service_listener(type_, listener)
 
     desc = {"path": "/healthz/"}
@@ -609,7 +609,7 @@ async def test_async_service_browser(quick_timing: None) -> None:
 
     calls = []
 
-    class MyListener(ServiceListener):
+    class EventStore(ServiceListener):
         def add_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("add", type, name))
 
@@ -619,7 +619,7 @@ async def test_async_service_browser(quick_timing: None) -> None:
         def update_service(self, aiozc: Zeroconf, type: str, name: str) -> None:
             calls.append(("update", type, name))
 
-    listener = MyListener()
+    listener = EventStore()
     await aiozc.async_add_service_listener(type_, listener)
 
     desc = {"path": "/healthz/"}

@@ -1208,7 +1208,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     zc: Zeroconf = aiozc.zeroconf
     updated = []
 
-    class MyListener(r.RecordUpdateListener):
+    class EventStore(r.RecordUpdateListener):
         """A RecordUpdateListener that does not implement update_records."""
 
         def async_update_records(self, zc: Zeroconf, now: float, records: list[r.RecordUpdate]) -> None:
@@ -1225,7 +1225,7 @@ async def test_record_update_manager_add_listener_callsback_existing_records():
     ptr_record = info.dns_pointer()
     zc.cache.async_add_records([ptr_record, a_record, info.dns_text(), info.dns_service()])
 
-    listener = MyListener()
+    listener = EventStore()
 
     zc.add_listener(
         listener,
@@ -1750,14 +1750,14 @@ async def test_add_listener_warns_when_not_using_record_update_listener(caplog):
     zc: Zeroconf = aiozc.zeroconf
     updated = []
 
-    class MyListener:
+    class EventStore:
         """A RecordUpdateListener that does not implement update_records."""
 
         def async_update_records(self, zc: Zeroconf, now: float, records: list[r.RecordUpdate]) -> None:
             """Update multiple records in one shot."""
             updated.extend(records)
 
-    zc.add_listener(MyListener(), None)  # type: ignore[arg-type]
+    zc.add_listener(EventStore(), None)  # type: ignore[arg-type]
     await asyncio.sleep(0)  # flush out any call soons
     assert (
         "listeners passed to async_add_listener must inherit from RecordUpdateListener" in caplog.text
