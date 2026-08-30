@@ -29,6 +29,8 @@ switch. Nothing already released changes license.
 | @marcosdiez   | Marcos Diez         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467084050) | 2026-08-30 |
 | @pawlizio     | Paul Daumlechner    | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467104893) | 2026-08-30 |
 | @schmittner   | Milan Stute         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467166859) | 2026-08-30 |
+| @che0         | Petr Novák          | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467942853) | 2026-08-30 |
+| @xandey       | Sandy Patterson     | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5469168708) | 2026-08-30 |
 
 <details><summary>Commit email mapping (click to expand)</summary>
 
@@ -47,5 +49,7 @@ switch. Nothing already released changes license.
 - @marcosdiez: marcos@unitron.com.br
 - @pawlizio: paul.daumlechner@live.de
 - @schmittner: mstute@seemoo.tu-darmstadt.de
+- @che0: petr.novak@cosmoboy.cz
+- @xandey: xandey@gmail.com
 
 </details>
