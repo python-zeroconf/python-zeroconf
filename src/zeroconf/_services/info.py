@@ -349,36 +349,38 @@ class ServiceInfo(RecordUpdateListener):
 
         first_request = True
         delay = self._get_initial_delay()
-        next_ = now
-        last = now + timeout
+        deadline = now + timeout
+        send_at = now
         try:
             zc.async_add_listener(self, None)
             while not self._is_complete:
-                if last <= now or self._is_denied:
-                    return False
-                if next_ <= now:
-                    this_question_type = question_type or (QU_QUESTION if first_request else QM_QUESTION)
-                    out = self._generate_request_query(zc, now, this_question_type)
-                    first_request = False
-                    if out.questions:
-                        # All questions may have been suppressed
-                        # by the question history, so nothing to send,
-                        # but keep waiting for answers in case another
-                        # client on the network is asking the same
-                        # question or they have not arrived yet.
-                        zc.async_send(out, addr, port)
-                    next_ = now + delay
-                    next_ += self._get_random_delay()
-                    if this_question_type is QM_QUESTION and delay < _DUPLICATE_QUESTION_INTERVAL:
-                        # If we just asked a QM question, we need to
-                        # wait at least the duplicate question interval
-                        # before asking another QM question otherwise
-                        # its likely to be suppressed by the question
-                        # history of the remote responder.
-                        delay = _DUPLICATE_QUESTION_INTERVAL
-
-                await self.async_wait(min(next_, last) - now, zc.loop)
                 now = current_time_millis()
+                if self._is_denied or deadline <= now:
+                    return False
+
+                remaining = min(send_at, deadline) - now
+                if remaining > 0:
+                    await self.async_wait(remaining, zc.loop)
+                    continue
+
+                question_kind = question_type or (QU_QUESTION if first_request else QM_QUESTION)
+                out = self._generate_request_query(zc, now, question_kind)
+                first_request = False
+                if out.questions:
+                    # All questions may have been suppressed
+                    # by the question history, so nothing to send,
+                    # but keep waiting for answers in case another
+                    # client on the network is asking the same
+                    # question or they have not arrived yet.
+                    zc.async_send(out, addr, port)
+                send_at = now + delay + self._get_random_delay()
+                if question_kind is QM_QUESTION and delay < _DUPLICATE_QUESTION_INTERVAL:
+                    # If we just asked a QM question, we need to
+                    # wait at least the duplicate question interval
+                    # before asking another QM question otherwise
+                    # its likely to be suppressed by the question
+                    # history of the remote responder.
+                    delay = _DUPLICATE_QUESTION_INTERVAL
         finally:
             zc.async_remove_listener(self)
 
