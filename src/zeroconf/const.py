@@ -139,8 +139,8 @@ _TYPE_ANY = 255
 
 
 # Wire values mapped to short human readable names, used only for reprs
-# and debug logging; lookups fall back to "?(value)" at the call sites.
-# Sorted by mnemonic.
+# and debug logging; _type_label and _class_label in _dns.py supply the
+# unknown-value fallback. Sorted by mnemonic.
 _CLASSES = {
     _CLASS_ANY: "any",
     _CLASS_CH: "ch",

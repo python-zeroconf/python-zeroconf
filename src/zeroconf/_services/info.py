@@ -487,7 +487,7 @@ class ServiceInfo(RecordUpdateListener):
 
     @property
     def name(self) -> str:
-        """Fully qualified name of this service instance."""
+        """The complete instance name, including the type and domain."""
         return self._name
 
     @name.setter
