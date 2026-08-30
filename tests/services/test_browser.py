@@ -433,7 +433,7 @@ class TestServiceBrowserMultipleTypes(unittest.TestCase):
                 if percent == const._EXPIRE_REFRESH_TIME_PERCENT:
                     called_with_refresh_time_check = True
                     return 0
-                return self.created + (percent * self.ttl * 10)
+                return self.created + percent * self.ttl * 10
 
             # Set an expire time that will force a refresh
             with patch("zeroconf.DNSRecord.get_expiration_time", new=_mock_get_expiration_time):
