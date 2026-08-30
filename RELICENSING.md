@@ -28,6 +28,7 @@ switch. Nothing already released changes license.
 | @devbanu      | Alexandru Ciobanu   | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5466504402) | 2026-08-30 |
 | @marcosdiez   | Marcos Diez         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467084050) | 2026-08-30 |
 | @pawlizio     | Paul Daumlechner    | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467104893) | 2026-08-30 |
+| @schmittner   | Milan Stute         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467166859) | 2026-08-30 |
 
 <details><summary>Commit email mapping (click to expand)</summary>
 
@@ -45,5 +46,6 @@ switch. Nothing already released changes license.
 - @devbanu: 93059748+devbanu@users.noreply.github.com
 - @marcosdiez: marcos@unitron.com.br
 - @pawlizio: paul.daumlechner@live.de
+- @schmittner: mstute@seemoo.tu-darmstadt.de
 
 </details>
