@@ -37,9 +37,11 @@ jobs:
               body: [
                 "Thanks for contributing! A quick note: this project is in the process of moving from LGPL-2.1 to Apache 2.0, see #1835.",
                 "",
-                "By continuing with this pull request you are okay with your contribution, and your previous contributions to this repository, being offered under Apache 2.0.",
+                "By continuing with this pull request you agree that this new contribution is offered under Apache 2.0.",
                 "",
-                "If that does not work for you, no hard feelings; reply with the exact phrase `I do not agree to the Apache 2.0 license` or simply close this pull request, and nothing of yours will be included in the change.",
+                "This notice does not affect your previous contributions. If you would like to consent to relicensing those as well, please post the consent statement on #1835; silence is never treated as consent for past work.",
+                "",
+                "If offering this contribution under Apache 2.0 does not work for you, no hard feelings; reply with the exact phrase `I do not agree to the Apache 2.0 license` or simply close this pull request.",
               ].join("\n"),
             });
 
