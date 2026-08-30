@@ -2,6 +2,35 @@
 
 <!-- version list -->
 
+## v0.151.3 (2026-08-30)
+
+### Bug Fixes
+
+- Correct the recursion available header flag to the rfc 1035 value
+  ([#1893](https://github.com/python-zeroconf/python-zeroconf/pull/1893),
+  [`07e3812`](https://github.com/python-zeroconf/python-zeroconf/commit/07e38121a30ecd3c19690ffc956dead8160e6c46))
+
+### Refactoring
+
+- Compute probe pacing from fresh clock reads
+  ([#1888](https://github.com/python-zeroconf/python-zeroconf/pull/1888),
+  [`7737108`](https://github.com/python-zeroconf/python-zeroconf/commit/773710807a0159dc49de2a8c875a63d1085df604))
+
+- Compute service info request pacing from fresh clock reads
+  ([#1895](https://github.com/python-zeroconf/python-zeroconf/pull/1895),
+  [`49aa15f`](https://github.com/python-zeroconf/python-zeroconf/commit/49aa15f639bc50f05f0f88c8153463a7a42c06ef))
+
+### Testing
+
+- Fix flaky test_service_browser_expire_callbacks
+  ([#1879](https://github.com/python-zeroconf/python-zeroconf/pull/1879),
+  [`6d061a4`](https://github.com/python-zeroconf/python-zeroconf/commit/6d061a4fb3b3557bafc37ef951c5214f7b24a125))
+
+- Make test_qu_response deterministic by injecting the announcement
+  ([#1845](https://github.com/python-zeroconf/python-zeroconf/pull/1845),
+  [`10db10a`](https://github.com/python-zeroconf/python-zeroconf/commit/10db10a8b5db3cbd6e6c6718a6cbb8830f4b9d07))
+
+
 ## v0.151.2 (2026-08-29)
 
 ### Bug Fixes

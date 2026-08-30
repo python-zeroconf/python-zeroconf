@@ -73,7 +73,7 @@ from ._utils.time import (  # noqa # import needed for backwards compat
 
 __author__ = "The python-zeroconf authors"  # full history in COPYING and git
 __maintainer__ = "J. Nick Koston <nick@koston.org>"
-__version__ = "0.151.2"
+__version__ = "0.151.3"
 __license__ = "LGPL"
 
 
