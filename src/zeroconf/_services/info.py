@@ -1044,26 +1044,26 @@ class ServiceInfo(RecordUpdateListener):
     def _unpack_text_into_properties(self) -> None:
         """Unpacks the text field into properties"""
         text = self.text
-        end = len(text)
-        if end == 0:
+        total = len(text)
+        if total == 0:
             # Properties should be set atomically
             # in case another thread is reading them
             self._properties = {}
             return
 
-        index = 0
         properties: dict[bytes, bytes | None] = {}
-        while index < end:
-            length = text[index]
-            index += 1
-            key_value = text[index : index + length]
+        pos = 0
+        while pos < total:
+            length = text[pos]
+            start = pos + 1
+            key_value = text[start : start + length]
+            pos = start + length
             key, sep, value = key_value.partition(b"=")
             if key not in properties:
                 # RFC 6763 section 6.4 distinguishes a key with no '=' (a
                 # boolean attribute: present, no value) from `key=` (present
                 # with an empty value), so test the separator, not the value.
                 properties[key] = value if sep else None
-            index += length
 
         self._properties = properties
 

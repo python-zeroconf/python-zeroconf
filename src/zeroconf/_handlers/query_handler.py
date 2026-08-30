@@ -247,8 +247,9 @@ class QueryHandler:
                 continue
             if ucast_source:
                 query_res.add_ucast_question_response(answer_set)
-            # We always multicast as well even if its a unicast
-            # source as long as we haven't done it recently (75% of ttl)
+            # The answer also goes out by multicast even for a unicast
+            # source; a copy multicast within the last second is folded
+            # into the aggregated response instead (RFC 6762 section 14)
             query_res.add_mcast_question_response(answer_set)
 
         return query_res.answers()
