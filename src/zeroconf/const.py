@@ -10,11 +10,11 @@ from __future__ import annotations
 import re
 import socket
 
-_UNREGISTER_TIME = 125  # ms
-_CHECK_TIME = 500  # ms
-_REGISTER_TIME = 225  # ms
-_LISTENER_TIME = 200  # ms
 _BROWSER_TIME = 10000  # ms
+_CHECK_TIME = 500  # ms
+_LISTENER_TIME = 200  # ms
+_REGISTER_TIME = 225  # ms
+_UNREGISTER_TIME = 125  # ms
 _DUPLICATE_PACKET_SUPPRESSION_INTERVAL = 1000  # ms
 # Per-listener bounded recency window. 16 is large enough to defeat
 # the alternating-payload bypass (RFC 6762 §6.2, issue #1724 — even a
@@ -94,16 +94,16 @@ _MAX_MSG_ABSOLUTE = 8966
 _MAX_MSG_TYPICAL = 1460
 
 # DNS header flag bits, RFC 1035 section 4.1.1 and RFC 6762 section 18
+_FLAGS_AA = 0x0400
+_FLAGS_AD = 0x0020
+_FLAGS_CD = 0x0010
 _FLAGS_QR_MASK = 0x8000
 _FLAGS_QR_QUERY = 0x0000
 _FLAGS_QR_RESPONSE = 0x8000
-_FLAGS_AA = 0x0400
-_FLAGS_TC = 0x0200
-_FLAGS_RD = 0x0100
 _FLAGS_RA = 0x8000
+_FLAGS_RD = 0x0100
+_FLAGS_TC = 0x0200
 _FLAGS_Z = 0x0040
-_FLAGS_AD = 0x0020
-_FLAGS_CD = 0x0010
 
 
 _CLASS_IN = 1

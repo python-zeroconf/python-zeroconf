@@ -326,7 +326,7 @@ class DNSOutgoing:
         self._write_byte(0)
 
     def write_short(self, value: int_) -> None:
-        """Append an unsigned short."""
+        """Append a 16 bit value in network order."""
         self.data.append(self._get_short(value))
         self.size += 2
 
@@ -361,7 +361,7 @@ class DNSOutgoing:
         return False
 
     def _get_short(self, value: int_) -> bytes:
-        """Convert an unsigned short to 2 bytes."""
+        """Encode a 16 bit value as two network order bytes."""
         return SHORT_LOOKUP[value] if value < SHORT_CACHE_MAX else PACK_SHORT(value)
 
     def _has_more_to_add(
@@ -380,11 +380,11 @@ class DNSOutgoing:
         )
 
     def _insert_short_at_start(self, value: int_) -> None:
-        """Prepend an unsigned short as the first chunk."""
+        """Prepend a 16 bit value as the first chunk."""
         self.data.insert(0, self._get_short(value))
 
     def _replace_short(self, index: int_, value: int_) -> None:
-        """Overwrite the chunk at index with an unsigned short."""
+        """Overwrite the chunk at index with a 16 bit value."""
         self.data[index] = self._get_short(value)
 
     def _reset_for_next_packet(self) -> None:
