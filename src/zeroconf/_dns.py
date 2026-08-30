@@ -80,20 +80,16 @@ class DNSEntry:  # noqa: PLW1641
         return isinstance(other, DNSEntry) and self._dns_entry_matches(other)
 
     @property
-    def type_label(self) -> str:
-        """Human readable label for the record type."""
-        return _type_label(self.type)
-
-    @property
     def class_label(self) -> str:
         """Human readable label for the record class."""
         return _class_label(self.class_)
 
-    def _display_fields(self) -> list[tuple[str, str]]:
-        fields = [("name", self.name), ("type", self.type_label), ("class", self.class_label)]
-        if self.unique:
-            fields.append(("", "unique"))
-        return fields
+    def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
+        """Compatibility alias rendering through the display formatter."""
+        fields = self._display_fields()
+        if other is not None:
+            fields.append(("data", str(other)))
+        return _format_display(hdr, fields)
 
     @staticmethod
     def get_class_(class_: int) -> str:
@@ -105,12 +101,16 @@ class DNSEntry:  # noqa: PLW1641
         """Compatibility alias for the type_label property."""
         return _type_label(t)
 
-    def entry_to_string(self, hdr: str, other: bytes | str | None) -> str:
-        """Compatibility alias rendering through the display formatter."""
-        fields = self._display_fields()
-        if other is not None:
-            fields.append(("data", str(other)))
-        return _format_display(hdr, fields)
+    @property
+    def type_label(self) -> str:
+        """Human readable label for the record type."""
+        return _type_label(self.type)
+
+    def _display_fields(self) -> list[tuple[str, str]]:
+        fields = [("name", self.name), ("type", self.type_label), ("class", self.class_label)]
+        if self.unique:
+            fields.append(("", "unique"))
+        return fields
 
     def _dns_entry_matches(self, other: DNSEntry) -> bool:
         return self.key == other.key and self.type == other.type and self.class_ == other.class_
@@ -222,14 +222,25 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
                 return True
         return False
 
+    def to_string(self, other: bytes | str) -> str:
+        """Compatibility alias rendering through the display formatter."""
+        return self._repr_with(("data", str(other)))
+
     def write(self, out: DNSOutgoing) -> None:
         raise AbstractMethodException(f"{type(self).__name__} is missing write")
+
+    def _display_fields(self) -> list[tuple[str, str]]:
+        remaining = int(self.get_remaining_ttl(current_time_millis()))
+        return [*DNSEntry._display_fields(self), ("ttl", f"{self.ttl} ({remaining} remaining)")]
 
     def _fast_init_record(self, name: str, type_: _int, class_: _int, ttl: _int, created: _float) -> None:
         """Fast init for reuse."""
         self._fast_init_entry(name, type_, class_)
         self.ttl = ttl
         self.created = created
+
+    def _repr_with(self, *details: tuple[str, str]) -> str:
+        return _format_display(type(self).__name__, [*self._display_fields(), *details])
 
     def _set_created_ttl(self, created: _float, ttl: _int) -> None:
         """Set the created and ttl of a record."""
@@ -238,19 +249,8 @@ class DNSRecord(DNSEntry):  # noqa: PLW1641
         self.created = created
         self.ttl = ttl
 
-    def _display_fields(self) -> list[tuple[str, str]]:
-        remaining = int(self.get_remaining_ttl(current_time_millis()))
-        return [*DNSEntry._display_fields(self), ("ttl", f"{self.ttl} ({remaining} remaining)")]
-
-    def _repr_with(self, *details: tuple[str, str]) -> str:
-        return _format_display(type(self).__name__, [*self._display_fields(), *details])
-
-    def to_string(self, other: bytes | str) -> str:
-        """Compatibility alias rendering through the display formatter."""
-        return self._repr_with(("data", str(other)))
-
     def _suppressed_by_answer(self, answer: DNSRecord) -> bool:
-        """True when the answer matches this record with at least half its TTL left."""
+        """RFC 6762 section 7.1 known answer test: an equal record whose TTL is at least half of ours."""
         return self == answer and self.ttl / 2 < answer.ttl
 
 
@@ -618,13 +618,6 @@ class DNSRRSet:
         """Return the lookup table as aset."""
         return set(self._get_lookup())
 
-    def _get_lookup(self) -> dict[DNSRecord, DNSRecord]:
-        """Return the lookup table, building it if needed."""
-        if self._lookup is None:
-            # Build the hash table so we can lookup the record ttl
-            self._lookup = {record: record for record in self._records}
-        return self._lookup
-
     def suppresses(self, record: _DNSRecord) -> bool:
         """True when the set holds a match with over half the record's TTL left."""
         lookup = self._get_lookup()
@@ -632,3 +625,10 @@ class DNSRRSet:
         if other is None:
             return False
         return other.ttl > (record.ttl / 2)
+
+    def _get_lookup(self) -> dict[DNSRecord, DNSRecord]:
+        """Return the lookup table, building it if needed."""
+        if self._lookup is None:
+            # Build the hash table so we can lookup the record ttl
+            self._lookup = {record: record for record in self._records}
+        return self._lookup

@@ -399,7 +399,7 @@ class DNSIncoming:
         return name
 
     def _read_others(self) -> None:
-        """Read the answer, authority and additional sections."""
+        """Parse everything after the question section in one pass."""
         self._did_read_others = True
         buf = self._buf
         answers = self._answers
