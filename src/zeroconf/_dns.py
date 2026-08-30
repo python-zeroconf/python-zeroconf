@@ -170,7 +170,7 @@ class DNSQuestion(DNSEntry):
 
 
 class DNSRecord(DNSEntry):  # noqa: PLW1641
-    """A DNS entry that also carries a TTL and creation time."""
+    """Record layered on the entry identity with a TTL and creation time."""
 
     __slots__ = ("created", "ttl")
 

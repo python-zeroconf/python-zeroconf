@@ -47,7 +47,7 @@ class ListenerTest(unittest.TestCase):
         name = "UPPERxxxyyyæøå"
         registration_name = f"{name}.{subtype}"
 
-        class MyListener(r.ServiceListener):
+        class EventStore(r.ServiceListener):
             def add_service(self, zeroconf, type, name):
                 zeroconf.get_service_info(type, name)
                 service_added.set()
@@ -78,7 +78,7 @@ class ListenerTest(unittest.TestCase):
             def update_service(self, zeroconf, type, name):
                 sub_service_updated.set()
 
-        listener = MyListener()
+        listener = EventStore()
         zeroconf_browser = Zeroconf(interfaces=["127.0.0.1"])
         zeroconf_browser.add_service_listener(type_, listener)
 
