@@ -39,9 +39,22 @@ class Signal:
     def __init__(self) -> None:
         self._handlers: list[Callable[..., None]] = []
 
-    def fire(self, **kwargs: Any) -> None:
+    def fire(
+        self,
+        *,
+        zeroconf: Zeroconf,
+        service_type: str,
+        name: str,
+        state_change: ServiceStateChange,
+        **kwargs: Any,
+    ) -> None:
         for h in self._handlers[:]:
-            h(**kwargs)
+            h(
+                zeroconf=zeroconf,
+                service_type=service_type,
+                name=name,
+                state_change=state_change,
+            )
 
     @property
     def registration_interface(self) -> SignalRegistrationInterface:
