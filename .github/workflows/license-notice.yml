@@ -1,11 +1,12 @@
 name: License Change Notice
 
-# The project is transitioning from LGPL-2.1 to Apache 2.0
+# The project is transitioning from LGPL-2.1 to Apache 2.0 and may keep
+# LGPL-2.1-or-later as an OR option for GPL-2.0-only consumers
 # (https://github.com/python-zeroconf/python-zeroconf/issues/1835).
 # Every newly opened pull request gets a comment stating that opening
-# it means agreeing to license the contribution, and the author's
-# previous contributions, under Apache 2.0. If the pull request author
-# replies that they do not agree, the pull request is closed.
+# it means agreeing to license the contribution under both licenses.
+# If the pull request author replies that they do not agree, the pull
+# request is closed.
 
 on:
   pull_request_target:
@@ -35,13 +36,13 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: [
-                "Thanks for contributing! A quick note: this project is in the process of moving from LGPL-2.1 to Apache 2.0, see #1835.",
+                "Thanks for contributing! A quick note: this project is in the process of moving from LGPL-2.1 to Apache 2.0, and may keep LGPL-2.1-or-later as an OR option so GPL-2.0-only projects can keep using the library, see #1835.",
                 "",
-                "By continuing with this pull request you agree that this new contribution is offered under Apache 2.0.",
+                "By continuing with this pull request you agree that this new contribution is offered under both Apache 2.0 and LGPL-2.1-or-later, so it is covered under either outcome.",
                 "",
                 "This notice does not affect your previous contributions. If you would like to consent to relicensing those as well, please post the consent statement on #1835; silence is never treated as consent for past work.",
                 "",
-                "If offering this contribution under Apache 2.0 does not work for you, no hard feelings; reply with the exact phrase `I do not agree to the Apache 2.0 license` or simply close this pull request.",
+                "If offering this contribution under these licenses does not work for you, no hard feelings; reply with the exact phrase `I do not agree to the Apache 2.0 license` or simply close this pull request.",
               ].join("\n"),
             });
 
