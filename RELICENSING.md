@@ -32,6 +32,11 @@ switch. Nothing already released changes license.
 | @che0         | Petr Novák          | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467942853) | 2026-08-30 |
 | @xandey       | Sandy Patterson     | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5469168708) | 2026-08-30 |
 | @smcv         | Simon McVittie      | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5469536878) | 2026-08-30 |
+| @mattsaxon    | mattsaxon           | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5478214834) | 2026-08-31 |
+| @nocarryr     | nocarryr            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5486821065) | 2026-09-01 |
+| @ZLJasonG     | ZLJasonG            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5568109941) | 2026-09-07 |
+| @jmpcm        | Jorge Miranda       | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5568628585) | 2026-09-07 |
+| @dtantsur     | Dmitry Tantsur      | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5573907204) | 2026-09-07 |
 
 <details><summary>Commit email mapping (click to expand)</summary>
 
@@ -53,5 +58,10 @@ switch. Nothing already released changes license.
 - @che0: petr.novak@cosmoboy.cz
 - @xandey: xandey@gmail.com
 - @smcv: smcv@collabora.com
+- @mattsaxon: saxonmatt@hotmail.com
+- @nocarryr: matt@nomadic-recording.com
+- @ZLJasonG: 36852337+ZLJasonG@users.noreply.github.com
+- @jmpcm: jorge.miguel.miranda@gmail.com
+- @dtantsur: divius.inside@gmail.com, dtantsur@protonmail.com
 
 </details>
