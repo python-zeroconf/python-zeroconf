@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "zeroconf"
-version = "0.151.3"
+version = "0.151.5"
 license = "LGPL-2.1-or-later"
 description = "A pure python implementation of multicast DNS service discovery"
 readme = "README.rst"
@@ -56,7 +56,7 @@ version_toml = ["pyproject.toml:project.version"]
 version_variables = [
     "src/zeroconf/__init__.py:__version__"
 ]
-build_command = "pip install poetry && poetry build"
+build_command = "pip install poetry && poetry build --format sdist"
 tag_format = "{version}"
 allow_zero_version = true
 

@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v0.151.5 (2026-09-28)
+
+### Bug Fixes
+
+- Build only the sdist in the release job
+  ([#1921](https://github.com/python-zeroconf/python-zeroconf/pull/1921),
+  [`1d939f4`](https://github.com/python-zeroconf/python-zeroconf/commit/1d939f471f045a2e4a5d44cfe35cf4f61e55c5ba))
+
+
+## v0.151.4 (2026-09-28)
+
+### Bug Fixes
+
+- Skip adapter scan for interface lists with no IPv6 entries
+  ([#1919](https://github.com/python-zeroconf/python-zeroconf/pull/1919),
+  [`47ec4ba`](https://github.com/python-zeroconf/python-zeroconf/commit/47ec4bab70d548503b937ba357f160eebfa2af1f))
+
+
 ## v0.151.3 (2026-08-30)
 
 ### Bug Fixes
