@@ -118,6 +118,35 @@ def test_ip6_addresses_to_indexes():
         assert netutils.ip6_addresses_to_indexes(interfaces_2) == [(("2001:db8::", 1, 1), 1)]
 
 
+@pytest.mark.parametrize("interfaces", [[], ["192.168.1.5"], ["192.168.1.5", "169.254.3.2"]])
+def test_ip6_addresses_to_indexes_skips_scan_without_ipv6(interfaces: list[str]) -> None:
+    """Test the adapters are not scanned when there are no IPv6 entries."""
+    with patch("zeroconf._utils.net.ifaddr.get_adapters") as mock_get_adapters:
+        assert netutils.ip6_addresses_to_indexes(interfaces) == []
+    mock_get_adapters.assert_not_called()
+
+
+def test_ip6_addresses_to_indexes_scans_once() -> None:
+    """Test the adapters are scanned once for a mixed list."""
+    with patch(
+        "zeroconf._utils.net.ifaddr.get_adapters",
+        return_value=_generate_mock_adapters(),
+    ) as mock_get_adapters:
+        assert netutils.ip6_addresses_to_indexes(["192.168.1.5", "2001:db8::", 1, "fd00:db8::"]) == [
+            (("2001:db8::", 1, 1), 1),
+            (("2001:db8::", 1, 1), 1),
+            (("fd00:db8::", 1, 1), 1),
+        ]
+    mock_get_adapters.assert_called_once()
+
+
+def test_normalize_interface_choice_ipv4_list_skips_scan() -> None:
+    """Test an IPv4 only list is normalized without scanning the adapters."""
+    with patch("zeroconf._utils.net.ifaddr.get_adapters") as mock_get_adapters:
+        assert netutils.normalize_interface_choice(["192.168.1.5"]) == ["192.168.1.5"]
+    mock_get_adapters.assert_not_called()
+
+
 def test_normalize_interface_choice_errors():
     """Test we generate exception on invalid input."""
     with (

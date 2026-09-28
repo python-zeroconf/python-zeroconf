@@ -126,13 +126,21 @@ def ip6_addresses_to_indexes(
     :param interfaces: List of IP addresses and indexes.
     :returns: List of indexes.
     """
-    result = []
+    result: list[tuple[tuple[str, int, int], int]] = []
+    needs_scan = [
+        iface
+        for iface in interfaces
+        if isinstance(iface, int) or (isinstance(iface, str) and ipaddress.ip_address(iface).version == 6)
+    ]
+    if not needs_scan:
+        return result
+
     adapters = ifaddr.get_adapters()
 
-    for iface in interfaces:
+    for iface in needs_scan:
         if isinstance(iface, int):
             result.append((interface_index_to_ip6_address(adapters, iface), iface))  # type: ignore[arg-type]
-        elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
+        else:
             result.append(ip6_to_address_and_index(adapters, iface))  # type: ignore[arg-type]
 
     return result
