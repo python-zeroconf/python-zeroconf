@@ -132,9 +132,10 @@ def test_ip6_addresses_to_indexes_scans_once() -> None:
         "zeroconf._utils.net.ifaddr.get_adapters",
         return_value=_generate_mock_adapters(),
     ) as mock_get_adapters:
-        assert netutils.ip6_addresses_to_indexes(["192.168.1.5", "2001:db8::", 1]) == [
+        assert netutils.ip6_addresses_to_indexes(["192.168.1.5", "2001:db8::", 1, "fd00:db8::"]) == [
             (("2001:db8::", 1, 1), 1),
             (("2001:db8::", 1, 1), 1),
+            (("fd00:db8::", 1, 1), 1),
         ]
     mock_get_adapters.assert_called_once()
 
