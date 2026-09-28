@@ -127,12 +127,16 @@ def ip6_addresses_to_indexes(
     :returns: List of indexes.
     """
     result = []
-    adapters = ifaddr.get_adapters()
+    adapters = None
 
     for iface in interfaces:
         if isinstance(iface, int):
+            if adapters is None:
+                adapters = ifaddr.get_adapters()
             result.append((interface_index_to_ip6_address(adapters, iface), iface))  # type: ignore[arg-type]
         elif isinstance(iface, str) and ipaddress.ip_address(iface).version == 6:
+            if adapters is None:
+                adapters = ifaddr.get_adapters()
             result.append(ip6_to_address_and_index(adapters, iface))  # type: ignore[arg-type]
 
     return result
