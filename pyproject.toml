@@ -91,7 +91,7 @@ cython = "^3.3.0"
 setuptools = ">=84.0.0,<85.0.0"
 pytest-timeout = "^2.1.0"
 pytest-codspeed = ">=5.0.3,<6.0"
-blockbuster = ">=1.5.27,<2.0.0"
+blockbuster = ">=1.5.28,<2.0.0"
 hypothesis = {version = "^6.168.0", markers = "implementation_name == 'cpython'"}
 
 [tool.poetry.group.docs.dependencies]
