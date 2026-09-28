@@ -56,7 +56,7 @@ version_toml = ["pyproject.toml:project.version"]
 version_variables = [
     "src/zeroconf/__init__.py:__version__"
 ]
-build_command = "pip install poetry && poetry build"
+build_command = "pip install poetry && poetry build --format sdist"
 tag_format = "{version}"
 allow_zero_version = true
 
