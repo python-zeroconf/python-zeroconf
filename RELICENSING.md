@@ -12,31 +12,32 @@ contributions are covered by the license notice posted on every pull
 request, and blame will be re-verified against consent dates before any
 switch. Nothing already released changes license.
 
-| GitHub login  | Git author name     | Consent                                                                                           | Date (UTC) |
-| ------------- | ------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
-| @bdraco       | J. Nick Koston      | maintainer, relicense initiator                                                                   | 2026-08-28 |
-| @stevencrader | Steven Crader       | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5458645316) | 2026-08-28 |
-| @bboe         | Bryce Boe           | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5458732025) | 2026-08-28 |
-| @rima1881     | Amir                | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5458753986) | 2026-08-28 |
-| @jpbede       | Jan-Philipp Benecke | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5460526155) | 2026-08-29 |
-| @jstasiak     | Jakub Stasiak       | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5462270134) | 2026-08-29 |
-| @Rotzbua      | Rotzbua             | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5462300621) | 2026-08-29 |
-| @ibygrave     | ibygrave            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5463209000) | 2026-08-29 |
-| @bachp        | Pascal Bach         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5464361992) | 2026-08-29 |
-| @cdce8p       | Marc Mueller        | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5464917296) | 2026-08-29 |
-| @agners       | Stefan Agner        | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5465371892) | 2026-08-29 |
-| @devbanu      | Alexandru Ciobanu   | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5466504402) | 2026-08-30 |
-| @marcosdiez   | Marcos Diez         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467084050) | 2026-08-30 |
-| @pawlizio     | Paul Daumlechner    | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467104893) | 2026-08-30 |
-| @schmittner   | Milan Stute         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467166859) | 2026-08-30 |
-| @che0         | Petr Novák          | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467942853) | 2026-08-30 |
-| @xandey       | Sandy Patterson     | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5469168708) | 2026-08-30 |
-| @smcv         | Simon McVittie      | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5469536878) | 2026-08-30 |
-| @mattsaxon    | mattsaxon           | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5478214834) | 2026-08-31 |
-| @nocarryr     | nocarryr            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5486821065) | 2026-09-01 |
-| @ZLJasonG     | ZLJasonG            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5568109941) | 2026-09-07 |
-| @jmpcm        | Jorge Miranda       | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5568628585) | 2026-09-07 |
-| @dtantsur     | Dmitry Tantsur      | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5573907204) | 2026-09-07 |
+| GitHub login    | Git author name     | Consent                                                                                           | Date (UTC) |
+| --------------- | ------------------- | ------------------------------------------------------------------------------------------------- | ---------- |
+| @bdraco         | J. Nick Koston      | maintainer, relicense initiator                                                                   | 2026-08-28 |
+| @stevencrader   | Steven Crader       | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5458645316) | 2026-08-28 |
+| @bboe           | Bryce Boe           | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5458732025) | 2026-08-28 |
+| @rima1881       | Amir                | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5458753986) | 2026-08-28 |
+| @jpbede         | Jan-Philipp Benecke | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5460526155) | 2026-08-29 |
+| @jstasiak       | Jakub Stasiak       | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5462270134) | 2026-08-29 |
+| @Rotzbua        | Rotzbua             | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5462300621) | 2026-08-29 |
+| @ibygrave       | ibygrave            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5463209000) | 2026-08-29 |
+| @bachp          | Pascal Bach         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5464361992) | 2026-08-29 |
+| @cdce8p         | Marc Mueller        | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5464917296) | 2026-08-29 |
+| @agners         | Stefan Agner        | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5465371892) | 2026-08-29 |
+| @devbanu        | Alexandru Ciobanu   | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5466504402) | 2026-08-30 |
+| @marcosdiez     | Marcos Diez         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467084050) | 2026-08-30 |
+| @pawlizio       | Paul Daumlechner    | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467104893) | 2026-08-30 |
+| @schmittner     | Milan Stute         | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467166859) | 2026-08-30 |
+| @che0           | Petr Novák          | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5467942853) | 2026-08-30 |
+| @xandey         | Sandy Patterson     | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5469168708) | 2026-08-30 |
+| @smcv           | Simon McVittie      | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5469536878) | 2026-08-30 |
+| @mattsaxon      | mattsaxon           | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5478214834) | 2026-08-31 |
+| @nocarryr       | nocarryr            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5486821065) | 2026-09-01 |
+| @ZLJasonG       | ZLJasonG            | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5568109941) | 2026-09-07 |
+| @jmpcm          | Jorge Miranda       | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5568628585) | 2026-09-07 |
+| @dtantsur       | Dmitry Tantsur      | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5573907204) | 2026-09-07 |
+| @jacobtomlinson | Jacob Tomlinson     | [comment](https://github.com/python-zeroconf/python-zeroconf/issues/1835#issuecomment-5730191033) | 2026-09-18 |
 
 <details><summary>Commit email mapping (click to expand)</summary>
 
@@ -63,5 +64,6 @@ switch. Nothing already released changes license.
 - @ZLJasonG: 36852337+ZLJasonG@users.noreply.github.com
 - @jmpcm: jorge.miguel.miranda@gmail.com
 - @dtantsur: divius.inside@gmail.com, dtantsur@protonmail.com
+- @jacobtomlinson: jacobtomlinson@users.noreply.github.com
 
 </details>
