@@ -1,5 +1,10 @@
 [build-system]
-requires = ['setuptools>=77.0', 'Cython>=3.0.8', "poetry-core>=2.1.0"]
+# Cython is pinned to the version in poetry.lock so release wheels are built
+# with the exact, tested compiler. cibuildwheel resolves build-system.requires
+# from PyPI in an isolated env (it ignores poetry.lock), so an unbounded spec
+# lets each release silently pick up whichever Cython is newest at build time,
+# producing drifting C output. Bump this in lockstep with the dev dependency.
+requires = ['setuptools>=77.0', 'Cython==3.2.5', "poetry-core>=2.1.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project]
