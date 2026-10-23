@@ -53,6 +53,7 @@ class AsyncListener:
         "_timers",
         "data",
         "last_message",
+        "last_sender_scope",
         "last_time",
         "sock_description",
         "transport",
@@ -67,6 +68,7 @@ class AsyncListener:
         self.data: bytes | None = None
         self.last_time: float = 0
         self.last_message: DNSIncoming | None = None
+        self.last_sender_scope = 0
         self.transport: _WrappedTransport | None = None
         self.sock_description: str | None = None
         self._deferred: dict[str, list[DNSIncoming]] = {}
@@ -77,7 +79,12 @@ class AsyncListener:
         # order so the oldest entry is evicted first. Only payloads
         # without a QU question are cached so unicast replies still go
         # out on every receipt.
-        self._recent_packets: dict[bytes, float] = {}
+        #
+        # A dual-stack socket receives a responder's IPv4 and IPv6 copies
+        # of the same message (RFC 6762 section 20), and only a copy from
+        # a link-local sender gives its link-local AAAA records a scope,
+        # so a copy from a scoped sender is keyed with its scope.
+        self._recent_packets: dict[bytes | tuple[bytes, int], float] = {}
         super().__init__()
 
     def cancel_pending_timers(self) -> None:
@@ -228,8 +235,10 @@ class AsyncListener:
         data: _bytes,
         addrs: tuple[str, int] | tuple[str, int, int, int],
     ) -> None:
+        sender_scope = addrs[3] if len(addrs) == 4 else 0
         if (
             self.data == data
+            and self.last_sender_scope == sender_scope
             and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
             and self.last_message is not None
             and not self.last_message.has_qu_question()
@@ -254,7 +263,8 @@ class AsyncListener:
         # negative for the first ~1s after boot). Only non-QU payloads
         # are cached, so any hit here is safe to suppress without re-
         # checking has_qu_question.
-        recent_time = self._recent_packets.get(data, -1e30)
+        key = (data, sender_scope) if sender_scope else data
+        recent_time = self._recent_packets.get(key, -1e30)
         if (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < recent_time:
             # No timestamp refresh on hit so the suppression window
             # ends at first-observation + interval; one parse-and-
@@ -291,15 +301,16 @@ class AsyncListener:
         self.data = data
         self.last_time = now
         self.last_message = msg
+        self.last_sender_scope = sender_scope
         if not msg.has_qu_question():
             # Refresh LRU position when an entry exists but the
             # suppression window has expired; otherwise evict the oldest
             # entry once the window is full.
-            if data in self._recent_packets:
-                del self._recent_packets[data]
+            if key in self._recent_packets:
+                del self._recent_packets[key]
             elif len(self._recent_packets) >= _RECENT_PACKETS_MAX:
                 del self._recent_packets[next(iter(self._recent_packets))]
-            self._recent_packets[data] = now
+            self._recent_packets[key] = now
         if msg.valid is True:
             if debug:
                 log.debug(
