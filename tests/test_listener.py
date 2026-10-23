@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import socket
 import unittest
 import unittest.mock
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import zeroconf as r
@@ -273,6 +275,44 @@ def test_guard_against_duplicate_packets(zc: Zeroconf) -> None:
         listener._process_datagram_at_time(False, len(b"garbage"), new_time, b"garbage", addrs)
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
+
+
+def test_guard_against_duplicate_packets_per_sender_scope(zc: Zeroconf) -> None:
+    """A scoped copy of a response is not suppressed by an unscoped one, and each is by its own."""
+    listener = _listener.AsyncListener(zc)
+    listener.transport = MagicMock()
+
+    response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    response.add_answer_at_time(
+        r.DNSAddress(
+            "peer.local.",
+            const._TYPE_AAAA,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            120,
+            socket.inet_pton(socket.AF_INET6, "fe80::1"),
+        ),
+        0,
+    )
+    packet = response.packets()[0]
+    v4_mapped = ("::ffff:192.0.2.1", 5353, 0, 0)
+    v6_link_local = ("fe80::2", 5353, 0, 2)
+
+    def cached() -> list[r.DNSAddress]:
+        records = zc.cache.async_all_by_details("peer.local.", const._TYPE_AAAA, const._CLASS_IN)
+        return [cast(r.DNSAddress, record) for record in records]
+
+    def scopes() -> set[int | None]:
+        return {record.scope_id for record in cached()}
+
+    now = current_time_millis()
+    listener._process_datagram_at_time(False, len(packet), now, packet, v4_mapped)
+    listener._process_datagram_at_time(False, len(packet), now, packet, v6_link_local)
+    assert scopes() == {0, 2}
+
+    zc.cache.async_remove_records(cached())
+    listener._process_datagram_at_time(False, len(packet), now, packet, v6_link_local)
+    listener._process_datagram_at_time(False, len(packet), now, packet, v4_mapped)
+    assert scopes() == set()
 
 
 def test_guard_against_alternating_duplicate_packets(zc: Zeroconf) -> None:

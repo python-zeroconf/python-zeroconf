@@ -27,6 +27,7 @@ cdef class AsyncListener:
     cdef QueryHandler _query_handler
     cdef public cython.bytes data
     cdef public double last_time
+    cdef public cython.uint last_sender_scope
     cdef public DNSIncoming last_message
     cdef public object transport
     cdef public object sock_description
@@ -38,7 +39,7 @@ cdef class AsyncListener:
     @cython.locals(now=double, debug=cython.bint)
     cpdef datagram_received(self, cython.bytes bytes, cython.tuple addrs)
 
-    @cython.locals(msg=DNSIncoming, recent_time=double)
+    @cython.locals(msg=DNSIncoming, recent_time=double, sender_scope=cython.uint, key=object)
     cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, double now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)
