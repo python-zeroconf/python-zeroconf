@@ -14,6 +14,7 @@ import sys
 import threading
 from collections.abc import Awaitable
 from types import TracebackType
+from typing import Self
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
@@ -212,7 +213,7 @@ class Zeroconf(QuietLogger):
 
         self.start()
 
-    def __enter__(self) -> Zeroconf:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(  # pylint: disable=useless-return

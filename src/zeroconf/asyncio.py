@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable
 from types import TracebackType  # used in type hints
+from typing import Self
 
 from ._core import Zeroconf
 from ._dns import DNSQuestionType
@@ -48,7 +49,7 @@ class AsyncServiceBrowser(_ServiceBrowserBase):
         super().__init__(zeroconf, type_, handlers, listener, addr, port, delay, question_type)
         self._async_start()
 
-    async def __aenter__(self) -> AsyncServiceBrowser:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(
@@ -138,7 +139,7 @@ class AsyncZeroconf:
         )
         self.async_browsers: dict[ServiceListener, AsyncServiceBrowser] = {}
 
-    async def __aenter__(self) -> AsyncZeroconf:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(

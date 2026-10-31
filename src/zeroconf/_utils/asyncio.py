@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import contextlib
-import sys
 from collections.abc import Awaitable, Coroutine
 from typing import Any
 
@@ -58,7 +57,7 @@ async def wait_future_or_timeout(future: asyncio.Future[bool | None], timeout: f
     try:
         await future
     except asyncio.CancelledError:
-        if sys.version_info >= (3, 11) and (task := asyncio.current_task()) and task.cancelling():
+        if (task := asyncio.current_task()) and task.cancelling():
             raise
     finally:
         handle.cancel()
