@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.151.6 (2026-10-31)
+
+### Bug Fixes
+
+- Shorten the duplicate packet window to 800 ms
+  ([#1930](https://github.com/python-zeroconf/python-zeroconf/pull/1930),
+  [`c245c2f`](https://github.com/python-zeroconf/python-zeroconf/commit/c245c2fab48ebedd145895b9fa5ee36f86715159))
+
+
 ## v0.151.5 (2026-09-28)
 
 ### Bug Fixes
