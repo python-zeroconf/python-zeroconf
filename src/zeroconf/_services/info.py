@@ -594,6 +594,15 @@ class ServiceInfo(RecordUpdateListener):
         else:
             question_history.add_question_at_time(question, now, known_answers)
         out.add_question(question)
+        if type_ == _TYPE_AAAA and len(known_answers) > 1:
+            # The cache can hold an AAAA record once per scope it was
+            # received with, but the scope is not on the wire.
+            by_address: dict[bytes, DNSRecord] = {}
+            for address_answer in known_answers:
+                if TYPE_CHECKING:
+                    address_answer = cast(DNSAddress, address_answer)
+                by_address[address_answer.address] = address_answer
+            known_answers = set(by_address.values())
         for answer in known_answers:
             out.add_answer_at_time(answer, now)
 

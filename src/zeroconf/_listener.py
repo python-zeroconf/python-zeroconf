@@ -235,7 +235,9 @@ class AsyncListener:
         data: _bytes,
         addrs: tuple[str, int] | tuple[str, int, int, int],
     ) -> None:
-        sender_scope = addrs[3] if len(addrs) == 4 else 0
+        # Only a response's records take the sender's scope (QR is the top
+        # bit of header byte 2), so queries keep scope-independent dedup.
+        sender_scope = addrs[3] if len(addrs) == 4 and data_len > 2 and data[2] & 0x80 else 0
         if (
             self.data == data
             and self.last_sender_scope == sender_scope
