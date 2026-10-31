@@ -39,6 +39,9 @@ cdef class DNSCache:
     cpdef void async_remove_records(self, object entries)
 
     @cython.locals(store=cython.dict)
+    cpdef DNSAddress async_get_address(self, DNSAddress entry)
+
+    @cython.locals(store=cython.dict)
     cpdef DNSRecord async_get_unique(self, DNSRecord entry)
 
     @cython.locals(record=DNSRecord, when_record=tuple, when=double)

@@ -530,14 +530,16 @@ class DNSIncoming:
             )
             return hinfo_rec
         if type_ == _TYPE_AAAA:
+            address = self._read_string(16)
             address_rec = DNSAddress.__new__(DNSAddress)
+            # Zone indexes only apply to link-local fe80::/10 (RFC 4007 section 6).
             address_rec._fast_init(
                 domain,
                 type_,
                 class_,
                 ttl,
-                self._read_string(16),
-                self.scope_id,
+                address,
+                self.scope_id if address[0] == 0xFE and (address[1] & 0xC0) == 0x80 else None,
                 self.now,
             )
             return address_rec

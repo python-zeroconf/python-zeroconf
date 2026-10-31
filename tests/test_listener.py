@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import unittest
 import unittest.mock
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import zeroconf as r
@@ -19,7 +20,7 @@ from zeroconf import (
 from zeroconf._protocol import outgoing
 from zeroconf._protocol.incoming import DNSIncoming
 
-from . import QuestionHistoryWithoutSuppression
+from . import QuestionHistoryWithoutSuppression, aaaa_response_packet
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -273,6 +274,64 @@ def test_guard_against_duplicate_packets(zc: Zeroconf) -> None:
         listener._process_datagram_at_time(False, len(b"garbage"), new_time, b"garbage", addrs)
         _handle_query_or_defer.assert_not_called()
         _handle_query_or_defer.reset_mock()
+
+
+def test_guard_against_duplicate_packets_per_sender_scope(zc: Zeroconf) -> None:
+    """A scoped copy of a response follows an unscoped one, and suppresses later copies from any sender."""
+    listener = _listener.AsyncListener(zc)
+    listener.transport = MagicMock()
+    packet = aaaa_response_packet("peer.local.")
+    other_packet = aaaa_response_packet("other.local.")
+    v4_mapped = ("::ffff:192.0.2.1", 5353, 0, 0)
+    v6_link_local = ("fe80::2", 5353, 0, 2)
+
+    now = current_time_millis()
+    listener._process_datagram_at_time(False, len(packet), now, packet, v4_mapped)
+    listener._process_datagram_at_time(False, len(packet), now, packet, v6_link_local)
+    (record,) = zc.cache.async_all_by_details("peer.local.", const._TYPE_AAAA, const._CLASS_IN)
+    assert cast(r.DNSAddress, record).scope_id == 2
+
+    listener._process_datagram_at_time(False, len(other_packet), now, other_packet, v4_mapped)
+    processed = listener.last_message
+    for addrs in (v4_mapped, v6_link_local, ("fe80::2", 5353, 0, 15)):
+        listener._process_datagram_at_time(False, len(packet), now, packet, addrs)
+    assert listener.last_message is processed
+
+
+def test_guard_against_duplicate_queries_across_sender_scopes(zc: Zeroconf) -> None:
+    """The scoped copy of a query is still suppressed as a duplicate of the unscoped one."""
+    zc.registry.async_add(
+        ServiceInfo(
+            "_http._tcp.local.",
+            "Test._http._tcp.local.",
+            server="Test._http._tcp.local.",
+            port=4,
+        )
+    )
+    handled: list[tuple[str, int]] = []
+
+    class SubListener(_listener.AsyncListener):
+        def handle_query_or_defer(
+            self,
+            msg: DNSIncoming,
+            addr: str,
+            port: int,
+            transport: _engine._WrappedTransport,
+            v6_flow_scope: tuple[()] | tuple[int, int] = (),
+        ) -> None:
+            handled.append((addr, port))
+
+    listener = SubListener(zc)
+    listener.transport = MagicMock()
+
+    query = r.DNSOutgoing(const._FLAGS_QR_QUERY)
+    query.add_question(r.DNSQuestion("peer.local.", const._TYPE_AAAA, const._CLASS_IN))
+    packet = query.packets()[0]
+
+    now = current_time_millis()
+    listener._process_datagram_at_time(False, len(packet), now, packet, ("::ffff:192.0.2.1", 5353, 0, 0))
+    listener._process_datagram_at_time(False, len(packet), now, packet, ("fe80::2", 5353, 0, 2))
+    assert handled == [("::ffff:192.0.2.1", 5353)]
 
 
 def test_guard_against_alternating_duplicate_packets(zc: Zeroconf) -> None:
