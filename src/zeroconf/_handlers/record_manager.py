@@ -10,13 +10,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from .._cache import _UniqueRecordsType
-from .._dns import DNSQuestion, DNSRecord
+from .._dns import DNSAddress, DNSQuestion, DNSRecord
 from .._logger import log
 from .._protocol.incoming import DNSIncoming
 from .._record_update import RecordUpdate
 from .._updates import RecordUpdateListener
 from .._utils.time import current_time_millis
-from ..const import _ADDRESS_RECORD_TYPES, _DNS_PTR_MIN_TTL, _TYPE_PTR
+from ..const import _ADDRESS_RECORD_TYPES, _DNS_PTR_MIN_TTL, _TYPE_AAAA, _TYPE_PTR
 
 if TYPE_CHECKING:
     from .._core import Zeroconf
@@ -118,6 +118,11 @@ class RecordManager:
                 record = cast(_UniqueRecordsType, record)
 
             maybe_entry = cache.async_get_unique(record)
+            if maybe_entry is None and record_type == _TYPE_AAAA:
+                if TYPE_CHECKING:
+                    assert isinstance(record, DNSAddress)
+                maybe_entry = self._async_merge_address(record)
+
             if not record.is_expired(now):
                 if record_type in _ADDRESS_RECORD_TYPES:
                     address_adds.append(record)
@@ -166,6 +171,17 @@ class RecordManager:
             cache.async_remove_records(removes)
         if updates:
             self.async_updates_complete(new)
+
+    def _async_merge_address(self, record: DNSAddress) -> DNSAddress | None:
+        """Return the cached copy of the AAAA, keeping one per address and preferring a scoped one."""
+        cached = self.cache.async_get_address(record)
+        if cached is None:
+            return None
+        if record.scope_id and not cached.scope_id and record.ttl:
+            self.cache.async_remove_records((cached,))
+            return None
+        record._set_scope_id(cached.scope_id)
+        return cached
 
     def _async_update_matching_records(
         self, listener: RecordUpdateListener, questions: list[_DNSQuestion]

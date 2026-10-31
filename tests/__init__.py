@@ -20,7 +20,16 @@ from unittest import mock
 
 import ifaddr
 
-from zeroconf import DNSIncoming, DNSOutgoing, DNSQuestion, DNSRecord, ServiceInfo, Zeroconf, const
+from zeroconf import (
+    DNSAddress,
+    DNSIncoming,
+    DNSOutgoing,
+    DNSQuestion,
+    DNSRecord,
+    ServiceInfo,
+    Zeroconf,
+    const,
+)
 from zeroconf._history import QuestionHistory
 
 _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
@@ -114,6 +123,23 @@ def make_service_info(
         server,
         **kwargs,
     )
+
+
+def aaaa_response_packet(name: str, *addresses: str) -> bytes:
+    """Build a response packet with one cache-flush AAAA per address, `fe80::1` by default."""
+    generated = DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    for address in addresses or ("fe80::1",):
+        generated.add_answer_at_time(
+            DNSAddress(
+                name,
+                const._TYPE_AAAA,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_pton(socket.AF_INET6, address),
+            ),
+            0,
+        )
+    return generated.packets()[0]
 
 
 def mock_incoming_msg(records: Iterable[DNSRecord]) -> DNSIncoming:

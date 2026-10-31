@@ -78,6 +78,8 @@ cdef class DNSAddress(DNSRecord):
 
     cdef bint _eq(self, DNSAddress other)
 
+    cdef void _set_scope_id(self, object scope_id)
+
     cpdef write(self, DNSOutgoing out)
 
 
