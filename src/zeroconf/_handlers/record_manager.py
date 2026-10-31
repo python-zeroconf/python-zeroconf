@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 _float = float
 _RecordUpdate = RecordUpdate
-_DNSRecordSet = set[DNSRecord]
 _DNSQuestion = DNSQuestion
 
 
@@ -122,7 +121,7 @@ class RecordManager:
             if maybe_entry is None and record_type == _TYPE_AAAA:
                 if TYPE_CHECKING:
                     assert isinstance(record, DNSAddress)
-                maybe_entry = self._async_merge_address(record, removes)
+                maybe_entry = self._async_merge_address(record)
 
             if not record.is_expired(now):
                 if record_type in _ADDRESS_RECORD_TYPES:
@@ -173,13 +172,13 @@ class RecordManager:
         if updates:
             self.async_updates_complete(new)
 
-    def _async_merge_address(self, record: DNSAddress, removes: _DNSRecordSet) -> DNSAddress | None:
+    def _async_merge_address(self, record: DNSAddress) -> DNSAddress | None:
         """Return the cached copy of the AAAA, keeping one per address and preferring a scoped one."""
         cached = self.cache.async_get_address(record)
         if cached is None:
             return None
-        if record.scope_id and not cached.scope_id:
-            removes.add(cached)
+        if record.scope_id and not cached.scope_id and record.ttl:
+            self.cache.async_remove_records((cached,))
             return None
         record._set_scope_id(cached.scope_id)
         return cached

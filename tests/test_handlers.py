@@ -1874,12 +1874,19 @@ async def test_aaaa_unscoped_copy_refreshes_scoped() -> None:
 @pytest.mark.parametrize(("cached_scope", "goodbye_scope"), [(2, 0), (0, 2), (2, 15)])
 @pytest.mark.asyncio
 async def test_aaaa_goodbye_under_another_scope_removes_cached(cached_scope: int, goodbye_scope: int) -> None:
-    """A goodbye for an address removes its cached AAAA whatever scope either was received with."""
+    """A goodbye for an address removes and reports its cached AAAA whatever scope either came with."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
     zc.record_manager.async_updates_from_response(
         r.DNSIncoming(aaaa_response_packet("host.local."), ("fe80::2", 5353), cached_scope)
     )
+    updates: list[r.RecordUpdate] = []
+
+    class EventStore(r.RecordUpdateListener):
+        def async_update_records(self, zc: Zeroconf, now: float, records: list[r.RecordUpdate]) -> None:
+            updates.extend(records)
+
+    zc.record_manager.async_add_listener(EventStore(), None)
     goodbye = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
     goodbye.add_answer_at_time(
         r.DNSAddress(
@@ -1895,4 +1902,5 @@ async def test_aaaa_goodbye_under_another_scope_removes_cached(cached_scope: int
         r.DNSIncoming(goodbye.packets()[0], ("fe80::2", 5353), goodbye_scope)
     )
     assert zc.cache.async_all_by_details("host.local.", const._TYPE_AAAA, const._CLASS_IN) == []
+    assert [(update.new.ttl, update.old is not None) for update in updates] == [(0, True)]
     await aiozc.async_close()

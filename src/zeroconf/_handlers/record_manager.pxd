@@ -40,7 +40,7 @@ cdef class RecordManager:
     cpdef void async_remove_listener(self, RecordUpdateListener listener)
 
     @cython.locals(cached=DNSAddress)
-    cdef DNSAddress _async_merge_address(self, DNSAddress record, object removes)
+    cdef DNSAddress _async_merge_address(self, DNSAddress record)
 
     @cython.locals(question=DNSQuestion, record=DNSRecord)
     cdef void _async_update_matching_records(self, RecordUpdateListener listener, cython.list questions)
