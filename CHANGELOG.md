@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.153.0 (2026-10-31)
+
+### Features
+
+- Drop Python 3.10 support ([#1935](https://github.com/python-zeroconf/python-zeroconf/pull/1935),
+  [`7fd81ac`](https://github.com/python-zeroconf/python-zeroconf/commit/7fd81ac5d3ce1846671e9b8e1fab0b425b112f67))
+
+
 ## v0.152.1 (2026-10-31)
 
 ### Bug Fixes
