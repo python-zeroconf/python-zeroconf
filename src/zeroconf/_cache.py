@@ -131,6 +131,21 @@ class DNSCache:
         self.async_remove_records(expired)
         return expired
 
+    def async_get_address(self, entry: DNSAddress) -> DNSAddress | None:
+        """Look up the cached copy of an address record under any scope, or None."""
+        store = self.cache.get(entry.key)
+        if store is None:
+            return None
+        for record in store.values():
+            if (
+                isinstance(record, DNSAddress)
+                and record.address == entry.address
+                and record.type == entry.type
+                and record.class_ == entry.class_
+            ):
+                return record
+        return None
+
     def async_get_unique(self, entry: _UniqueRecordsType) -> DNSRecord | None:
         """Look up the cached copy of a unique record, or None.
 

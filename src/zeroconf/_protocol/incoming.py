@@ -530,20 +530,16 @@ class DNSIncoming:
             )
             return hinfo_rec
         if type_ == _TYPE_AAAA:
-            offset = self.offset
             address = self._read_string(16)
-            buf = self._buf
             address_rec = DNSAddress.__new__(DNSAddress)
-            # A zone index only means something for link-local fe80::/10
-            # (RFC 4007 section 6); scoping other addresses would make
-            # copies from differently scoped senders look like new records.
+            # Zone indexes only apply to link-local fe80::/10 (RFC 4007 section 6).
             address_rec._fast_init(
                 domain,
                 type_,
                 class_,
                 ttl,
                 address,
-                self.scope_id if buf[offset] == 0xFE and (buf[offset + 1] & 0xC0) == 0x80 else None,
+                self.scope_id if address[0] == 0xFE and (address[1] & 0xC0) == 0x80 else None,
                 self.now,
             )
             return address_rec

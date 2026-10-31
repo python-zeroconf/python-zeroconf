@@ -35,6 +35,7 @@ from .. import (
     _restamp_cache,
     _wait_for,
     _wait_for_start,
+    aaaa_response_packet,
     has_working_ipv6,
     make_service_info,
     mock_incoming_msg,
@@ -1714,18 +1715,7 @@ def test_service_browser_aaaa_scope_variant_does_not_trigger_update(zc: Zeroconf
         assert service_added.wait(timeout=5)
 
         assert info.server is not None
-        response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-        response.add_answer_at_time(
-            r.DNSAddress(
-                info.server,
-                const._TYPE_AAAA,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                120,
-                socket.inet_pton(socket.AF_INET6, "fe80::1"),
-            ),
-            0,
-        )
-        packet = response.packets()[0]
+        packet = aaaa_response_packet(info.server)
         _inject_response(zc, r.DNSIncoming(packet, ("fe80::2", 5353), 31))
         assert _wait_for(lambda: len(updates) == 1)
         _inject_response(zc, r.DNSIncoming(packet, ("::ffff:10.7.4.3", 5353), 0))

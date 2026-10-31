@@ -16,7 +16,7 @@ from zeroconf import DNSHinfo, DNSIncoming, DNSText, const, current_time_millis
 from zeroconf._logger import _MAX_SEEN_LOGS
 from zeroconf._protocol import incoming as _incoming_module
 
-from . import add_question_batch, has_working_ipv6
+from . import aaaa_response_packet, add_question_batch, has_working_ipv6
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -1501,23 +1501,6 @@ def test_hinfo_second_character_string_missing_skips_record() -> None:
 
 def test_aaaa_scope_only_applied_to_link_local() -> None:
     """Only link-local AAAA records take the receiving scope."""
-    generated = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-    for address in ("fe80::1", "2001:db8::1"):
-        generated.add_answer_at_time(
-            r.DNSAddress(
-                "host.local.",
-                const._TYPE_AAAA,
-                const._CLASS_IN,
-                120,
-                socket.inet_pton(socket.AF_INET6, address),
-            ),
-            0,
-        )
-    parsed = r.DNSIncoming(generated.packets()[0], ("fe80::2", 5353), 2)
-    scopes = {
-        socket.inet_ntop(socket.AF_INET6, cast(r.DNSAddress, answer).address): cast(
-            r.DNSAddress, answer
-        ).scope_id
-        for answer in parsed.answers()
-    }
-    assert scopes == {"fe80::1": 2, "2001:db8::1": None}
+    packet = aaaa_response_packet("host.local.", "fe80::1", "2001:db8::1")
+    answers = cast("list[r.DNSAddress]", r.DNSIncoming(packet, ("fe80::2", 5353), 2).answers())
+    assert [answer.scope_id for answer in answers] == [2, None]

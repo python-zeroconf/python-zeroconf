@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import socket
 import unittest
 import unittest.mock
 from typing import cast
@@ -21,7 +20,7 @@ from zeroconf import (
 from zeroconf._protocol import outgoing
 from zeroconf._protocol.incoming import DNSIncoming
 
-from . import QuestionHistoryWithoutSuppression
+from . import QuestionHistoryWithoutSuppression, aaaa_response_packet
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -278,41 +277,25 @@ def test_guard_against_duplicate_packets(zc: Zeroconf) -> None:
 
 
 def test_guard_against_duplicate_packets_per_sender_scope(zc: Zeroconf) -> None:
-    """A scoped copy of a response is not suppressed by an unscoped one, and each is by its own."""
+    """A scoped copy of a response follows an unscoped one, and suppresses later copies from any sender."""
     listener = _listener.AsyncListener(zc)
     listener.transport = MagicMock()
-
-    response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-    response.add_answer_at_time(
-        r.DNSAddress(
-            "peer.local.",
-            const._TYPE_AAAA,
-            const._CLASS_IN | const._CLASS_UNIQUE,
-            120,
-            socket.inet_pton(socket.AF_INET6, "fe80::1"),
-        ),
-        0,
-    )
-    packet = response.packets()[0]
+    packet = aaaa_response_packet("peer.local.")
+    other_packet = aaaa_response_packet("other.local.")
     v4_mapped = ("::ffff:192.0.2.1", 5353, 0, 0)
     v6_link_local = ("fe80::2", 5353, 0, 2)
-
-    def cached() -> list[r.DNSAddress]:
-        records = zc.cache.async_all_by_details("peer.local.", const._TYPE_AAAA, const._CLASS_IN)
-        return [cast(r.DNSAddress, record) for record in records]
-
-    def scopes() -> set[int | None]:
-        return {record.scope_id for record in cached()}
 
     now = current_time_millis()
     listener._process_datagram_at_time(False, len(packet), now, packet, v4_mapped)
     listener._process_datagram_at_time(False, len(packet), now, packet, v6_link_local)
-    assert scopes() == {2}
+    (record,) = zc.cache.async_all_by_details("peer.local.", const._TYPE_AAAA, const._CLASS_IN)
+    assert cast(r.DNSAddress, record).scope_id == 2
 
-    zc.cache.async_remove_records(cached())
-    listener._process_datagram_at_time(False, len(packet), now, packet, v6_link_local)
-    listener._process_datagram_at_time(False, len(packet), now, packet, v4_mapped)
-    assert scopes() == set()
+    listener._process_datagram_at_time(False, len(other_packet), now, other_packet, v4_mapped)
+    processed = listener.last_message
+    for addrs in (v4_mapped, v6_link_local, ("fe80::2", 5353, 0, 15)):
+        listener._process_datagram_at_time(False, len(packet), now, packet, addrs)
+    assert listener.last_message is processed
 
 
 def test_guard_against_duplicate_queries_across_sender_scopes(zc: Zeroconf) -> None:

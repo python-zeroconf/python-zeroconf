@@ -23,7 +23,7 @@ from zeroconf._handlers.multicast_outgoing_queue import (
 from zeroconf._utils.time import millis_to_seconds
 from zeroconf.asyncio import AsyncZeroconf
 
-from . import _clear_cache, _inject_response, has_working_ipv6, make_service_info
+from . import _clear_cache, _inject_response, aaaa_response_packet, has_working_ipv6, make_service_info
 
 log = logging.getLogger("zeroconf")
 original_logging_level = logging.NOTSET
@@ -1841,56 +1841,26 @@ async def test_async_updates_complete_iteration_safe():
     await aiozc.async_close()
 
 
-def _aaaa_response(address: str = "fe80::1") -> bytes:
-    response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
-    response.add_answer_at_time(
-        r.DNSAddress(
-            "host.local.",
-            const._TYPE_AAAA,
-            const._CLASS_IN | const._CLASS_UNIQUE,
-            120,
-            socket.inet_pton(socket.AF_INET6, address),
-        ),
-        0,
-    )
-    return response.packets()[0]
-
-
-def _cached_aaaa_scopes(zc: Zeroconf) -> list[int | None]:
-    records = zc.cache.async_all_by_details("host.local.", const._TYPE_AAAA, const._CLASS_IN)
-    return [cast(r.DNSAddress, record).scope_id for record in records]
-
-
-@pytest.mark.parametrize(
-    ("scopes", "expected"),
-    [
-        ((0, 2), [2]),
-        ((2, 0), [2]),
-        ((None, 2), [2]),
-        ((2, 15), [2]),
-        ((2, 2), [2]),
-    ],
-)
+@pytest.mark.parametrize("scopes", [(0, 2), (2, 0), (None, 2), (2, 15)])
 @pytest.mark.asyncio
-async def test_aaaa_cached_once_per_address(
-    scopes: tuple[int | None, int | None], expected: list[int]
-) -> None:
-    """The cache keeps one AAAA per address, preferring a scoped copy over an unscoped one."""
+async def test_aaaa_cached_once_per_address(scopes: tuple[int | None, int | None]) -> None:
+    """The cache keeps one AAAA per address, preferring a scoped copy and then the first scope."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
-    packet = _aaaa_response()
+    packet = aaaa_response_packet("host.local.")
     for scope in scopes:
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet, ("fe80::2", 5353), scope))
-    assert _cached_aaaa_scopes(zc) == expected
+    records = zc.cache.async_all_by_details("host.local.", const._TYPE_AAAA, const._CLASS_IN)
+    assert [cast(r.DNSAddress, record).scope_id for record in records] == [2]
     await aiozc.async_close()
 
 
 @pytest.mark.asyncio
-async def test_aaaa_unscoped_copy_refreshes_and_does_not_flush_scoped() -> None:
-    """An unscoped cache-flush copy refreshes the scoped AAAA instead of expiring it."""
+async def test_aaaa_unscoped_copy_refreshes_scoped() -> None:
+    """An unscoped cache-flush copy refreshes the cached scoped AAAA."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
-    packet = _aaaa_response()
+    packet = aaaa_response_packet("host.local.")
     now = current_time_millis()
     zc.record_manager.async_updates_from_response(r.DNSIncoming(packet, ("fe80::2", 5353), 2, now - 2000))
     zc.record_manager.async_updates_from_response(r.DNSIncoming(packet, ("::ffff:192.0.2.1", 5353), 0, now))
@@ -1898,4 +1868,31 @@ async def test_aaaa_unscoped_copy_refreshes_and_does_not_flush_scoped() -> None:
     assert cast(r.DNSAddress, record).scope_id == 2
     assert record.ttl == 120
     assert record.created == now
+    await aiozc.async_close()
+
+
+@pytest.mark.parametrize(("cached_scope", "goodbye_scope"), [(2, 0), (0, 2), (2, 15)])
+@pytest.mark.asyncio
+async def test_aaaa_goodbye_under_another_scope_removes_cached(cached_scope: int, goodbye_scope: int) -> None:
+    """A goodbye for an address removes its cached AAAA whatever scope either was received with."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    zc = aiozc.zeroconf
+    zc.record_manager.async_updates_from_response(
+        r.DNSIncoming(aaaa_response_packet("host.local."), ("fe80::2", 5353), cached_scope)
+    )
+    goodbye = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    goodbye.add_answer_at_time(
+        r.DNSAddress(
+            "host.local.",
+            const._TYPE_AAAA,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            0,
+            socket.inet_pton(socket.AF_INET6, "fe80::1"),
+        ),
+        0,
+    )
+    zc.record_manager.async_updates_from_response(
+        r.DNSIncoming(goodbye.packets()[0], ("fe80::2", 5353), goodbye_scope)
+    )
+    assert zc.cache.async_all_by_details("host.local.", const._TYPE_AAAA, const._CLASS_IN) == []
     await aiozc.async_close()

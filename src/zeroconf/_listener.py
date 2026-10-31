@@ -38,6 +38,8 @@ _float = float
 
 DEBUG_ENABLED = partial(log.isEnabledFor, logging.DEBUG)
 
+_NOT_SEEN = (-1e30, True)
+
 
 class AsyncListener:
     """Asyncio datagram protocol that receives mDNS packets and feeds them
@@ -46,6 +48,7 @@ class AsyncListener:
     __slots__ = (
         "_deferred",
         "_deferred_deadlines",
+        "_last_scoped",
         "_query_handler",
         "_recent_packets",
         "_record_manager",
@@ -53,7 +56,6 @@ class AsyncListener:
         "_timers",
         "data",
         "last_message",
-        "last_sender_scope",
         "last_time",
         "sock_description",
         "transport",
@@ -68,7 +70,7 @@ class AsyncListener:
         self.data: bytes | None = None
         self.last_time: float = 0
         self.last_message: DNSIncoming | None = None
-        self.last_sender_scope = 0
+        self._last_scoped = False
         self.transport: _WrappedTransport | None = None
         self.sock_description: str | None = None
         self._deferred: dict[str, list[DNSIncoming]] = {}
@@ -78,13 +80,10 @@ class AsyncListener:
         # flood cannot defeat single-slot dedup; relies on dict insertion
         # order so the oldest entry is evicted first. Only payloads
         # without a QU question are cached so unicast replies still go
-        # out on every receipt.
-        #
-        # A dual-stack socket receives a responder's IPv4 and IPv6 copies
-        # of the same message (RFC 6762 section 20), and only a copy from
-        # a link-local sender gives its link-local AAAA records a scope,
-        # so a copy from a scoped sender is keyed with its scope.
-        self._recent_packets: dict[bytes | tuple[bytes, int], float] = {}
+        # out on every receipt. Each entry records whether the copy came
+        # from a scoped sender: only that copy scopes link-local AAAA
+        # records, so it is not suppressed by an unscoped one.
+        self._recent_packets: dict[bytes, tuple[float, bool]] = {}
         super().__init__()
 
     def cancel_pending_timers(self) -> None:
@@ -236,11 +235,11 @@ class AsyncListener:
         addrs: tuple[str, int] | tuple[str, int, int, int],
     ) -> None:
         # Only a response's records take the sender's scope (QR is the top
-        # bit of header byte 2), so queries keep scope-independent dedup.
-        sender_scope = addrs[3] if len(addrs) == 4 and data_len > 2 and data[2] & 0x80 else 0
+        # bit of header byte 2).
+        scoped = len(addrs) == 4 and addrs[3] != 0 and data_len > 2 and (data[2] & 0x80) != 0
         if (
             self.data == data
-            and self.last_sender_scope == sender_scope
+            and (self._last_scoped or not scoped)
             and (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < self.last_time
             and self.last_message is not None
             and not self.last_message.has_qu_question()
@@ -257,7 +256,7 @@ class AsyncListener:
                 )
             return
 
-        # `get(data, -1e30)` keeps the suppression compare a single C
+        # `get(data, _NOT_SEEN)` keeps the suppression compare a single C
         # double compare; the sentinel is far below any real `now -
         # _DUPLICATE_PACKET_SUPPRESSION_INTERVAL` so a cache miss never
         # triggers the branch even when `now` is small (time.monotonic
@@ -265,9 +264,9 @@ class AsyncListener:
         # negative for the first ~1s after boot). Only non-QU payloads
         # are cached, so any hit here is safe to suppress without re-
         # checking has_qu_question.
-        key = (data, sender_scope) if sender_scope else data
-        recent_time = self._recent_packets.get(key, -1e30)
-        if (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < recent_time:
+        recent = self._recent_packets.get(data, _NOT_SEEN)
+        recent_time = recent[0]
+        if (now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL) < recent_time and (recent[1] or not scoped):
             # No timestamp refresh on hit so the suppression window
             # ends at first-observation + interval; one parse-and-
             # dispatch fires per payload per interval, capping the
@@ -303,16 +302,16 @@ class AsyncListener:
         self.data = data
         self.last_time = now
         self.last_message = msg
-        self.last_sender_scope = sender_scope
+        self._last_scoped = scoped
         if not msg.has_qu_question():
             # Refresh LRU position when an entry exists but the
             # suppression window has expired; otherwise evict the oldest
             # entry once the window is full.
-            if key in self._recent_packets:
-                del self._recent_packets[key]
+            if recent is not _NOT_SEEN:
+                del self._recent_packets[data]
             elif len(self._recent_packets) >= _RECENT_PACKETS_MAX:
                 del self._recent_packets[next(iter(self._recent_packets))]
-            self._recent_packets[key] = now
+            self._recent_packets[data] = (now, scoped)
         if msg.valid is True:
             if debug:
                 log.debug(

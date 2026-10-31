@@ -17,6 +17,7 @@ cdef cython.uint _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
 cdef cython.uint _RECENT_PACKETS_MAX
 cdef cython.uint _MAX_DEFERRED_ADDRS
 cdef cython.uint _MAX_DEFERRED_PER_ADDR
+cdef tuple _NOT_SEEN
 
 
 cdef class AsyncListener:
@@ -27,7 +28,7 @@ cdef class AsyncListener:
     cdef QueryHandler _query_handler
     cdef public cython.bytes data
     cdef public double last_time
-    cdef public cython.uint last_sender_scope
+    cdef bint _last_scoped
     cdef public DNSIncoming last_message
     cdef public object transport
     cdef public object sock_description
@@ -39,7 +40,7 @@ cdef class AsyncListener:
     @cython.locals(now=double, debug=cython.bint)
     cpdef datagram_received(self, cython.bytes bytes, cython.tuple addrs)
 
-    @cython.locals(msg=DNSIncoming, recent_time=double, sender_scope=cython.uint, key=object)
+    @cython.locals(msg=DNSIncoming, recent=tuple, recent_time=double, scoped=bint)
     cpdef _process_datagram_at_time(self, bint debug, cython.uint data_len, double now, bytes data, cython.tuple addrs)
 
     cdef _cancel_any_timers_for_addr(self, object addr)

@@ -28,6 +28,7 @@ from zeroconf.asyncio import AsyncZeroconf
 from .. import (
     QUICK_REQUEST_TIMEOUT_MS,
     _inject_response,
+    aaaa_response_packet,
     has_working_ipv6,
     make_service_info,
     mock_incoming_msg,
@@ -3029,18 +3030,7 @@ async def test_aaaa_known_answer_sent_once_per_address() -> None:
     """An AAAA received under several scopes is sent as one known answer."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
-    response = DNSOutgoing(const._FLAGS_QR_RESPONSE)
-    response.add_answer_at_time(
-        r.DNSAddress(
-            "host.local.",
-            const._TYPE_AAAA,
-            const._CLASS_IN | const._CLASS_UNIQUE,
-            120,
-            socket.inet_pton(socket.AF_INET6, "fe80::1"),
-        ),
-        0,
-    )
-    packet = response.packets()[0]
+    packet = aaaa_response_packet("host.local.")
     for source, scope in ((("fe80::2", 5353), 2), (("::ffff:192.0.2.1", 5353), 0)):
         zc.record_manager.async_updates_from_response(r.DNSIncoming(packet, source, scope))
     sent: list[DNSOutgoing] = []

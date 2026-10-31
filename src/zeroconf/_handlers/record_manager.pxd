@@ -2,7 +2,7 @@
 import cython
 
 from .._cache cimport DNSCache
-from .._dns cimport DNSQuestion, DNSRecord
+from .._dns cimport DNSAddress, DNSQuestion, DNSRecord
 from .._protocol.incoming cimport DNSIncoming
 from .._updates cimport RecordUpdateListener
 from .._utils.time cimport current_time_millis
@@ -11,7 +11,6 @@ from .._record_update cimport RecordUpdate
 cdef unsigned int _DNS_PTR_MIN_TTL
 cdef cython.uint _TYPE_PTR
 cdef cython.uint _TYPE_AAAA
-cdef cython.uint _CLASS_UNIQUE
 cdef object _ADDRESS_RECORD_TYPES
 cdef bint TYPE_CHECKING
 cdef object _TYPE_PTR
@@ -40,8 +39,8 @@ cdef class RecordManager:
 
     cpdef void async_remove_listener(self, RecordUpdateListener listener)
 
-    @cython.locals(cached=DNSRecord)
-    cdef DNSRecord _async_merge_scope_variant(self, DNSRecord record)
+    @cython.locals(cached=DNSAddress)
+    cdef DNSAddress _async_merge_address(self, DNSAddress record, object removes)
 
     @cython.locals(question=DNSQuestion, record=DNSRecord)
     cdef void _async_update_matching_records(self, RecordUpdateListener listener, cython.list questions)

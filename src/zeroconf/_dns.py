@@ -310,6 +310,11 @@ class DNSAddress(DNSRecord):
         self.scope_id = scope_id
         self._hash = hash((self.key, type_, self.class_, address, scope_id))
 
+    def _set_scope_id(self, scope_id: _int | None) -> None:
+        """Replace the scope of a record that is not cached yet."""
+        self.scope_id = scope_id
+        self._hash = hash((self.key, self.type, self.class_, self.address, scope_id))
+
 
 class DNSHinfo(DNSRecord):
     """HINFO record carrying the host's cpu and os strings."""
