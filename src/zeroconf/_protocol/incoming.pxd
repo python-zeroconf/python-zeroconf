@@ -121,6 +121,7 @@ cdef class DNSIncoming:
         name_start="unsigned int",
         offset="unsigned int",
         address_rec=DNSAddress,
+        address=bytes,
         pointer_rec=DNSPointer,
         text_rec=DNSText,
         srv_rec=DNSService,

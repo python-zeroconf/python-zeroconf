@@ -783,9 +783,9 @@ class ServiceInfo(RecordUpdateListener):
             ip_addr = get_ip_address_object_from_record(record)
             if ip_addr is None:
                 continue
-            # The cache keeps scoped and unscoped link-local AAAA
-            # records as separate entries because DNSAddress equality
-            # includes scope_id. Collapse them here so each address
+            # Records added to the cache directly, not through the
+            # record manager, can hold scoped and unscoped copies of a
+            # link-local AAAA. Collapse them here so each address
             # appears once; the scoped variant wins so callers of
             # parsed_scoped_addresses() get a %<interface_index>-
             # qualified link-local address when one was observed.

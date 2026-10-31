@@ -28,6 +28,7 @@ from zeroconf.asyncio import AsyncZeroconf
 from .. import (
     QUICK_REQUEST_TIMEOUT_MS,
     _inject_response,
+    aaaa_response_packet,
     has_working_ipv6,
     make_service_info,
     mock_incoming_msg,
@@ -3022,3 +3023,21 @@ def test_addresses_setter_rejects_invalid_address():
     info = ServiceInfo(type_, f"xxxyyy.{type_}", 80, server="spare-rig.local.")
     with pytest.raises(TypeError, match="Addresses must either be"):
         info.addresses = ["not an address"]
+
+
+@pytest.mark.asyncio
+async def test_aaaa_known_answer_sent_once_per_address() -> None:
+    """An AAAA received under several scopes is sent as one known answer."""
+    aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
+    zc = aiozc.zeroconf
+    packet = aaaa_response_packet("host.local.")
+    for source, scope in ((("fe80::2", 5353), 2), (("::ffff:192.0.2.1", 5353), 0)):
+        zc.record_manager.async_updates_from_response(r.DNSIncoming(packet, source, scope))
+    sent: list[DNSOutgoing] = []
+    info = ServiceInfo("_test._tcp.local.", "x._test._tcp.local.", server="host.local.")
+    with patch.object(zc, "async_send", lambda out, *args, **kwargs: sent.append(out)):
+        await info.async_request(zc, timeout=200)
+    assert sent
+    for out in sent:
+        assert [record.type for record, _ in out.answers].count(const._TYPE_AAAA) == 1
+    await aiozc.async_close()
