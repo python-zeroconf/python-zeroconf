@@ -258,6 +258,7 @@ jobs:
             ubuntu-24.04-arm,
             ubuntu-latest,
             windows-latest,
+            windows-11-arm,
             macos-latest,
           ]
         qemu: [""]
