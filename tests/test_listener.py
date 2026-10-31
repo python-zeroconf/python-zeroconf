@@ -425,3 +425,22 @@ def test_recent_packets_miss_with_small_now_is_not_suppressed(zc: Zeroconf) -> N
     with patch.object(listener, "handle_query_or_defer") as _handle_query_or_defer:
         listener._process_datagram_at_time(False, len(packet), 0.0, packet, addrs)
         _handle_query_or_defer.assert_called_once()
+
+
+def test_repeated_announcement_under_one_second_is_processed(zc: Zeroconf) -> None:
+    """An announcement repeated a little under a second later is not dropped as a duplicate."""
+    listener = _listener.AsyncListener(zc)
+    listener.transport = MagicMock()
+    response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
+    response.add_answer_at_time(
+        r.DNSAddress("device.local.", const._TYPE_A, const._CLASS_IN, 120, b"\x7f\x00\x00\x01"), 0
+    )
+    packet = response.packets()[0]
+    addrs = ("1.2.3.4", 5353)
+
+    now = current_time_millis()
+    listener._process_datagram_at_time(False, len(packet), now, packet, addrs)
+    listener._process_datagram_at_time(False, len(packet), now + 5, packet, addrs)
+    assert listener.last_time == now
+    listener._process_datagram_at_time(False, len(packet), now + 926, packet, addrs)
+    assert listener.last_time == now + 926
