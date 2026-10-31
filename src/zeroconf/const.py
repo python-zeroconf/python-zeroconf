@@ -15,14 +15,16 @@ _CHECK_TIME = 500  # ms
 _LISTENER_TIME = 200  # ms
 _REGISTER_TIME = 225  # ms
 _UNREGISTER_TIME = 125  # ms
-_DUPLICATE_PACKET_SUPPRESSION_INTERVAL = 1000  # ms
+# Below the ~1s spacing of repeated announcements (RFC 6762 §8.3), which some
+# responders jitter to a little under a second.
+_DUPLICATE_PACKET_SUPPRESSION_INTERVAL = 800  # ms
 # Per-listener bounded recency window. 16 is large enough to defeat
 # the alternating-payload bypass (RFC 6762 §6.2, issue #1724 — even a
 # rotation of a dozen distinct payloads still dedups), and small
 # enough that the dict bookkeeping per miss stays cheap under a
 # hostile flood.
 _RECENT_PACKETS_MAX = 16
-_DUPLICATE_QUESTION_INTERVAL = 999  # ms # Must be 1ms less than _DUPLICATE_PACKET_SUPPRESSION_INTERVAL
+_DUPLICATE_QUESTION_INTERVAL = 999  # ms
 _CACHE_CLEANUP_INTERVAL = 10  # s
 _LOADED_SYSTEM_TIMEOUT = 10  # s
 _STARTUP_TIMEOUT = 9  # s must be lower than _LOADED_SYSTEM_TIMEOUT
