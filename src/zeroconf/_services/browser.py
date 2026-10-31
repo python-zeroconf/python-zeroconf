@@ -21,6 +21,7 @@ from types import TracebackType  # used in type hints
 from typing import (
     TYPE_CHECKING,
     Any,
+    Self,
     cast,
 )
 
@@ -762,7 +763,7 @@ class ServiceBrowser(_ServiceBrowserBase, threading.Thread):
             getattr(self, "native_id", self.ident),
         )
 
-    def __enter__(self) -> ServiceBrowser:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(  # pylint: disable=useless-return

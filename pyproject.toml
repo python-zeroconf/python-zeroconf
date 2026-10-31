@@ -14,7 +14,7 @@ authors = [
 maintainers = [
     { name = "J. Nick Koston", email = "nick@koston.org" },
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.urls]
 "Repository" = "https://github.com/python-zeroconf/python-zeroconf"
@@ -80,7 +80,7 @@ match = "(?!(master|release-0.x)$)"
 prerelease = true
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 ifaddr = ">=0.1.7"
 
 [tool.poetry.group.dev.dependencies]
@@ -99,7 +99,7 @@ sphinx = "^7.4.7 || ^8.1.3"
 sphinx-rtd-theme = "^3.1.0"
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 110
 
 [tool.ruff.lint]
@@ -117,10 +117,10 @@ ignore = [
     "PGH004",  # too many to fix
     "PGH003", # too many to fix
     "SIM110", # this is slower
-    "PYI034", # enable when we drop Py3.10
     "PYI032", # breaks Cython
     "PYI041",  # breaks Cython
     "PERF401", # Cython: closures inside cpdef functions not yet supported
+    "ASYNC109", # timeout params are public API
 ]
 select = [
     "ASYNC", # async rules
