@@ -389,7 +389,7 @@ def test_recent_packets_miss_with_small_now_is_not_suppressed(zc: Zeroconf) -> N
     """A cache miss must not trigger suppression when `now` is below the suppression interval."""
     # time.monotonic() can start near zero on freshly booted systems, so
     # `now - _DUPLICATE_PACKET_SUPPRESSION_INTERVAL` is negative for the
-    # first second of process lifetime. A 0.0 default on the recency
+    # first interval of process lifetime. A 0.0 default on the recency
     # dict would let any negative `now - INTERVAL` satisfy the compare
     # and suppress legitimate traffic.
     zc.registry.async_add(
