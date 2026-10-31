@@ -261,7 +261,7 @@ class AsyncListener:
         # _DUPLICATE_PACKET_SUPPRESSION_INTERVAL` so a cache miss never
         # triggers the branch even when `now` is small (time.monotonic
         # is allowed to start near zero, leaving `now - INTERVAL`
-        # negative for the first ~1s after boot). Only non-QU payloads
+        # negative for the first interval after boot). Only non-QU payloads
         # are cached, so any hit here is safe to suppress without re-
         # checking has_qu_question.
         recent = self._recent_packets.get(data, _NOT_SEEN)
