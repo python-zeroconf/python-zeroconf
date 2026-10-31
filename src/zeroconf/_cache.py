@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from heapq import heapify, heappop, heappush
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from ._dns import (
     DNSAddress,
@@ -22,13 +22,14 @@ from ._dns import (
     DNSText,
 )
 from ._utils.time import current_time_millis
-from .const import _MAX_CACHE_RECORDS, _ONE_SECOND, _TYPE_PTR
+from .const import _MAX_CACHE_RECORDS, _ONE_SECOND, _TYPE_AAAA, _TYPE_PTR
 
 _UNIQUE_RECORD_TYPES = (DNSAddress, DNSHinfo, DNSPointer, DNSText, DNSService)
 _UniqueRecordsType = DNSAddress | DNSHinfo | DNSPointer | DNSText | DNSService
 _DNSRecordCacheType = dict[str, dict[DNSRecord, DNSRecord]]
 _UniqueType = tuple[str, int, int]
 _DNSRecord = DNSRecord
+_DNSRecordSet = set[DNSRecord]
 _str = str
 _float = float
 _int = int
@@ -48,6 +49,16 @@ def _remove_key(cache: _DNSRecordCacheType, key: _str, record: _DNSRecord) -> No
     del record_cache[record]
     if not record_cache:
         del cache[key]
+
+
+def _has_scope_variant(record: DNSRecord, answers: _DNSRecordSet) -> bool:
+    """True if answers carry the AAAA record's address under another scope."""
+    if TYPE_CHECKING:
+        record = cast(DNSAddress, record)
+    for answer in answers:
+        if isinstance(answer, DNSAddress) and answer.key == record.key and answer.address == record.address:
+            return True
+    return False
 
 
 class DNSCache:
@@ -156,6 +167,10 @@ class DNSCache:
             for record in self.async_all_by_details(name, type_, class_):
                 created_double = record.created
                 if (now - created_double > _ONE_SECOND) and record not in answers_rrset:
+                    # The scope is not on the wire, so the same address
+                    # received with another scope is the same record.
+                    if type_ == _TYPE_AAAA and _has_scope_variant(record, answers_rrset):
+                        continue
                     # Expire in 1s
                     self._async_set_created_ttl(record, now, 1)
 

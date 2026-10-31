@@ -16,6 +16,7 @@ cdef object heappush
 cdef object heapify
 
 cdef object _UNIQUE_RECORD_TYPES
+cdef unsigned int _TYPE_AAAA
 cdef unsigned int _TYPE_PTR
 cdef cython.uint _ONE_SECOND
 cdef unsigned int _MIN_SCHEDULED_RECORD_EXPIRATION
@@ -24,6 +25,8 @@ cdef unsigned int _MAX_CACHE_RECORDS
 
 @cython.locals(record_cache=dict)
 cdef _remove_key(cython.dict cache, object key, DNSRecord record)
+
+cdef bint _has_scope_variant(DNSRecord record, object answers)
 
 
 cdef class DNSCache:
