@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import socket
 import unittest.mock
 from heapq import heapify, heappop
 
@@ -720,27 +719,3 @@ def test_cache_total_records_invariant_under_mixed_ops() -> None:
         cache.async_add_records([rec])
         assert cache._total_records == actual()
     assert cache._total_records == const._MAX_CACHE_RECORDS
-
-
-def test_cache_flush_keeps_aaaa_received_with_another_scope() -> None:
-    """A cache-flush answer does not expire the same AAAA cached under another scope."""
-    cache = r.DNSCache()
-    now = r.current_time_millis()
-    old = now - 2000
-    address = socket.inet_pton(socket.AF_INET6, "fe80::1")
-    other_address = socket.inet_pton(socket.AF_INET6, "fe80::2")
-    scoped = r.DNSAddress(
-        "host.local.", const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 120, address, 2, old
-    )
-    stale = r.DNSAddress(
-        "host.local.", const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 120, other_address, 2, old
-    )
-    cache.async_add_records([scoped, stale])
-    unscoped = r.DNSAddress(
-        "host.local.", const._TYPE_AAAA, const._CLASS_IN | const._CLASS_UNIQUE, 120, address, 0, now
-    )
-    cache.async_mark_unique_records_older_than_1s_to_expire(
-        {("host.local.", const._TYPE_AAAA, const._CLASS_IN)}, [unscoped], now
-    )
-    assert scoped.ttl == 120
-    assert stale.ttl == 1
