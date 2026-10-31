@@ -77,13 +77,13 @@ path. The authoritative list of cythonized modules lives in
   and `zeroconf/asyncio.py` re-export.
 
 - **Line length**: 110 (ruff `line-length = 110`).
-  `requires-python = ">=3.10"`, `target-version = "py310"` for
-  ruff; pyupgrade runs `--py310-plus`.
+  `requires-python = ">=3.11"`, `target-version = "py311"` for
+  ruff; pyupgrade runs `--py311-plus`.
 
 - **Imports**: ruff/isort sorted, `profile = "black"`,
   `known_first_party = ["zeroconf", "tests"]`. Prefer
   `from __future__ import annotations` so modern type syntax
-  works on 3.10.
+  works on 3.11.
 
 - **Generated `.c` files are not lint-targets.** `*.c` files
   next to each cythonized module are Cython output — never hand-
@@ -135,8 +135,8 @@ CodSpeed benchmarks live under `tests/benchmarks/` and run in CI
 through `CodSpeedHQ/action`. Ad-hoc microbenchmarks for manual
 profiling live under `bench/` — those don't run in CI.
 
-The CI matrix includes CPython 3.10 – 3.14, the free-threaded
-3.14t build, and PyPy 3.10. Don't add anything that breaks
+The CI matrix includes CPython 3.11 – 3.15, the free-threaded
+3.14t and 3.15t builds, and PyPy 3.11. Don't add anything that breaks
 on the free-threaded build (no module-level mutable globals
 mutated from multiple threads without locks; no
 `PyDict_Next`-style escape hatches in Cython).

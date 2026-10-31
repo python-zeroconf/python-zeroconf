@@ -18,7 +18,7 @@ from zeroconf._services import info as service_info
 from zeroconf.asyncio import AsyncZeroconf
 
 # The dev dependency group only installs hypothesis on CPython (the CI
-# matrix pins pypy-3.10 and hypothesis ships no pp310 wheels), and a
+# matrix pins pypy-3.11 and hypothesis ships no pp311 wheels), and a
 # non-dev install has no hypothesis at all.
 collect_ignore: list[str] = []
 if importlib.util.find_spec("hypothesis") is None:
@@ -45,7 +45,7 @@ _BENCHMARKS_DIR = "tests/benchmarks"
 # `test_async_service_registration*` and `test_async_tasks` entries
 # share a single root cause: `Zeroconf.async_close()` -> ... ->
 # `ServiceBrowser.cancel()` calls `Thread.join()` to drain the
-# dedicated browser thread, and on Python 3.10-3.12 the thread is
+# dedicated browser thread, and on Python 3.11-3.12 the thread is
 # still alive when the join happens. `test_use_asyncio_false_*` is
 # by design (sync bootstrap when `use_asyncio=False` is requested from
 # inside a running loop); `test_run_coro_with_timeout` exercises the

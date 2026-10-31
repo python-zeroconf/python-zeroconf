@@ -117,8 +117,8 @@ CI runs three jobs:
   the PR title against Conventional Commits. If it fails, fix
   the title in the GitHub UI or with `gh pr edit --title "..."`;
   the workflow re-runs on the edit, no push needed.
-- `test` — the full pytest matrix across CPython 3.10–3.14,
-  3.14t (free-threaded), and PyPy 3.10, on Linux + macOS +
+- `test` — the full pytest matrix across CPython 3.11–3.15,
+  3.14t and 3.15t (free-threaded), and PyPy 3.11, on Linux + macOS +
   Windows. The free-threaded entry is the canary for unguarded
   shared-state bugs; failures there are often genuine even when
   the GIL-enabled rows pass.
