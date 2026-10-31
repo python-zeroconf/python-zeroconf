@@ -307,7 +307,7 @@ def test_guard_against_duplicate_packets_per_sender_scope(zc: Zeroconf) -> None:
     now = current_time_millis()
     listener._process_datagram_at_time(False, len(packet), now, packet, v4_mapped)
     listener._process_datagram_at_time(False, len(packet), now, packet, v6_link_local)
-    assert scopes() == {0, 2}
+    assert scopes() == {2}
 
     zc.cache.async_remove_records(cached())
     listener._process_datagram_at_time(False, len(packet), now, packet, v6_link_local)

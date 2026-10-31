@@ -3026,25 +3026,23 @@ def test_addresses_setter_rejects_invalid_address():
 
 @pytest.mark.asyncio
 async def test_aaaa_known_answer_sent_once_per_address() -> None:
-    """An AAAA cached under several scopes is sent as one known answer."""
+    """An AAAA received under several scopes is sent as one known answer."""
     aiozc = AsyncZeroconf(interfaces=["127.0.0.1"])
     zc = aiozc.zeroconf
-    now = r.current_time_millis()
-    address = socket.inet_pton(socket.AF_INET6, "fe80::1")
-    zc.cache.async_add_records(
-        [
-            r.DNSAddress(
-                "host.local.",
-                const._TYPE_AAAA,
-                const._CLASS_IN | const._CLASS_UNIQUE,
-                120,
-                address,
-                scope_id=scope,
-                created=now,
-            )
-            for scope in (0, 2)
-        ]
+    response = DNSOutgoing(const._FLAGS_QR_RESPONSE)
+    response.add_answer_at_time(
+        r.DNSAddress(
+            "host.local.",
+            const._TYPE_AAAA,
+            const._CLASS_IN | const._CLASS_UNIQUE,
+            120,
+            socket.inet_pton(socket.AF_INET6, "fe80::1"),
+        ),
+        0,
     )
+    packet = response.packets()[0]
+    for source, scope in ((("fe80::2", 5353), 2), (("::ffff:192.0.2.1", 5353), 0)):
+        zc.record_manager.async_updates_from_response(r.DNSIncoming(packet, source, scope))
     sent: list[DNSOutgoing] = []
     info = ServiceInfo("_test._tcp.local.", "x._test._tcp.local.", server="host.local.")
     with patch.object(zc, "async_send", lambda out, *args, **kwargs: sent.append(out)):

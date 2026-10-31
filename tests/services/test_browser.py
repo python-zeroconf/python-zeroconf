@@ -1686,3 +1686,51 @@ async def test_close_zeroconf_without_browser_after_start_up_queries(quick_timin
         finally:
             await aio_zeroconf_registrar.async_close()
             await browser.async_cancel()
+
+
+def test_service_browser_aaaa_scope_variant_does_not_trigger_update(zc: Zeroconf) -> None:
+    """A cached AAAA arriving again under another scope fires no Updated."""
+    type_ = "_hap._tcp.local."
+    registration_name = f"xxxyyy.{type_}"
+    updates: list[str] = []
+    service_added = Event()
+
+    class MyServiceListener(r.ServiceListener):
+        def add_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
+            if name == registration_name:
+                service_added.set()
+
+        def remove_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
+            pass
+
+        def update_service(self, zc, type_, name) -> None:  # type: ignore[no-untyped-def]
+            if name == registration_name:
+                updates.append(name)
+
+    browser = r.ServiceBrowser(zc, type_, None, MyServiceListener())
+    try:
+        info = make_service_info(type_, registration_name, addresses=[socket.inet_aton("10.7.4.2")])
+        _inject_response(zc, mock_incoming_msg([info.dns_pointer(), info.dns_service(), info.dns_text()]))
+        assert service_added.wait(timeout=5)
+
+        assert info.server is not None
+        response = r.DNSOutgoing(const._FLAGS_QR_RESPONSE)
+        response.add_answer_at_time(
+            r.DNSAddress(
+                info.server,
+                const._TYPE_AAAA,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                socket.inet_pton(socket.AF_INET6, "fe80::1"),
+            ),
+            0,
+        )
+        packet = response.packets()[0]
+        _inject_response(zc, r.DNSIncoming(packet, ("fe80::2", 5353), 31))
+        assert _wait_for(lambda: len(updates) == 1)
+        _inject_response(zc, r.DNSIncoming(packet, ("::ffff:10.7.4.3", 5353), 0))
+        _inject_response(zc, r.DNSIncoming(packet, ("fe80::2", 5353), 15))
+        time.sleep(0.2)
+        assert updates == [registration_name]
+    finally:
+        browser.cancel()

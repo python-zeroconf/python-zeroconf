@@ -169,7 +169,7 @@ cdef class ServiceInfo(RecordUpdateListener):
     @cython.locals(cache=DNSCache, history=QuestionHistory, out=DNSOutgoing, qu_question=bint)
     cdef DNSOutgoing _generate_request_query(self, object zc, double now, object question_type)
 
-    @cython.locals(question=DNSQuestion, answer=DNSRecord, address_answer=DNSAddress)
+    @cython.locals(question=DNSQuestion, answer=DNSRecord)
     cdef void _add_question_with_known_answers(
         self,
         DNSOutgoing out,
