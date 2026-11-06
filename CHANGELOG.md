@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.154.0 (2026-11-06)
+
+### Features
+
+- Build armv7l wheels for Python 3.15
+  ([#1941](https://github.com/python-zeroconf/python-zeroconf/pull/1941),
+  [`7c44d72`](https://github.com/python-zeroconf/python-zeroconf/commit/7c44d724dc5334a643072ddbd6d6274085273723))
+
+
 ## v0.153.0 (2026-10-31)
 
 ### Features
