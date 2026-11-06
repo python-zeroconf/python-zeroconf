@@ -95,7 +95,7 @@ blockbuster = ">=1.5.29,<2.0.0"
 hypothesis = {version = "^6.168.5", markers = "implementation_name == 'cpython'"}
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "^7.4.7 || ^8.1.3"
+sphinx = "^7.4.7 || ^8.1.3 || ^9.0.4"
 sphinx-rtd-theme = "^3.1.0"
 
 [tool.ruff]
