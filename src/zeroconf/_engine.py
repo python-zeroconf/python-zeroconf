@@ -11,7 +11,7 @@ import asyncio
 import itertools
 import socket
 import threading
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 from ._logger import log
 from ._record_update import RecordUpdate
@@ -82,6 +82,17 @@ def _without_transport(
     return [wrapped for wrapped in wrappers if wrapped.transport is not transport]
 
 
+class InterfaceUpdateResult(NamedTuple):
+    """Outcome of reconciling the sockets to a requested interface set."""
+
+    applied: bool
+    added: bool
+    complete: bool
+
+
+_NOT_APPLIED = InterfaceUpdateResult(applied=False, added=False, complete=False)
+
+
 class AsyncEngine:
     """An engine wraps sockets in the event loop."""
 
@@ -122,7 +133,7 @@ class AsyncEngine:
         interfaces: InterfacesType,
         ip_version: IPVersion,
         apple_p2p: bool,
-    ) -> bool:
+    ) -> InterfaceUpdateResult:
         """Reconcile sender/reader sockets to the live interface set.
 
         Adds a per-interface responder socket for each interface that
@@ -130,8 +141,10 @@ class AsyncEngine:
         disappeared, diffing on the bound address. A Default single-family
         instance's dual-use listen/responder socket is converted to a pure
         listener when moving to an explicit set; otherwise the shared listen
-        socket is left intact. Returns whether any responder socket was
-        added, so the caller can skip re-announcing when nothing appeared.
+        socket is left intact. The result reports whether the reconcile ran
+        at all, whether any responder socket was added (so the caller can skip
+        re-announcing when nothing appeared), and whether every desired
+        interface ended up bound and joined.
         """
         assert self.loop is not None
         try:
@@ -143,7 +156,7 @@ class AsyncEngine:
             # a momentary down state doesn't crash a caller's adapter-change
             # handler (best-effort contract); the next rescan reconciles.
             log.warning("Skipping interface update; no interfaces available: %s", exc)
-            return False
+            return _NOT_APPLIED
         desired = {_interface_key(interface): interface for interface in normalized}
         current = {wrapped.interface_key: wrapped for wrapped in self.senders}
         listen_transport = self._listen_transport
@@ -176,16 +189,17 @@ class AsyncEngine:
                 current.pop(listen_key, None)
                 needs_rebuild = True
 
+        complete = True
         if needs_rebuild:
             try:
-                await self._async_rebuild_listen_socket(apple_p2p, desired, current)
+                complete = await self._async_rebuild_listen_socket(apple_p2p, desired, current)
             except (OSError, RuntimeError) as exc:
                 # A fresh wildcard bind / endpoint creation can transiently fail
                 # during adapter churn. The rebuild raises before tearing down
                 # the old listen socket, so state is unchanged; log and no-op
                 # rather than crash the caller's handler (best-effort contract).
                 log.warning("Skipping interface update; listen socket rebuild failed: %s", exc)
-                return False
+                return _NOT_APPLIED
             listen_transport = self._listen_transport
             listen_socket = listen_transport.sock if listen_transport is not None else None
 
@@ -207,7 +221,9 @@ class AsyncEngine:
                 continue
             if await self._async_add_interface(interface, listen_socket, apple_p2p):
                 added = True
-        return added
+            else:
+                complete = False
+        return InterfaceUpdateResult(applied=True, added=added, complete=complete)
 
     def close(self) -> None:
         """Close from sync context.
@@ -341,7 +357,7 @@ class AsyncEngine:
         apple_p2p: bool,
         desired: dict[tuple[str, int], str | tuple[tuple[str, int, int], int]],
         current: dict[tuple[str, int], _WrappedTransport],
-    ) -> None:
+    ) -> bool:
         """Replace the listen socket with one whose family covers the desired set.
 
         The listen socket's family is otherwise fixed at construction; this
@@ -351,7 +367,8 @@ class AsyncEngine:
         requested ip_version, which an explicit list can contradict) so it
         always covers every desired interface and never needs an immediate
         re-rebuild. Interfaces that are staying are re-joined on the new socket,
-        and the old socket is closed (releasing its memberships).
+        and the old socket is closed (releasing its memberships). Returns
+        whether every staying interface re-joined.
         """
         has_v6 = any(isinstance(interface, tuple) for interface in desired.values())
         has_v4 = any(not isinstance(interface, tuple) for interface in desired.values())
@@ -364,12 +381,14 @@ class AsyncEngine:
         new_listen = new_listen_socket(family_version, apple_p2p)
         if new_listen is None:
             raise RuntimeError("Failed to create a listen socket for the new interface family")
+        rejoined = True
         try:
             for bind_address, interface in desired.items():
                 # A staying interface that can't re-join on the new socket keeps
                 # its sender but receives only via the shared socket it never
                 # joined; surface that degraded state like _async_add_interface.
                 if bind_address in current and not add_multicast_member(new_listen, interface):
+                    rejoined = False
                     self.zc.log_warning_once(
                         f"Interface {interface!r} could not re-join the multicast group "
                         "on the rebuilt listen socket"
@@ -388,6 +407,7 @@ class AsyncEngine:
         old_transport = old_listen_transport.transport
         self._async_remove_transport(old_transport)
         old_transport.close()
+        return rejoined
 
     def _async_remove_transport(self, transport: asyncio.DatagramTransport) -> None:
         """Drop a transport's protocol/reader/sender wrappers, cancelling its timers."""

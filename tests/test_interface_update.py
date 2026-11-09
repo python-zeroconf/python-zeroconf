@@ -264,9 +264,9 @@ async def test_update_interfaces_reconciles_mixed_set(aiozc: AsyncZeroconf) -> N
         patch.object(_engine, "drop_multicast_member") as mock_drop,
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=_fake_wrap)),
     ):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
 
-    assert added is True
+    assert result.added is True
     # Unchanged senders are the same objects; gone ones are removed.
     assert keep_v4 in engine.senders
     assert keep_v6 in engine.senders
@@ -446,9 +446,9 @@ async def test_update_interfaces_ip_change_in_one_rescan(aiozc: AsyncZeroconf) -
         patch.object(_engine, "drop_multicast_member") as mock_drop,
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
     ):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
 
-    assert added is True
+    assert result.added is True
     # The old address left its group and was closed; exactly the new one remains.
     assert {call.args[1] for call in mock_drop.call_args_list} == {"10.0.0.5"}
     old_transport.close.assert_called_once()
@@ -477,9 +477,9 @@ async def test_update_interfaces_transient_empty_set_is_noop(
         ),
         caplog.at_level(logging.WARNING),
     ):
-        added = await engine.async_update_interfaces(InterfaceChoice.All, IPVersion.All, False)
+        result = await engine.async_update_interfaces(InterfaceChoice.All, IPVersion.All, False)
 
-    assert added is False
+    assert result.added is False
     assert "Skipping interface update; no interfaces available" in caplog.text
     # Current sockets are left intact rather than torn down.
     assert (len(engine.senders), len(engine.readers), len(engine.protocols)) == before
@@ -603,11 +603,11 @@ async def test_update_interfaces_default_to_explicit_reconciles(aiozc: AsyncZero
         patch.object(_engine, "drop_multicast_member"),
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
     ):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
 
     # The dual-use socket is rebuilt as a pure listener (demoted and closed),
     # a fresh listener replaces it, and the explicit interface gains a responder.
-    assert added is True
+    assert result.added is True
     mock_new_listen.assert_called_once()
     assert engine._listen_transport is not listen
     assert listen not in engine.senders
@@ -633,9 +633,9 @@ async def test_update_interfaces_default_to_explicit_real(aiozc: AsyncZeroconf) 
     engine.senders = [listen]
 
     with patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1"]):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
 
-    assert added is True
+    assert result.added is True
     new_listen = engine._listen_transport
     assert new_listen is not None
     assert new_listen is not listen
@@ -689,9 +689,9 @@ async def test_update_interfaces_rebuild_rejoins_kept_interfaces(aiozc: AsyncZer
         patch.object(_engine, "drop_multicast_member"),
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
     ):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
 
-    assert added is True
+    assert result.added is True
     # The kept IPv4 interface was re-joined on the new listen socket.
     assert any(
         call.args[0] is new_listen_sock and call.args[1] == "127.0.0.1" for call in mock_add.call_args_list
@@ -723,9 +723,11 @@ async def test_update_interfaces_rebuild_rejoin_failure_warns(
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=fake_wrap)),
         caplog.at_level(logging.WARNING),
     ):
-        await engine.async_update_interfaces(["unused"], IPVersion.All, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.All, False)
 
     assert "could not re-join the multicast group on the rebuilt listen socket" in caplog.text
+    assert result.applied is True
+    assert result.complete is False
 
 
 @pytest.mark.asyncio
@@ -742,10 +744,10 @@ async def test_update_interfaces_rebuild_failure_is_noop(
         patch.object(_engine, "new_listen_socket", return_value=None),
         caplog.at_level(logging.WARNING),
     ):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
 
     # Best-effort: no raise into the caller, state left untouched.
-    assert added is False
+    assert result.added is False
     assert "listen socket rebuild failed" in caplog.text
     assert engine._listen_transport is old_listen
     assert (list(engine.senders), list(engine.readers)) == before
@@ -766,13 +768,77 @@ async def test_update_interfaces_default_rebuild_failure_keeps_dual_use(
         patch.object(_engine, "normalize_interface_choice", return_value=["192.168.1.5"]),
         patch.object(_engine, "new_listen_socket", return_value=None),
     ):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.V4Only, False)
 
     # The dual-use socket was not demoted before the (failed) rebuild, so the
     # instance still responds on its interface rather than going silent.
-    assert added is False
+    assert result.added is False
     assert engine.senders == [listen]
     assert engine._listen_transport is listen
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_returns_true_when_all_up(aiozc: AsyncZeroconf) -> None:
+    """A rescan that brings every requested interface up returns True."""
+    await aiozc.zeroconf.async_wait_for_start()
+    assert await aiozc.async_update_interfaces([]) is True
+    await asyncio.sleep(0)
+    assert await aiozc.async_update_interfaces(["127.0.0.1"]) is True
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_add_failure_returns_false(aiozc: AsyncZeroconf) -> None:
+    """An interface that fails to come up returns False; the requested config is still stored."""
+    zc = aiozc.zeroconf
+    await zc.async_wait_for_start()
+    await aiozc.async_update_interfaces([])
+    await asyncio.sleep(0)
+    with patch.object(_engine, "add_interface", return_value=None):
+        assert await aiozc.async_update_interfaces(["127.0.0.1"]) is False
+    assert zc._interfaces == ["127.0.0.1"]
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_rebuild_failure_returns_false_and_keeps_config(
+    aiozc: AsyncZeroconf,
+) -> None:
+    """A failed listen socket rebuild returns False and leaves the stored config unchanged."""
+    zc = aiozc.zeroconf
+    await zc.async_wait_for_start()
+    before = (zc._interfaces, zc._ip_version)
+    with (
+        patch.object(_engine, "normalize_interface_choice", return_value=[(("fe80::1", 0, 0), 1)]),
+        patch.object(_engine, "new_listen_socket", return_value=None),
+    ):
+        assert await aiozc.async_update_interfaces(["fe80::1"], ip_version=IPVersion.V6Only) is False
+    assert (zc._interfaces, zc._ip_version) == before
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_no_interfaces_returns_false_and_keeps_config(
+    aiozc: AsyncZeroconf,
+) -> None:
+    """A rescan that resolves to no interfaces returns False and leaves the stored config unchanged."""
+    zc = aiozc.zeroconf
+    await zc.async_wait_for_start()
+    before = (zc._interfaces, zc._ip_version)
+    with patch.object(
+        _engine, "normalize_interface_choice", side_effect=RuntimeError("No interfaces to listen on")
+    ):
+        assert await aiozc.async_update_interfaces(InterfaceChoice.All, ip_version=IPVersion.All) is False
+    assert (zc._interfaces, zc._ip_version) == before
+
+
+def test_update_interfaces_sync_returns_result() -> None:
+    """The sync wrapper returns the same result as the async method."""
+    zc = Zeroconf(interfaces=["127.0.0.1"])
+    try:
+        assert zc.update_interfaces(["127.0.0.1"]) is True
+        with patch.object(_engine, "add_interface", return_value=None):
+            assert zc.update_interfaces([]) is True
+            assert zc.update_interfaces(["127.0.0.1"]) is False
+    finally:
+        zc.close()
 
 
 @pytest.mark.asyncio
@@ -792,11 +858,11 @@ async def test_update_interfaces_rebuild_closes_socket_on_wrap_failure(
         patch.object(_engine, "add_multicast_member", return_value=True),
         patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=OSError("boom"))),
     ):
-        added = await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
+        result = await engine.async_update_interfaces(["unused"], IPVersion.V6Only, False)
 
     # Best-effort no-op: the unadopted socket was closed (not leaked) and the
     # old listen socket is untouched.
-    assert added is False
+    assert result.added is False
     new_listen_sock.close.assert_called_once()
     assert engine._listen_transport is old_listen
 

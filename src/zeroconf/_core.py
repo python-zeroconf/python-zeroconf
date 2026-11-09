@@ -14,7 +14,7 @@ import sys
 import threading
 from collections.abc import Awaitable
 from types import TracebackType
-from typing import Self
+from typing import Self, cast
 
 from ._cache import DNSCache
 from ._dns import DNSQuestion, DNSQuestionType
@@ -417,7 +417,7 @@ class Zeroconf(QuietLogger):
         interfaces: InterfacesType | None = None,
         ip_version: IPVersion | None = None,
         apple_p2p: bool | None = None,
-    ) -> None:
+    ) -> bool:
         """Rescan network interfaces and reconcile the sockets in use.
 
         Adds sockets for interfaces that appeared, drops sockets for
@@ -432,8 +432,11 @@ class Zeroconf(QuietLogger):
         is best-effort: a requested interface that fails to bind, or fails to
         re-join after a rebuild, is logged rather than raised, and likewise a
         registration that fails to re-announce is logged so one failure cannot
-        block the others. Raises RuntimeError if apple_p2p is set on a non-Apple
-        platform (input validation, matching the constructor).
+        block the others. Returns True if every requested interface is up, and
+        False if any is not. When no interface is available or the listen socket
+        cannot be rebuilt for a new address family, nothing is changed and the
+        previous configuration is kept. Raises RuntimeError if apple_p2p is
+        set on a non-Apple platform (input validation, matching the constructor).
         """
         # Resolve against the retained config but only commit it after the
         # engine reconcile succeeds, so a failed reconcile leaves the stored
@@ -449,14 +452,15 @@ class Zeroconf(QuietLogger):
         # alone; the multi-second re-announce runs unlocked so a bursty
         # adapter-change source isn't blocked behind it.
         async with self._interface_update_lock:
-            added = await self.engine.async_update_interfaces(interfaces, ip_version, apple_p2p)
-            # Copy a mutable list so later caller mutation can't change the
-            # retained configuration.
-            self._interfaces = list(interfaces) if isinstance(interfaces, list) else interfaces
-            self._ip_version = ip_version
-            self._apple_p2p = apple_p2p
-        if not added:
-            return
+            outcome = await self.engine.async_update_interfaces(interfaces, ip_version, apple_p2p)
+            if outcome.applied:
+                # Copy a mutable list so later caller mutation can't change the
+                # retained configuration.
+                self._interfaces = list(interfaces) if isinstance(interfaces, list) else interfaces
+                self._ip_version = ip_version
+                self._apple_p2p = apple_p2p
+        if not outcome.added:
+            return outcome.complete
         # Re-announce every registration; one broadcast failing must not mask
         # the rest, so collect exceptions and log them individually, naming the
         # service so a partial failure is actionable.
@@ -472,6 +476,7 @@ class Zeroconf(QuietLogger):
                 # gather(return_exceptions=True) also captures BaseExceptions
                 # such as CancelledError; don't swallow a cancellation/interrupt.
                 raise result
+        return outcome.complete
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
         """Publish updated records for an already registered service.
@@ -682,23 +687,27 @@ class Zeroconf(QuietLogger):
         interfaces: InterfacesType | None = None,
         ip_version: IPVersion | None = None,
         apple_p2p: bool | None = None,
-    ) -> None:
+    ) -> bool:
         """Rescan network interfaces and reconcile the sockets in use.
 
-        While it is not expected during normal operation,
-        this function may raise EventLoopBlocked if the underlying
-        call to `async_update_interfaces` cannot be completed. Raises
-        RuntimeError if apple_p2p is set on a non-Apple platform.
+        Returns whether every requested interface is up, as
+        `async_update_interfaces` does. While it is not expected during
+        normal operation, this function may raise EventLoopBlocked if the
+        underlying call to `async_update_interfaces` cannot be completed.
+        Raises RuntimeError if apple_p2p is set on a non-Apple platform.
         """
         assert self.loop is not None
         # Unlike register/update, the re-announce is awaited inline (to log
         # per-service failures), so the budget must cover the full announce
         # window ((_REGISTER_BROADCASTS - 1) * _REGISTER_TIME) plus the reconcile
         # and wait-for-start overhead; double the register budget for headroom.
-        run_coro_with_timeout(
-            self.async_update_interfaces(interfaces, ip_version, apple_p2p),
-            self.loop,
-            _REGISTER_TIME * _REGISTER_BROADCASTS * 2,
+        return cast(
+            bool,
+            run_coro_with_timeout(
+                self.async_update_interfaces(interfaces, ip_version, apple_p2p),
+                self.loop,
+                _REGISTER_TIME * _REGISTER_BROADCASTS * 2,
+            ),
         )
 
     def update_service(self, info: ServiceInfo) -> None:
