@@ -230,16 +230,17 @@ class AsyncZeroconf:
         interfaces: InterfacesType | None = None,
         ip_version: IPVersion | None = None,
         apple_p2p: bool | None = None,
-    ) -> None:
+    ) -> bool:
         """Rescan network interfaces and reconcile the sockets in use.
 
         Adds sockets for interfaces that appeared, drops sockets for
         interfaces that disappeared, and re-announces existing
         registrations on the resulting senders. ``interfaces``,
         ``ip_version`` and ``apple_p2p`` each default to the construction-time
-        value. Raises RuntimeError if apple_p2p is set on a non-Apple platform.
+        value. Returns whether every requested interface is up. Raises
+        RuntimeError if apple_p2p is set on a non-Apple platform.
         """
-        await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
+        return await self.zeroconf.async_update_interfaces(interfaces, ip_version, apple_p2p)
 
     async def async_update_service(self, info: ServiceInfo) -> Awaitable:
         """Publish updated records for an already registered service.
