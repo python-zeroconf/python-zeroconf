@@ -22,6 +22,7 @@ from ._utils.net import (
     add_interface,
     add_multicast_member,
     drop_multicast_member,
+    get_interface_indexes,
     new_listen_socket,
     normalize_interface_choice,
 )
@@ -127,7 +128,9 @@ class AsyncEngine:
 
         Adds a per-interface responder socket for each interface that
         appeared and tears down the socket for each interface that
-        disappeared, diffing on the bound address. A Default single-family
+        disappeared, diffing on the bound address. A responder whose address
+        is still present but now lives on an interface with a different index
+        (the interface was re-created) is torn down and added again. A Default single-family
         instance's dual-use listen/responder socket is converted to a pure
         listener when moving to an explicit set; otherwise the shared listen
         socket is left intact. Returns whether any responder socket was
@@ -148,6 +151,32 @@ class AsyncEngine:
         current = {wrapped.interface_key: wrapped for wrapped in self.senders}
         listen_transport = self._listen_transport
         listen_socket = listen_transport.sock if listen_transport is not None else None
+
+        # An interface that was removed and re-created (driver reset, PCI
+        # rescan, USB replug, ``ip link del`` + add) usually comes back with
+        # the same address, so its key still matches, but under a new
+        # interface index: the sender's multicast interface and the listen
+        # socket's group membership still refer to the old, dead interface.
+        # Close such stale senders here so the add pass below re-creates them
+        # (re-joining the group on the new interface) and re-announces.
+        live_indexes = get_interface_indexes()
+        for key, wrapped in list(current.items()):
+            live_index = live_indexes.get(key)
+            if (
+                not wrapped.ifindex
+                or live_index is None
+                or live_index == wrapped.ifindex
+                or (listen_transport is not None and wrapped.transport is listen_transport.transport)
+            ):
+                continue
+            log.debug(
+                "Interface %s was re-created (index %d -> %d), re-binding it",
+                key[0],
+                wrapped.ifindex,
+                live_index,
+            )
+            self._async_close_sender(wrapped, listen_socket)
+            del current[key]
 
         # The listen socket's family is fixed at construction, so a desired
         # interface of another family (e.g. an IPv6 interface added to an IPv4
@@ -439,8 +468,14 @@ class AsyncEngine:
         self._respond_sockets = []
 
     async def _async_wrap_socket(self, sock: socket.socket, is_sender: bool) -> _WrappedTransport:
-        """Adopt a socket into a transport, register it, and return the reader wrapper."""
+        """Adopt a socket into a transport, register it, and return the reader wrapper.
+
+        A sender records the index of the interface holding its bound address
+        so a later interface update can detect that the interface was
+        re-created.
+        """
         assert self.loop is not None
+        ifindexes = get_interface_indexes() if is_sender else {}
         transport, protocol = await self.loop.create_datagram_endpoint(  # type: ignore[type-var]
             lambda: AsyncListener(self.zc),  # type: ignore[arg-type, return-value]
             sock=sock,
@@ -452,5 +487,7 @@ class AsyncEngine:
         self.protocols.append(cast(AsyncListener, protocol))
         self.readers.append(reader)
         if is_sender:
-            self.senders.append(make_wrapped_transport(datagram_transport))
+            sender = make_wrapped_transport(datagram_transport)
+            sender.ifindex = ifindexes.get(sender.interface_key, 0)
+            self.senders.append(sender)
         return reader

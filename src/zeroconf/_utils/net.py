@@ -105,6 +105,31 @@ def ip6_to_address_and_index(adapters: Iterable[ifaddr.Adapter], ip: str) -> tup
     raise RuntimeError(f"No adapter found for IP address {ip}")
 
 
+def get_interface_indexes(
+    adapters: Iterable[ifaddr.Adapter] | None = None,
+) -> dict[tuple[str, int], int]:
+    """Map each local address to the index of the interface that holds it.
+
+    Keys use the same ``(address, scope_id)`` shape as the engine's interface
+    keys: ``(address, 0)`` for IPv4 and ``(address, scope_id)`` for IPv6, where
+    the scope_id is the interface index for link-local addresses and 0
+    otherwise. An address present on several interfaces keeps the first one.
+    """
+    if adapters is None:
+        adapters = ifaddr.get_adapters()
+    indexes: dict[tuple[str, int], int] = {}
+    for adapter in adapters:
+        if adapter.index is None:
+            continue
+        for adapter_ip in adapter.ips:
+            if isinstance(adapter_ip.ip, tuple):
+                key = (adapter_ip.ip[0], adapter_ip.ip[2])
+            else:
+                key = (adapter_ip.ip, 0)
+            indexes.setdefault(key, adapter.index)
+    return indexes
+
+
 def interface_index_to_ip6_address(adapters: Iterable[ifaddr.Adapter], index: int) -> tuple[str, int, int]:
     for adapter in adapters:
         if adapter.index == index:

@@ -27,6 +27,7 @@ class _WrappedTransport:
 
     __slots__ = (
         "fileno",
+        "ifindex",
         "is_ipv6",
         "multicast_index",
         "sock",
@@ -42,12 +43,19 @@ class _WrappedTransport:
         fileno: int,
         sock_name: tuple,
         multicast_index: int = 0,
+        ifindex: int = 0,
     ) -> None:
         """Initialize the wrapped transport.
 
         ``multicast_index`` is the IPV6_MULTICAST_IF interface index the
         sender joined the group with, carried so a group leave uses the same
         index the join did (the bound socket's scope_id is 0 for global IPv6).
+
+        ``ifindex`` is the index of the interface that held the bound address
+        when the sender was created (0 if unknown). An interface that is
+        removed and re-created keeps its address but gets a new index, which
+        leaves the socket's multicast settings pointing at the dead interface;
+        comparing this against the live index detects that.
         """
         self.transport = transport
         self.is_ipv6 = is_ipv6
@@ -55,6 +63,7 @@ class _WrappedTransport:
         self.fileno = fileno
         self.sock_name = sock_name
         self.multicast_index = multicast_index
+        self.ifindex = ifindex
 
     @property
     def interface_key(self) -> tuple[str, int]:
