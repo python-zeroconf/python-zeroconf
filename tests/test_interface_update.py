@@ -13,6 +13,7 @@ import pytest
 from zeroconf import InterfaceChoice, IPVersion, ServiceInfo, Zeroconf, _engine, _listener
 from zeroconf._engine import _interface_key, _listen_socket_supports
 from zeroconf._transport import _strip_zone, _WrappedTransport, make_wrapped_transport
+from zeroconf._utils.net import get_interface_indexes
 from zeroconf.asyncio import AsyncZeroconf
 
 
@@ -972,3 +973,125 @@ def test_sync_update_interfaces(zc: Zeroconf) -> None:
     sender_count = len(engine.senders)
     zc.update_interfaces(["127.0.0.1"])
     assert len(engine.senders) == sender_count
+
+
+def _adapter(index: int | None, *ips: object) -> Mock:
+    """Build an ifaddr-like adapter with the given index and IP addresses."""
+    adapter = Mock()
+    adapter.index = index
+    adapter.ips = [Mock(ip=ip) for ip in ips]
+    return adapter
+
+
+def test_get_interface_indexes() -> None:
+    """Addresses map to their adapter's index, keyed like the interface keys."""
+    adapters = [
+        _adapter(None, "10.0.0.9"),  # no index: skipped
+        _adapter(2, "192.168.1.5", ("fe80::1", 0, 2), ("2001:db8::1", 0, 0)),
+        _adapter(3, "192.168.1.5", ("fe80::1", 0, 3)),
+    ]
+    assert get_interface_indexes(adapters) == {
+        # An address on two interfaces keeps the first one.
+        ("192.168.1.5", 0): 2,
+        # Link-local addresses repeat across interfaces, the scope tells them apart.
+        ("fe80::1", 2): 2,
+        ("fe80::1", 3): 3,
+        ("2001:db8::1", 0): 2,
+    }
+
+
+@pytest.mark.asyncio
+async def test_sender_records_interface_index(aiozc: AsyncZeroconf) -> None:
+    """A sender records the index of the interface holding its bound address."""
+    await aiozc.zeroconf.async_wait_for_start()
+    (sender,) = aiozc.zeroconf.engine.senders
+    assert sender.ifindex == get_interface_indexes().get(("127.0.0.1", 0), 0)
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_rebinds_recreated_interface(aiozc: AsyncZeroconf) -> None:
+    """An interface re-created with the same address but a new index is re-bound.
+
+    The sender's key is unchanged, so without comparing interface indexes the
+    rescan would be a no-op and the sender would stay tied to the dead
+    interface. It must be closed, re-created on the new index, and the
+    registered services re-announced.
+    """
+    zc = aiozc.zeroconf
+    await zc.async_wait_for_start()
+    engine = zc.engine
+    info = ServiceInfo(
+        "_test._tcp.local.",
+        "Test._test._tcp.local.",
+        addresses=[b"\x7f\x00\x00\x01"],
+        port=80,
+        server="test.local.",
+    )
+    await aiozc.async_register_service(info)
+    (old_sender,) = engine.senders
+    old_sender.ifindex = 7
+    old_transport = old_sender.transport
+
+    with (
+        patch.object(_engine, "get_interface_indexes", return_value={("127.0.0.1", 0): 8}),
+        patch.object(_engine, "drop_multicast_member", wraps=_engine.drop_multicast_member) as mock_drop,
+        patch.object(zc, "_async_broadcast_service", new_callable=AsyncMock) as mock_broadcast,
+    ):
+        await aiozc.async_update_interfaces()
+        await asyncio.sleep(0)
+
+    (new_sender,) = engine.senders
+    assert new_sender.transport is not old_transport
+    assert old_transport.is_closing()
+    assert new_sender.interface_key == ("127.0.0.1", 0)
+    assert new_sender.ifindex == 8
+    # The stale membership is left on the listen socket before re-joining.
+    mock_drop.assert_called_once()
+    assert mock_drop.call_args.args[1] == "127.0.0.1"
+    assert mock_broadcast.call_count == 1
+    assert mock_broadcast.call_args.args[0] is info
+
+
+@pytest.mark.parametrize(
+    ("recorded", "live"),
+    [
+        (7, {("127.0.0.1", 0): 7}),  # same interface
+        (0, {("127.0.0.1", 0): 8}),  # index unknown when the sender was created
+        (7, {}),  # address not currently on any interface
+    ],
+)
+@pytest.mark.asyncio
+async def test_update_interfaces_keeps_sender_unless_index_changed(
+    aiozc: AsyncZeroconf, recorded: int, live: dict[tuple[str, int], int]
+) -> None:
+    """A sender is only re-bound when both indexes are known and differ."""
+    zc = aiozc.zeroconf
+    await zc.async_wait_for_start()
+    (sender,) = zc.engine.senders
+    sender.ifindex = recorded
+    transport = sender.transport
+
+    with patch.object(_engine, "get_interface_indexes", return_value=live):
+        await aiozc.async_update_interfaces()
+
+    assert zc.engine.senders == [sender]
+    assert sender.transport is transport
+    assert not transport.is_closing()
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_keeps_dual_use_listen_socket_on_index_change(
+    aiozc: AsyncZeroconf,
+) -> None:
+    """The dual-use listen socket is never torn down, even if its index changed."""
+    engine = aiozc.zeroconf.engine
+    await aiozc.zeroconf.async_wait_for_start()
+    listen = engine._listen_transport
+    assert listen is not None
+    # Simulate a Default single-family instance: the listen socket is the sole sender.
+    engine.senders = [listen]
+    listen.ifindex = 7
+    with patch.object(_engine, "get_interface_indexes", return_value={listen.interface_key: 8}):
+        await engine.async_update_interfaces([], IPVersion.V4Only, False)
+    assert listen in engine.senders
+    assert not listen.transport.is_closing()

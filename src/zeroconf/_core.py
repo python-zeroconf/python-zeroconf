@@ -421,7 +421,9 @@ class Zeroconf(QuietLogger):
         """Rescan network interfaces and reconcile the sockets in use.
 
         Adds sockets for interfaces that appeared, drops sockets for
-        interfaces that disappeared, and re-announces existing
+        interfaces that disappeared, re-creates the socket of an interface
+        that was removed and re-created with the same address (detected by
+        its changed interface index), and re-announces existing
         registrations when a new sender appeared. ``interfaces``,
         ``ip_version`` and ``apple_p2p`` each default to the value passed at
         construction; pass a new value to switch it. When the resulting
