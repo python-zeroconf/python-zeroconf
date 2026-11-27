@@ -1724,3 +1724,48 @@ def test_service_browser_aaaa_scope_variant_does_not_trigger_update(zc: Zeroconf
         assert updates == [registration_name]
     finally:
         browser.cancel()
+
+
+@pytest.mark.asyncio
+async def test_browser_notifies_when_expired_srv_record_revived(aiozc: AsyncZeroconf) -> None:
+    """Reviving an expired unpurged non-PTR record still emits Updated."""
+    zc = aiozc.zeroconf
+    events: list[ServiceStateChange] = []
+
+    def handler(**kwargs: object) -> None:
+        events.append(cast(ServiceStateChange, kwargs["state_change"]))
+
+    browser = _services_browser._ServiceBrowserBase(zc, "_test._tcp.local.", handlers=[handler])
+    zc.record_manager.listeners.add(browser)
+    base = current_time_millis()
+    name = "speaker._test._tcp.local."
+    try:
+        for seconds, target, expected in [
+            (0, "speaker-2.local.", [ServiceStateChange.Updated]),
+            (10, "speaker-2.local.", []),
+            (20, "speaker.local.", [ServiceStateChange.Updated]),
+            (25, "speaker-2.local.", [ServiceStateChange.Updated]),
+            (26, "speaker-2.local.", []),
+        ]:
+            now = base + seconds * 1000
+            record = r.DNSService(
+                name,
+                const._TYPE_SRV,
+                const._CLASS_IN | const._CLASS_UNIQUE,
+                120,
+                0,
+                0,
+                7000,
+                target,
+                created=now,
+            )
+            if seconds == 25:
+                old = zc.cache.async_get_unique(record)
+                assert old is not None and old.is_expired(now)
+            packet = r.DNSOutgoing(const._FLAGS_QR_RESPONSE | const._FLAGS_AA)
+            packet.add_answer_at_time(record, 0)
+            events.clear()
+            zc.record_manager.async_updates_from_response(r.DNSIncoming(packet.packets()[0], now=now))
+            assert events == expected, (seconds, target)
+    finally:
+        zc.record_manager.listeners.discard(browser)

@@ -631,8 +631,9 @@ class _ServiceBrowserBase(RecordUpdateListener):
                         self.query_scheduler.reschedule_ptr_first_refresh(pointer)
                 continue
 
-            # If its expired or already exists in the cache it cannot be updated.
-            if old_record is not None or record.is_expired(now):
+            # Ignore expired incoming records and refreshes of unexpired cached records;
+            # reviving an expired unpurged record must still notify browsers.
+            if record.is_expired(now) or (old_record is not None and not old_record.is_expired(now)):
                 continue
 
             if record_type in _ADDRESS_RECORD_TYPES:
