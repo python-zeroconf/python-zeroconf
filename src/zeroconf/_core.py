@@ -188,10 +188,17 @@ class Zeroconf(QuietLogger):
         self._interfaces = list(interfaces) if isinstance(interfaces, list) else interfaces
         self._ip_version = ip_version
         self._apple_p2p = apple_p2p
-        listen_socket, respond_sockets = create_sockets(interfaces, unicast, ip_version, apple_p2p=apple_p2p)
+        pending_v6_retries: list[tuple[tuple[str, int, int], int]] = []
+        listen_socket, respond_sockets = create_sockets(
+            interfaces,
+            unicast,
+            ip_version,
+            apple_p2p=apple_p2p,
+            retry_v6_interfaces=pending_v6_retries,
+        )
         log.debug("Listen socket %s, respond sockets %s", listen_socket, respond_sockets)
 
-        self.engine = AsyncEngine(self, listen_socket, respond_sockets)
+        self.engine = AsyncEngine(self, listen_socket, respond_sockets, pending_v6_retries)
 
         self.browsers: dict[ServiceListener, ServiceBrowser] = {}
         self.registry = ServiceRegistry()

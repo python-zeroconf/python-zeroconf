@@ -11,6 +11,7 @@ import asyncio
 import itertools
 import socket
 import threading
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
 from ._logger import log
@@ -26,7 +27,7 @@ from ._utils.net import (
     normalize_interface_choice,
 )
 from ._utils.time import current_time_millis
-from .const import _CACHE_CLEANUP_INTERVAL
+from .const import _CACHE_CLEANUP_INTERVAL, _IPV6_DAD_RETRY_INTERVAL
 
 if TYPE_CHECKING:
     from ._core import Zeroconf
@@ -87,9 +88,13 @@ class AsyncEngine:
 
     __slots__ = (
         "_cleanup_timer",
+        "_dad_retry_task",
+        "_dad_retry_timer",
         "_listen_socket",
         "_listen_transport",
+        "_pending_v6_retries",
         "_respond_sockets",
+        "_retried_v6_keys",
         "_setup_task",
         "loop",
         "protocols",
@@ -104,6 +109,7 @@ class AsyncEngine:
         zeroconf: Zeroconf,
         listen_socket: socket.socket | None,
         respond_sockets: list[socket.socket],
+        pending_v6_retries: Sequence[tuple[tuple[str, int, int], int]] = (),
     ) -> None:
         self.loop: asyncio.AbstractEventLoop | None = None
         self.zc = zeroconf
@@ -116,6 +122,10 @@ class AsyncEngine:
         self._respond_sockets = respond_sockets
         self._cleanup_timer: asyncio.TimerHandle | None = None
         self._setup_task: asyncio.Task[None] | None = None
+        self._dad_retry_timer: asyncio.TimerHandle | None = None
+        self._dad_retry_task: asyncio.Task[None] | None = None
+        self._pending_v6_retries: set[tuple[str, int]] = {_interface_key(i) for i in pending_v6_retries}
+        self._retried_v6_keys: set[tuple[str, int]] = set()
 
     async def async_update_interfaces(
         self,
@@ -201,12 +211,27 @@ class AsyncEngine:
             # the leave is then a benign no-op that drop_multicast_member swallows.
             self._async_close_sender(wrapped, listen_socket)
 
+        self._retried_v6_keys.intersection_update(desired)
+        self._pending_v6_retries.intersection_update(desired)
+
         added = False
         for bind_address, interface in desired.items():
             if bind_address in current:
+                self._pending_v6_retries.discard(bind_address)
+                self._retried_v6_keys.discard(bind_address)
                 continue
             if await self._async_add_interface(interface, listen_socket, apple_p2p):
                 added = True
+                self._pending_v6_retries.discard(bind_address)
+                self._retried_v6_keys.discard(bind_address)
+            elif isinstance(interface, tuple) and bind_address not in self._retried_v6_keys:
+                self._pending_v6_retries.add(bind_address)
+
+        if self._pending_v6_retries:
+            self._async_schedule_v6_retry()
+        elif self._dad_retry_timer is not None:
+            self._dad_retry_timer.cancel()
+            self._dad_retry_timer = None
         return added
 
     def close(self) -> None:
@@ -299,6 +324,16 @@ class AsyncEngine:
         await asyncio.sleep(0)  # flush out any call soons
         if self._cleanup_timer is not None:
             self._cleanup_timer.cancel()
+        if self._dad_retry_timer is not None:
+            self._dad_retry_timer.cancel()
+            self._dad_retry_timer = None
+        if self._dad_retry_task is not None:
+            try:
+                await self._dad_retry_task
+            except asyncio.CancelledError:
+                if not self._dad_retry_task.cancelled():
+                    raise
+            self._dad_retry_task = None
 
     def _async_close_sender(self, wrapped: _WrappedTransport, listen_socket: socket.socket | None) -> None:
         """Drop a per-interface sender's wrappers/protocol and close its transport."""
@@ -409,10 +444,41 @@ class AsyncEngine:
         assert loop is not None
         self._cleanup_timer = loop.call_at(loop.time() + _CACHE_CLEANUP_INTERVAL, self._async_cache_cleanup)
 
+    def _async_schedule_v6_retry(self) -> None:
+        """Schedule a single delayed retry for tentative IPv6 interfaces."""
+        if self.loop is None or self.zc.done or self._dad_retry_timer is not None:
+            return
+        if self._dad_retry_task is not None and not self._dad_retry_task.done():
+            return
+        self._dad_retry_timer = self.loop.call_later(_IPV6_DAD_RETRY_INTERVAL, self._on_v6_retry_timer)
+
+    def _on_v6_retry_timer(self) -> None:
+        """Launch the delayed reconcile task once the DAD retry interval elapses."""
+        self._dad_retry_timer = None
+        if self.loop is None or self.zc.done or not self._pending_v6_retries:
+            return
+        self._dad_retry_task = self.loop.create_task(self._async_retry_v6_interfaces())
+
+    async def _async_retry_v6_interfaces(self) -> None:
+        """Reconcile interfaces once after tentative IPv6 addresses finish DAD."""
+        self._retried_v6_keys.update(self._pending_v6_retries)
+        self._pending_v6_retries.clear()
+        try:
+            if not self.zc.done:
+                await self.zc.async_update_interfaces()
+        except Exception as exc:
+            log.debug("IPv6 interface retry failed: %s", exc)
+        finally:
+            self._dad_retry_task = None
+            if self._pending_v6_retries and not self.zc.done:
+                self._async_schedule_v6_retry()
+
     async def _async_setup(self, loop_thread_ready: threading.Event | None) -> None:
         """Set up the instance."""
         self._async_schedule_next_cache_cleanup()
         await self._async_create_endpoints()
+        if self._pending_v6_retries:
+            self._async_schedule_v6_retry()
         assert self.running_future is not None
         if not self.running_future.done():
             self.running_future.set_result(True)
@@ -428,6 +494,11 @@ class AsyncEngine:
         # shutdown has started.
         if self._setup_task is not None and not self._setup_task.done():
             self._setup_task.cancel()
+        if self._dad_retry_timer is not None:
+            self._dad_retry_timer.cancel()
+            self._dad_retry_timer = None
+        if self._dad_retry_task is not None and not self._dad_retry_task.done():
+            self._dad_retry_task.cancel()
         for wrapped_transport in itertools.chain(self.senders, self.readers):
             wrapped_transport.transport.close()
         # Anything still here was never adopted by a transport.

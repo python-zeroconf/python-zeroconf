@@ -493,6 +493,7 @@ def create_sockets(
     unicast: bool = False,
     ip_version: IPVersion = IPVersion.V4Only,
     apple_p2p: bool = False,
+    retry_v6_interfaces: list[tuple[tuple[str, int, int], int]] | None = None,
 ) -> tuple[socket.socket | None, list[socket.socket]]:
     listen_socket = None if unicast else new_listen_socket(ip_version, apple_p2p)
 
@@ -512,6 +513,8 @@ def create_sockets(
         respond_socket = add_interface(listen_socket, interface, apple_p2p=apple_p2p, unicast=unicast)
         if respond_socket is not None:
             respond_sockets.append(respond_socket)
+        elif isinstance(interface, tuple) and retry_v6_interfaces is not None:
+            retry_v6_interfaces.append(interface)
 
     return listen_socket, respond_sockets
 

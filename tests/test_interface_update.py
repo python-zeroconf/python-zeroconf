@@ -972,3 +972,123 @@ def test_sync_update_interfaces(zc: Zeroconf) -> None:
     sender_count = len(engine.senders)
     zc.update_interfaces(["127.0.0.1"])
     assert len(engine.senders) == sender_count
+
+
+@pytest.mark.asyncio
+async def test_startup_retries_skipped_ipv6_interface(aiozc: AsyncZeroconf) -> None:
+    """An IPv6 interface skipped during create_sockets is retried once after DAD delay."""
+    del aiozc
+    v6 = (("::1", 0, 0), 1)
+    v4_sock = Mock(fileno=lambda: -1)
+    fake_v6_sock = Mock()
+    v4_wrapped = _make_wrapped(("127.0.0.1", 5353))
+    v6_wrapped = _make_wrapped(("::1", 5353, 0, 1), is_ipv6=True, multicast_index=1)
+    instance: AsyncZeroconf | None = None
+
+    async def _wrap(sock: object, is_sender: bool) -> _WrappedTransport:
+        assert instance is not None
+        engine = instance.zeroconf.engine
+        if sock is v4_sock and is_sender:
+            engine.readers.append(v4_wrapped)
+            engine.senders.append(v4_wrapped)
+            return v4_wrapped
+        if sock is fake_v6_sock and is_sender:
+            engine.readers.append(v6_wrapped)
+            engine.senders.append(v6_wrapped)
+            return v6_wrapped
+        return _make_wrapped(("::", 5353, 0, 0), is_ipv6=True)
+
+    with (
+        patch.object(_engine, "_IPV6_DAD_RETRY_INTERVAL", 0.05),
+        patch("zeroconf._utils.net.normalize_interface_choice", return_value=["127.0.0.1", v6]),
+        patch.object(_engine, "normalize_interface_choice", return_value=["127.0.0.1", v6]),
+        patch("zeroconf._utils.net.add_interface", side_effect=[v4_sock, None]),
+        patch.object(_engine, "add_interface", return_value=fake_v6_sock) as mock_engine_add,
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=_wrap)),
+    ):
+        instance = AsyncZeroconf(interfaces=InterfaceChoice.All, ip_version=IPVersion.All)
+        try:
+            await instance.zeroconf.async_wait_for_start()
+            assert instance.zeroconf.engine._dad_retry_timer is not None
+            assert len(instance.zeroconf.engine.senders) == 1
+            await asyncio.sleep(0.15)
+            mock_engine_add.assert_called_once()
+            assert mock_engine_add.call_args.args[1] == v6
+            assert len(instance.zeroconf.engine.senders) == 2
+        finally:
+            await instance.async_close()
+
+
+@pytest.mark.asyncio
+async def test_update_interfaces_retries_skipped_ipv6_once(aiozc: AsyncZeroconf) -> None:
+    """An IPv6 interface skipped during async_update_interfaces retries once and does not spin."""
+    zc = aiozc.zeroconf
+    await zc.async_wait_for_start()
+    engine = zc.engine
+    await aiozc.async_update_interfaces([])
+    await asyncio.sleep(0)
+
+    v6 = (("fe80::1", 0, 1), 1)
+    call_count = 0
+
+    def _add_side_effect(*_args: object, **_kwargs: object) -> None:
+        nonlocal call_count
+        call_count += 1
+
+    with (
+        patch.object(_engine, "_IPV6_DAD_RETRY_INTERVAL", 0.05),
+        patch.object(_engine, "normalize_interface_choice", return_value=[v6]),
+        patch.object(_engine, "add_multicast_member", return_value=True),
+        patch.object(_engine, "add_interface", side_effect=_add_side_effect),
+    ):
+        await aiozc.async_update_interfaces(["unused"], IPVersion.All)
+        assert call_count == 1
+        assert engine._dad_retry_timer is not None
+        await asyncio.sleep(0.2)
+        # Initial call + single DAD retry; must not re-schedule after failing again.
+        assert call_count == 2
+        assert engine._dad_retry_timer is None
+
+
+@pytest.mark.asyncio
+async def test_v6_retry_succeeds_after_dad_and_clears_state(aiozc: AsyncZeroconf) -> None:
+    """When the retried IPv6 bind succeeds, sender is added and retry state clears."""
+    zc = aiozc.zeroconf
+    await zc.async_wait_for_start()
+    engine = zc.engine
+    await aiozc.async_update_interfaces([])
+    await asyncio.sleep(0)
+
+    v6 = (("fe80::2", 0, 2), 2)
+    fake_v6_sock = Mock()
+    attempts = 0
+
+    def _add_side_effect(*_args: object, **_kwargs: object) -> object | None:
+        nonlocal attempts
+        attempts += 1
+        return None if attempts == 1 else fake_v6_sock
+
+    wrapped_v6 = _make_wrapped(("fe80::2", 5353, 0, 2), is_ipv6=True, multicast_index=2)
+
+    async def _wrap_side_effect(sock: object, is_sender: bool) -> _WrappedTransport:
+        if sock is fake_v6_sock and is_sender:
+            engine.readers.append(wrapped_v6)
+            engine.senders.append(wrapped_v6)
+            return wrapped_v6
+        return _make_wrapped(("::", 5353, 0, 0), is_ipv6=True)
+
+    with (
+        patch.object(_engine, "_IPV6_DAD_RETRY_INTERVAL", 0.05),
+        patch.object(_engine, "normalize_interface_choice", return_value=[v6]),
+        patch.object(_engine, "add_multicast_member", return_value=True),
+        patch.object(_engine, "add_interface", side_effect=_add_side_effect),
+        patch.object(_engine.AsyncEngine, "_async_wrap_socket", new=AsyncMock(side_effect=_wrap_side_effect)),
+    ):
+        await aiozc.async_update_interfaces(["unused"], IPVersion.All)
+        assert attempts == 1
+        assert len(engine.senders) == 0
+        await asyncio.sleep(0.15)
+        assert attempts == 2
+        assert len(engine.senders) == 1
+        assert not engine._pending_v6_retries
+        assert not engine._retried_v6_keys
